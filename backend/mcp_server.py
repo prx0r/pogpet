@@ -6,9 +6,10 @@ Meta Muse or any MCP client connects, and gets the same verbs a human clicks.
     python3 -m backend.mcp_server     # stdio  (for local/agent harnesses)
     MCP_HTTP=1 python3 -m backend.mcp_server  # streamable HTTP on :8799/mcp
 
-Identity: tools act as whoever's key is in `FIGG_API_KEY` (put your own in
-.env). A separate agent credential minted via `POST /api/agents` can be used
-instead — it keeps its own profile and only the permissions you granted.
+Identity: **bobdod** is the main helper agent (storefront + this MCP).
+Tools act as whoever's key is in `FIGG_API_KEY` (put your own in .env), or
+as the agent credential from `POST /api/agents`. The company graph
+(`figg_companygraph`) is the canonical FACTS/RESOURCES/CAPABILITIES surface.
 
 Every tool is a thin call to the HTTP API rather than direct DB access, so
 the permission checks, credit accounting and validation are enforced in
@@ -65,6 +66,13 @@ async def _call(method: str, path: str, body: dict | None = None) -> dict:
             req.add_header("Content-Type", "application/json")
         if _key():
             req.add_header("X-API-Key", _key())
+        figg_owner = os.environ.get("FIGG_OWNER", "").strip()
+        claimed = ""
+        if body and isinstance(body, dict):
+            claimed = str(body.get("owner") or "").strip()
+        if figg_owner and claimed == figg_owner:
+            from backend import config as _cfg
+            req.add_header("X-Owner-Sig", _cfg.sign_owner(figg_owner))
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
                 return json.loads(r.read().decode() or "{}")
@@ -86,13 +94,11 @@ def _j(d: dict) -> str:
 
 # ── identity ────────────────────────────────────────────────────────
 
-@mcp.tool()
 async def figg_me() -> str:
     """Your profile: handle, active pog, roster and today's free credits."""
     return _j(await _call("GET", "/api/accounts/me"))
 
 
-@mcp.tool()
 async def figg_create_account(handle: str, password: str = "",
                               display_name: str = "") -> str:
     """Create an account. `handle` becomes the owner of everything it makes.
@@ -102,7 +108,6 @@ async def figg_create_account(handle: str, password: str = "",
                            "display_name": display_name}))
 
 
-@mcp.tool()
 async def figg_login(handle: str, password: str) -> str:
     """Sign in with handle + password. Returns the api_key for this session."""
     return _j(await _call("POST", "/api/accounts/login",
@@ -111,7 +116,6 @@ async def figg_login(handle: str, password: str) -> str:
 
 # ── meshes ──────────────────────────────────────────────────────────
 
-@mcp.tool()
 async def figg_styles() -> str:
     """Ready-made characters to start from. No Meshy key required — a pet
     that looks like *yours* still needs photo-to-3D, but everything downstream
@@ -119,7 +123,6 @@ async def figg_styles() -> str:
     return _j(await _call("GET", "/api/styles"))
 
 
-@mcp.tool()
 async def figg_install_style(style: str, owner: str = "") -> str:
     """Instantly install a style preset as an active pog (renders a portrait,
     stores it, binds all products). `style` is an id from figg_styles()."""
@@ -127,20 +130,17 @@ async def figg_install_style(style: str, owner: str = "") -> str:
                           {"style": style, "owner": owner}))
 
 
-@mcp.tool()
 async def figg_mesh_status(mesh_id: str, owner: str = "") -> str:
     """Status of one mesh plus every product it is active in."""
     q = f"?owner={owner}" if owner else ""
     return _j(await _call("GET", f"/api/meshes/{mesh_id}{q}"))
 
 
-@mcp.tool()
 async def figg_measure(mesh_id: str) -> str:
     """Geometry of a mesh: bounding box and print dimensions in mm."""
     return _j(await _call("GET", f"/api/meshes/{mesh_id}/measure"))
 
 
-@mcp.tool()
 async def figg_print_export(mesh_id: str, format: str = "stl",
                              height_mm: float = 0) -> str:
     """Export a printable file. format is 'stl' or 'obj'; height_mm scales the
@@ -151,7 +151,6 @@ async def figg_print_export(mesh_id: str, format: str = "stl",
 
 # ── shop ────────────────────────────────────────────────────────────
 
-@mcp.tool()
 async def figg_products(owner: str = "", concept: str = "",
                         subject: str = "") -> str:
     """The Prodigi catalogue rendered against the owner's ACTIVE pog.
@@ -165,21 +164,18 @@ async def figg_products(owner: str = "", concept: str = "",
     return _j(await _call("GET", f"/api/products{q}"))
 
 
-@mcp.tool()
 async def figg_concepts() -> str:
     """The 36-concept template library: wizard / mystic / christmas ×
     solo / couple / solo_pet / pet, each with art direction."""
     return _j(await _call("GET", "/api/concepts"))
 
 
-@mcp.tool()
 async def figg_quote(sku: str, country: str = "GB", attrs: str = "{}") -> str:
     """Live Prodigi price for a SKU (item, shipping, tax, carrier)."""
     return _j(await _call("GET",
                           f"/api/prodigi/quote?sku={sku}&country={country}&attrs={attrs}"))
 
 
-@mcp.tool()
 async def figg_check_sku(sku: str) -> str:
     """Does this Prodigi SKU exist, and what attributes does quoting need?"""
     return _j(await _call("GET", f"/api/prodigi/check?sku={sku}"))
@@ -187,14 +183,12 @@ async def figg_check_sku(sku: str) -> str:
 
 # ── perform ─────────────────────────────────────────────────────────
 
-@mcp.tool()
 async def figg_acts() -> str:
     """The talent-show roster (19 acts) and the three talents:
     comedy, dance, singing. Each act carries its own edge-tts voice."""
     return _j(await _call("GET", "/api/acts"))
 
 
-@mcp.tool()
 async def figg_perform(talent: str, topic: str, mesh_id: str,
                        act: str = "", pet_name: str = "your pet",
                        voice: str = "ryan") -> str:
@@ -207,16 +201,116 @@ async def figg_perform(talent: str, topic: str, mesh_id: str,
                            "owner": os.environ.get("FIGG_OWNER", "")}))
 
 
-@mcp.tool()
 async def figg_credits(owner: str = "") -> str:
     """Today's free allowance: sculpts and videos remaining."""
     return _j(await _call("GET", f"/api/credits?owner={owner}"))
 
 
+# ── foundation: catalog, flow, upload→mesh, and the tool manifest ────────────
+
+async def figg_catalog() -> str:
+    """Every product we make: id, label, price, section, emoji, blurb, preview kind."""
+    return _j(await _call("GET", "/api/catalog"))
+
+
+async def figg_flow(owner: str = "") -> str:
+    """Upload->mesh->previews state in one call: stage (empty/uploaded/sculpting/ready), photos, meshes, active mesh."""
+    return _j(await _call("GET", "/api/flow?owner=" + owner))
+
+
+async def figg_start_mesh(photo_id: str, owner: str = "") -> str:
+    """Start sculpting an uploaded photo (photo_id from figg_upload_photo) -> returns the mesh job.
+
+    Pass `owner` when acting for a known handle — without FIGG_OWNER/API key
+    matching that owner the backend refuses non-anon credit burns.
+    """
+    payload = {"photo_id": photo_id}
+    if owner:
+        payload["owner"] = owner
+    return _j(await _call("POST", "/api/meshes", payload))
+
+
+async def figg_upload_photo(file_name: str, owner: str = "") -> str:
+    """Upload an image from the server sandbox (FIGG_UPLOAD_DIR) -> photo_id for figg_start_mesh."""
+    import asyncio
+    import urllib.error
+    import urllib.request
+    from pathlib import Path
+
+    from backend import config
+
+    base = Path(config.UPLOAD_DIR).resolve()
+    src = Path(file_name)
+    src = (src if src.is_absolute() else base / src).resolve()
+    if not str(src).startswith(str(base)) or not src.is_file():
+        return _j({"ok": False, "error": f"file must live inside the sandbox {base}"})
+
+    def work() -> dict:
+        boundary = "----fogg" + str(os.getpid())
+        head = (f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="owner"\r\n\r\n{owner}\r\n'
+                f"--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="photo"; filename="{src.name}"\r\n'
+                f"Content-Type: application/octet-stream\r\n\r\n").encode()
+        body = head + src.read_bytes() + f"\r\n--{boundary}--\r\n".encode()
+        url = f"{API}/api/photos?token={_service_token()}"
+        req = urllib.request.Request(url, data=body, method="POST")
+        req.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
+        try:
+            with urllib.request.urlopen(req, timeout=300) as r:
+                return json.loads(r.read().decode() or "{}")
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode("utf-8", "replace")
+            try:
+                return json.loads(raw)
+            except Exception:
+                return {"ok": False, "error": f"{e.code}: {raw[:200]}"}
+        except Exception as e:                                  # noqa: BLE001
+            return {"ok": False, "error": str(e)[:300]}
+
+    return _j(await asyncio.get_event_loop().run_in_executor(None, work))
+
+
+async def figg_companygraph() -> str:
+    """OddHobb company graph — FACTS (products/policies), RESOURCES, CAPABILITIES, and the bobdod helper agent identity. Read-only."""
+    return _j(await _call("GET", "/api/companygraph"))
+
+
+# ── the manifest: adding a tool = adding it to an area. One place. ───────────
+TOOL_AREAS: dict[str, list] = {
+    "flow":      [figg_flow, figg_upload_photo, figg_start_mesh],
+    "identity":  [figg_me, figg_create_account, figg_login, figg_credits],
+    "mesh":      [figg_mesh_status, figg_measure, figg_print_export],
+    "shop":      [figg_catalog, figg_products, figg_concepts, figg_quote,
+                  figg_check_sku],
+    "style":     [figg_styles, figg_install_style],
+    "stage":     [figg_acts, figg_perform],
+    "company":   [figg_companygraph],
+}
+
+
+async def figg_tools() -> str:
+    """The self-describing library: every area and tool this MCP server exposes."""
+    areas = {a: [{"name": fn.__name__,
+                   "doc": (fn.__doc__ or "").strip().split("\n")[0]}
+                  for fn in fns]
+             for a, fns in TOOL_AREAS.items()}
+    count = sum(len(v) for v in TOOL_AREAS.values()) + 1   # + figg_tools itself
+    return _j({"ok": True, "count": count, "areas": areas})
+
+
+for _fns in list(TOOL_AREAS.values()):
+    for _fn in _fns:
+        mcp.tool()(_fn)
+mcp.tool()(figg_tools)
+
+
 async def main() -> None:
     if os.environ.get("MCP_HTTP"):
         print(f"fogg MCP (streamable http) on http://127.0.0.1:{PORT}/mcp", file=sys.stderr)
-        await mcp.run_streamable_http_async(host="0.0.0.0", port=PORT)
+        # Local only: the bridge proxies /mcp with a token gate. Never
+        # expose this directly — its tools call the API with the service token.
+        await mcp.run_streamable_http_async(host="127.0.0.1", port=PORT)
     else:
         await mcp.run_stdio_async()
 

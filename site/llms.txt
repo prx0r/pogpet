@@ -1,0 +1,59 @@
+# OddHobb
+
+> oddhobb.com — what odd thing shall we make you? Upload your pet once and
+> browse figurines, cards, gifts and video that already feature them.
+
+OddHobb turns a pet photo into a 3D mesh, then renders that mesh onto every
+product in the shop — cards, mugs, cushions, jigsaws, prints, stickers and
+more. Prices on the storefront are estimates (EST) until a live supplier
+quote replaces them.
+
+## Shop
+
+- Storefront: https://oddhobb.com/
+- Categories: https://oddhobb.com/#/s/all — /#/s/board-games, /#/s/gifts, /#/s/cards
+- Greeting cards shelf: https://cards.oddhobb.com/
+- Gifts shelf: https://gifts.oddhobb.com/
+- Board games shelf: https://boardgames.oddhobb.com/
+- Your uploads and roster: https://my.oddhobb.com/
+
+## Machine-readable catalog
+
+- All products (JSON): https://oddhobb.com/backend/api/catalog
+- Google Merchant Center feed (RSS 2.0, GBP): https://oddhobb.com/backend/api/feeds/google.xml
+- Shopify-shaped feed (mirrors /products.json): https://oddhobb.com/backend/api/feeds/shopify.json
+- Sections registry: https://oddhobb.com/backend/api/sections
+
+All four endpoints are public and need no token. Product images in feeds are
+public render URLs under https://oddhobb.com/img/ — no token required.
+
+## For AI assistants (MCP)
+
+OddHobb exposes a standard MCP server (streamable HTTP) with 20 tools
+covering pets, meshes, the full product library, quotes, styles and the
+stage: https://mcp.oddhobb.com/mcp
+
+Connect with the bridge token as a query parameter:
+`https://mcp.oddhobb.com/mcp?token=<BRIDGE_TOKEN>` — without it the server
+answers 401. Start with `figg_tools` (self-describing manifest), then
+`figg_flow` for upload→mesh→preview state, `figg_catalog` for the library.
+
+## Contact
+
+- Support: support@oddhobb.com
+- Brand: OddHobb. Currency: GBP. Prints fulfilled print-on-demand.
+
+## Agent discovery (Google AI / Pinterest playbook)
+
+- Product data with 8 AI attributes: https://oddhobb.com/api/seo/products.json
+- Flat Q&A pairs for conversational AI: https://oddhobb.com/api/seo/faq.json
+- Per-product buyer guides (FAQPage schema): https://oddhobb.com/guides/<product_id>
+- Merchant feed (RSS + custom labels): https://oddhobb.com/backend/api/feeds/google.xml
+- Shopify-shaped catalog: https://oddhobb.com/backend/api/feeds/shopify.json
+- Strategy: docs/seo.md in the figgsite repo
+
+## Helper agent + company graph
+
+- Helper agent: **bobdod** — main store helper on oddhobb.com and via MCP
+- Company graph (FACTS/RESOURCES/CAPABILITIES): https://oddhobb.com/api/companygraph
+- MCP tool: `figg_companygraph` on https://mcp.oddhobb.com/mcp

@@ -27,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from PIL import Image, ImageOps  # noqa: F401
 from flask import Flask, Response, jsonify, redirect, request, send_file  # noqa: E402
 
 from backend import config, db, intake, meshy, pipeline, storage, video  # noqa: E402
@@ -65,11 +66,102 @@ def _err(message: str, code: int):
     return jsonify({"ok": False, "error": message}), code
 
 
+# ── owner signatures (audit H1) ──────────────────────────────────────
+# Browser visitors used to be able to POST owner=<anyone> and burn that
+# owner's free sculpt/video credits. Writes now need either a real user
+# API key for that owner or an owner_sig minted by POST /api/session.
+# "anon" stays open on the service-token path so the seeded demo + tests
+# keep working — named owners do not.
+
+_AUTH_FAILS: dict[str, list[float]] = {}
+_AUTH_WINDOW = 900.0
+_AUTH_MAX = 5
+
+
+def _auth_rate(bucket: str, key: str) -> bool:
+    """True if another attempt is allowed. In-memory, per-process."""
+    import time as _time
+    slot = f"{bucket}:{key}"
+    now = _time.time()
+    hits = [t for t in _AUTH_FAILS.get(slot, []) if now - t < _AUTH_WINDOW]
+    if len(hits) >= _AUTH_MAX:
+        _AUTH_FAILS[slot] = hits
+        return False
+    hits.append(now)
+    _AUTH_FAILS[slot] = hits
+    return True
+
+
+def _auth_rate_reset(bucket: str, key: str) -> None:
+    _AUTH_FAILS.pop(f"{bucket}:{key}", None)
+
+
+def _owner_sig() -> str:
+    sig = request.headers.get("X-Owner-Sig", "").strip()
+    if not sig:
+        b = request.get_json(silent=True) or {}
+        sig = str(b.get("owner_sig") or "").strip()
+    if not sig:
+        sig = (request.form.get("owner_sig")
+               or request.args.get("owner_sig") or "").strip()
+    return sig
+
+
+def _owner_denied(owner: str):
+    """Error response if the caller may not act as `owner`, else None."""
+    owner = (owner or "anon").strip()[:80]
+    key = _api_key()
+    if key:
+        with db.connect() as c:
+            u = db.get_user_by_api_key(c, key)
+        if u and u["handle"] == owner:
+            return None
+        if u:
+            return _err("API key does not match this owner", 403)
+        return _err("unknown API key", 401)
+    sig = _owner_sig()
+    if config.verify_owner(owner, sig):
+        return None
+    if owner == "anon":
+        return None
+    return _err(
+        "owner_sig required for this owner — POST /api/session first", 403)
+
+
+@app.post("/api/session")
+def api_session():
+    """Mint or refresh an owner_sig.
+
+    - valid owner+sig  -> echo back (session continues)
+    - empty / "anon"   -> sign "anon" (seeded demo path)
+    - pog_* unsigned    -> sign that random browser id (unguessable, low risk)
+    - any other name   -> 403 (cannot claim a named owner without proof)
+    """
+    b = request.get_json(silent=True) or {}
+    owner = str(b.get("owner") or "").strip()[:80]
+    sig = str(b.get("owner_sig") or "").strip() or _owner_sig()
+    if owner and config.verify_owner(owner, sig):
+        return jsonify({"ok": True, "owner": owner, "owner_sig": sig})
+    if not owner or owner == "anon":
+        owner = "anon"
+    elif owner.startswith("pog_") and len(owner) <= 40:
+        pass  # client-generated browser id — sign as presented
+    else:
+        return _err(
+            "cannot claim a named owner without a valid owner_sig or API key",
+            403)
+    return jsonify({"ok": True, "owner": owner,
+                    "owner_sig": config.sign_owner(owner)})
+
+
 # ── photos ────────────────────────────────────────────────────────────
 
 @app.post("/api/photos")
 def upload_photo():
     owner = (request.form.get("owner") or request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     day = date.today().isoformat()
 
     file = request.files.get("photo") or request.files.get("file")
@@ -138,6 +230,13 @@ def start_mesh():
     photo_id = body.get("photo_id") or request.form.get("photo_id")
     if not photo_id:
         return _err("photo_id is required", 400)
+    with db.connect() as c:
+        photo = db.get_photo(c, photo_id)
+    if photo is None:
+        return _err("That photo isn't on file — upload it first.", 404)
+    denied = _owner_denied(photo["owner"] or "anon")
+    if denied is not None:
+        return denied
     try:
         res = pipeline.start_mesh(photo_id)
     except pipeline.PipelineError as e:
@@ -149,6 +248,9 @@ def start_mesh():
 def list_meshes():
     """Latest meshes for an owner — what the shop/studio tabs bind to."""
     owner = (request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     limit = min(int(request.args.get("limit", "10") or 10), 50)
     with db.connect() as c:
         rows = c.execute(
@@ -169,6 +271,9 @@ def list_meshes():
 def me():
     """Spotlight state: who you are, your roster, which pog is active."""
     owner = (request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     with db.connect() as c:
         prof = db.get_profile(c, owner)
         pogs = db.pogs_for(c, owner)
@@ -195,6 +300,9 @@ def set_active():
     mesh_id = (body.get("mesh_id") or "").strip()
     if not owner or not mesh_id:
         return _err("owner and mesh_id are required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     with db.connect() as c:
         if not db.get_mesh(c, mesh_id):
             return _err("no such mesh", 404)
@@ -207,9 +315,66 @@ def set_active():
     return jsonify({"ok": True, "owner": owner, "active_mesh_id": mesh_id})
 
 
+def _ensure_mockup(owner, short, pid, spec, src_path, concept, subject, have):
+    """Render a product mockup if missing; return (r2_key, fname, was_rendered).
+
+    Extracted so feeds and future surfaces reuse the identical cache semantics
+    as /api/products (same fname scheme, same R2 keys). Raises
+    FileNotFoundError when there is no source image to render from.
+    """
+    from backend import mockup   # absolute: this module is __main__
+    ctag = f"_{concept['id']}" if concept else ""
+    stg = f"_{abs(hash(subject)) % 99999}" if subject else ""
+    fname = f"{pid}_{short}{ctag}{stg}.png"
+    key = f"owners/{storage._slug(owner)}/products/{fname}"
+    rendered = False
+    if fname not in have:
+        if src_path is None:
+            raise FileNotFoundError("no source image")
+        tmp = config.LOCAL_TMP / f"mk_{pid}_{owner}.png"
+        mockup.render(spec["shape"], src_path, spec["label"], tmp,
+                      concept=concept, subject=subject)
+        storage.put(tmp, key)
+        tmp.unlink(missing_ok=True)
+        have.add(fname)
+        rendered = True
+    return key, fname, rendered
+
+
+def _product_src(owner, active, mesh, photo):
+    """Source image for mockups: Blender mesh render first, photo fallback."""
+    try:
+        from backend import render as meshrender          # absolute: this is __main__
+        rkey = meshrender.get_mesh_render(owner, active, mesh["glb_key"])
+        if rkey:
+            tmp = config.LOCAL_TMP / f"mr_{active}.png"
+            storage.get(rkey, tmp)
+            return str(tmp), "mesh"
+    except Exception:
+        pass
+    try:
+        src = pipeline._local_photo(dict(photo)) if photo else None
+        return (str(src), "photo") if src else (None, "none")
+    except Exception:
+        return None, "none"
+
+
+def _public_product_image(key, fname):
+    """Mirror an R2 product render into the public /img/ dir (cached).
+
+    Marketing assets only — user photos never land here. Feeds and shopping
+    agents fetch these without any token.
+    """
+    config.ensure_dirs()
+    dest = config.PRODUCTIMG_DIR / fname
+    if not dest.exists() or dest.stat().st_size == 0:
+        storage.get(key, dest)
+    return f"{_public_base()}/img/{fname}"
+
+
 @app.get("/api/products")
 def products():
-    """Prodigi catalogue rendered against the owner's ACTIVE pog.
+    """Prodigi rendered against the owner's ACTIVE pog.
 
     Each item comes back with a server-rendered mockup so the grid literally
     shows their selected mesh on a card / mug / wrapping paper / jigsaw.
@@ -270,22 +435,13 @@ def products():
         except storage.StorageError:
             have = set()
         for pid, spec in {**config.PRODIGI_PRODUCTS}.items():
-            ctag = f"_{concept["id"]}" if concept else ""
-            stg = f"_{abs(hash(subject)) % 99999}" if subject else ""
-            fname = f"{pid}_{short}{ctag}{stg}.png"
-            key = f"owners/{storage._slug(owner)}/products/{fname}"
             try:
-                if fname not in have:
-                    if src_path is None:
-                        failed[pid] = "no source image"
-                        continue
-                    from backend import mockup   # absolute: this module is __main__
-                    tmp = config.LOCAL_TMP / f"mk_{pid}_{owner}.png"
-                    mockup.render(spec["shape"], src_path, spec["label"], tmp,
-                                  concept=concept, subject=subject)
-                    storage.put(tmp, key)
-                    rendered += 1
-                    tmp.unlink(missing_ok=True)
+                key, fname, was_rendered = _ensure_mockup(
+                    owner, short, pid, spec, src_path, concept, subject, have)
+                rendered += was_rendered
+            except FileNotFoundError:
+                failed[pid] = "no source image"
+                continue
             except Exception as e:
                 # Never swallow this silently again — it hid a whole empty grid.
                 failed[pid] = f"{type(e).__name__}: {e}"
@@ -302,6 +458,7 @@ def products():
                     pass
             items.append({
                 "id": pid, "label": spec["label"], "shape": spec["shape"],
+                "section": config.SECTION_OF.get(pid, ""),
                 "price_cents": price, "sku_note": spec["sku_note"],
                 "sku": spec.get("sku"), "price_grade": grade,
                 "image": storage.public_url(key), "source": "prodigi",
@@ -451,8 +608,10 @@ def mesh_turntable(mid: str):
         try:
             from backend import render as meshrender
             meshrender.get_turntable(owner, mid, mesh["glb_key"])
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 — surface, don't swallow
+            import traceback
+            print(f"turntable {mid}: {e}", flush=True)
+            traceback.print_exc()
         finally:
             with _TT_LOCK:
                 _TT_INFLIGHT.discard(mid)
@@ -467,17 +626,636 @@ def mesh_turntable(mid: str):
 def mesh_products(mid: str):
     with db.connect() as c:
         mesh = db.get_mesh(c, mid)
+        if mesh is None:
+            return _err("no such mesh", 404)
         products = db.products_for(c, mid)
-    if mesh is None:
-        return _err("no such mesh", 404)
+        # ── the inheritance guarantee (docs/foundation.md): a product added
+        # to config.PRODUCTS *after* this mesh was made must appear on it
+        # without a re-sculpt. bind_products is idempotent, so this is a
+        # cheap set-difference on every read.
+        bound = {p.get("product") for p in products}
+        missing = [k for k in config.PRODUCTS if k not in bound]
+        if missing:
+            db.bind_products(c, mid, missing)
+            products = db.products_for(c, mid)
+        # drop bindings whose product left the config (renames/removals)
+        products = [p for p in products if p.get("product") in config.PRODUCTS]
+    products = [dict(p, section=config.SECTION_OF.get(p.get("product", ""), ""))
+                for p in products]
     return jsonify({"ok": True, "mesh_id": mid, "products": products,
                     "source_glb": mesh["glb_key"]})
+
+
+@app.get("/api/sections")
+def sections():
+    """Section registry: the rail, the shop chips, host->section routing.
+
+    docs/navigation.md is the architecture note; config.SECTIONS is the truth.
+    """
+    return jsonify({"ok": True, "sections": config.SECTIONS,
+                    "section_of": config.SECTION_OF,
+                    "host_section": {s["host"]: s["id"]
+                                     for s in config.SECTIONS if s["host"]}})
+
+
+@app.get("/api/brand")
+def brand():
+    """Brand record for this request's Host (multi-brand seam).
+
+    Same app serves oddhobb.com, ochema.co, pog.pet — the frontend asks here
+    on boot and paints brand strings from the answer instead of hardcoding
+    them. Unknown hosts fall back to the default brand, never an error.
+    """
+    return jsonify({"ok": True, **config.brand_for(request.host)})
+
+
+@app.get("/api/catalog")
+def catalog():
+    """Unified product catalog — the single registry the site cards, the shop
+    grid and MCP's figg_catalog all read (docs/foundation.md)."""
+    rows = []
+    for pid, spec in config.PRODUCTS.items():
+        rows.append({
+            "id": pid, "label": spec["label"], "price_cents": spec["price_cents"],
+            "free": spec.get("free", False), "source": spec.get("source", "local"),
+            "section": config.SECTION_OF.get(pid, ""), "preview": "mesh",
+            "emoji": config.PRODUCT_EMOJI.get(pid, "\U0001f381"),
+            "blurb": config.PRODUCT_BLURB.get(pid, ""),
+        })
+    for pid, spec in config.PRODIGI_PRODUCTS.items():
+        rows.append({
+            "id": pid, "label": spec["label"], "price_cents": spec["price_cents"],
+            "free": spec.get("free", False), "source": "prodigi",
+            "section": config.SECTION_OF.get(pid, ""), "preview": "prodigi",
+            "emoji": config.SHAPE_EMOJI.get(spec.get("shape", ""), "\U0001f381"),
+            "blurb": spec.get("sku_note", ""),
+        })
+    return jsonify({"ok": True, "products": rows, "count": len(rows),
+                    "sections": config.SECTIONS})
+
+
+def _public_base() -> str:
+    """Feed/product URLs follow the request host when it is a known brand."""
+    host = (request.host or "").split(":")[0].lower()
+    if host.startswith("www."):
+        host = host[4:]
+    if host in config.BRANDS or any(host.endswith(d) for d in config.BRANDS):
+        return f"https://{host}"
+    return config.PUBLIC_BASE
+
+
+def _feed_items():
+    """Canonical product renders for shopping agents.
+
+    Renders come from anon's seeded sample mesh — the same images the shop
+    shows — mirrored into the public /img/ dir. Returns (items, failed).
+    """
+    owner = "anon"
+    with db.connect() as c:
+        prof = db.get_profile(c, owner)
+        pogs = db.pogs_for(c, owner)
+        active = prof.get("active_mesh_id") or ""
+        if not active:
+            ok = next((p for p in pogs if p["status"] == "succeeded"), None)
+            active = ok["id"] if ok else ""
+        if not active:
+            return None, "no canonical renders yet — seed the sample mesh first"
+        mesh = db.get_mesh(c, active)
+        photo = db.get_photo(c, mesh["photo_id"]) if mesh else None
+    if mesh is None:
+        return None, "active mesh missing"
+    src_path, _ = _product_src(owner, active, mesh, photo)
+    short = active.replace("msh_", "")[:8]
+    try:
+        have = storage.list_keys(f"owners/{storage._slug(owner)}/products/")
+    except storage.StorageError:
+        have = set()
+    items, failed = [], {}
+    for pid, spec in config.PRODIGI_PRODUCTS.items():
+        try:
+            key, fname, _ = _ensure_mockup(
+                owner, short, pid, spec, src_path, None, "", have)
+            public = _public_product_image(key, fname)
+        except FileNotFoundError:
+            failed[pid] = "no source image"
+            continue
+        except Exception as e:
+            failed[pid] = f"{type(e).__name__}: {e}"
+            continue
+        section = config.SECTION_OF.get(pid, "")
+        host = next((s["host"] for s in config.SECTIONS
+                     if s["id"] == section and s.get("host")), "")
+        seo = config.SEO.get(pid, {})
+        qa = seo.get("qa") or []
+        qa_flat = "; ".join(f"Q: {q} A: {a}" for q, a in qa)
+        desc = (
+            f"{spec['label']} — {spec.get('sku_note', 'personalised pet product')}. "
+            f"Personalised with your pet's photo."
+        )
+        if seo.get("highlight"):
+            desc += f" Highlights: {seo['highlight']}."
+        if seo.get("details"):
+            desc += f" Details: {seo['details']}."
+        if qa_flat:
+            desc += f" FAQ: {qa_flat}"
+        items.append({
+            "id": pid, "title": spec["label"],
+            "description": desc,
+            "link": f"https://{host}/" if host else _public_base() + "/",
+            "image_url": public,
+            "price_cents": spec["price_cents"],
+            "section": section,
+            # 8 AI attributes (docs/seo.md) — feeds + /api/seo/products.json
+            "product_highlight": seo.get("highlight", ""),
+            "product_detail": seo.get("details", ""),
+            "variant_option": seo.get("variants", ""),
+            "item_group_title": seo.get("item_group", ""),
+            "related_products": seo.get("related", ""),
+            "question_and_answer": qa_flat,
+            "document_link": ";".join(
+                f"{_public_base()}{d}" for d in seo.get("docs", [])),
+            "availability": "in_stock",
+            "brand": "OddHobb",
+            "product_type": section or "gifts",
+            "qa": [{"question": q, "answer": a} for q, a in qa],
+            "docs": seo.get("docs", []),
+        })
+    return items, failed
+
+
+@app.get("/api/feeds/google.xml")
+def feed_google():
+    """Google Merchant Center feed (RSS 2.0 + g: namespace).
+
+    Public (ungated at the bridge) so Google/Pinterest fetch it directly.
+    Prices are GBP; EST grade matches what the storefront shows.
+    """
+    from xml.sax.saxutils import escape
+    items, failed = _feed_items()
+    if items is None:
+        return Response(failed, status=503, content_type="text/plain")
+    out = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel>',
+           f"<title>OddHobb</title><link>{_public_base()}/</link>"
+           "<description>Personalised pet products — rendered with your pet.</description>"]
+    for it in items:
+        price = f"{it['price_cents']/100:.2f} GBP"
+        out.append("<item>" + "".join([
+            f"<g:id>{escape(it['id'])}</g:id>",
+            f"<title>{escape(it['title'])}</title>",
+            f"<description>{escape(it['description'])}</description>",
+            f"<link>{escape(it['link'])}</link>",
+            f"<g:image_link>{escape(it['image_url'])}</g:image_link>",
+            f"<g:price>{price}</g:price>",
+            "<g:availability>in_stock</g:availability>",
+            "<g:brand>OddHobb</g:brand>",
+            "<g:condition>new</g:condition>",
+            f"<g:product_type>{escape(it.get('product_type') or 'gifts')}</g:product_type>",
+            f"<g:item_group_id>{escape(it.get('item_group_title') or it['id'])}</g:item_group_id>",
+            f"<g:custom_label_0>{escape(it.get('product_highlight') or '')}</g:custom_label_0>",
+            f"<g:custom_label_1>{escape(it.get('product_detail') or '')}</g:custom_label_1>",
+            f"<g:custom_label_2>{escape(it.get('variant_option') or '')}</g:custom_label_2>",
+            f"<g:custom_label_3>{escape(it.get('related_products') or '')}</g:custom_label_3>",
+        ]) + "</item>")
+    out.append("</channel></rss>")
+    return Response("\n".join(out), content_type="application/rss+xml")
+
+
+@app.get("/api/feeds/shopify.json")
+def feed_shopify():
+    """Shopify storefront-shaped feed (mirrors /products.json).
+
+    Same canonical renders as the Google feed, so a Shopify-side agent or
+    import reads identical products, prices and images.
+    """
+    items, failed = _feed_items()
+    if items is None:
+        return jsonify({"ok": False, "error": failed}), 503
+    products = []
+    for it in items:
+        qa_html = "".join(
+            f"<p><strong>Q:</strong> {qa['question']}</p>"
+            f"<p><strong>A:</strong> {qa['answer']}</p>"
+            for qa in it.get("qa") or [])
+        body = (
+            f"<p>{it['description']}</p>"
+            + (f"<p><strong>Highlights:</strong> {it['product_highlight']}</p>"
+               if it.get("product_highlight") else "")
+            + (f"<p><strong>Details:</strong> {it['product_detail']}</p>"
+               if it.get("product_detail") else "")
+            + (f"<div><h3>Questions &amp; answers</h3>{qa_html}</div>" if qa_html else "")
+        )
+        tags = [t for t in [
+            it.get("section") or "",
+            it.get("item_group_title") or "",
+            "personalised", "pet", "oddhobb",
+        ] if t]
+        products.append({
+            "id": it["id"],
+            "title": it["title"],
+            "handle": it["id"].replace("_", "-"),
+            "body_html": body,
+            "vendor": "OddHobb",
+            "product_type": it.get("product_type") or it["section"] or "gifts",
+            "tags": tags,
+            "variants": [{"price": f"{it['price_cents']/100:.2f}",
+                          "sku": it["id"], "available": True}],
+            "images": [{"src": it["image_url"]}],
+            "seo": {
+                "product_highlight": it.get("product_highlight", ""),
+                "product_detail": it.get("product_detail", ""),
+                "variant_option": it.get("variant_option", ""),
+                "item_group_title": it.get("item_group_title", ""),
+                "related_products": it.get("related_products", ""),
+                "question_and_answer": it.get("question_and_answer", ""),
+                "document_link": it.get("document_link", ""),
+            },
+        })
+    return jsonify({"products": products})
+
+
+@app.get("/api/seo/products.json")
+def seo_products():
+    """Full 8-attribute AI pack for every catalogue product (public)."""
+    items, failed = _feed_items()
+    if items is None:
+        return jsonify({"ok": False, "error": failed}), 503
+    return jsonify({
+        "ok": True,
+        "brand": "OddHobb",
+        "base": _public_base(),
+        "count": len(items),
+        "failed": failed,
+        "products": items,
+        "note": "8 Google AI attributes per product — see docs/seo.md",
+    })
+
+
+@app.get("/api/seo/faq.json")
+def seo_faq():
+    """Flat Q&A pairs for conversational AI (public)."""
+    items, failed = _feed_items()
+    if items is None:
+        return jsonify({"ok": False, "error": failed}), 503
+    pairs = []
+    for it in items:
+        for qa in it.get("qa") or []:
+            pairs.append({
+                "product": it["id"],
+                "title": it["title"],
+                "question": qa["question"],
+                "answer": qa["answer"],
+            })
+    return jsonify({"ok": True, "count": len(pairs), "pairs": pairs})
+
+
+@app.get("/guides/<pid>")
+def guide_page(pid: str):
+    """Crawlable companion guide per product + Product/FAQPage JSON-LD."""
+    import json as _json
+    from xml.sax.saxutils import escape
+    seo = config.SEO.get(pid)
+    spec = config.PRODIGI_PRODUCTS.get(pid) or config.PRODUCTS.get(pid)
+    if not seo or not spec:
+        return _err("no guide for that product", 404)
+    label = spec.get("label", pid)
+    price = spec.get("price_cents", 0) / 100.0
+    qa_html = "".join(
+        f"<h3>{escape(q)}</h3><p>{escape(a)}</p>" for q, a in seo.get("qa", []))
+    highlights = [h.strip() for h in (seo.get("highlight") or "").split(";") if h.strip()]
+    details = [d.strip() for d in (seo.get("details") or "").split("|") if d.strip()]
+    faq_ld = ",".join(
+        '{"@type":"Question","name":%s,"acceptedAnswer":{"@type":"Answer","text":%s}}'
+        % (_json.dumps(q), _json.dumps(a)) for q, a in seo.get("qa", [])[:12])
+    product_ld = _json.dumps({
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": label,
+        "description": seo.get("highlight") or f"Personalised {label.lower()} from OddHobb",
+        "brand": {"@type": "Brand", "name": "OddHobb"},
+        "material": (details[0].split(":", 1)[-1].strip() if details else "see specs"),
+        "url": f"{_public_base()}/guides/{pid}",
+        "offers": {
+            "@type": "Offer",
+            "price": f"{price:.2f}",
+            "priceCurrency": "GBP",
+            "availability": "https://schema.org/InStock",
+        },
+    })
+    html = f"""<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{escape(label)} — guide | OddHobb</title>
+<meta name="description" content="Buyer guide for the OddHobb personalised {escape(label.lower())}: highlights, specs, shipping and FAQ.">
+<link rel="canonical" href="{_public_base()}/guides/{escape(pid)}">
+<script type="application/ld+json">{product_ld}</script>
+<script type="application/ld+json">{{
+  "@context": "https://schema.org", "@type": "FAQPage",
+  "mainEntity": [{faq_ld}]
+}}</script>
+<style>body{{font:16px/1.5 system-ui,sans-serif;max-width:42rem;margin:2rem auto;padding:0 1rem;color:#111}}
+h1{{font-size:1.6rem}} h2{{margin-top:1.5rem}} li{{margin:.25rem 0}}
+table{{border-collapse:collapse;width:100%;margin:1rem 0}}
+td,th{{border:1px solid #ccc;padding:.4rem .6rem;text-align:left}}</style>
+</head><body>
+<p><a href="/">OddHobb</a> / guide</p>
+<h1>{escape(label)} — buyer guide</h1>
+<p><strong>Definition.</strong> Personalised {escape(label.lower())} from OddHobb: upload one pet photo; we render a 3D character and print it on this product.</p>
+<h2>Highlights</h2><ul>{''.join(f'<li>{escape(h)}</li>' for h in highlights) or '<li>Personalised with your pet photo</li>'}</ul>
+<h2>Specifications</h2><ul>{''.join(f'<li>{escape(d)}</li>' for d in details) or '<li>See product page</li>'}</ul>
+<h2>Shipping</h2><p>1–3 business days production, 5–10 days worldwide shipping.</p>
+<h2>Questions &amp; answers</h2>{qa_html or '<p>See the product page for FAQ.</p>'}
+<h2>Related</h2><p>{escape(seo.get("related") or "Other personalised pet products")}</p>
+<p><a href="/">Back to the shop</a> · <a href="/learn/">Buyer guides &amp; comparisons</a> · <a href="/api/seo/products.json">Product data for AI</a></p>
+</body></html>"""
+    return Response(html, content_type="text/html; charset=utf-8")
+
+
+@app.get("/learn/")
+def learn_index():
+    """GEO content hub — definitions and comparisons for AI crawlers."""
+    from xml.sax.saxutils import escape
+    cards = "".join(
+        f'<li><a href="/learn/{escape(slug)}">{escape(pg["title"])}</a></li>'
+        for slug, pg in sorted(config.GEO_PAGES.items()))
+    html = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn — personalised pet products | OddHobb</title>
+<meta name="description" content="Definitions, comparisons and how-tos for personalised pet products from OddHobb.">
+<link rel="canonical" href="{_public_base()}/learn/">
+<style>body{{font:16px/1.5 system-ui,sans-serif;max-width:42rem;margin:2rem auto;padding:0 1rem;color:#111}}
+h1{{font-size:1.6rem}} li{{margin:.4rem 0}}</style>
+</head><body>
+<p><a href="/">OddHobb</a> / learn</p>
+<h1>Learn — personalised pet products</h1>
+<p>OddHobb turns one pet photo into a 3D character, then prints that character on cards, prints, mugs, puzzles, figurines and videos. These pages are written for people and AI assistants alike.</p>
+<h2>Guides &amp; comparisons</h2>
+<ul>{cards}</ul>
+<p><a href="/api/seo/products.json">Product data (JSON)</a> · <a href="/api/seo/faq.json">Q&amp;A pairs</a> · <a href="/api/companygraph">Company graph</a></p>
+</body></html>"""
+    return Response(html, content_type="text/html; charset=utf-8")
+
+
+@app.get("/learn/<slug>")
+def learn_page(slug: str):
+    """GEO definition / comparison page with Article + optional table markup."""
+    import json as _json
+    from xml.sax.saxutils import escape
+    pg = config.GEO_PAGES.get(slug)
+    if not pg:
+        return _err("no learn page for that slug", 404)
+    title = pg["title"]
+    definition = pg["definition"]
+    sections_html = []
+    for head, body in pg.get("sections", []):
+        if body == "table" and pg.get("comparison"):
+            cmp = pg["comparison"]
+            th = "".join(f"<th>{escape(c)}</th>" for c in cmp["headers"])
+            rows = "".join(
+                "<tr>" + "".join(f"<td>{escape(c)}</td>" for c in row) + "</tr>"
+                for row in cmp["rows"])
+            sections_html.append(
+                f"<h2>{escape(head)}</h2>"
+                f"<table><thead><tr>{th}</tr></thead><tbody>{rows}</tbody></table>")
+        else:
+            sections_html.append(f"<h2>{escape(head)}</h2><p>{escape(body)}</p>")
+    article_ld = _json.dumps({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": title,
+        "description": definition[:200],
+        "author": {"@type": "Organization", "name": "OddHobb"},
+        "publisher": {"@type": "Organization", "name": "OddHobb"},
+        "url": f"{_public_base()}/learn/{slug}",
+    })
+    html = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{escape(title)} | OddHobb</title>
+<meta name="description" content="{escape(definition[:155])}">
+<link rel="canonical" href="{_public_base()}/learn/{escape(slug)}">
+<script type="application/ld+json">{article_ld}</script>
+<style>body{{font:16px/1.5 system-ui,sans-serif;max-width:42rem;margin:2rem auto;padding:0 1rem;color:#111}}
+h1{{font-size:1.6rem}} h2{{margin-top:1.4rem}}
+table{{border-collapse:collapse;width:100%;margin:1rem 0}}
+td,th{{border:1px solid #ccc;padding:.4rem .6rem;text-align:left}}</style>
+</head><body>
+<p><a href="/">OddHobb</a> / <a href="/learn/">learn</a></p>
+<h1>{escape(title)}</h1>
+<p><strong>Definition.</strong> {escape(definition)}</p>
+{''.join(sections_html)}
+<p><a href="/">Shop personalised pet products</a> · <a href="/api/seo/faq.json">Q&amp;A data</a></p>
+</body></html>"""
+    return Response(html, content_type="text/html; charset=utf-8")
+
+
+@app.get("/sitemap.xml")
+def sitemap():
+    """Simple sitemap — shop, learn, guides, feeds (AI crawler discovery)."""
+    from xml.sax.saxutils import escape
+    base = _public_base()
+    urls = ["/", "/learn/", "/llms.txt", "/api/seo/products.json",
+            "/api/seo/faq.json", "/api/companygraph"]
+    urls += [f"/learn/{s}" for s in sorted(config.GEO_PAGES)]
+    urls += [f"/guides/{p}" for p in sorted(config.SEO)]
+    urls += ["/backend/api/feeds/google.xml", "/backend/api/feeds/shopify.json"]
+    locs = "".join(f"<url><loc>{escape(base + u)}</loc></url>" for u in urls)
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>'
+           f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{locs}</urlset>')
+    return Response(xml, content_type="application/xml")
+
+
+@app.get("/api/companygraph")
+def companygraph():
+    """OddHobb CompanyGraph — FACTS / RESOURCES / CAPABILITIES (public).
+
+    Pattern: agentcom/companygraph. bobdod is the helper agent identity
+    customers and MCP clients meet. Products/policies derive from live
+    config so the graph never drifts from the catalog.
+    """
+    return jsonify({"ok": True, **config.company_graph()})
+
+
+@app.get("/api/flow")
+def flow():
+    """Upload -> mesh -> previews in ONE call: the state a flow driver needs.
+
+    stage: empty (no photos) -> uploaded (photo, no mesh yet) ->
+           sculpting (a mesh queued/running) -> ready (an active mesh succeeded)
+    """
+    owner = (request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        # photos have no status column (schema: id,owner,sha256,r2_key,mime,
+        # width,height,bytes,orig_name,created_at) — presence IS the state.
+        photos = [{"id": r["id"], "mime": r["mime"], "size": [r["width"], r["height"]],
+                   "created_at": r["created_at"]}
+                  for r in c.execute(
+                      "SELECT id,mime,width,height,created_at FROM photos WHERE owner=?"
+                      " ORDER BY created_at DESC LIMIT 5", (owner,))]
+        pogs = db.pogs_for(c, owner)
+        prof = db.get_profile(c, owner)
+    active = prof.get("active_mesh_id") or next(
+        (p["id"] for p in pogs if p.get("status") == "succeeded"), "")
+    active_row = next((p for p in pogs if p["id"] == active), None) or {}
+    statuses = {p.get("status") for p in pogs}
+    if statuses & {"queued", "running"}:
+        stage = "sculpting"
+    elif active_row.get("status") == "succeeded":
+        stage = "ready"
+    elif photos:
+        stage = "uploaded"
+    else:
+        stage = "empty"
+    return jsonify({
+        "ok": True, "owner": owner, "stage": stage,
+        "photos": photos, "meshes": pogs,
+        "active_mesh_id": active,
+        "active": {k: active_row.get(k) for k in
+                   ("id", "status", "stub", "glb_key", "created_at")},
+        "catalog_count": len(config.PRODUCTS) + len(config.PRODIGI_PRODUCTS),
+        "hint": {
+            "empty": "Upload a photo to start.",
+            "uploaded": "Sculpt it — that unlocks every preview.",
+            "sculpting": "Sculpting… previews unlock when the mesh lands.",
+            "ready": "Ready — every product below previews against this mesh.",
+        }[stage],
+    })
+
+
+def _dhash(img) -> int:
+    """64-bit difference hash: 9x8 grayscale, bit = left pixel > right pixel."""
+    g = img.convert("L").resize((9, 8), Image.LANCZOS)
+    px = list(g.getdata())
+    bits = 0
+    for row in range(8):
+        for col in range(8):
+            bits = (bits << 1) | (1 if px[row * 9 + col] > px[row * 9 + col + 1] else 0)
+    return bits
+
+
+@app.post("/api/photos/autosort")
+def photos_autosort():
+    """Group an owner's uploads into *people* by perceptual similarity.
+
+    v1 = difference-hash clustering (free, local, PIL-only): near-identical
+    photos of the same subject land in the same group and get an auto label
+    ("Person 1"…). Groups come back `needs_name` so the UI can ask
+    "who's this?" — the answer goes to POST /api/people/rename and sticks to
+    the profile (custom gifting seed).
+    """
+    owner = (request.args.get("owner") or request.form.get("owner")
+             or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        rows = [dict(r) for r in c.execute(
+            "SELECT id,sha256,r2_key,person,mime FROM photos WHERE owner=?"
+            " ORDER BY created_at", (owner,))]
+    if not rows:
+        return jsonify({"ok": True, "owner": owner, "groups": [], "count": 0})
+
+    def pixel_hash(r):
+        path = config.LOCAL_TMP / f"ph_{r['sha256'][:40]}.img"
+        if not path.exists():
+            try:
+                storage.get(r["r2_key"], path)
+            except storage.StorageError:
+                return None
+        try:
+            return _dhash(Image.open(path))
+        except Exception:  # noqa: BLE001
+            return None
+
+    hs = [pixel_hash(r) for r in rows]
+    # union-find with hamming <= 12 (same subject, different crops/lighting)
+    parent = list(range(len(rows)))
+
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for i in range(len(rows)):
+        for j in range(i + 1, len(rows)):
+            if hs[i] is None or hs[j] is None:
+                continue
+            if (hs[i] ^ hs[j]).bit_count() <= 12:
+                ri, rj = find(i), find(j)
+                if ri != rj:
+                    parent[ri] = rj
+
+    clusters: dict[int, list[int]] = {}
+    for i in range(len(rows)):
+        clusters.setdefault(find(i), []).append(i)
+
+    # label: keep existing person labels; auto-label the rest
+    auto_n = 0
+    groups = []
+    with db.connect() as c:
+        mesh_by_photo = {r["photo_id"]: r["id"] for r in c.execute(
+            "SELECT id, photo_id FROM meshes WHERE photo_id IS NOT NULL")}
+        for members in clusters.values():
+            persons = {rows[i]["person"] for i in members if rows[i]["person"]}
+            if persons:
+                label = sorted(persons)[0]
+                needs_name = False
+            else:
+                auto_n += 1
+                label = f"Person {auto_n}"
+                needs_name = True
+                for i in members:
+                    c.execute("UPDATE photos SET person=? WHERE id=?",
+                              (label, rows[i]["id"]))
+            groups.append({
+                "person": label, "needs_name": needs_name,
+                "photos": [{"id": rows[i]["id"], "mime": rows[i]["mime"],
+                            "r2_key": rows[i]["r2_key"],
+                            "has_mesh": rows[i]["id"] in mesh_by_photo,
+                            "mesh_id": mesh_by_photo.get(rows[i]["id"])}
+                           for i in members],
+            })
+    groups.sort(key=lambda g: g["person"])
+    return jsonify({"ok": True, "owner": owner, "groups": groups,
+                    "count": len(rows)})
+
+
+@app.post("/api/people/rename")
+def people_rename():
+    """Rename a group: "who's this?" -> name, saved against the profile.
+
+    Renames every photo carrying the old label, so the whole cluster follows.
+    """
+    b = request.get_json(silent=True) or {}
+    owner = (b.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    old = str(b.get("from") or "").strip()[:60]
+    new = str(b.get("to") or "").strip()[:60]
+    if not old or not new:
+        return _err("from and to are required", 400)
+    with db.connect() as c:
+        n = c.execute(
+            "UPDATE photos SET person=? WHERE owner=? AND person=?",
+            (new, owner, old)).rowcount
+    return jsonify({"ok": True, "owner": owner, "renamed": n,
+                    "person": new})
 
 
 @app.get("/api/credits")
 def credits():
     """Free-tier balance for an owner: what's left today."""
     owner = (request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     day = datetime.now(timezone.utc).date().isoformat()
     with db.connect() as c:
         status = db.credit_status(c, owner, day)
@@ -531,6 +1309,9 @@ def create_account():
         return _err("handle is required", 400)
     if password and len(password) < 8:
         return _err("password needs at least 8 characters", 400)
+    ip = (request.remote_addr or "anon").strip()[:64]
+    if not _auth_rate("signup", ip):
+        return _err("too many account attempts — try again later", 429)
     claim = (b.get("claim_owner") or "").strip()
 
     try:
@@ -570,6 +1351,9 @@ def login():
     b = request.get_json(silent=True) or {}
     handle = (b.get("handle") or "").strip()
     password = str(b.get("password") or "")
+    ip = (request.remote_addr or "anon").strip()[:64]
+    if not _auth_rate("login", f"{ip}:{handle.lower()}"):
+        return _err("too many sign-in attempts — try again later", 429)
     with db.connect() as c:
         u = db.get_user_by_handle(c, handle)
         if not u or not u["password_hash"] or not db.verify_password(password, u["password_hash"]):
@@ -579,6 +1363,7 @@ def login():
         pogs = db.pogs_for(c, u["handle"])
         credits = db.credit_status(c, u["handle"],
                                    datetime.now(timezone.utc).date().isoformat())
+    _auth_rate_reset("login", f"{ip}:{handle.lower()}")
     return jsonify({"ok": True, "handle": u["handle"],
                     "display_name": u["display_name"], "api_key": u["api_key"],
                     "active_mesh_id": prof.get("active_mesh_id", ""),
@@ -1059,6 +1844,9 @@ def make_video():
     """The wedge: free talking/comedy video. Spends a video credit first."""
     body = request.get_json(silent=True) or {}
     owner = (body.get("owner") or request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     mesh_id = body.get("mesh_id") or ""
     talent = str(body.get("talent") or "comedy")
     act_slug = str(body.get("act") or "").strip()
@@ -1085,12 +1873,15 @@ def make_video():
         mesh = db.get_mesh(c, mesh_id)
         if mesh is None:
             return _err("no such mesh", 404)
+        photo = db.get_photo(c, mesh["photo_id"])
+        mesh_owner = (photo["owner"] if photo else "") or "anon"
+        if mesh_owner != owner:
+            return _err("that mesh belongs to someone else", 403)
         ok, used = db.spend_credit(c, owner, day, "video", config.FREE_DAILY["video"])
         if not ok:
             return _err(
                 f"That's {config.FREE_DAILY['video']} free videos today — "
                 "back tomorrow for more.", 429)
-        photo = db.get_photo(c, mesh["photo_id"])
         photo_path = pipeline._local_photo(dict(photo)) if photo else None
 
     try:
@@ -1163,6 +1954,9 @@ def video_file(vid: str):
 @app.get("/api/videos")
 def list_videos():
     owner = (request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     with db.connect() as c:
         rows = c.execute(
             "SELECT id,scene,talent,voice,pet_name,watermarked,duration,bytes,created_at"
@@ -1199,6 +1993,66 @@ def artifact(key: str):
         .get(key.rsplit(".", 1)[-1], "application/octet-stream")
     return Response(tmp.read_bytes(), content_type=ctype,
                     headers={"Cache-Control": "private, max-age=3600"})
+
+
+# ── premesh ──────────────────────────────────────────────────────────
+# Normalise an uploaded image for whatever comes next: subject extracted and
+# framed for Meshy (`recipe=meshy`), cut out on transparency for a card
+# (`recipe=card`), or a plain thumbnail (`recipe=thumb`).
+#
+#   POST /api/premesh   multipart photo=file  |  url=https://…
+#                       &recipe=meshy|card|thumb  &format=json  &strict=1
+#
+# Binary by default (image/png or image/webp) with the QC verdict in
+# `X-Premesh-Ok`; `format=json` returns the report + base64 instead. The same
+# module drives the CLI: `python3 -m premesh photo.jpg -r meshy`.
+@app.post("/api/premesh")
+def premesh_endpoint():
+    import base64
+
+    import premesh
+
+    recipe = request.values.get("recipe", "meshy")
+    if recipe not in premesh.RECIPES:
+        return _err(f"unknown recipe — have: {', '.join(sorted(premesh.RECIPES))}",
+                    400)
+
+    source = request.values.get("url", "")
+    upload = request.files.get("photo") or request.files.get("file")
+    if upload is not None:
+        try:
+            accepted = intake.accept(upload.read(), upload.filename or "photo.jpg")
+        except intake.IntakeError as e:
+            return _err(str(e), e.code)
+        source = accepted.path
+    if not source:
+        return _err("Attach a photo in the 'photo' field, or pass ?url=https://…",
+                    400)
+
+    try:
+        # Zone follows the request host so Cloudflare pulls staged sources
+        # from the zone actually serving them (multi-brand seam).
+        out = premesh.normalize(source, recipe,
+                                zone=config.brand_for(request.host)["host"])
+    except premesh.TransformError as e:
+        return _err(f"normalisation failed: {e}", 502)
+
+    if request.values.get("format") == "json":
+        payload = out.as_dict()
+        payload["b64"] = base64.b64encode(out.data).decode()
+        return jsonify(payload)
+
+    if not out.ok and request.values.get("strict"):
+        return jsonify({"ok": False, "recipe": out.recipe,
+                        "issues": out.report.issues}), 422
+
+    ctype = out.report.content_type
+    return Response(out.data, content_type=ctype, headers={
+        "X-Premesh-Ok": "1" if out.ok else "0",
+        "X-Premesh-Recipe": out.recipe,
+        "X-Premesh-Coverage": str(out.report.coverage),
+        "Cache-Control": "no-store",
+    })
 
 
 @app.get("/health")

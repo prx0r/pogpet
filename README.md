@@ -3,9 +3,13 @@
 Figg backend — photo in, mesh out, mesh active across every product, with the
 pi agent driving it.
 
-> STATUS: backend built and verified 2026-09-28. Meshy runs in **stub** mode
-> until `MESHY_API_KEY` is set; everything else is live (real R2, real pi,
-> real model). Site frontend still the imported MogMug build.
+> STATUS 2026-09-30: oddhobb.com storefront live via Cloudflare tunnel
+> (multi-brand seam — ochema.co pending NS at Namecheap). Meshy **live**
+> (real mesh on file, ledger 1,056 cr left, paid calls ask-first). Shopify
+> dev store synced (13 products, GBP) — auth model in `docs/shopify-auth.md`.
+> Test suite green (`python3 scripts/test_site.py` → `docs/test-report.md`).
+> **Repo:** github.com/prx0r/pogpet (public) · **start here:** `HANDOVER.md`,
+> audit: `docs/audit.md`, rules/map in `AGENTS.md`.
 
 ## Layout
 
@@ -19,7 +23,11 @@ figgsite/
 │   ├── intake.py      photo QC (magic bytes, EXIF, downscale, dedupe)
 │   ├── storage.py     R2 via the preconfigured `rclone r2:` remote
 │   └── db.py          photos / meshes / product_bindings / jobs
-├── bridge/llm_bridge.py  site AI contract → pi (serves site/ + figg-studio/)
+├── bridge/llm_bridge.py  site AI contract → pi (serves site/ + figg-studio/ + premesh/)
+├── premesh/          image normaliser: photo → Cloudflare edge → Meshy/card/thumb input
+│   ├── recipes.py    meshy | card | thumb — options + QC as data
+│   ├── pixabay.py    page URL → API → licensed image bytes (+ provenance)
+│   └── README.md     how to reuse it elsewhere
 ├── pi/.pi/extensions/figgsite.ts   the agent's 5 tools
 ├── site/              product frontend, imported from stallspy/brands/mythicbee/site
 ├── dash/              dashboard + agentcom, imported from qpbot

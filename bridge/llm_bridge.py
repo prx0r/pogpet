@@ -123,10 +123,15 @@ def run_pi(messages: list, max_tokens: int, temperature: float) -> str:
     return out
 
 
-# Two static roots, one origin. /studio/* serves the figg. brand studio
-# (the asset pack); everything else serves the product site.
+# Three static roots, one origin. /studio/* serves the figg. brand studio
+# (the asset pack); /premesh/* serves staged uploads for Cloudflare image
+# transformations (content-addressed, pruned); /img/* serves PUBLIC product
+# renders for feeds and shopping agents (marketing assets only — user photos
+# never land here); everything else is the site.
 ROUTES = (
     ("/studio/", ROOT / "figg-studio"),
+    ("/premesh/", ROOT / "data" / "premesh" / "public"),
+    ("/img/", ROOT / "data" / "productimg"),
     ("/", ROOT / "site"),
 )
 
@@ -141,6 +146,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _sec_headers(self) -> None:
+        # Minimal hardening — no CSP yet (inline token inject + SPA scripts).
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+
     def _gated(self):
         if not TOKEN:
             return True
@@ -152,6 +163,60 @@ class Handler(BaseHTTPRequestHandler):
             return True
         self._json({"success": False, "error": "bad token"}, 401)
         return False
+
+    def _mcp_proxy(self, method: str) -> None:
+        """POST/GET /mcp -> the local MCP server (:8799), streaming.
+
+        MCP streamable HTTP needs headers BOTH ways (mcp-session-id) and a
+        text/event-stream that never sets Content-Length — so this proxies
+        line-by-line instead of buffering. Gated by _gated() first: without
+        a token the local MCP (which carries the service token inside) must
+        never be reachable.
+        """
+        import urllib.error
+        raw = urlparse(self.path)
+        target = f"http://127.0.0.1:{os.environ.get('MCP_PORT', '8799')}{raw.path}"
+        if raw.query:
+            target += "?" + raw.query
+        n = int(self.headers.get("Content-Length") or 0)
+        body = self.rfile.read(n) if (n > 0 and method == "POST") else None
+        fwd = {}
+        for k, v in self.headers.items():
+            if k.lower() in ("host", "content-length", "connection",
+                             "accept-encoding", "transfer-encoding"):
+                continue
+            fwd[k] = v
+        req = urllib.request.Request(target, data=body, headers=fwd, method=method)
+        try:
+            r = urllib.request.urlopen(req, timeout=600)
+        except urllib.error.HTTPError as e:
+            r = e
+        except Exception as e:                                  # noqa: BLE001
+            self._json({"success": False, "error": f"mcp unreachable: {e}"}, 502)
+            return
+        self.send_response(r.status)
+        for hk in ("Content-Type", "Cache-Control", "mcp-session-id",
+                   "Mcp-Session-Id"):
+            hv = r.headers.get(hk)
+            if hv:
+                self.send_header(hk, hv)
+        cl = r.headers.get("Content-Length")
+        if cl:
+            self.send_header("Content-Length", cl)
+        self.end_headers()
+        try:
+            if cl:
+                self.wfile.write(r.read(int(cl)))
+            else:
+                # SSE / chunk-less: stream lines as they arrive
+                while True:
+                    line = r.readline()
+                    if not line:
+                        break
+                    self.wfile.write(line)
+                    self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def _proxy(self, method: str, path: str | None = None) -> None:
         """/backend/* → the Flask API on 8798, so one tunnel exposes it all.
@@ -178,18 +243,29 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         body = self.rfile.read(n) if n > 0 and method == "POST" else None
         headers = {}
-        for h in ("Content-Type", "X-API-Token"):
+        for h in ("Content-Type", "X-API-Token", "X-Owner-Sig", "X-API-Key"):
             if self.headers.get(h):
                 headers[h] = self.headers[h]
         if body is not None and "Content-Type" not in headers:
             headers["Content-Type"] = "application/octet-stream"
 
         req = urllib.request.Request(target, data=body, headers=headers, method=method)
+        # Upstream X-* headers ride along (X-Premesh-Ok and friends) — the
+        # rest of the response is rebuilt below so nothing leaks through.
+        extra: list[tuple[str, str]] = []
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
-                payload, status, ctype = r.read(), r.status, r.headers.get("Content-Type", "application/octet-stream")
+                payload = r.read()
+                status = r.status
+                ctype = r.headers.get("Content-Type", "application/octet-stream")
+                extra = [(k, v) for k, v in r.headers.items()
+                         if k.lower().startswith("x-")]
         except urllib.error.HTTPError as e:
-            payload, status, ctype = e.read(), e.code, e.headers.get("Content-Type", "application/json")
+            payload = e.read()
+            status = e.code
+            ctype = e.headers.get("Content-Type", "application/json")
+            extra = [(k, v) for k, v in e.headers.items()
+                     if k.lower().startswith("x-")]
         except Exception as e:
             self._json({"success": False, "error": f"backend unreachable: {e}"}, 502)
             return
@@ -197,11 +273,34 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(payload)))
         self.send_header("Access-Control-Allow-Origin", "*")
+        self._sec_headers()
+        for k, v in extra:
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(payload)
 
     def do_GET(self):
         raw = urlparse(self.path).path
+        if raw.startswith("/mcp"):
+            if not self._gated():
+                self.close_connection = True
+                return
+            self._mcp_proxy("GET")
+            return
+        if raw.startswith("/backend/api/feeds/") or raw.startswith("/backend/api/seo/"):
+            # Product feeds + SEO packs for shopping/AI agents: read-only
+            # catalog data + public images, safe ungated like llms.txt.
+            self._proxy("GET")
+            return
+        if (raw.startswith("/api/seo/") or raw.startswith("/api/companygraph")
+                or raw.startswith("/learn") or raw == "/sitemap.xml"):
+            # Public discovery surface — GEO pages, sitemap, SEO packs.
+            self._proxy("GET", path=raw)
+            return
+        if raw.startswith("/guides/"):
+            # Crawlable companion guides (SEO document links) — public HTML.
+            self._proxy("GET", path=raw)
+            return
         if raw.startswith("/backend"):
             if not self._gated():
                 return
@@ -240,6 +339,7 @@ class Handler(BaseHTTPRequestHandler):
             ".jpg": "image/jpeg",
             ".zip": "application/zip",
             ".jpg": "image/jpeg",
+            ".txt": "text/plain; charset=utf-8",
             ".ico": "image/x-icon",
         }.get(target.suffix, "application/octet-stream")
         data = target.read_bytes()
@@ -255,7 +355,10 @@ class Handler(BaseHTTPRequestHandler):
                 "var u=typeof i==='string'?i:i.url;"
                 "if(u.indexOf('/api/')===0||u.indexOf('/backend/')===0){var j=u.indexOf('?')>=0?'&':'?';"
                 "var n=u+j+'token='+encodeURIComponent(T);"
-                "i=(typeof i==='string')?n:new Request(n,i);}return f(i,o);};})();"
+                "var sig='';try{sig=localStorage.getItem('pogpet.ownersig')||'';}catch(e){}"
+                "var hdrs=(o&&o.headers)||{};"
+                "if(sig){try{if(typeof Headers==='function'&&hdrs instanceof Headers){if(!hdrs.has('X-Owner-Sig'))hdrs.set('X-Owner-Sig',sig);}else{hdrs=Object.assign({},hdrs);hdrs['X-Owner-Sig']=sig;}}catch(e){}}"
+                "i=(typeof i==='string')?n:new Request(n, o?Object.assign({},o,{headers:hdrs}):{headers:hdrs});}return f(i,o);};})();"
                 "</script>"
             ).encode()
             marker = b"</body>"
@@ -265,6 +368,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-cache")
+        self._sec_headers()
         self.end_headers()
         self.wfile.write(data)
 
@@ -276,6 +380,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        if urlparse(self.path).path.startswith("/mcp"):
+            if not self._gated():
+                self.close_connection = True
+                return
+            self._mcp_proxy("POST")
+            return
         if urlparse(self.path).path.startswith("/backend"):
             if not self._gated():
                 return

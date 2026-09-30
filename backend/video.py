@@ -252,9 +252,10 @@ def compose_frame(photo: Path | None, pet_name: str, scene: str,
     d.text((cx, cy + r + 165), headline[:60], font=_font(34), fill=(90, 90, 90), anchor="mm")
 
     if watermark:
-        d.text((VW // 2, VH - 150), "free preview — figg.", font=_font(40),
-               fill=(255, 255, 255), anchor="mm")
-        d.text((VW // 2, VH - 90), "roast.pet", font=_font(30),
+        from backend import config as _cfg
+        d.text((VW // 2, VH - 150), f"free preview — {_cfg.watermark_brand()}.",
+               font=_font(40), fill=(255, 255, 255), anchor="mm")
+        d.text((VW // 2, VH - 90), _cfg.watermark_domain(), font=_font(30),
                fill=FIGG_LILAC, anchor="mm")
 
     out = OUT_DIR / f"frame_{uuid.uuid4().hex[:12]}.png"

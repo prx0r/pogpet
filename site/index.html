@@ -3,7 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>pogpet — Upload your pet, get free videos</title>
+  <title>oddhobb — Upload your pet, get free videos</title>
+  <meta name="description" content="oddhobb — what odd thing shall we make you? Upload your pet once and browse figurines, cards, gifts and video that already feature them.">
+  <meta name="theme-color" content="#0B0B0F">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://oddhobb.com/">
+  <meta property="og:title" content="oddhobb — what odd thing shall we make you?">
+  <meta property="og:description" content="Upload your pet once. Every card, figurine and gift in the shop renders YOUR pet — plus a chat bar that makes whatever you imagine.">
+  <link rel="alternate" type="application/json" href="/api/seo/products.json" title="OddHobb product data for AI agents">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "OddHobb",
+    "url": "https://oddhobb.com/",
+    "description": "Personalised pet products — upload a photo, get 3D figurines, cards, prints and videos featuring your pet."
+  }
+  </script>
+  <!-- Pinterest domain verification (oddhobb.com) -->
+  <meta name="p:domain_verify" content="5f31a4515d8ece964b0d7db8d0961321"/>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -20,7 +38,7 @@
     }
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Inter',sans-serif;background:var(--obsidian);color:var(--ivory);height:100dvh;overflow:hidden}
-    .app{display:grid;grid-template-rows:1fr auto;height:100dvh;padding-left:72px;background:radial-gradient(ellipse at 50% 30%,#1E0F33 0%,var(--obsidian) 70%)}
+    .app{display:grid;grid-template-rows:1fr auto;height:100dvh;padding-left:72px;padding-top:102px;background:radial-gradient(ellipse at 50% 30%,#1E0F33 0%,var(--obsidian) 70%)}
     .stage{position:relative;display:flex;align-items:center;justify-content:center;padding:20px}
     .barth{position:relative;width:200px;height:240px;animation:barthFloat 3s ease-in-out infinite}
     .barth img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5))}
@@ -101,6 +119,67 @@
     .tab:disabled:hover{background:transparent;color:var(--muted)}
     .tabrail__sep{width:34px;height:1px;background:rgba(255,255,255,.09);margin:6px 0}
     .tabrail__soon{font-size:7px;letter-spacing:.1em;color:var(--violet);margin-top:-2px}
+
+    /* ── topbar: search + account (Amazon bones) ───────────────── */
+    .topbar{position:fixed;left:72px;right:0;top:0;z-index:70;
+      background:rgba(11,11,15,.88);backdrop-filter:blur(12px);
+      border-bottom:1px solid rgba(255,255,255,.07)}
+    .topbar__row{display:flex;align-items:center;gap:12px;padding:10px 18px}
+    .topbar__brand{font-family:'Playfair Display',serif;font-size:22px;color:var(--ivory);text-decoration:none;white-space:nowrap}
+    .topbar__brand i{color:var(--pumpkin);font-style:normal}
+    .topbar__search{flex:1;display:flex;align-items:center;gap:8px;max-width:620px;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+      border-radius:999px;padding:8px 14px;color:var(--muted)}
+    .topbar__search input{flex:1;background:none;border:none;outline:none;color:var(--ivory);
+      font-family:inherit;font-size:14px;min-width:0}
+    .topbar__search input::placeholder{color:var(--muted)}
+    .topbar__acct{display:flex;gap:8px;margin-left:auto}
+    .topbar__btn{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--ivory);
+      border-radius:999px;padding:7px 13px;font-family:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
+    .topbar__btn:hover{border-color:rgba(255,122,26,.45)}
+    .catstrip{display:flex;gap:8px;overflow-x:auto;padding:0 18px 10px;scrollbar-width:none}
+    .catstrip::-webkit-scrollbar{display:none}
+    .secchip{flex:0 0 auto;padding:7px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.14);
+      background:transparent;color:var(--muted);font-family:inherit;font-size:12px;
+      cursor:pointer;transition:all .18s;white-space:nowrap}
+    .secchip:hover{color:var(--ivory);border-color:rgba(255,122,26,.35)}
+    .secchip.active{color:var(--pumpkin);border-color:rgba(255,122,26,.45);
+      background:rgba(255,122,26,.12)}
+    .secempty{grid-column:1/-1;text-align:center;padding:44px 18px;color:var(--muted);
+      font-size:14px;line-height:1.7}
+    .secempty b{color:var(--ivory)}
+    @media (max-width:640px){
+      .topbar__brand{font-size:18px}
+      .topbar__btn{padding:6px 10px}
+      .topbar__search{padding:6px 10px}
+    }
+
+    /* ── cinematic product cards (Higgsfield skin on catalog bones) ── */
+    .card{transition:transform .22s ease,box-shadow .22s ease}
+    .card:hover{transform:translateY(-4px);box-shadow:0 12px 42px rgba(139,61,255,.22),0 4px 14px rgba(0,0,0,.5)}
+    .hero{border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:22px;
+      background:radial-gradient(ellipse at 20% 10%,rgba(139,61,255,.22) 0%,rgba(11,11,15,0) 60%),var(--charcoal);
+      margin-bottom:14px}
+    .hero h3{font-family:'Playfair Display',serif;font-size:clamp(22px,4vw,30px);color:var(--ivory);letter-spacing:-.01em}
+    .hero p{font-size:13px;color:var(--muted);margin:6px 0 12px}
+    .hero__row{display:flex;gap:8px}
+    .hero__row input{flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+      border-radius:10px;padding:10px 14px;color:var(--ivory);font-family:inherit;font-size:13px;min-width:0}
+    .hero__row button{background:var(--pumpkin);border:none;border-radius:10px;color:#141414;
+      font-weight:700;font-family:inherit;font-size:13px;padding:10px 18px;cursor:pointer}
+    /* ── people grid (my.oddhobb.com) ── */
+    .people{display:flex;flex-wrap:wrap;gap:14px}
+    .person{border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:12px;
+      min-width:200px;max-width:260px;background:rgba(255,255,255,.02)}
+    .person__name{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+      border-radius:8px;color:var(--ivory);font-family:inherit;font-size:13px;font-weight:600;padding:8px 10px}
+    .person__thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+    .person__thumbs img{width:56px;height:56px;object-fit:cover;border-radius:8px;
+      border:1px solid rgba(255,255,255,.10)}
+    .person__foot{display:flex;gap:8px;margin-top:10px;align-items:center}
+    .person__star{background:transparent;border:1px solid rgba(255,122,26,.5);color:var(--pumpkin);
+      border-radius:8px;font-family:inherit;font-size:11px;font-weight:600;padding:6px 10px;cursor:pointer}
+    .person__hint{font-size:10px;color:var(--muted)}
 
     /* ── Greeting page ─────────────────────────────────────── */
     .greet{position:fixed;inset:0 0 0 72px;z-index:200;background:
@@ -318,7 +397,7 @@
 <body>
   <!-- boot screen: jumbled words resolve into status lines, then it lifts -->
   <div class="pogboot" id="pogboot" aria-hidden="true">
-    <div class="pogboot__mark">pogpet<i>.</i></div>
+    <div class="pogboot__mark">oddhobb<i>.</i></div>
     <div class="pogboot__words" id="pogboot-words"></div>
     <div class="pogboot__bar"><i id="pogboot-fill"></i></div>
   </div>
@@ -326,7 +405,7 @@
   <!-- greeting page: the first thing a visitor sees -->
   <div class="greet" id="greet">
     <div class="greet__inner">
-      <div class="greet__mark">pogpet<i>.</i></div>
+      <div class="greet__mark">oddhobb<i>.</i></div>
       <div class="greet__eyebrow">Welcome to the pogverse · spooky season · free to try</div>
       <p class="greet__sub">One photo of your pet, and you get them back as videos worth sharing. No card, no trial, no catch.</p>
       <ol class="greet__steps">
@@ -354,7 +433,7 @@
     <button class="brand-btn" id="brand-btn" type="button" aria-haspopup="true" aria-expanded="false" title="Switch world">p<i>.</i></button>
     <div class="switcher" id="switcher" role="menu" aria-label="Switch world">
       <div class="switcher__hd">the pogverse</div>
-      <a href="https://pog.pet/" class="here" role="menuitem"><span>pog.pet</span><small>you are here</small></a>
+      <a href="/" class="here" role="menuitem"><span>oddhobb.com</span><small>you are here</small></a>
       <a href="https://pog.town/" role="menuitem"><span>pog.town</span><small>community</small></a>
     </div>
     <button class="tab active" type="button" data-tab="chat">
@@ -374,6 +453,19 @@
       <span class="tab__icon">🛒</span>shop
     </button>
   </nav>
+
+  <!-- topbar: search + account. Categories live in #catstrip below (registry = GET /api/sections) -->
+  <header class="topbar">
+    <div class="topbar__row">
+      <a class="topbar__brand" href="/">oddhobb<i>.</i></a>
+      <label class="topbar__search"><span aria-hidden="true">&#x2315;</span><input id="qsearch" type="search" placeholder="Search figurines, cards, puzzles…" autocomplete="off"></label>
+      <div class="topbar__acct">
+        <button class="topbar__btn" id="acct-btn" type="button">&#x1F464; <span id="acct-name">sign in</span></button>
+        <button class="topbar__btn" id="cart-btn" type="button">&#x1F6D2; <span id="cart-n">0</span></button>
+      </div>
+    </div>
+    <nav class="catstrip" id="catstrip" aria-label="Categories"></nav>
+  </header>
   <script>
   (function () {
     var PHRASES = [
@@ -481,10 +573,10 @@
   </script>
   
   <!-- ══ TAB: upload ══ -->
-  <section class="panel" data-panel="upload" id="panel-upload" aria-label="Your pogs">
+  <section class="panel" data-panel="upload" id="panel-upload" aria-label="Your people">
     <div class="panel__inner">
-      <h2 class="panel__h">Avatar spotlight</h2>
-      <p class="panel__lede">Your roster. One is in the spotlight — whatever's active is what appears on every card, mug and sheet of wrapping paper.</p>
+      <h2 class="panel__h">Your star</h2>
+      <p class="panel__lede">Your people, sorted automatically. One is the star — whatever’s active is what appears on every card, mug and sheet of wrapping paper.</p>
 
       <span class="panel__label">now showing</span>
       <div class="spot" id="spot">
@@ -493,7 +585,7 @@
           <img id="spot-img" alt="" hidden>
         </div>
         <div class="spot__meta">
-          <div class="spot__label">active pog</div>
+          <div class="spot__label">active star</div>
           <div class="spot__name" id="spot-name">nothing yet</div>
           <div class="spot__id" id="spot-id"></div>
           <div class="spot__state" id="spot-state"></div>
@@ -506,10 +598,13 @@
       </div>
       <div class="panel__status" id="spin-status"></div>
 
-      <span class="panel__label">roster — click to spotlight</span>
+      <span class="panel__label">your people — click a face to spotlight</span>
       <div class="roster" id="roster" role="list"></div>
 
-      <span class="panel__label">add a pog</span>
+      <span class="panel__label">uploads — autosorted into people</span>
+      <div class="people" id="people-grid" role="list"></div>
+
+      <span class="panel__label">add someone</span>
       <div class="drop" id="drop" role="button" tabindex="0" aria-label="Upload a photo">
         <input type="file" id="up-input" accept="image/jpeg,image/png" hidden>
         <div class="drop__icon">🐾</div>
@@ -562,7 +657,7 @@
   <section class="panel" data-panel="perform" id="panel-perform" aria-label="Perform">
     <div class="panel__inner">
       <h2 class="panel__h">Perform</h2>
-      <p class="panel__lede">Put your active pog on stage. Pick a talent, pick an act, and the script is written for them — voice and all.</p>
+      <p class="panel__lede">Put your active star on stage. Pick a talent, pick an act, and the script is written for them — voice and all.</p>
 
       <span class="panel__label">talent</span>
       <div class="chips" id="pf-talents" role="group" aria-label="Talent"></div>
@@ -595,7 +690,12 @@
   <section class="panel" data-panel="shop" id="panel-shop" aria-label="Shop">
     <div class="panel__inner">
       <h2 class="panel__h">3. Shop</h2>
-      <p class="panel__lede">Everything below is already active against your mesh — same model, one sculpt, many products.</p>
+      <p class="panel__lede" id="shop-lede">Everything below is already active against your mesh — same model, one sculpt, many products.</p>
+      <div class="hero" id="shop-hero">
+        <h3>what odd thing shall we make you?</h3>
+        <p id="hero-sub">Your star, on everything below.</p>
+        <div class="hero__row"><input id="hero-q" placeholder="Describe it — a bauble that barks…" maxlength="140"><button id="hero-go" type="button">Ask &rarr;</button></div>
+      </div>
 
       <span class="panel__label">template (36 concepts)</span>
       <select class="panel__select" id="shop-concept"></select>
@@ -635,10 +735,10 @@
   <div class="hive-signal"><div class="hive-signal-fill" id="hive-signal"></div></div>
   <div class="honey-badge" id="honey-badge"><span>🎃</span><span id="honey-count">0</span></div>
   <div class="satchel" id="satchel"><div class="satchel__icon">👜</div><div class="satchel__count" id="satchel-count">0 items</div><div class="satchel__total" id="satchel-total">Empty</div></div>
-  <div class="bee-status" id="bee-status"><span class="bee-status__name" id="bee-name">Pogo</span> — <span id="bee-role">Spooky Season</span></div>
+  <div class="bee-status" id="bee-status"><span class="bee-status__name" id="bee-name">bobdod</span> — <span id="bee-role">Store helper</span></div>
 
   <script>
-    console.log('pogpet loading...');
+    console.log('oddhobb loading...');
     
     // ═══════════════════════════════════════════════════════════
     // CONFIG
@@ -674,18 +774,26 @@
     // ═══════════════════════════════════════════════════════════
     // BEE SESSION
     // ═══════════════════════════════════════════════════════════
-    // CAST — one host per session. Pogo is the OG resident.
+    // CAST — bobdod is the main helper. Guests stay available as optional moods.
+    var BOBDOD = {
+      name: 'bobdod',
+      role: 'Store helper',
+      voice: 'warm, direct, catalogue-obsessed',
+      traits: ['helpful', 'knows every product', 'no nonsense', 'asks one good question']
+    };
     var ARCHETYPES = [
+      BOBDOD,
       { name: 'Buster', role: 'Dachshund Wizard', voice: 'grandiose-cheeky', traits: ['dramatic', 'cheese-motivated', 'secretly judgemental'] },
       { name: 'Pogo', role: 'Spooky Season', voice: 'grandiose', traits: ['pompous', 'dramatic', 'formal'] },
       { name: 'Kevin', role: 'Angry Pigeon', voice: 'irate', traits: ['furious', 'territorial', 'shareable'] },
       { name: 'Pickles', role: 'Cat', voice: 'dry', traits: ['unimpressed', 'precise', 'dangerous'] },
       { name: 'Mog', role: 'Weird Goblin', voice: 'mischievous', traits: ['funny', 'strange', 'feral'] }
     ];
+    window.__COMPANY__ = null;
 
     var session = {
       id: 'bee_' + Date.now().toString(36),
-      bee: ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)],
+      bee: BOBDOD,
       brief: {},
       satchel: [],
       honey: 30,
@@ -693,11 +801,17 @@
       mission: {}
     };
 
-    // Load from localStorage
+    // Load from localStorage — bobdod unless a guest host was chosen on purpose
     try {
       var saved = JSON.parse(localStorage.getItem('mythicbee-session'));
-      if (saved) session = saved;
-    } catch(e) {}
+      if (saved && saved.bee && saved.bee.name) session = saved;
+      if (!session.bee || !session.bee.name) session.bee = BOBDOD;
+    } catch(e) { session.bee = BOBDOD; }
+    function loadCompanyGraph() {
+      return get(API + "/companygraph").then(function (d) {
+        if (d && d.ok) window.__COMPANY__ = d;
+      }).catch(function () {});
+    }
 
     function saveSession() {
       try { localStorage.setItem('mythicbee-session', JSON.stringify(session)); } catch(e) {}
@@ -842,7 +956,27 @@
       if (turnCount % 3 === 0) setTimeout(showFlash, 2500);
       try {
         var reply = await callLLM([
-          { role: 'system', content: 'You are ' + session.bee.name + ', ' + session.bee.role + ' at pogpet. You help people bring their pet to life as videos, portals and gifts. Your personality: ' + session.bee.traits.join(', ') + '. Be warm, ' + session.bee.voice + ', concise. Ask one good question at a time. When you have enough info, say "I think I have some ideas." GiftBrief: ' + JSON.stringify(session.brief) },
+          { role: 'system', content: (function () {
+              var b = window.__BRAND__ || {brand:"oddhobb"};
+              var cg = window.__COMPANY__;
+              var who = 'You are bobdod, the main store helper at ' + b.brand + '.';
+              if (session.bee && session.bee.name && session.bee.name !== 'bobdod') {
+                who = 'You are ' + session.bee.name + ' (' + session.bee.role + '), a guest host at ' + b.brand + '. The store helper is bobdod.';
+              }
+              var facts = '';
+              if (cg && cg.policies) {
+                facts = ' Policies: free tier ' + (cg.policies.free_tier||'') +
+                  '; shipping ' + (cg.policies.shipping||'') +
+                  '; personalisation ' + (cg.policies.personality || cg.policies.personalisation || '') + '.';
+              }
+              if (cg && cg.products && cg.products.length) {
+                var names = cg.products.slice(0, 12).map(function (p) { return p.name + ' (£' + p.price_gbp + ')'; }).join(', ');
+                facts += ' Catalogue sample: ' + names + '.';
+              }
+              return who + ' You help people bring their pet to life as videos, prints, cards and gifts.' + facts +
+                ' Personality: ' + (session.bee.traits||[]).join(', ') + '. Be ' + (session.bee.voice||'warm, direct') +
+                ', concise. Ask one good question at a time. When you have enough info, say "I think I have some ideas." GiftBrief: ' + JSON.stringify(session.brief);
+            })() },
           ].concat(session.history)
         );
         session.history.push({ role: 'assistant', content: reply });
@@ -1025,7 +1159,7 @@
       }, 800);
     });
 
-    console.log('pogpet loaded');
+    console.log('oddhobb loaded');
   </script>
 <script>
   (function () {
@@ -1056,10 +1190,41 @@
       if (!t || u.indexOf("token=") >= 0) return u;
       return u + (u.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(t);
     }
-    function get(u) { return fetch(withTok(u)).then(function (r) { return r.json(); }); }
-    function post(u, b) {
-      return fetch(withTok(u), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+    function authHeaders(h) {
+      h = h || {};
+      try {
+        if (state.apiKey) h["X-API-Key"] = state.apiKey;
+        var sig = localStorage.getItem("pogpet.ownersig") || "";
+        if (sig) h["X-Owner-Sig"] = sig;
+      } catch (e) {}
+      return h;
+    }
+    function get(u) {
+      return fetch(withTok(u), { headers: authHeaders() })
         .then(function (r) { return r.json(); });
+    }
+    function post(u, b) {
+      var h = authHeaders({ "Content-Type": "application/json" });
+      return fetch(withTok(u), { method: "POST", headers: h, body: JSON.stringify(b) })
+        .then(function (r) { return r.json(); });
+    }
+    function mintSession() {
+      var owner = state.owner || "";
+      var sig = "";
+      try { sig = localStorage.getItem("pogpet.ownersig") || ""; } catch (e) {}
+      // Named accounts with an API key authenticate via X-API-Key — no sig needed
+      if (state.apiKey && owner && !/^pog_/.test(owner)) return Promise.resolve();
+      return post(API + "/session", { owner: owner, owner_sig: sig })
+        .then(function (d) {
+          if (d && d.ok && d.owner) {
+            state.owner = d.owner;
+            try {
+              localStorage.setItem("pogpet.owner", d.owner);
+              localStorage.setItem("pogpet.ownersig", d.owner_sig || "");
+            } catch (e) {}
+          }
+        })
+        .catch(function () {});
     }
     function say(el, text, kind) { if (!el) return; el.textContent = text || ""; el.className = "panel__status" + (kind ? " " + kind : ""); }
 
@@ -1126,6 +1291,173 @@
     }
     document.addEventListener("pog:tab", function (e) { showTab(e.detail.tab); });
 
+    // ── sections: top category strip (Amazon) + host routing ────────
+    // Registry comes from GET /api/sections (config.SECTIONS is the truth);
+    // this inline list is only the pre-paint fallback.
+    var SECTIONS = [
+      {id:"all",         label:"All",         icon:"\u{1F6CD}️", panel:"shop"},
+      {id:"board-games", label:"Board games", icon:"\u{1F3B2}",   panel:"shop"},
+      {id:"gifts",       label:"Gifts",       icon:"\u{1F381}",   panel:"shop"},
+      {id:"cards",       label:"Cards",       icon:"\u{1F3B4}",   panel:"shop"},
+      {id:"my",          label:"My oddhobbs", icon:"\u{1F43E}",   panel:"upload"}
+    ];
+    var SECTION_OF = {}, HOST_SECTION = {};
+    state.section = "all";
+    var shopLoaded = false, hostRouted = false;
+
+    function secBtn(s) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "secchip"; b.dataset.section = s.id;
+      b.innerHTML = '<span>' + s.icon + '</span>' + s.label;
+      b.onclick = function () { setSection(s.id); };
+      return b;
+    }
+    function paintSectionUI() {
+      var strip = $("catstrip");
+      if (strip) { strip.innerHTML = ""; SECTIONS.forEach(function (s) { strip.appendChild(secBtn(s)); }); }
+      markSectionUI();
+    }
+    function markSectionUI() {
+      document.querySelectorAll("[data-section]").forEach(function (b) {
+        b.classList.toggle("active", b.dataset.section === state.section);
+      });
+    }
+    function sectionLabel(id) {
+      var s = SECTIONS.filter(function (x) { return x.id === id; })[0];
+      return s ? s.label : id;
+    }
+    state.q = "";
+    function setSection(id, fromHash) {
+      if (!SECTIONS.some(function (s) { return s.id === id; })) id = "all";
+      state.section = id;
+      markSectionUI();
+      var lede = $("shop-lede");
+      if (lede) {
+        var s0 = SECTIONS.filter(function (x) { return x.id === id; })[0] || SECTIONS[0];
+        lede.textContent = id === "all"
+          ? "Everything below is already active against your mesh — same model, one sculpt, many products."
+          : ((s0.blurb || sectionLabel(id)) + " — every card here already features your star.");
+      }
+      if (!fromHash) { try { history.replaceState(null, "", "#/s/" + id); } catch (e) {} }
+      var s = SECTIONS.filter(function (x) { return x.id === id; })[0] || SECTIONS[0];
+      if (s.panel === "shop") {
+        var shop = document.querySelector('.panel[data-panel="shop"]');
+        if (shop && shop.classList.contains("open")) applySection();
+        else showTab("shop");
+      } else {
+        showTab(s.panel);
+      }
+    }
+    function applySection() {
+      if (!shopLoaded) return;
+      var grid = $("shop-grid"); if (!grid) return;
+      var vis = 0;
+      grid.querySelectorAll(".card").forEach(function (c) {
+        var q = (state.q || "").toLowerCase();
+        var show = (state.section === "all" || (c.dataset.sec || "") === state.section) &&
+                   (!q || (c.dataset.label || "").indexOf(q) >= 0);
+        c.style.display = show ? "" : "none";
+        if (show) vis++;
+      });
+      var old = grid.querySelector(".secempty");
+      if (old) old.remove();
+      if (vis === 0) {
+        var d = document.createElement("div");
+        d.className = "secempty";
+        d.innerHTML = state.section === "board-games"
+          ? "<b>Board games</b> are coming — the jigsaw lands here first.<br>Meanwhile the <b>All</b> shelf has everything."
+          : "<b>" + sectionLabel(state.section) + "</b> has nothing in stock yet.<br>Try <b>All</b> — everything we make lives there.";
+        grid.appendChild(d);
+      }
+      var st = $("shop-status");
+      if (st && st.textContent && st.textContent.indexOf("·") >= 0) {
+        st.dataset.base = st.dataset.base || st.textContent;
+        st.textContent = (state.section === "all" ? "" : sectionLabel(state.section) + " · ") + st.dataset.base;
+      }
+    }
+    function initSections() {
+      // server registry wins over the inline fallback
+      get(API + "/sections").then(function (d) {
+        if (d && d.ok) {
+          SECTIONS = d.sections; SECTION_OF = d.section_of || {}; HOST_SECTION = d.host_section || {};
+        }
+        paintSectionUI();
+        // hash first, then host (a deep link beats the domain default)
+        var m = (location.hash || "").match(/^#\/s\/([a-z-]+)$/);
+        if (m) { setSection(m[1], true); }
+        else {
+          var byHost = HOST_SECTION[location.hostname];
+          if (byHost && !hostRouted) { hostRouted = true; setSection(byHost); }
+        }
+      }).catch(function () { paintSectionUI(); });
+    }
+    window.addEventListener("hashchange", function () {
+      var m = (location.hash || "").match(/^#\/s\/([a-z-]+)$/);
+      if (m) setSection(m[1], true);
+    });
+    window.addEventListener("load", initSections);
+    window.addEventListener("load", wireTopbar);
+    window.addEventListener("load", initBrand);
+    window.addEventListener("load", function () { mintSession(); });
+    window.addEventListener("load", function () { loadCompanyGraph(); });
+
+    // ── multi-brand: same app, many storefronts ──────────────────────────
+    // Brand strings live on the server (GET /api/brand answers per request
+    // Host). The page ships painted as oddhobb (the fallback) and repaints
+    // from the answer — unknown hosts keep the fallback, never an error.
+    window.__BRAND__ = {brand:"oddhobb", domain:"oddhobb.com",
+      tagline:"what odd thing shall we make you?", support:"support@oddhobb.com"};
+    function applyBrand(b) {
+      if (!b || !b.brand) return;
+      window.__BRAND__ = b;
+      document.title = b.brand + " — Upload your pet, get free videos";
+      var marks = document.querySelectorAll(".pogboot__mark, .greet__mark, .topbar__brand");
+      for (var i = 0; i < marks.length; i++) marks[i].innerHTML = b.brand + "<i>.</i>";
+      var here = document.querySelector(".switcher a.here span");
+      if (here) here.textContent = b.domain;
+      var swapped = false;
+      for (var j = 0; j < SECTIONS.length; j++) {
+        if (/oddhobb/i.test(SECTIONS[j].label)) {
+          SECTIONS[j].label = SECTIONS[j].label.replace(/oddhobb/gi, b.brand);
+          swapped = true;
+        }
+      }
+      if (swapped && typeof paintSectionUI === "function") {
+        paintSectionUI();
+        if (typeof markSectionUI === "function") markSectionUI();
+      }
+    }
+    function initBrand() {
+      get(API + "/brand").then(function (d) {
+        if (d && d.ok) applyBrand(d);
+      }).catch(function () {});
+    }
+    function wireTopbar() {
+      var q = $("qsearch");
+      if (q) q.addEventListener("input", function () {
+        state.q = (q.value || "").trim().toLowerCase();
+        var shop = document.querySelector('.panel[data-panel="shop"]');
+        if (state.q && shop && !shop.classList.contains("open")) showTab("shop");
+        else applySection();
+      });
+      var ab = $("acct-btn");
+      if (ab) ab.onclick = function () {
+        var g = document.getElementById("greet");
+        if (g) g.classList.remove("hidden");
+      };
+      var cb = $("cart-btn");
+      if (cb) cb.onclick = function () {
+        showTab("shop");
+        msg("shop-msg", "Cart isn't wired up yet — that's Stripe, which still needs keys.", "");
+      };
+      var hq = $("hero-q"), hg = $("hero-go");
+      if (hq && hg) hg.onclick = function () {
+        var t = $("ti");
+        if (t) { t.value = hq.value || ""; t.focus(); }
+        if (hq.value) msg("shop-msg", "Pasted into the chat bar below — hit send.", "");
+      };
+    }
+
     // ── spotlight / roster ──────────────────────────────────
     // The gate token is injected into the page by the bridge (window.__FIGG_TOKEN).
     // fetch is patched for us, but <img src> never goes through fetch — so image
@@ -1144,14 +1476,70 @@
           state.meshId = d.active_mesh_id || null;
           try { if (state.meshId) localStorage.setItem("pogpet.mesh", state.meshId); } catch (e) {}
           paintSpotlight(d);
+          loadPeople();
         })
         .catch(function () { stat("up-status", "couldn't reach the roster"); });
+    }
+    var peopleLoaded = false;
+    function loadPeople(force) {
+      var grid = $("people-grid"); if (!grid) return;
+      if (peopleLoaded && !force) return;
+      peopleLoaded = true;
+      grid.innerHTML = "";
+      post(API + "/photos/autosort?owner=" + encodeURIComponent(state.owner), {})
+        .then(function (d) {
+          if (!d || !d.ok) { grid.innerHTML = '<div class="person__hint">couldn\u2019t sort uploads yet.</div>'; peopleLoaded = false; return; }
+          if (!d.groups.length) { grid.innerHTML = '<div class="person__hint">no uploads yet — add someone below.</div>'; return; }
+          d.groups.forEach(function (g) {
+            var card = document.createElement("div");
+            card.className = "person"; card.setAttribute("role", "listitem");
+            var head = document.createElement("input");
+            head.className = "person__name"; head.maxLength = 40; head.value = g.person;
+            head.placeholder = "who\u2019s this?"; head.setAttribute("aria-label", "Name this person");
+            head.addEventListener("change", function () {
+              var to = head.value.trim();
+              if (!to || to === g.person) { head.value = g.person; return; }
+              post(API + "/people/rename", { owner: state.owner, from: g.person, to: to })
+                .then(function (r) { if (r && r.ok) { g.person = to; head.value = to; } else { head.value = g.person; } })
+                .catch(function () { head.value = g.person; });
+            });
+            card.appendChild(head);
+            var thumbs = document.createElement("div"); thumbs.className = "person__thumbs";
+            g.photos.forEach(function (ph) {
+              var im = document.createElement("img");
+              im.src = art("/api/artifacts/" + ph.r2_key); im.alt = g.person; im.loading = "lazy";
+              thumbs.appendChild(im);
+            });
+            card.appendChild(thumbs);
+            var foot = document.createElement("div"); foot.className = "person__foot";
+            var mid = null;
+            for (var i = 0; i < g.photos.length; i++) if (g.photos[i].mesh_id) { mid = g.photos[i].mesh_id; break; }
+            if (mid) {
+              var b = document.createElement("button");
+              b.className = "person__star"; b.type = "button"; b.textContent = "make star";
+              (function (m) { b.addEventListener("click", function () { activate(m); }); })(mid);
+              foot.appendChild(b);
+            } else {
+              var h = document.createElement("span"); h.className = "person__hint";
+              h.textContent = "no sculpt yet";
+              foot.appendChild(h);
+            }
+            if (g.needs_name) {
+              var h2 = document.createElement("span"); h2.className = "person__hint";
+              h2.textContent = "new face — give them a name";
+              foot.appendChild(h2);
+            }
+            card.appendChild(foot);
+            grid.appendChild(card);
+          });
+        })
+        .catch(function () { grid.innerHTML = ""; peopleLoaded = false; });
     }
     function paintSpotlight(d) {
       var roster = $("roster"), ring = $("spot-ring");
       if (!roster) return;
       if (!d.pogs.length) {
-        roster.innerHTML = '<div class="roster__empty">No pogs yet — drop a photo below to make your first.</div>';
+        roster.innerHTML = '<div class="roster__empty">Nobody here yet — drop a photo below to add your first person.</div>';
         $("spot-name").textContent = "nothing yet";
         $("spot-id").textContent = "";
         $("spot-state").textContent = "";
@@ -1256,7 +1644,7 @@
 
     function shortName(id) {
       // no pet names stored yet — show a friendly handle off the id
-      return "pog " + id.replace(/^msh_/, "").slice(0, 5);
+      return "star " + id.replace(/^msh_/, "").slice(0, 5);
     }
     function activate(meshId) {
       if (!meshId) return;
@@ -1268,7 +1656,7 @@
           msg("up-msg", "Active. Cards, studio and shop all follow it now.", "ok");
           stat("up-status", "");
           loadMe();
-          // shop re-renders against the new active pog
+          // shop re-renders against the new active mesh
           if ($("panel-shop") && $("panel-shop").classList.contains("open")) loadShop();
         })
         .catch(function (e) { msg("up-msg", "Error: " + e.message, "err"); });
@@ -1370,6 +1758,10 @@
             sculptBtn.textContent = "Open the studio →";
             sculptBtn.onclick = function () { document.querySelector('[data-tab="studio"]').click(); };
             loadMe();   // roster + spotlight pick it up (auto-activates if it's the first)
+            if (typeof shopLoaded !== "undefined" && shopLoaded) {
+              var s0 = $("shop-status"); if (s0) delete s0.dataset.base;
+              loadShop();   // re-render every product preview against the new mesh
+            }
           }
  else if (s === "failed") {
             msg("up-msg", d.mesh.error || "The sculpt failed.", "err");
@@ -1458,6 +1850,17 @@
       comedy_set: "Written for them, start to finish",
       ar_show: "Scan it, watch them do the set"
     };
+    // One registry drives every card: GET /api/catalog (docs/foundation.md).
+    // Inline maps above stay as the pre-paint fallback.
+    window.CATALOG = null;
+    get(API + "/catalog").then(function (d) {
+      if (!d || !d.ok) return;
+      window.CATALOG = d.products;
+      d.products.forEach(function (p) {
+        if (p.emoji) EMOJI[p.id] = p.emoji;
+        if (p.blurb) BLURB[p.id] = p.blurb;
+      });
+    }).catch(function () {});
     var conceptsLoaded = false;
     function loadConcepts() {
       if (conceptsLoaded) return;
@@ -1483,6 +1886,7 @@
 
     function loadShop() {
       var grid = $("shop-grid");
+      var s0 = $("shop-status"); if (s0) delete s0.dataset.base;
       loadConcepts();
       stat("shop-status", "loading…");
       var q = "?owner=" + encodeURIComponent(state.owner);
@@ -1506,6 +1910,8 @@
           d.items.forEach(function (it) {
             var el = document.createElement("div");
             el.className = "card";
+            el.dataset.sec = it.section || "";
+            el.dataset.label = (it.label || "").toLowerCase();
             el.innerHTML =
               '<img class="card__shot" src="' + art(it.image) + '" alt="' + it.label + '" loading="lazy">' +
               '<div class="card__tag">prodigi · ' + it.shape + '</div>' +
@@ -1525,6 +1931,8 @@
           m.products.forEach(function (p) {
             var el = document.createElement("div");
             el.className = "card";
+            el.dataset.sec = p.section || "";
+            el.dataset.label = p.product.replace(/_/g, " ").toLowerCase();
             el.innerHTML =
               '<div class="card__emoji">' + (EMOJI[p.product] || "\u{1F381}") + '</div>' +
               '<div class="card__tag">from your mesh</div>' +
@@ -1541,6 +1949,8 @@
               msg("shop-msg", "Cart isn't wired up yet — that's Stripe, which still needs keys.", "");
             });
           });
+          shopLoaded = true;
+          applySection();
         })
         .catch(function () { stat("shop-status", ""); msg("shop-msg", "Backend unreachable.", "err"); });
     }
@@ -1634,7 +2044,7 @@
     if (pfGo) pfGo.addEventListener("click", function () {
       var topicEl = $("pf-topic"), topic = topicEl ? (topicEl.value || "").trim() : "";
       if (!topic) { msg("pf-msg", "Give me the bit — one funny detail.", "err"); return; }
-      if (!state.meshId) { msg("pf-msg", "Sculpt a pog in the spotlight first.", "err"); return; }
+      if (!state.meshId) { msg("pf-msg", "Sculpt a photo in the spotlight first.", "err"); return; }
       pfGo.disabled = true;
       var out = $("pf-out"); if (out) out.hidden = true;
       stat("pf-status", "writing, voicing, rendering — about 45 seconds…");

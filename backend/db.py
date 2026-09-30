@@ -224,6 +224,27 @@ def init() -> None:
         c.executescript(SCHEMA)
         _migrate_photos_unique(c)
         _migrate_videos_talent(c)
+        _migrate_photos_person(c)
+        _migrate_users_email_unique(c)
+
+
+def _migrate_users_email_unique(c: sqlite3.Connection) -> None:
+    """One account per email — Google sign-in keys on email; dupes fork identities."""
+    c.execute(
+        """CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique
+           ON users(lower(email)) WHERE email <> ''"""
+    )
+
+
+def _migrate_photos_person(c: sqlite3.Connection) -> None:
+    """photos.person — which person/pet this upload belongs to (autosort label).
+
+    NULL = not grouped yet. Renaming a label renames the whole group
+    (POST /api/people/rename), which is the "who's this?" -> save flow.
+    """
+    cols = [r[1] for r in c.execute("PRAGMA table_info(photos)")]
+    if "person" not in cols:
+        c.execute("ALTER TABLE photos ADD COLUMN person TEXT")
 
 
 def new_id(prefix: str) -> str:
@@ -263,12 +284,24 @@ def create_user(c: sqlite3.Connection, handle: str, password: str = "",
     alphabet = string.ascii_letters + string.digits
     key = "figg_" + "".join(secrets.choice(alphabet) for _ in range(40))
     uid = new_id("usr")
-    c.execute(
-        "INSERT INTO users (id,handle,email,display_name,password_hash,api_key,created_at)"
-        " VALUES (?,?,?,?,?,?,?)",
-        (uid, h, email.strip()[:120], display_name.strip()[:80],
-         hash_password(password) if password else "", key, now()),
-    )
+    email_clean = email.strip()[:120]
+    if email_clean:
+        clash = c.execute(
+            "SELECT handle FROM users WHERE lower(email)=lower(?) AND email<>''",
+            (email_clean,)).fetchone()
+        if clash:
+            raise ValueError(f"email already registered to @{clash['handle']}")
+    try:
+        c.execute(
+            "INSERT INTO users (id,handle,email,display_name,password_hash,api_key,created_at)"
+            " VALUES (?,?,?,?,?,?,?)",
+            (uid, h, email_clean, display_name.strip()[:80],
+             hash_password(password) if password else "", key, now()),
+        )
+    except sqlite3.IntegrityError as e:
+        if "email" in str(e).lower():
+            raise ValueError("email already registered") from None
+        raise
     # adopt an existing anonymous profile if they had one
     if not get_profile(c, h).get("active_mesh_id"):
         set_active(c, h, "")

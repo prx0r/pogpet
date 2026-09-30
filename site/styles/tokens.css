@@ -1,0 +1,58 @@
+:root {
+  /* Night palette */
+  --night-950: #090D10;
+  --night-900: #10161A;
+  --night-800: #182024;
+
+  /* Paper palette */
+  --paper: #F5F0E7;
+  --paper-warm: #FAF7F1;
+  --paper-deep: #E9E0D2;
+
+  /* Ink */
+  --ink: #27241F;
+  --ink-soft: #6F685F;
+
+  /* Star gold */
+  --star: #E3B45D;
+  --star-light: #F2D696;
+  --star-deep: #A97832;
+
+  /* Accent */
+  --wine: #653C45;
+  --moss: #596554;
+
+  /* Hairlines */
+  --hairline-dark: rgba(255,255,255,.10);
+  --hairline-paper: rgba(39,36,31,.12);
+
+  /* Typography */
+  --font-display: "Instrument Serif", "Newsreader", Georgia, serif;
+  --font-body: "Inter", "Geist", -apple-system, sans-serif;
+
+  /* Motion */
+  --ease-premium: cubic-bezier(.22, 1, .36, 1);
+  --fast: 160ms;
+  --normal: 320ms;
+  --slow: 650ms;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --space-3xl: 96px;
+
+  /* Radii */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-soft: 0 2px 20px rgba(0,0,0,.08);
+  --shadow-card: 0 4px 24px rgba(0,0,0,.06);
+  --shadow-lifted: 0 8px 32px rgba(0,0,0,.10);
+}

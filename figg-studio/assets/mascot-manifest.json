@@ -1,0 +1,263 @@
+{
+  "name": "figg. mascot library",
+  "color": "#8B3DFF",
+  "version": "1.0.0",
+  "variants": [
+    {
+      "id": "01",
+      "slug": "classic",
+      "name": "The original",
+      "category": "core",
+      "svg": "assets/mascots/svg/01-classic.svg",
+      "png": "assets/mascots/png/01-classic.png"
+    },
+    {
+      "id": "02",
+      "slug": "wink",
+      "name": "A little wink",
+      "category": "core",
+      "svg": "assets/mascots/svg/02-wink.svg",
+      "png": "assets/mascots/png/02-wink.png"
+    },
+    {
+      "id": "03",
+      "slug": "sitting",
+      "name": "Take five",
+      "category": "core",
+      "svg": "assets/mascots/svg/03-sitting.svg",
+      "png": "assets/mascots/png/03-sitting.png"
+    },
+    {
+      "id": "04",
+      "slug": "tall",
+      "name": "Standing tall",
+      "category": "core",
+      "svg": "assets/mascots/svg/04-tall.svg",
+      "png": "assets/mascots/png/04-tall.png"
+    },
+    {
+      "id": "05",
+      "slug": "joy",
+      "name": "Pure joy",
+      "category": "core",
+      "svg": "assets/mascots/svg/05-joy.svg",
+      "png": "assets/mascots/png/05-joy.png"
+    },
+    {
+      "id": "06",
+      "slug": "side",
+      "name": "From the side",
+      "category": "core",
+      "svg": "assets/mascots/svg/06-side.svg",
+      "png": "assets/mascots/png/06-side.png"
+    },
+    {
+      "id": "07",
+      "slug": "wave",
+      "name": "Hi there",
+      "category": "core",
+      "svg": "assets/mascots/svg/07-wave.svg",
+      "png": "assets/mascots/png/07-wave.png"
+    },
+    {
+      "id": "08",
+      "slug": "sleepy",
+      "name": "Slow mornings",
+      "category": "core",
+      "svg": "assets/mascots/svg/08-sleepy.svg",
+      "png": "assets/mascots/png/08-sleepy.png"
+    },
+    {
+      "id": "09",
+      "slug": "sparkle",
+      "name": "Magic moment",
+      "category": "expressions",
+      "svg": "assets/mascots/svg/09-sparkle.svg",
+      "png": "assets/mascots/png/09-sparkle.png"
+    },
+    {
+      "id": "10",
+      "slug": "crown",
+      "name": "Little royalty",
+      "category": "occasions",
+      "svg": "assets/mascots/svg/10-crown.svg",
+      "png": "assets/mascots/png/10-crown.png"
+    },
+    {
+      "id": "11",
+      "slug": "curious",
+      "name": "Curious figg",
+      "category": "expressions",
+      "svg": "assets/mascots/svg/11-curious.svg",
+      "png": "assets/mascots/png/11-curious.png"
+    },
+    {
+      "id": "12",
+      "slug": "scarf",
+      "name": "Wrapped up",
+      "category": "occasions",
+      "svg": "assets/mascots/svg/12-scarf.svg",
+      "png": "assets/mascots/png/12-scarf.png"
+    },
+    {
+      "id": "13",
+      "slug": "heart",
+      "name": "With love",
+      "category": "occasions",
+      "svg": "assets/mascots/svg/13-heart.svg",
+      "png": "assets/mascots/png/13-heart.png"
+    },
+    {
+      "id": "14",
+      "slug": "headphones",
+      "name": "In my zone",
+      "category": "accessories",
+      "svg": "assets/mascots/svg/14-headphones.svg",
+      "png": "assets/mascots/png/14-headphones.png"
+    },
+    {
+      "id": "15",
+      "slug": "cheeky",
+      "name": "A cheeky hello",
+      "category": "expressions",
+      "svg": "assets/mascots/svg/15-cheeky.svg",
+      "png": "assets/mascots/png/15-cheeky.png"
+    },
+    {
+      "id": "16",
+      "slug": "shades",
+      "name": "Incognito",
+      "category": "accessories",
+      "svg": "assets/mascots/svg/16-shades.svg",
+      "png": "assets/mascots/png/16-shades.png"
+    },
+    {
+      "id": "17",
+      "slug": "tilt",
+      "name": "A new angle",
+      "category": "core",
+      "svg": "assets/mascots/svg/17-tilt.svg",
+      "png": "assets/mascots/png/17-tilt.png"
+    },
+    {
+      "id": "18",
+      "slug": "nap",
+      "name": "Extra cozy",
+      "category": "expressions",
+      "svg": "assets/mascots/svg/18-nap.svg",
+      "png": "assets/mascots/png/18-nap.png"
+    },
+    {
+      "id": "19",
+      "slug": "jump",
+      "name": "Can\u2019t contain it",
+      "category": "expressions",
+      "svg": "assets/mascots/svg/19-jump.svg",
+      "png": "assets/mascots/png/19-jump.png"
+    },
+    {
+      "id": "20",
+      "slug": "quiet",
+      "name": "Just here",
+      "category": "core",
+      "svg": "assets/mascots/svg/20-quiet.svg",
+      "png": "assets/mascots/png/20-quiet.png"
+    },
+    {
+      "id": "21",
+      "slug": "bashful",
+      "name": "Blushing",
+      "category": "expressions",
+      "svg": "assets/mascots/svg/21-bashful.svg",
+      "png": "assets/mascots/png/21-bashful.png"
+    },
+    {
+      "id": "22",
+      "slug": "sprout",
+      "name": "Growing on you",
+      "category": "accessories",
+      "svg": "assets/mascots/svg/22-sprout.svg",
+      "png": "assets/mascots/png/22-sprout.png"
+    },
+    {
+      "id": "23",
+      "slug": "cap",
+      "name": "Out and about",
+      "category": "accessories",
+      "svg": "assets/mascots/svg/23-cap.svg",
+      "png": "assets/mascots/png/23-cap.png"
+    },
+    {
+      "id": "24",
+      "slug": "star",
+      "name": "You\u2019re a star",
+      "category": "occasions",
+      "svg": "assets/mascots/svg/24-star.svg",
+      "png": "assets/mascots/png/24-star.png"
+    },
+    {
+      "id": "25",
+      "slug": "back",
+      "name": "See you soon",
+      "category": "core",
+      "svg": "assets/mascots/svg/25-back.svg",
+      "png": "assets/mascots/png/25-back.png"
+    },
+    {
+      "id": "26",
+      "slug": "bow",
+      "name": "Dressed up",
+      "category": "accessories",
+      "svg": "assets/mascots/svg/26-bow.svg",
+      "png": "assets/mascots/png/26-bow.png"
+    },
+    {
+      "id": "27",
+      "slug": "cheer",
+      "name": "Big day",
+      "category": "expressions",
+      "svg": "assets/mascots/svg/27-cheer.svg",
+      "png": "assets/mascots/png/27-cheer.png"
+    },
+    {
+      "id": "28",
+      "slug": "hoodie",
+      "name": "Comfy club",
+      "category": "accessories",
+      "svg": "assets/mascots/svg/28-hoodie.svg",
+      "png": "assets/mascots/png/28-hoodie.png"
+    },
+    {
+      "id": "29",
+      "slug": "glasses",
+      "name": "A bright idea",
+      "category": "accessories",
+      "svg": "assets/mascots/svg/29-glasses.svg",
+      "png": "assets/mascots/png/29-glasses.png"
+    },
+    {
+      "id": "30",
+      "slug": "belly",
+      "name": "Grounded",
+      "category": "expressions",
+      "svg": "assets/mascots/svg/30-belly.svg",
+      "png": "assets/mascots/png/30-belly.png"
+    },
+    {
+      "id": "31",
+      "slug": "love",
+      "name": "Little crush",
+      "category": "occasions",
+      "svg": "assets/mascots/svg/31-love.svg",
+      "png": "assets/mascots/png/31-love.png"
+    },
+    {
+      "id": "32",
+      "slug": "cosmic",
+      "name": "Night mode",
+      "category": "occasions",
+      "svg": "assets/mascots/svg/32-cosmic.svg",
+      "png": "assets/mascots/png/32-cosmic.png"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+# secrets — never commit
+.env
+.env.local
+*.key
+token
+.token
+*.pem
+
+# runtime
+*.log
+*.pid
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# local pipeline state: sqlite, staged photos, downloaded meshes
+data/
+
+# figg-studio: the nested kit zip is rebuilt by scripts/package.py
+figg-studio/downloads/*.zip
+
+# node
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# pi (vendored, its own .gitignore also applies)
+pi/auth.json
+pi/.artifacts/
+
+# local assets that live in R2, not git
+assets/style/*.png

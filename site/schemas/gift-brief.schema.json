@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mythicbee.com/schemas/gift-brief.schema.json",
+  "title": "MythicBee GiftBrief",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "occasion", "recipient", "interests", "personality", "memories", "tone", "assets", "confidence"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "briefId": { "type": ["string", "null"] },
+    "status": {
+      "type": "string",
+      "enum": ["collecting", "ready_for_concept", "concept_ready", "preview_ready", "checkout_ready"]
+    },
+    "occasion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": ["string", "null"],
+          "enum": [null, "birthday", "fathers_day", "mothers_day", "wedding", "anniversary", "christmas", "graduation", "memorial", "new_baby", "pet", "retirement", "thank_you", "just_because", "other"]
+        },
+        "label": { "type": ["string", "null"], "maxLength": 120 },
+        "date": { "type": ["string", "null"], "format": "date" },
+        "locale": { "type": ["string", "null"], "maxLength": 32 }
+      }
+    },
+    "recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relationship"],
+      "properties": {
+        "relationship": { "type": ["string", "null"], "maxLength": 80 },
+        "name": { "type": ["string", "null"], "maxLength": 120 },
+        "age": { "type": ["integer", "null"], "minimum": 0, "maximum": 130 },
+        "pronouns": { "type": ["string", "null"], "maxLength": 40 }
+      }
+    },
+    "interests": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "importance"],
+        "properties": {
+          "label": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "detail": { "type": ["string", "null"], "maxLength": 400 },
+          "importance": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+    "personality": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["trait"],
+        "properties": {
+          "trait": { "type": "string", "minLength": 1, "maxLength": 100 },
+          "evidence": { "type": ["string", "null"], "maxLength": 500 }
+        }
+      }
+    },
+    "memories": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["summary"],
+        "properties": {
+          "summary": { "type": "string", "minLength": 1, "maxLength": 1200 },
+          "emotionalWeight": { "type": "number", "minimum": 0, "maximum": 1 },
+          "place": { "type": ["string", "null"], "maxLength": 160 },
+          "date": { "type": ["string", "null"], "maxLength": 40 }
+        }
+      }
+    },
+    "tone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary"],
+      "properties": {
+        "primary": {
+          "type": ["string", "null"],
+          "enum": [null, "heartfelt", "funny", "epic", "nostalgic", "cinematic", "absurd", "warm", "elegant", "bittersweet", "surprising"]
+        },
+        "secondary": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 4,
+          "items": { "type": "string", "maxLength": 60 }
+        },
+        "avoid": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 12,
+          "items": { "type": "string", "maxLength": 120 }
+        }
+      }
+    },
+    "creativeDirection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "concept": { "type": ["string", "null"], "maxLength": 1200 },
+        "format": { "type": ["string", "null"], "maxLength": 100 },
+        "mustInclude": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 200 } },
+        "mustAvoid": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 200 } }
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "recommendedProductIds": { "type": "array", "maxItems": 5, "uniqueItems": true, "items": { "type": "string" } },
+        "selectedProductId": { "type": ["string", "null"] }
+      }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["photos", "videos", "audio"],
+      "properties": {
+        "photos": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/mediaAsset" } },
+        "videos": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/mediaAsset" } },
+        "audio": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/mediaAsset" } }
+      }
+    },
+    "budget": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "maxAmount": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "deadline": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "date": { "type": ["string", "null"], "format": "date" },
+        "hard": { "type": "boolean" }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hasPermissionToUseUploadedMedia": { "type": ["boolean", "null"] }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 },
+      "properties": {
+        "occasion": { "type": "number", "minimum": 0, "maximum": 1 },
+        "recipient": { "type": "number", "minimum": 0, "maximum": 1 },
+        "interests": { "type": "number", "minimum": 0, "maximum": 1 },
+        "personality": { "type": "number", "minimum": 0, "maximum": 1 },
+        "memories": { "type": "number", "minimum": 0, "maximum": 1 },
+        "tone": { "type": "number", "minimum": 0, "maximum": 1 },
+        "creativeDirection": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "mediaAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["photo", "video", "audio"] },
+        "caption": { "type": ["string", "null"], "maxLength": 500 },
+        "url": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>MythicBee AR — Bring your gift to life</title>
+  
+  <!-- 8th Wall Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/landing-page@1/dist/landing-page.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/xrextras@1/dist/xrextras.js" crossorigin="anonymous"></script>
+  
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #instructions {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-size: 14px;
+      z-index: 100;
+      text-align: center;
+    }
+    #instructions.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div id="instructions">Point your camera at the MythicBee card</div>
+  
+  <script>
+    const onxrloaded = () => {
+      // Configure with no image targets yet — will use demo mode
+      XR8.XrController.configure({
+        imageTargetData: [],
+      })
+    }
+    window.XR8 ? onxrloaded() : window.addEventListener('xrloaded', onxrloaded)
+  </script>
+
+  <a-scene xrextras-gesture-detector landing-page xrextras-loading xrextras-runtime-error
+    renderer="colorManagement:true" vr-mode-ui="enabled: false">
+    
+    <a-assets>
+      <img id="bee-texture" src="../assets/bartholomew.webp">
+    </a-assets>
+
+    <a-camera position="0 1.6 0" raycaster="objects: .cantap" cursor="fuse: false; rayOrigin: mouse;">
+    </a-camera>
+
+    <a-light type="directional" intensity="0.8" position="1 2 1"></a-light>
+    <a-light type="ambient" intensity="0.6"></a-light>
+
+    <!-- Bartholomew 3D character -->
+    <a-entity id="bartholomew" position="0 0.5 0" scale="0.3 0.3 0.3">
+      <!-- Body -->
+      <a-box position="0 0 0" width="0.8" height="1" depth="0.6" color="#FFD700"></a-box>
+      
+      <!-- Head -->
+      <a-sphere position="0 0.8 0" radius="0.4" color="#FFD700"></a-sphere>
+      
+      <!-- Eyes -->
+      <a-sphere position="-0.15 0.85 0.35" radius="0.08" color="#6B3FA0"></a-sphere>
+      <a-sphere position="0.15 0.85 0.35" radius="0.08" color="#6B3FA0"></a-sphere>
+      
+      <!-- Antennae -->
+      <a-cylinder position="-0.15 1.2 0" radius="0.02" height="0.3" color="#1a1a2e"></a-cylinder>
+      <a-cylinder position="0.15 1.2 0" radius="0.02" height="0.3" color="#1a1a2e"></a-cylinder>
+      
+      <!-- Wings -->
+      <a-plane position="-0.5 0.3 0" width="0.6" height="0.4" color="#E8F0FF" opacity="0.7" rotation="-20 0 0"></a-plane>
+      <a-plane position="0.5 0.3 0" width="0.6" height="0.4" color="#E8F0FF" opacity="0.7" rotation="-20 0 0"></a-plane>
+      
+      <!-- Cape -->
+      <a-plane position="0 0.2 -0.35" width="0.6" height="0.8" color="#CC3333" rotation="10 0 0"></a-plane>
+      
+      <!-- Animation -->
+      <a-animation attribute="position" to="0 0.7 0" dur="2000" easing="ease-in-out" repeat="indefinite" direction="alternate"></a-animation>
+    </a-entity>
+
+    <!-- Floating text -->
+    <a-entity id="greeting" position="0 1.8 0" text="value: Greetings, Legend; color: #d4af37; align: center; width: 4; font: https://cdn.aframe.io/fonts/PlayfairDisplay42Bold.fnt" visible="false">
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    // Show greeting when AR is active
+    window.addEventListener('xrloaded', () => {
+      setTimeout(() => {
+        document.getElementById('greeting').setAttribute('visible', 'true')
+        document.getElementById('instructions').classList.add('hidden')
+      }, 3000)
+    })
+  </script>
+</body>
+</html>

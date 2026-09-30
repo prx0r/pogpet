@@ -1,0 +1,13 @@
+/* figg. foundational tokens — imports without a framework */
+:root {
+  --figg-purple: #8B3DFF;
+  --figg-purple-dark: #6D2FD1;
+  --figg-lilac: #EAD8FF;
+  --figg-ink: #111111;
+  --figg-paper: #FAFAF8;
+  --figg-line: #E8E5E9;
+  --figg-radius-sm: 12px;
+  --figg-radius-md: 24px;
+  --figg-radius-lg: 36px;
+  --figg-radius-xl: 54px;
+}

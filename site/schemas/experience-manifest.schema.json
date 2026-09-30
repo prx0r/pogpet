@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExperienceManifest",
+  "description": "Canonical description of a MythicBee personalized experience. Generated from GiftBrief by the experience planner.",
+  "type": "object",
+  "required": ["experience", "engine", "recipient", "occasion"],
+  "properties": {
+    "experience": {
+      "type": "string",
+      "description": "Unique identifier for this experience instance"
+    },
+    "engine": {
+      "type": "string",
+      "enum": ["SUMMON", "CHARACTER", "NEWS", "DOCUMENTARY", "TRAILER", "STORYWORLD"],
+      "description": "Which render engine produces this experience"
+    },
+    "recipient": {
+      "type": "string",
+      "description": "Name or identifier of the gift recipient"
+    },
+    "occasion": {
+      "type": "string",
+      "description": "The occasion being celebrated"
+    },
+    "sender": {
+      "type": "string",
+      "description": "Name of the gift giver"
+    },
+    "cast": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Characters/entities featured in the experience"
+    },
+    "world": {
+      "type": "string",
+      "description": "The setting/environment for the experience"
+    },
+    "tone": {
+      "type": "string",
+      "enum": ["funny", "beautiful", "understated", "sentimental", "ridiculous", "surprise"],
+      "description": "Emotional tone of the experience"
+    },
+    "beats": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Sequential narrative beats in the experience"
+    },
+    "outputs": {
+      "type": "object",
+      "properties": {
+        "card": { "type": "boolean", "default": false },
+        "video": { "type": "boolean", "default": false },
+        "webReveal": { "type": "boolean", "default": true },
+        "roomAR": { "type": "boolean", "default": false },
+        "targetAR": { "type": "boolean", "default": false }
+      },
+      "description": "Which output formats to generate"
+    },
+    "assets": {
+      "type": "object",
+      "properties": {
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "videos": { "type": "array", "items": { "type": "string" } },
+        "audio": { "type": "array", "items": { "type": "string" } }
+      },
+      "description": "User-provided media assets"
+    },
+    "giftBrief": {
+      "$ref": "#/definitions/GiftBrief",
+      "description": "The original GiftBrief that generated this experience"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "planned", "rendering", "ready", "delivered"],
+      "default": "draft"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "definitions": {
+    "GiftBrief": {
+      "type": "object",
+      "properties": {
+        "occasion": { "type": "string" },
+        "recipient": { "type": "string" },
+        "relationship": { "type": "string" },
+        "age": { "type": "integer" },
+        "interests": { "type": "array", "items": { "type": "string" } },
+        "personality": { "type": "string" },
+        "memories": { "type": "array", "items": { "type": "string" } },
+        "tone": { "type": "string" },
+        "creativeDirection": { "type": "string" },
+        "budget": { "type": "number" },
+        "deadline": { "type": "string", "format": "date" }
+      }
+    }
+  }
+}

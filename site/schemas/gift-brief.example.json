@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "status": "collecting",
+  "occasion": { "type": "fathers_day", "label": "Father's Day", "date": null, "locale": "en-GB" },
+  "recipient": { "relationship": "dad", "name": null, "age": 60, "pronouns": "he/him" },
+  "interests": [
+    { "label": "football", "detail": "Liverpool FC", "importance": 0.95 }
+  ],
+  "personality": [
+    { "trait": "teasing sense of humour", "evidence": "Always taking the piss out of everyone" }
+  ],
+  "memories": [],
+  "tone": { "primary": null, "secondary": [], "avoid": [] },
+  "creativeDirection": { "concept": null, "format": null, "mustInclude": [], "mustAvoid": [] },
+  "product": { "recommendedProductIds": [], "selectedProductId": null },
+  "assets": { "photos": [], "videos": [], "audio": [] },
+  "budget": null,
+  "deadline": null,
+  "consent": { "hasPermissionToUseUploadedMedia": null },
+  "confidence": {
+    "occasion": 1.0,
+    "recipient": 0.9,
+    "interests": 0.8,
+    "personality": 0.7,
+    "memories": 0.0,
+    "tone": 0.0,
+    "creativeDirection": 0.0
+  }
+}

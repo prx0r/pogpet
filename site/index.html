@@ -1,0 +1,1693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>pogpet — Upload your pet, get free videos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      /* Halloween: pumpkin replaces gold, graveyard purple in the glow */
+      --obsidian:#0B0B0F;
+      --gold:#FF7A1A;
+      --ivory:#F5F0E8;
+      --charcoal:#1E1E24;
+      --muted:#8B8577;
+      --pumpkin:#FF7A1A;
+      --violet:#8B3DFF;
+      --poison:#7CFF6B;
+      --blood:#E5341B;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',sans-serif;background:var(--obsidian);color:var(--ivory);height:100dvh;overflow:hidden}
+    .app{display:grid;grid-template-rows:1fr auto;height:100dvh;padding-left:72px;background:radial-gradient(ellipse at 50% 30%,#1E0F33 0%,var(--obsidian) 70%)}
+    .stage{position:relative;display:flex;align-items:center;justify-content:center;padding:20px}
+    .barth{position:relative;width:200px;height:240px;animation:barthFloat 3s ease-in-out infinite}
+    .barth img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5))}
+    .barth__tag{position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--obsidian);padding:3px 12px;border-radius:8px;font-size:9px;font-weight:700;letter-spacing:.1em;white-space:nowrap}
+    @keyframes barthFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-8px) rotate(2deg)}}
+    .speech{position:absolute;top:0;left:50%;transform:translateX(-50%);background:rgba(255,122,26,0.1);border:1px solid rgba(255,122,26,0.2);border-radius:14px;padding:14px 20px;font-size:15px;color:var(--ivory);max-width:380px;text-align:center;opacity:0;transition:opacity .4s;pointer-events:none;z-index:20}
+    .speech.visible{opacity:1}
+    .hive-signal{position:fixed;top:0;left:72px;right:0;height:2px;background:rgba(255,255,255,0.03);z-index:40}
+    .hive-signal-fill{height:100%;background:linear-gradient(90deg,var(--gold),#FF7A1A);width:0%;transition:width .8s}
+    .honey-badge{position:fixed;top:12px;right:20px;background:rgba(255,122,26,0.1);border:1px solid rgba(255,122,26,0.2);border-radius:20px;padding:6px 14px;font-size:12px;color:var(--gold);display:flex;align-items:center;gap:6px;z-index:50;opacity:0;transition:opacity .4s}
+    .honey-badge.visible{opacity:1}
+    .flash{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,122,26,0.08);border:1px solid rgba(255,122,26,0.15);border-radius:10px;padding:10px 18px;font-size:13px;color:var(--gold);font-style:italic;z-index:30;opacity:0;transition:opacity .4s;pointer-events:none}
+    .flash.visible{opacity:1}
+    .dialogue{background:var(--charcoal);border-top:2px solid var(--gold);padding:20px 40px}
+    .dialogue__inner{max-width:700px;margin:0 auto}
+    .dialogue__speaker{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+    .dialogue__text{font-family:'JetBrains Mono',monospace;font-size:15px;line-height:1.6;min-height:40px}
+    .dialogue__text .cursor{display:inline-block;width:2px;height:14px;background:var(--gold);margin-left:2px;animation:blink .8s infinite;vertical-align:middle}
+    @keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+    .dialogue__input-row{display:flex;gap:8px;margin-top:12px}
+    .dialogue__input{flex:1;padding:12px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:24px;color:var(--ivory);font-size:15px;font-family:inherit;outline:none}
+    .dialogue__input::placeholder{color:var(--muted)}
+    .dialogue__input:focus{border-color:var(--gold)}
+    .dialogue__btn{width:40px;height:40px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .15s}
+    .dialogue__btn:hover{transform:scale(1.05)}
+    .dialogue__btn svg{width:18px;height:18px;fill:var(--obsidian)}
+    .dialogue__mic{background:transparent;border:1px solid rgba(255,255,255,0.1)}
+    .dialogue__mic svg{fill:var(--ivory)}
+    .dialogue__mic.recording{background:#e74c3c;border-color:#e74c3c}
+    .overlay{position:fixed;inset:0;background:rgba(11,11,15,0.95);z-index:50;display:none;align-items:center;justify-content:center;padding:40px}
+    .overlay.visible{display:flex}
+    .overlay-panel{max-width:900px;width:100%}
+    .overlay-panel h2{font-family:'Playfair Display',serif;font-size:28px;text-align:center;margin-bottom:8px}
+    .overlay-panel p{text-align:center;color:var(--muted);margin-bottom:32px}
+    .overlay-close{position:absolute;top:20px;right:20px;background:none;border:none;color:var(--muted);font-size:24px;cursor:pointer}
+    .concepts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .concept{background:var(--charcoal);border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .3s}
+    .concept:hover{border-color:var(--gold);transform:translateY(-4px)}
+    .concept__visual{height:160px;display:flex;align-items:center;justify-content:center;font-size:52px;background:linear-gradient(135deg,rgba(255,122,26,0.08),rgba(255,122,26,0.02))}
+    .concept__body{padding:20px}
+    .concept__name{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:4px}
+    .concept__desc{font-size:13px;color:var(--muted);line-height:1.4;margin-bottom:8px}
+    .concept__price{font-size:12px;color:var(--gold);font-weight:600}
+    .products-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .product{background:var(--charcoal);border:1px solid rgba(255,255,255,0.08);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .3s}
+    .product:hover{border-color:var(--gold);transform:translateY(-4px)}
+    .product__visual{height:140px;display:flex;align-items:center;justify-content:center;font-size:48px}
+    .product__body{padding:16px}
+    .product__name{font-family:'Playfair Display',serif;font-size:16px;margin-bottom:4px}
+    .product__desc{font-size:12px;color:var(--muted);margin-bottom:8px}
+    .product__price{font-size:14px;color:var(--gold);font-weight:600}
+    .satchel{position:fixed;bottom:100px;right:20px;background:var(--charcoal);border:1px solid rgba(255,122,26,0.2);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--ivory);z-index:40;opacity:0;transition:all .3s;cursor:pointer}
+    .satchel.visible{opacity:1}
+    .satchel__icon{font-size:20px;margin-bottom:4px}
+    .satchel__count{color:var(--gold);font-weight:600}
+    .satchel__total{color:var(--muted);font-size:11px}
+    .bee-status{position:fixed;bottom:100px;left:92px;font-size:11px;color:var(--muted);z-index:40;opacity:0;transition:opacity .3s}
+    .bee-status.visible{opacity:1}
+    .bee-status__name{color:var(--gold);font-weight:600}
+
+    /* ── Left tab rail ─────────────────────────────────────── */
+    .tabrail{position:fixed;left:0;top:0;height:100dvh;width:72px;z-index:60;
+      background:rgba(30,30,36,.82);backdrop-filter:blur(10px);
+      border-right:1px solid rgba(255,122,26,.20);
+      display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0 18px}
+    .tabrail__brand{font-family:'Playfair Display',serif;font-size:22px;color:var(--ivory);
+      margin-bottom:10px;user-select:none}
+    .tabrail__brand i{color:var(--pumpkin);font-style:normal}
+    .tab{width:58px;padding:10px 3px;border-radius:12px;background:transparent;
+      border:1px solid transparent;color:var(--muted);font-family:inherit;font-size:9px;
+      letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
+      display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .2s}
+    .tab__icon{font-size:19px;line-height:1}
+    .tab:hover{color:var(--ivory);background:rgba(255,122,26,.09)}
+    .tab.active{color:var(--pumpkin);background:rgba(255,122,26,.15);
+      border-color:rgba(255,122,26,.38)}
+    .tab:disabled{opacity:.32;cursor:default}
+    .tab:disabled:hover{background:transparent;color:var(--muted)}
+    .tabrail__sep{width:34px;height:1px;background:rgba(255,255,255,.09);margin:6px 0}
+    .tabrail__soon{font-size:7px;letter-spacing:.1em;color:var(--violet);margin-top:-2px}
+
+    /* ── Greeting page ─────────────────────────────────────── */
+    .greet{position:fixed;inset:0 0 0 72px;z-index:200;background:
+      radial-gradient(ellipse at 50% 25%,#1E0F33 0%,var(--obsidian) 72%);
+      display:flex;align-items:center;justify-content:center;padding:28px 20px;
+      transition:opacity .55s ease,visibility .55s ease}
+    .greet.hidden{opacity:0;visibility:hidden;pointer-events:none}
+    .greet__inner{width:min(560px,100%);text-align:left}
+    .greet__mark{font-family:'Playfair Display',serif;font-size:clamp(44px,11vw,78px);
+      line-height:1;letter-spacing:-.02em;color:var(--ivory)}
+    .greet__mark i{color:var(--pumpkin);font-style:normal}
+    .greet__eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+      color:var(--poison);margin:14px 0 8px}
+    .greet__sub{font-size:clamp(15px,3.6vw,18px);line-height:1.55;color:var(--ivory);
+      opacity:.86;margin-bottom:26px;max-width:34ch}
+    .greet__steps{list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:14px;
+      margin-bottom:30px;padding:0}
+    .greet__steps li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;
+      gap:14px;align-items:start}
+    .greet__steps li::before{content:counter(s);font-family:'JetBrains Mono',monospace;
+      font-size:12px;color:var(--pumpkin);border:1px solid rgba(255,122,26,.45);
+      border-radius:50%;width:30px;height:30px;display:flex;align-items:center;
+      justify-content:center;background:rgba(255,122,26,.10)}
+    .greet__steps b{display:block;font-size:15px;font-weight:600;color:var(--ivory);margin-bottom:2px}
+    .greet__steps span{font-size:13px;color:var(--muted);line-height:1.5}
+    .greet__cta{display:inline-flex;align-items:center;gap:10px;background:var(--pumpkin);
+      color:#141414;border:none;font-family:inherit;font-size:16px;font-weight:700;
+      padding:15px 28px;border-radius:12px;cursor:pointer;transition:transform .18s ease,filter .18s}
+    .greet__cta:hover{transform:translateY(-2px);filter:brightness(1.08)}
+    .greet__cta:active{transform:translateY(0)}
+    .greet__fine{font-size:11px;color:var(--muted);margin-top:16px;opacity:.75}
+    .greet__auth{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap}
+    .greet__or{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+    .gbtn{display:inline-flex;align-items:center;gap:9px;background:#fff;color:#1f1f1f;
+      border:none;font-family:inherit;font-size:14px;font-weight:600;padding:11px 18px;
+      border-radius:10px;cursor:pointer;transition:transform .15s ease,filter .15s}
+    .gbtn:hover{transform:translateY(-1px);filter:brightness(.97)}
+    .gbtn[disabled]{opacity:.5;cursor:default;transform:none}
+    .gbtn svg{width:17px;height:17px;flex:0 0 17px}
+    .greet__who{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--poison);
+      margin-top:12px}
+    .greet__who button{background:none;border:none;color:var(--muted);font-family:inherit;
+      font-size:11px;cursor:pointer;text-decoration:underline;padding:0 0 0 8px}
+    @media (max-width:640px){
+      .app{padding-left:60px}
+      .tabrail{width:60px}
+      .greet{inset:0 0 0 60px;padding:22px 16px}
+      .tab{width:50px}
+      .bee-status{left:74px}
+      .hive-signal{left:60px}
+      .greet__steps li{grid-template-columns:30px 1fr;gap:11px}
+    }
+
+    /* ── Tab panels (upload / studio / shop) ──────────────── */
+    .panel{position:fixed;inset:0 0 0 72px;z-index:50;overflow-y:auto;
+      -webkit-overflow-scrolling:touch;padding:26px 22px 70px;
+      background:radial-gradient(ellipse at 50% 20%,#1E0F33 0%,var(--obsidian) 72%);
+      opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s ease}
+    .panel.open{opacity:1;visibility:visible;pointer-events:auto}
+    .panel__inner{max-width:560px;margin:0 auto}
+    .panel__h{font-family:'Playfair Display',serif;font-size:clamp(23px,6vw,33px);
+      color:var(--ivory);margin-bottom:6px}
+    .panel__lede{font-size:14px;line-height:1.6;color:var(--muted);margin-bottom:4px}
+    .panel__label{display:block;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+      color:var(--pumpkin);margin:22px 0 8px}
+    .panel__msg{font-size:13px;line-height:1.55;margin-top:14px;min-height:1.2em}
+    .panel__msg.err{color:var(--blood)}
+    .panel__msg.ok{color:var(--poison)}
+    .panel__status{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);
+      margin-top:12px;min-height:1.2em}
+    .panel__fine{font-size:11px;color:var(--muted);opacity:.7;margin-top:10px}
+    .panel input[type=text]{width:100%;background:var(--charcoal);border:1px solid rgba(255,255,255,.12);
+      color:var(--ivory);font-family:inherit;font-size:15px;padding:13px 14px;border-radius:11px}
+    .panel input[type=text]:focus{outline:none;border-color:var(--pumpkin)}
+
+    .drop{border:2px dashed rgba(255,122,26,.42);border-radius:16px;padding:34px 18px;
+      text-align:center;cursor:pointer;transition:all .2s;background:rgba(255,122,26,.04)}
+    .drop:hover,.drop.over{border-color:var(--pumpkin);background:rgba(255,122,26,.11)}
+    .drop__icon{font-size:34px;margin-bottom:8px}
+    .drop__copy{font-size:15px;color:var(--ivory);margin-bottom:5px}
+    .drop__fine{font-size:11px;color:var(--muted)}
+    .drop__preview{max-width:100%;border-radius:14px;border:2px solid rgba(255,122,26,.5);
+      margin-top:16px;display:block}
+
+    .btn{display:block;width:100%;background:var(--pumpkin);color:#141414;border:none;
+      font-family:inherit;font-size:15px;font-weight:700;padding:14px 20px;border-radius:12px;
+      cursor:pointer;margin-top:18px;transition:filter .2s}
+    .btn:hover{filter:brightness(1.08)}
+    .btn:disabled{opacity:.45;cursor:default;filter:none}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,122,26,.5);color:var(--pumpkin)}
+
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{background:var(--charcoal);border:1px solid rgba(255,255,255,.10);color:var(--muted);
+      font-family:inherit;font-size:12px;padding:8px 13px;border-radius:999px;cursor:pointer;transition:all .18s}
+    .chip:hover{color:var(--ivory);border-color:rgba(255,122,26,.45)}
+    .chip.on{background:rgba(255,122,26,.17);border-color:var(--pumpkin);color:var(--pumpkin)}
+
+    .panel__select{width:100%;background:var(--charcoal);border:1px solid rgba(255,255,255,.12);
+      color:var(--ivory);font-family:inherit;font-size:14px;padding:12px 14px;border-radius:11px}
+    .panel__select:focus{outline:none;border-color:var(--pumpkin)}
+    .panel__select option{background:var(--charcoal)}
+    .panel__select optgroup{color:var(--pumpkin);font-weight:600}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(156px,1fr));gap:12px}
+    .card{background:var(--charcoal);border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;padding:15px}
+    .card__emoji{font-size:25px}
+    .card__tag{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet)}
+    .card__name{font-size:14px;font-weight:600;color:var(--ivory);margin:7px 0 3px}
+    .card__desc{font-size:11px;color:var(--muted);line-height:1.45;min-height:2.6em}
+    .card__price{font-size:17px;color:var(--pumpkin);font-weight:700;margin-top:8px}
+    .card__btn{width:100%;margin-top:10px;background:transparent;border:1px solid rgba(255,122,26,.5);
+      color:var(--pumpkin);font-family:inherit;font-size:12px;font-weight:600;padding:9px;
+      border-radius:9px;cursor:pointer;transition:background .18s}
+    .card__btn:hover{background:rgba(255,122,26,.15)}
+    .card__btn:disabled{opacity:.4;cursor:default}
+
+    .out{margin-top:20px;border:1px solid rgba(255,122,26,.32);border-radius:14px;
+      overflow:hidden;background:#000}
+    .out video{width:100%;display:block;aspect-ratio:9/16;object-fit:cover;background:#000}
+    .out__bar{display:flex;justify-content:space-between;align-items:center;gap:10px;
+      padding:10px 12px;font-size:11px;color:var(--muted);background:var(--charcoal)}
+    .out__bar a{color:var(--pumpkin);font-weight:600}
+
+    /* ── Domain switcher (top-left p.) ────────────────────── */
+    .brand-btn{background:transparent;border:none;font-family:'Playfair Display',serif;
+      font-size:22px;color:var(--ivory);cursor:pointer;padding:2px 8px 8px;
+      line-height:1;position:relative}
+    .brand-btn i{color:var(--pumpkin);font-style:normal}
+    .brand-btn:hover{color:var(--pumpkin)}
+    .switcher{position:absolute;left:60px;top:6px;background:var(--charcoal);
+      border:1px solid rgba(255,122,26,.38);border-radius:12px;padding:6px;z-index:70;
+      display:none;min-width:150px;box-shadow:0 12px 34px rgba(0,0,0,.55)}
+    .switcher.open{display:block}
+    .switcher__hd{font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+      color:var(--muted);padding:5px 11px 6px}
+    .switcher a{display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:9px 11px;border-radius:8px;color:var(--ivory);text-decoration:none;font-size:13px}
+    .switcher a:hover{background:rgba(255,122,26,.15)}
+    .switcher a.here{color:var(--pumpkin);background:rgba(255,122,26,.10)}
+    .switcher a small{font-size:9px;color:var(--muted);letter-spacing:.06em}
+
+    /* ── Spotlight (avatar select) ─────────────────────────── */
+    .spot{display:flex;align-items:center;gap:18px;background:var(--charcoal);
+      border:1px solid rgba(255,122,26,.30);border-radius:20px;padding:18px 20px;
+      position:relative;overflow:hidden}
+    .spot::after{content:"";position:absolute;inset:0;pointer-events:none;
+      background:radial-gradient(circle at 22% 50%,rgba(139,61,255,.22),transparent 62%)}
+    .spot__ring{width:104px;height:104px;flex:0 0 104px;border-radius:50%;
+      border:3px solid var(--pumpkin);background:#12101a;display:flex;align-items:center;
+      justify-content:center;overflow:hidden;position:relative;z-index:1;
+      box-shadow:0 0 0 6px rgba(255,122,26,.14),0 0 34px rgba(255,122,26,.35);
+      animation:spotPulse 2.6s ease-in-out infinite}
+    @keyframes spotPulse{0%,100%{box-shadow:0 0 0 6px rgba(255,122,26,.14),0 0 30px rgba(255,122,26,.30)}
+      50%{box-shadow:0 0 0 9px rgba(255,122,26,.20),0 0 46px rgba(255,122,26,.50)}}
+    .spot__ring img{width:100%;height:100%;object-fit:cover}
+    .spot__ring span{font-size:38px;opacity:.75}
+    .spot__meta{position:relative;z-index:1;min-width:0}
+    .spot__label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--pumpkin)}
+    .spot__name{font-family:'Playfair Display',serif;font-size:clamp(22px,5.6vw,30px);
+      color:var(--ivory);margin:3px 0 5px;word-break:break-word}
+    .spot__id{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);
+      word-break:break-all}
+    .spot__state{font-size:12px;color:var(--poison);margin-top:6px}
+
+    .roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px}
+    .rogue{background:var(--charcoal);border:2px solid rgba(255,255,255,.09);
+      border-radius:14px;padding:8px 6px;cursor:pointer;text-align:center;
+      transition:all .18s;position:relative}
+    .rogue:hover{border-color:rgba(255,122,26,.55);transform:translateY(-2px)}
+    .rogue.on{border-color:var(--pumpkin);background:rgba(255,122,26,.13)}
+    .rogue.on::after{content:"ACTIVE";position:absolute;top:-7px;left:50%;
+      transform:translateX(-50%);background:var(--pumpkin);color:#141414;
+      font-size:7px;letter-spacing:.1em;padding:2px 6px;border-radius:6px;font-weight:700}
+    .rogue__ph{width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#12101a;
+      display:flex;align-items:center;justify-content:center;font-size:22px}
+    .rogue__ph img{width:100%;height:100%;object-fit:cover}
+    .rogue__st{font-size:8px;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);margin-top:6px;word-break:break-all}
+    .roster__empty{grid-column:1/-1;font-size:13px;color:var(--muted);
+      border:1px dashed rgba(255,255,255,.14);border-radius:14px;padding:18px;text-align:center}
+
+    .spin__go{display:inline-block;margin-top:12px;background:transparent;
+      border:1px solid rgba(255,122,26,.55);color:var(--pumpkin);font-family:inherit;
+      font-size:12px;font-weight:600;padding:8px 14px;border-radius:9px;cursor:pointer}
+    .spin__go:hover{background:rgba(255,122,26,.15)}
+    .spin__go:disabled{opacity:.5;cursor:default}
+    .spin__out{margin-top:12px}
+    .spin__out video{aspect-ratio:1;object-fit:cover}
+
+    /* ── Shop grid with rendered product mockups ──────────── */
+    .card__shot{width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;
+      background:#12101a;display:block;object-fit:cover}
+    .card__note{font-size:9px;color:var(--muted);opacity:.72;margin-top:7px;line-height:1.35;
+      min-height:2.3em}
+
+    /* ── Boot / jumbled-words loading screen ───────────────── */
+    .pogboot{position:fixed;inset:0;z-index:300;background:var(--obsidian);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+      transition:opacity .7s ease,visibility .7s ease}
+    .pogboot.hidden{opacity:0;visibility:hidden;pointer-events:none}
+    .pogboot__mark{font-family:'Playfair Display',serif;font-size:clamp(40px,10vw,76px);
+      letter-spacing:-.02em;color:var(--ivory)}
+    .pogboot__mark i{color:var(--pumpkin);font-style:normal}
+    .pogboot__words{font-family:'JetBrains Mono',monospace;
+      font-size:clamp(11px,3vw,15px);letter-spacing:.08em;color:var(--muted);
+      min-height:1.7em;text-align:center;padding:0 16px}
+    .pogboot__words u{text-decoration:none;color:var(--poison)}
+    .pogboot__bar{width:min(260px,62vw);height:2px;background:rgba(255,255,255,.09);
+      border-radius:2px;overflow:hidden}
+    .pogboot__bar i{display:block;height:100%;width:0;
+      background:linear-gradient(90deg,var(--pumpkin),var(--violet));transition:width .3s ease}
+    @media (prefers-reduced-motion: reduce){.pogboot__words{transition:none}}
+  </style>
+</head>
+<body>
+  <!-- boot screen: jumbled words resolve into status lines, then it lifts -->
+  <div class="pogboot" id="pogboot" aria-hidden="true">
+    <div class="pogboot__mark">pogpet<i>.</i></div>
+    <div class="pogboot__words" id="pogboot-words"></div>
+    <div class="pogboot__bar"><i id="pogboot-fill"></i></div>
+  </div>
+
+  <!-- greeting page: the first thing a visitor sees -->
+  <div class="greet" id="greet">
+    <div class="greet__inner">
+      <div class="greet__mark">pogpet<i>.</i></div>
+      <div class="greet__eyebrow">Welcome to the pogverse · spooky season · free to try</div>
+      <p class="greet__sub">One photo of your pet, and you get them back as videos worth sharing. No card, no trial, no catch.</p>
+      <ol class="greet__steps">
+        <li><div><b>Upload your pet</b><span>One photo, front-on, good light. We do the rest.</span></div></li>
+        <li><div><b>Give them a voice</b><span>324 voices to pick from — or let them keep their dignity.</span></div></li>
+        <li><div><b>Take free videos home</b><span>Three a day, watermarked, yours to share.</span></div></li>
+      </ol>
+      <button class="greet__cta" id="greet-cta" type="button">Upload your pet <span aria-hidden="true">→</span></button>
+
+      <div class="greet__auth">
+        <span class="greet__or">or</span>
+        <button class="gbtn" id="g-signin" type="button">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.1 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.2-.4-4.7H24v9h12.7c-.6 3-2.3 5.5-4.9 7.2l7.6 5.9c4.5-4.1 7.1-10.2 7.1-17.4z"/><path fill="#FBBC05" d="M10.4 28.7c-.5-1.4-.7-2.9-.7-4.7s.3-3.3.7-4.7l-7.8-6.1C1 16.4 0 20.1 0 24s1 7.6 2.6 10.8l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.6l-7.6-5.9c-2.1 1.4-4.8 2.3-7.6 2.3-6.3 0-11.7-3.6-13.6-8.7l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+      </div>
+      <div class="greet__who" id="g-who" hidden></div>
+
+      <p class="greet__fine">Already met Pogo? He's in the chat tab, bottom left.</p>
+    </div>
+  </div>
+
+  <!-- left tab rail -->
+  <nav class="tabrail" id="tabrail" aria-label="Sections">
+    <button class="brand-btn" id="brand-btn" type="button" aria-haspopup="true" aria-expanded="false" title="Switch world">p<i>.</i></button>
+    <div class="switcher" id="switcher" role="menu" aria-label="Switch world">
+      <div class="switcher__hd">the pogverse</div>
+      <a href="https://pog.pet/" class="here" role="menuitem"><span>pog.pet</span><small>you are here</small></a>
+      <a href="https://pog.town/" role="menuitem"><span>pog.town</span><small>community</small></a>
+    </div>
+    <button class="tab active" type="button" data-tab="chat">
+      <span class="tab__icon">💬</span>chat
+    </button>
+    <div class="tabrail__sep"></div>
+    <button class="tab" type="button" data-tab="upload">
+      <span class="tab__icon">🐾</span>upload
+    </button>
+    <button class="tab" type="button" data-tab="studio">
+      <span class="tab__icon">🎬</span>studio
+    </button>
+    <button class="tab" type="button" data-tab="perform">
+      <span class="tab__icon">🎤</span>perform
+    </button>
+    <button class="tab" type="button" data-tab="shop">
+      <span class="tab__icon">🛒</span>shop
+    </button>
+  </nav>
+  <script>
+  (function () {
+    var PHRASES = [
+      "Summoning the familiar…",
+      "Warming up the cauldron…",
+      "Consulting the hive…",
+      "Locating forbidden socks…",
+      "Carving something with teeth…",
+      "Recombobulating the pixels…"
+    ];
+    var GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&$@!?/\\|<>[]{}*+=~^";
+    var words = document.getElementById("pogboot-words");
+    var boot  = document.getElementById("pogboot");
+    var fill  = document.getElementById("pogboot-fill");
+    if (!words || !boot) return;
+
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var idx = 0, timer = null;
+
+    function render(scrambled, settled) {
+      // settled part shown for real, unsettled part still jumbled
+      var out = "";
+      for (var i = 0; i < scrambled.length; i++) {
+        out += i < settled ? scrambled[i] : scrambled[i];
+      }
+      words.innerHTML = "<u>" + out.slice(0, settled) + "</u>" + out.slice(settled);
+    }
+
+    function play(phrase, onDone) {
+      var target = phrase.split("");
+      var live = target.map(function (c) {
+        return c === " " ? " " : GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+      });
+      var settled = 0, frame = 0;
+      clearInterval(timer);
+      timer = setInterval(function () {
+        frame++;
+        // keep the unsettled tail flickering
+        for (var i = settled; i < live.length; i++) {
+          if (target[i] !== " ") live[i] = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+        }
+        if (frame % 2 === 0) settled += 2;
+        words.innerHTML = "<u>" + target.slice(0, settled).join("") + "</u>" +
+                          live.slice(settled).join("");
+        if (settled > live.length) {
+          clearInterval(timer);
+          words.innerHTML = "<u>" + phrase + "</u>";
+          if (onDone) onDone();
+        }
+      }, 22);
+    }
+
+    function next() {
+      fill.style.width = Math.round(((idx + 1) / PHRASES.length) * 100) + "%";
+      if (idx >= PHRASES.length) { finish(); return; }
+      play(PHRASES[idx++], function () { setTimeout(next, 180); });
+    }
+
+    function finish() {
+      clearInterval(timer);
+      boot.classList.add("hidden");
+      document.dispatchEvent(new CustomEvent("pogboot:done"));
+    }
+
+    if (reduced) {
+      words.innerHTML = "<u>" + PHRASES[0] + "</u>";
+      fill.style.width = "100%";
+      setTimeout(finish, 700);
+      return;
+    }
+    next();
+    // never trap the user behind the curtain
+    setTimeout(finish, 6000);
+  })();
+  </script>
+  <script>
+  (function () {
+    // ── greeting page ─────────────────────────────────────
+    var greet = document.getElementById("greet");
+    var cta = document.getElementById("greet-cta");
+    if (cta && greet) {
+      cta.addEventListener("click", function () {
+        greet.classList.add("hidden");
+        var ti = document.getElementById("ti");
+        if (ti) { try { ti.focus({ preventScroll: true }); } catch (e) { ti.focus(); } }
+        document.dispatchEvent(new CustomEvent("pog:enter"));
+      });
+    }
+
+    // ── left tab rail ─────────────────────────────────────
+    var rail = document.getElementById("tabrail");
+    if (rail) {
+      rail.addEventListener("click", function (e) {
+        var btn = e.target.closest ? e.target.closest(".tab") : null;
+        if (!btn || btn.disabled) return;
+        var all = rail.querySelectorAll(".tab");
+        for (var i = 0; i < all.length; i++) all[i].classList.remove("active");
+        btn.classList.add("active");
+        document.dispatchEvent(new CustomEvent("pog:tab", {
+          detail: { tab: btn.getAttribute("data-tab") }
+        }));
+      });
+    }
+  })();
+  </script>
+  
+  <!-- ══ TAB: upload ══ -->
+  <section class="panel" data-panel="upload" id="panel-upload" aria-label="Your pogs">
+    <div class="panel__inner">
+      <h2 class="panel__h">Avatar spotlight</h2>
+      <p class="panel__lede">Your roster. One is in the spotlight — whatever's active is what appears on every card, mug and sheet of wrapping paper.</p>
+
+      <span class="panel__label">now showing</span>
+      <div class="spot" id="spot">
+        <div class="spot__ring" id="spot-ring">
+          <span id="spot-emoji">🐾</span>
+          <img id="spot-img" alt="" hidden>
+        </div>
+        <div class="spot__meta">
+          <div class="spot__label">active pog</div>
+          <div class="spot__name" id="spot-name">nothing yet</div>
+          <div class="spot__id" id="spot-id"></div>
+          <div class="spot__state" id="spot-state"></div>
+          <button class="spin__go" id="spin-go" type="button" hidden>Render 360&deg; spin</button>
+        </div>
+      </div>
+      <div class="out spin__out" id="spin-out" hidden>
+        <video id="spin-video" controls playsinline muted loop></video>
+        <div class="out__bar"><span id="spin-meta">turntable</span></div>
+      </div>
+      <div class="panel__status" id="spin-status"></div>
+
+      <span class="panel__label">roster — click to spotlight</span>
+      <div class="roster" id="roster" role="list"></div>
+
+      <span class="panel__label">add a pog</span>
+      <div class="drop" id="drop" role="button" tabindex="0" aria-label="Upload a photo">
+        <input type="file" id="up-input" accept="image/jpeg,image/png" hidden>
+        <div class="drop__icon">🐾</div>
+        <p class="drop__copy">Click or drop a photo of your pet</p>
+        <p class="drop__fine">JPEG or PNG · up to 10 MB · at least 256px on the short side</p>
+      </div>
+      <img class="drop__preview" id="up-preview" alt="" hidden>
+
+      <div class="panel__msg" id="up-msg" role="status" aria-live="polite"></div>
+      <button class="btn" id="up-sculpt" type="button" hidden>Sculpt them →</button>
+      <div class="panel__status" id="up-status"></div>
+
+      <p class="panel__fine">Free tier: 3 sculpts a day. Stored under your own R2 namespace — <code style="color:var(--poison)">owners/&lt;you&gt;/…</code> — and cached, so re-sculpting the same photo never spends a credit.</p>
+    </div>
+  </section>
+
+  <!-- ══ TAB: studio ══ -->
+  <section class="panel" data-panel="studio" id="panel-studio" aria-label="Studio">
+    <div class="panel__inner">
+      <h2 class="panel__h">2. Studio</h2>
+      <p class="panel__lede">Write one funny detail, pick a voice, pick a scene. About 45 seconds, no charge.</p>
+
+      <span class="panel__label">the joke</span>
+      <input type="text" id="st-topic" placeholder="e.g. he eats socks, only the left one" maxlength="180">
+
+      <span class="panel__label">voice</span>
+      <div class="chips" id="st-voices" role="group" aria-label="Voice"></div>
+
+      <span class="panel__label">scene</span>
+      <div class="chips" id="st-scenes" role="group" aria-label="Scene"></div>
+
+      <span class="panel__label">their name</span>
+      <input type="text" id="st-name" placeholder="Max" maxlength="40">
+
+      <button class="btn" id="st-go" type="button">Make the video →</button>
+      <div class="panel__status" id="st-status"></div>
+      <div class="panel__msg" id="st-msg" role="status" aria-live="polite"></div>
+
+      <div class="out" id="st-out" hidden>
+        <video id="st-video" controls playsinline></video>
+        <div class="out__bar"><span id="st-meta"></span><a id="st-dl" download>Download</a></div>
+      </div>
+
+      <p class="panel__fine" id="st-credits"></p>
+    </div>
+  </section>
+
+  <!-- ══ TAB: shop ══ -->
+  <!-- ══ TAB: perform ══ -->
+  <section class="panel" data-panel="perform" id="panel-perform" aria-label="Perform">
+    <div class="panel__inner">
+      <h2 class="panel__h">Perform</h2>
+      <p class="panel__lede">Put your active pog on stage. Pick a talent, pick an act, and the script is written for them — voice and all.</p>
+
+      <span class="panel__label">talent</span>
+      <div class="chips" id="pf-talents" role="group" aria-label="Talent"></div>
+
+      <span class="panel__label">act / persona</span>
+      <select class="panel__select" id="pf-act"></select>
+      <div class="panel__fine" id="pf-premise"></div>
+
+      <span class="panel__label">the bit</span>
+      <input type="text" id="pf-topic" placeholder="e.g. does the worm on a pub table" maxlength="180">
+
+      <span class="panel__label">their name</span>
+      <input type="text" id="pf-name" placeholder="Bender" maxlength="40">
+
+      <button class="btn" id="pf-go" type="button">Take the stage &#8594;</button>
+      <div class="panel__status" id="pf-status"></div>
+      <div class="panel__msg" id="pf-msg" role="status" aria-live="polite"></div>
+
+      <div class="out" id="pf-out" hidden>
+        <video id="pf-video" controls playsinline></video>
+        <div class="out__bar"><span id="pf-meta"></span><a id="pf-dl" download>Download</a></div>
+      </div>
+      <p class="panel__fine" id="pf-credits"></p>
+
+      <span class="panel__label">your performances</span>
+      <div class="roster" id="pf-history" role="list"></div>
+    </div>
+  </section>
+
+  <section class="panel" data-panel="shop" id="panel-shop" aria-label="Shop">
+    <div class="panel__inner">
+      <h2 class="panel__h">3. Shop</h2>
+      <p class="panel__lede">Everything below is already active against your mesh — same model, one sculpt, many products.</p>
+
+      <span class="panel__label">template (36 concepts)</span>
+      <select class="panel__select" id="shop-concept"></select>
+      <span class="panel__label">their name</span>
+      <input type="text" id="shop-subject" placeholder="Max" maxlength="40">
+      <button class="btn ghost" id="shop-apply" type="button">Apply to all cards</button>
+      <div class="panel__status" id="shop-status"></div>
+      <div class="cards" id="shop-grid"></div>
+      <div class="panel__msg" id="shop-msg" role="status" aria-live="polite"></div>
+      <p class="panel__fine">Physical ships from Makr3D / Prodigi. Digital lands instantly.</p>
+    </div>
+  </section>
+
+  <div class="app">
+    <div class="stage">
+      <div class="flash" id="flash"></div>
+      <div class="speech" id="speech"></div>
+      <div class="barth" id="barth">
+        <img src="assets/poses/01_neutral.webp" alt="Pogo" id="barth-img">
+        <div class="barth__tag">POGO</div>
+      </div>
+    </div>
+    <div class="dialogue">
+      <div class="dialogue__inner">
+        <div class="dialogue__speaker" id="speaker">POGO</div>
+        <div class="dialogue__text" id="dt"></div>
+        <div class="dialogue__input-row">
+          <input type="text" class="dialogue__input" id="ti" placeholder="Type or press the mic…" autocomplete="off">
+          <button class="dialogue__btn dialogue__mic" id="mic" type="button"><svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
+          <button class="dialogue__btn" id="send" type="button"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="overlay" id="concepts-overlay"><button class="overlay-close" id="concepts-close">×</button><div class="overlay-panel"><h2 id="concepts-title">Ideas</h2><p>Which feels right?</p><div class="concepts-grid" id="concepts-grid"></div></div></div>
+  <div class="overlay" id="products-overlay"><button class="overlay-close" id="products-close">×</button><div class="overlay-panel"><h2>How should we deliver this?</h2><p>Same concept. Different form.</p><div class="products-grid"><div class="product" data-type="digital" data-price="6.99"><div class="product__visual">✨</div><div class="product__body"><div class="product__name">Personalised Video</div><div class="product__desc">Your pet, brought to life</div><div class="product__price">£6.99</div></div></div><div class="product" data-type="card" data-price="12.99"><div class="product__visual">💳</div><div class="product__body"><div class="product__name">Video + Portal Card</div><div class="product__desc">Scan to summon them</div><div class="product__price">£12.99</div></div></div><div class="product" data-type="gift" data-price="19.99"><div class="product__visual">☕</div><div class="product__body"><div class="product__name">Mug Portal</div><div class="product__desc">Their face on your mornings</div><div class="product__price">£19.99</div></div></div><div class="product" data-type="legend" data-price="29.99"><div class="product__visual">🛋️</div><div class="product__body"><div class="product__name">Cushion Portal</div><div class="product__desc">A throne for their face</div><div class="product__price">£29.99</div></div></div></div></div></div>
+  <div class="hive-signal"><div class="hive-signal-fill" id="hive-signal"></div></div>
+  <div class="honey-badge" id="honey-badge"><span>🎃</span><span id="honey-count">0</span></div>
+  <div class="satchel" id="satchel"><div class="satchel__icon">👜</div><div class="satchel__count" id="satchel-count">0 items</div><div class="satchel__total" id="satchel-total">Empty</div></div>
+  <div class="bee-status" id="bee-status"><span class="bee-status__name" id="bee-name">Pogo</span> — <span id="bee-role">Spooky Season</span></div>
+
+  <script>
+    console.log('pogpet loading...');
+    
+    // ═══════════════════════════════════════════════════════════
+    // CONFIG
+    // ═══════════════════════════════════════════════════════════
+    var CF = { account: "YOUR_ACCOUNT_ID", token: "YOUR_CLOUDFLARE_TOKEN" };
+    var $ = function(id) { return document.getElementById(id); };
+    var dt, conf, flash, ti, speech, barthImg;
+
+    // ═══════════════════════════════════════════════════════════
+    // POGO POSES
+    // ═══════════════════════════════════════════════════════════
+    var POSES = {
+      neutral: 'assets/poses/01_neutral.webp',
+      happy: 'assets/poses/02_happy.webp',
+      wink: 'assets/poses/03_wink.webp',
+      listening: 'assets/poses/04_listening.webp',
+      thinking: 'assets/poses/05_thinking.webp',
+      surprised: 'assets/poses/06_surprised.webp',
+      confident: 'assets/poses/07_confident.webp',
+      talking: 'assets/poses/08_talking.webp',
+      presenting: 'assets/poses/09_presenting.webp',
+      celebrate: 'assets/poses/11_celebrate_arms.webp',
+      sleeping: 'assets/poses/12_sleeping.webp'
+    };
+    var currentPose = 'neutral';
+    function setPose(pose) {
+      if (POSES[pose] && pose !== currentPose && barthImg) {
+        barthImg.src = POSES[pose];
+        currentPose = pose;
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // BEE SESSION
+    // ═══════════════════════════════════════════════════════════
+    // CAST — one host per session. Pogo is the OG resident.
+    var ARCHETYPES = [
+      { name: 'Buster', role: 'Dachshund Wizard', voice: 'grandiose-cheeky', traits: ['dramatic', 'cheese-motivated', 'secretly judgemental'] },
+      { name: 'Pogo', role: 'Spooky Season', voice: 'grandiose', traits: ['pompous', 'dramatic', 'formal'] },
+      { name: 'Kevin', role: 'Angry Pigeon', voice: 'irate', traits: ['furious', 'territorial', 'shareable'] },
+      { name: 'Pickles', role: 'Cat', voice: 'dry', traits: ['unimpressed', 'precise', 'dangerous'] },
+      { name: 'Mog', role: 'Weird Goblin', voice: 'mischievous', traits: ['funny', 'strange', 'feral'] }
+    ];
+
+    var session = {
+      id: 'bee_' + Date.now().toString(36),
+      bee: ARCHETYPES[Math.floor(Math.random() * ARCHETYPES.length)],
+      brief: {},
+      satchel: [],
+      honey: 30,
+      history: [],
+      mission: {}
+    };
+
+    // Load from localStorage
+    try {
+      var saved = JSON.parse(localStorage.getItem('mythicbee-session'));
+      if (saved) session = saved;
+    } catch(e) {}
+
+    function saveSession() {
+      try { localStorage.setItem('mythicbee-session', JSON.stringify(session)); } catch(e) {}
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // UI HELPERS
+    // ═══════════════════════════════════════════════════════════
+    function say(text) {
+      if (!speech) return;
+      speech.textContent = text;
+      speech.classList.add('visible');
+      setTimeout(function() { speech.classList.remove('visible'); }, 4000);
+    }
+
+    function speak(text) {
+      return new Promise(function(resolve) {
+        if (!window.speechSynthesis) { resolve(); return; }
+        window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(text);
+        u.rate = 0.95;
+        u.pitch = 1.1;
+        var v = window.speechSynthesis.getVoices();
+        var en = null;
+        for (var i = 0; i < v.length; i++) {
+          if (v[i].lang.startsWith('en') && v[i].name.includes('Google')) { en = v[i]; break; }
+        }
+        if (!en) for (var i = 0; i < v.length; i++) { if (v[i].lang.startsWith('en')) { en = v[i]; break; } }
+        if (en) u.voice = en;
+        u.onstart = function() { setPose('talking'); };
+        u.onend = function() { setPose('neutral'); resolve(); };
+        u.onerror = function() { resolve(); };
+        window.speechSynthesis.speak(u);
+      });
+    }
+
+    function typeText(text, speed) {
+      speed = speed || 22;
+      if (!dt) return Promise.resolve();
+      dt.innerHTML = '';
+      var i = 0;
+      return new Promise(function(resolve) {
+        var interval = setInterval(function() {
+          if (i < text.length) {
+            dt.innerHTML = text.substring(0, i + 1) + '<span class="cursor"></span>';
+            i++;
+          } else {
+            clearInterval(interval);
+            dt.innerHTML = text;
+            resolve();
+          }
+        }, speed);
+      });
+    }
+
+    async function barthSpeaks(text) {
+      if ($('speaker')) $('speaker').textContent = session.bee.name;
+      setPose('talking');
+      await typeText(text, 18);
+      await speak(text);
+      setPose('neutral');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FLASH PROMPTS
+    // ═══════════════════════════════════════════════════════════
+    var FLASH = ["What's something only you know?","What makes them laugh?","What's their most ridiculous opinion?","What would they hate?","What's a memory that defines them?","What do they care about too much?","What's their superpower?"];
+    function showFlash() {
+      if (!flash) return;
+      flash.textContent = FLASH[Math.floor(Math.random() * FLASH.length)];
+      flash.classList.add('visible');
+      setTimeout(function() { flash.classList.remove('visible'); }, 7000);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // GIFT BRIEF
+    // ═══════════════════════════════════════════════════════════
+    var turnCount = 0;
+    function extract(text) {
+      var l = text.toLowerCase();
+      var b = session.brief;
+      if (/dad|father/i.test(l)) { b.relationship = 'dad'; b.recipient = 'Dad'; }
+      if (/mum|mom|mother/i.test(l)) { b.relationship = 'mum'; b.recipient = 'Mum'; }
+      if (/husband|partner|boyfriend/i.test(l)) { b.relationship = 'partner'; b.recipient = 'Partner'; }
+      if (/friend/i.test(l)) { b.relationship = 'friend'; b.recipient = 'Friend'; }
+      if (/dog|cat|pet/i.test(l)) { b.relationship = 'pet'; }
+      if (/birthday/i.test(l)) b.occasion = 'birthday';
+      if (/christmas/i.test(l)) b.occasion = 'christmas';
+      if (/funny|hilarious/i.test(l)) b.personality = 'funny';
+      if (/sarcastic|witty|dry/i.test(l)) b.personality = 'sarcastic';
+      if (!b.interests) b.interests = [];
+      ['football','soccer','arsenal','liverpool','chelsea','music','guitar','cooking','garden','golf','fishing','travel','wine','beer','book','film'].forEach(function(i) {
+        if (l.includes(i) && b.interests.indexOf(i) === -1) b.interests.push(i);
+      });
+      saveSession();
+      var confidence = {
+        relationship: b.relationship ? 0.95 : 0.1,
+        occasion: b.occasion ? 0.9 : 0.1,
+        interests: (b.interests||[]).length > 0 ? Math.min(0.95, 0.3 + (b.interests||[]).length * 0.15) : 0.1,
+        personality: b.personality ? 0.85 : 0.1
+      };
+      var vals = Object.values(confidence);
+      var avg = vals.reduce(function(a,c) { return a+c; }, 0) / vals.length;
+      if (conf) conf.style.width = (avg * 100) + '%';
+      if (b.recipient && turnCount === 1) { session.honey += 10; updateHoney(); }
+      if (b.interests && b.interests.length === 1 && turnCount === 2) { session.honey += 5; updateHoney(); }
+    }
+
+    function updateHoney() {
+      if ($('honey-count')) $('honey-count').textContent = session.honey;
+      if ($('honey-badge')) $('honey-badge').classList.add('visible');
+    }
+
+    function updateSatchel() {
+      if ($('satchel-count')) $('satchel-count').textContent = session.satchel.length + ' item' + (session.satchel.length !== 1 ? 's' : '');
+      if ($('satchel-total')) $('satchel-total').textContent = session.satchel.length > 0 ? '£' + session.satchel.reduce(function(a,i) { return a + (i.price||0); }, 0) : 'Empty';
+      if (session.satchel.length > 0 && $('satchel')) $('satchel').classList.add('visible');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // LLM
+    // ═══════════════════════════════════════════════════════════
+    async function callLLM(messages) {
+      var r = await fetch('/api/ai/cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: messages, max_tokens: 200, temperature: 0.8 })
+      });
+      var res = await r.json();
+      if (res.success && res.result) return res.result.response;
+      throw new Error('LLM failed');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CONVERSATION
+    // ═══════════════════════════════════════════════════════════
+    async function turn(userText) {
+      extract(userText);
+      session.history.push({ role: 'user', content: userText });
+      turnCount++;
+      setPose('thinking');
+      if (turnCount % 3 === 0) setTimeout(showFlash, 2500);
+      try {
+        var reply = await callLLM([
+          { role: 'system', content: 'You are ' + session.bee.name + ', ' + session.bee.role + ' at pogpet. You help people bring their pet to life as videos, portals and gifts. Your personality: ' + session.bee.traits.join(', ') + '. Be warm, ' + session.bee.voice + ', concise. Ask one good question at a time. When you have enough info, say "I think I have some ideas." GiftBrief: ' + JSON.stringify(session.brief) },
+          ].concat(session.history)
+        );
+        session.history.push({ role: 'assistant', content: reply });
+        await barthSpeaks(reply);
+        if (/idea|think|suggest|recommend|show|got enough/i.test(reply)) {
+          setTimeout(showConcepts, 1000);
+        }
+      } catch (err) {
+        if (dt) dt.innerHTML = 'Something went wrong. Try again?';
+        setPose('neutral');
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // CONCEPTS
+    // ═══════════════════════════════════════════════════════════
+    function showConcepts() {
+      setPose('presenting');
+      var b = session.brief;
+      var concepts = [];
+      if (b.relationship === 'dad' || (b.interests||[]).some(function(i) { return ['football','soccer','arsenal','liverpool','chelsea'].indexOf(i) >= 0; }))
+        concepts.push({ name: 'GameWinners', desc: 'Turn them into a sporting legend', emoji: '⚽', price: 9 });
+      if (b.relationship === 'pet' || (b.interests||[]).some(function(i) { return ['dog','cat','pet'].indexOf(i) >= 0; }))
+        concepts.push({ name: 'Dogcasso', desc: 'Renaissance pet portrait', emoji: '🐕', price: 9 });
+      concepts.push({ name: 'Breaking News', desc: 'Personalized headline story', emoji: '📰', price: 9 });
+      if (b.occasion === 'birthday') concepts.push({ name: 'CoverStar', desc: 'Magazine cover', emoji: '📸', price: 9 });
+      if (b.relationship === 'dad') concepts.push({ name: 'Legend of Dad', desc: 'Cinematic documentary', emoji: '🎬', price: 9 });
+
+      var title = $('concepts-title');
+      if (title) title.textContent = 'Ideas for ' + (b.recipient || 'them');
+      var grid = $('concepts-grid');
+      if (grid) {
+        grid.innerHTML = concepts.map(function(c, i) {
+          return '<div class="concept" data-i="' + i + '"><div class="concept__visual">' + c.emoji + '</div><div class="concept__body"><div class="concept__name">' + c.name + '</div><div class="concept__desc">' + c.desc + '</div><div class="concept__price">From £' + c.price + '</div></div></div>';
+        }).join('');
+
+        grid.querySelectorAll('.concept').forEach(function(el) {
+          el.onclick = function() {
+            var overlay = $('concepts-overlay');
+            if (overlay) overlay.classList.remove('visible');
+            var idx = parseInt(el.dataset.i);
+            var c = concepts[idx];
+            session.mission.concept = c.name;
+            saveSession();
+            barthSpeaks(c.name + '. Excellent. How should we deliver this?');
+            setTimeout(function() {
+              var prodOverlay = $('products-overlay');
+              if (prodOverlay) prodOverlay.classList.add('visible');
+            }, 1500);
+          };
+        });
+      }
+
+      var overlay = $('concepts-overlay');
+      if (overlay) overlay.classList.add('visible');
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PRODUCTS
+    // ═══════════════════════════════════════════════════════════
+    document.querySelectorAll('.product').forEach(function(p) {
+      p.onclick = function() {
+        var overlay = $('products-overlay');
+        if (overlay) overlay.classList.remove('visible');
+        var product = { type: p.dataset.type, name: p.querySelector('.product__name').textContent, price: parseInt(p.dataset.price) };
+        session.satchel.push(product);
+        updateSatchel();
+        session.honey += 15;
+        updateHoney();
+        setPose('confident');
+        barthSpeaks('The ' + product.name.toLowerCase() + '. I\'ll take it to the hive.');
+        setTimeout(function() { setPose('neutral'); }, 3000);
+      };
+    });
+
+    // Close overlays
+    if ($('concepts-close')) $('concepts-close').onclick = function() { $('concepts-overlay').classList.remove('visible'); };
+    if ($('products-close')) $('products-close').onclick = function() { $('products-overlay').classList.remove('visible'); };
+
+    // ═══════════════════════════════════════════════════════════
+    // VOICE
+    // ═══════════════════════════════════════════════════════════
+    var mediaRecorder = null, audioChunks = [];
+    if ($('mic')) {
+      $('mic').onclick = async function() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+          $('mic').classList.remove('recording');
+          if (ti) ti.placeholder = 'Type or press the mic…';
+          setPose('neutral');
+          return;
+        }
+        try {
+          setPose('listening');
+          var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+          audioChunks = [];
+          mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) audioChunks.push(e.data); };
+          mediaRecorder.onstop = async function() {
+            stream.getTracks().forEach(function(t) { t.stop(); });
+            if (dt) dt.innerHTML = '<span style="color:var(--gold)">Transcribing…</span>';
+            try {
+              var fd = new FormData();
+              fd.append('file', new Blob(audioChunks, { type: 'audio/webm' }), 'recording.webm');
+              fd.append('model', '@cf/openai/whisper');
+              var r = await fetch('/api/ai/cf/@cf/openai/whisper', {
+                method: 'POST', body: fd
+              });
+              var res = await r.json();
+              if (res.success && res.result && res.result.text) turn(res.result.text);
+              else barthSpeaks("I didn't catch that.");
+            } catch(e) { barthSpeaks("Voice failed. Try typing?"); }
+          };
+          mediaRecorder.start();
+          $('mic').classList.add('recording');
+          if (ti) ti.placeholder = 'Listening…';
+        } catch(e) {
+          if (ti) ti.placeholder = 'Mic denied — type instead';
+          setPose('neutral');
+        }
+      };
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // INPUT HANDLERS (the important part)
+    // ═══════════════════════════════════════════════════════════
+    function sendMessage() {
+      if (!ti) return;
+      var v = ti.value.trim();
+      if (v) {
+        ti.value = '';
+        turn(v);
+      }
+    }
+
+    // Wait for DOM to be ready
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM ready, attaching handlers...');
+      
+      dt = $('dt');
+      conf = $('hive-signal');
+      flash = $('flash');
+      ti = $('ti');
+      speech = $('speech');
+      barthImg = $('barth-img');
+
+      // Attach send handlers
+      var sendBtn = $('send');
+      var tiEl = $('ti');
+      
+      if (sendBtn) {
+        sendBtn.addEventListener('click', sendMessage);
+        console.log('Send button handler attached');
+      }
+      
+      if (tiEl) {
+        tiEl.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+        console.log('Enter key handler attached');
+        tiEl.focus();
+      }
+
+      // UI elements
+      if ($('bee-name')) $('bee-name').textContent = session.bee.name;
+      if ($('bee-role')) $('bee-role').textContent = session.bee.role;
+      if ($('bee-status')) $('bee-status').classList.add('visible');
+      updateHoney();
+      updateSatchel();
+
+      // THE GREETING
+      setTimeout(async function() {
+        setPose('happy');
+        say('Hey! What\'s the occasion?');
+        await barthSpeaks('Hey! What\'s the occasion?');
+        setPose('neutral');
+      }, 800);
+    });
+
+    console.log('pogpet loaded');
+  </script>
+<script>
+  (function () {
+    var API = "/backend/api";
+    var state = {
+      owner: "", photoId: null, meshId: null, apiKey: "",
+      voice: "ryan", scene: "comedy_show", ready: false,
+      concept: "", subject: "",
+      talent: "comedy", act: ""
+    };
+    try {
+      state.owner = localStorage.getItem("pogpet.owner") || "";
+      state.meshId = localStorage.getItem("pogpet.mesh") || null;
+    } catch (e) {}
+    if (!state.owner) {
+      state.owner = "pog_" + Math.random().toString(36).slice(2, 10);
+      try { localStorage.setItem("pogpet.owner", state.owner); } catch (e) {}
+    }
+
+    function $(id) { return document.getElementById(id); }
+    function msg(id, t, cls) { var e = $(id); if (!e) return; e.textContent = t || ""; e.className = "panel__msg" + (cls ? " " + cls : ""); }
+    function stat(id, t) { var e = $(id); if (e) e.textContent = t || ""; }
+    // The bridge patches window.fetch, but it injects that patch AFTER these
+    // scripts run — so anything fired at boot would go out tokenless and 401.
+    // Append it ourselves; harmless if the patch already added one.
+    function withTok(u) {
+      var t = window.__FIGG_TOKEN;
+      if (!t || u.indexOf("token=") >= 0) return u;
+      return u + (u.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(t);
+    }
+    function get(u) { return fetch(withTok(u)).then(function (r) { return r.json(); }); }
+    function post(u, b) {
+      return fetch(withTok(u), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+        .then(function (r) { return r.json(); });
+    }
+    function say(el, text, kind) { if (!el) return; el.textContent = text || ""; el.className = "panel__status" + (kind ? " " + kind : ""); }
+
+    // ── google sign-in round trip ───────────────────────────
+    try {
+      var qs = new URLSearchParams(location.search);
+      var authKey = qs.get("auth");
+      if (authKey) {
+        if (qs.get("handle")) state.owner = qs.get("handle");
+        state.apiKey = authKey;
+        try {
+          localStorage.setItem("pogpet.apikey", authKey);
+          localStorage.setItem("pogpet.owner", state.owner);
+        } catch (e) {}
+        qs.delete("auth"); qs.delete("handle");
+        var rest = qs.toString();
+        history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash);
+      } else {
+        try {
+          state.apiKey = localStorage.getItem("pogpet.apikey") || "";
+          if (localStorage.getItem("pogpet.owner")) state.owner = localStorage.getItem("pogpet.owner");
+        } catch (e) {}
+      }
+    } catch (e) {}
+    paintWho();
+
+    var gbtn = $("g-signin");
+    if (gbtn) gbtn.addEventListener("click", function () {
+      gbtn.disabled = true;
+      var t = window.__FIGG_TOKEN ? "?token=" + encodeURIComponent(window.__FIGG_TOKEN) : "";
+      // probe first so an unconfigured backend explains itself instead of
+      // dumping JSON at the user
+      fetch("/api/auth/google/start" + t, { redirect: "manual" })
+        .then(function (r) {
+          if (r.status === 501 || (r.status >= 400 && r.type !== "opaqueredirect")) {
+            return r.json().then(function (d) {
+              gbtn.disabled = false;
+              var w = $("g-who");
+              if (w) { w.hidden = false; w.textContent = d.fix || d.error || "sign-in unavailable"; }
+            });
+          }
+          location.href = "/api/auth/google/start" + t;
+        })
+        .catch(function () { location.href = "/api/auth/google/start" + t; });
+    });
+
+    // ── tab routing ─────────────────────────────────────────
+    var panels = document.querySelectorAll(".panel");
+    function showTab(name) {
+      // The greeting overlay covers the exact same area as the panels
+      // (both start at left:72px, greet is z200 vs panel z50), so a tab
+      // click would open the panel invisibly underneath it. Choosing a tab
+      // means you've entered the app — lift the greeting.
+      var g = document.getElementById("greet");
+      if (g && !g.classList.contains("hidden")) g.classList.add("hidden");
+
+      for (var i = 0; i < panels.length; i++) {
+        panels[i].classList.toggle("open", panels[i].getAttribute("data-panel") === name);
+      }
+      if (name === "shop") loadShop();
+      if (name === "studio") loadStudioMeta();
+      if (name === "upload") loadMe();
+      if (name === "perform") { loadPerf(); loadPerfHistory(true); }
+    }
+    document.addEventListener("pog:tab", function (e) { showTab(e.detail.tab); });
+
+    // ── spotlight / roster ──────────────────────────────────
+    // The gate token is injected into the page by the bridge (window.__FIGG_TOKEN).
+    // fetch is patched for us, but <img src> never goes through fetch — so image
+    // URLs have to carry the token themselves or every card comes back 401.
+    function art(u) {
+      if (!u) return "";
+      var tok = window.__FIGG_TOKEN || "";
+      var abs = u.charAt(0) === "/" ? "/backend" + u : u;
+      if (!tok) return abs;
+      return abs + (abs.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(tok);
+    }
+    function loadMe() {
+      get(API + "/me?owner=" + encodeURIComponent(state.owner))
+        .then(function (d) {
+          if (!d.ok) return;
+          state.meshId = d.active_mesh_id || null;
+          try { if (state.meshId) localStorage.setItem("pogpet.mesh", state.meshId); } catch (e) {}
+          paintSpotlight(d);
+        })
+        .catch(function () { stat("up-status", "couldn't reach the roster"); });
+    }
+    function paintSpotlight(d) {
+      var roster = $("roster"), ring = $("spot-ring");
+      if (!roster) return;
+      if (!d.pogs.length) {
+        roster.innerHTML = '<div class="roster__empty">No pogs yet — drop a photo below to make your first.</div>';
+        $("spot-name").textContent = "nothing yet";
+        $("spot-id").textContent = "";
+        $("spot-state").textContent = "";
+        $("spot-img").hidden = true;
+        return;
+      }
+      var active = null;
+      for (var i = 0; i < d.pogs.length; i++) if (d.pogs[i].active) active = d.pogs[i];
+
+      // spotlight frame
+      if (active) {
+        $("spot-name").textContent = shortName(active.mesh_id);
+        $("spot-id").textContent = active.mesh_id;
+        $("spot-state").textContent = active.status === "succeeded"
+          ? (active.stub ? "preview sculpt · 8 products armed" : "sculpt ready · products armed")
+          : active.status;
+        var img = $("spot-img");
+        if (active.photo_key) { img.src = art("/api/artifacts/" + active.photo_key); img.hidden = false; }
+        else { img.hidden = true; }
+        var sbtn = $("spin-go");
+        if (sbtn) sbtn.hidden = !(active.mesh_id && active.status === "succeeded");
+        var sout = $("spin-out");
+        if (sout && active.mesh_id && state.meshId !== active.mesh_id) sout.hidden = true;
+        wireSpin();
+      }
+
+      roster.innerHTML = "";
+      d.pogs.forEach(function (p) {
+        var el = document.createElement("button");
+        el.type = "button";
+        el.className = "rogue" + (p.active ? " on" : "");
+        el.setAttribute("role", "listitem");
+        el.innerHTML =
+          '<div class="rogue__ph">' +
+            (p.photo_key
+              ? '<img src="' + art("/api/artifacts/" + p.photo_key) + '" alt="">'
+              : "🐾") +
+          "</div>" +
+          '<div class="rogue__st">' + (p.status === "succeeded" ? "ready" : p.status) + "</div>";
+        el.addEventListener("click", function () { activate(p.mesh_id); });
+        roster.appendChild(el);
+      });
+    }
+    function paintWho() {
+      var el = $("g-who");
+      if (!el) return;
+      if (!state.apiKey) { el.hidden = true; return; }
+      el.hidden = false;
+      el.innerHTML = "signed in as <b>@" + state.owner + "</b> " +
+        '<button type="button" id="g-signout">sign out</button>';
+      var b = $("g-signout");
+      if (b) b.addEventListener("click", function () {
+        try { localStorage.removeItem("pogpet.apikey"); } catch (e) {}
+        state.apiKey = "";
+        paintWho();
+      });
+    }
+
+    // ── 360° turntable on the spotlight ─────────────────────
+    function wireSpin() {
+      var b = $("spin-go");
+      if (!b) return;
+      b.onclick = function () {
+        if (!state.meshId) return;
+        b.disabled = true;
+        stat("spin-status", "rendering 36 frames with Blender — first time takes about a minute…");
+        var owner = encodeURIComponent(state.owner);
+        var mid = state.meshId;
+        function finish(d) {
+          if (d.status === "ready" && d.url) {
+            b.disabled = false;
+            var v = $("spin-video");
+            v.src = art(d.url);
+            $("spin-out").hidden = false;
+            stat("spin-status", "cached in R2 — instant from now on");
+            v.play().catch(function () {});
+            return true;
+          }
+          return false;
+        }
+        function poll(n) {
+          if (n > 75) { b.disabled = false; stat("spin-status", "still rendering — try again shortly"); return; }
+          get(API + "/meshes/" + mid + "/turntable?owner=" + owner)
+            .then(function (d) {
+              if (!d.ok) { b.disabled = false; stat("spin-status", d.error || "couldn't render"); return; }
+              if (finish(d)) return;
+              stat("spin-status", "rendering 36 frames with Blender… " + (n * 4) + "s");
+              setTimeout(function () { poll(n + 1); }, 4000);
+            })
+            .catch(function () { setTimeout(function () { poll(n + 1); }, 5000); });
+        }
+        get(API + "/meshes/" + mid + "/turntable?owner=" + owner)
+          .then(function (d) {
+            if (!d.ok) { b.disabled = false; stat("spin-status", d.error || "couldn't render"); return; }
+            if (finish(d)) return;
+            stat("spin-status", "rendering 36 frames with Blender… takes about a minute");
+            poll(1);
+          })
+          .catch(function () { b.disabled = false; stat("spin-status", "render failed"); });
+      };
+    }
+
+    function shortName(id) {
+      // no pet names stored yet — show a friendly handle off the id
+      return "pog " + id.replace(/^msh_/, "").slice(0, 5);
+    }
+    function activate(meshId) {
+      if (!meshId) return;
+      stat("up-status", "spotlighting " + meshId + "…");
+      post(API + "/me/active", { owner: state.owner, mesh_id: meshId })
+        .then(function (d) {
+          if (!d.ok) { msg("up-msg", d.error || "Couldn't switch.", "err"); return; }
+          state.meshId = d.active_mesh_id;
+          msg("up-msg", "Active. Cards, studio and shop all follow it now.", "ok");
+          stat("up-status", "");
+          loadMe();
+          // shop re-renders against the new active pog
+          if ($("panel-shop") && $("panel-shop").classList.contains("open")) loadShop();
+        })
+        .catch(function (e) { msg("up-msg", "Error: " + e.message, "err"); });
+    }
+
+    // ── domain switcher ─────────────────────────────────────
+    var bb = $("brand-btn"), sw = $("switcher");
+    if (bb && sw) {
+      bb.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = sw.classList.toggle("open");
+        bb.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      document.addEventListener("click", function () {
+        sw.classList.remove("open");
+        bb.setAttribute("aria-expanded", "false");
+      });
+      sw.addEventListener("click", function (e) { e.stopPropagation(); });
+    }
+
+    // ── upload tab ──────────────────────────────────────────
+    var drop = $("drop"), input = $("up-input"), preview = $("up-preview"),
+        sculptBtn = $("up-sculpt"), picked = null;
+
+    if (drop && input) {
+      drop.addEventListener("click", function () { input.click(); });
+      drop.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
+      });
+      ["dragenter", "dragover"].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); });
+      });
+      ["dragleave", "drop"].forEach(function (ev) {
+        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); });
+      });
+      drop.addEventListener("drop", function (e) {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) take(e.dataTransfer.files[0]);
+      });
+      input.addEventListener("change", function () {
+        if (input.files && input.files[0]) take(input.files[0]);
+      });
+    }
+
+    function take(file) {
+      picked = file;
+      msg("up-msg", "", "");
+      stat("up-status", "");
+      if (!/^image\/(jpeg|png)$/.test(file.type)) { msg("up-msg", "JPEG or PNG only — try another photo.", "err"); return; }
+      if (file.size > 10 * 1024 * 1024) { msg("up-msg", "That's " + (file.size / 1048576).toFixed(1) + " MB — max is 10 MB.", "err"); return; }
+      var url = URL.createObjectURL(file);
+      preview.src = url; preview.hidden = false;
+      stat("up-status", "uploading " + file.name + "…");
+      upload(file);
+    }
+
+    function upload(file) {
+      var fd = new FormData();
+      fd.append("photo", file, file.name);
+      fd.append("owner", state.owner);
+      fetch(API + "/photos", { method: "POST", body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d.ok) { msg("up-msg", d.error || "Upload failed.", "err"); stat("up-status", ""); return; }
+          state.photoId = d.photo.id;
+          sculptBtn.hidden = false;
+          msg("up-msg", (d.reused ? "Already on file — no credit spent. " : "") +
+              "Stored " + d.photo.width + "×" + d.photo.height + ".", "ok");
+          stat("up-status", "owner " + state.owner + " · photos: " + d.photo.r2_key.split("/")[1]);
+        })
+        .catch(function (e) { msg("up-msg", "Upload failed: " + e.message, "err"); stat("up-status", ""); });
+    }
+
+    if (sculptBtn) sculptBtn.addEventListener("click", function () {
+      if (!state.photoId) return;
+      sculptBtn.disabled = true;
+      stat("up-status", "Sculpting…");
+      msg("up-msg", "", "");
+      post(API + "/meshes", { photo_id: state.photoId })
+        .then(function (d) {
+          if (!d.ok) { msg("up-msg", d.error || "Could not start.", "err"); sculptBtn.disabled = false; stat("up-status", ""); return; }
+          if (d.reused) { msg("up-msg", "Cached — already sculpted.", "ok"); }
+          state.meshId = d.mesh.id;
+          try { localStorage.setItem("pogpet.mesh", state.meshId); } catch (e) {}
+          poll(d.mesh.id, 0);
+        })
+        .catch(function (e) { msg("up-msg", "Error: " + e.message, "err"); sculptBtn.disabled = false; stat("up-status", ""); });
+    });
+
+    function poll(mid, n) {
+      if (n > 60) { stat("up-status", "still going — check back in a moment"); sculptBtn.disabled = false; return; }
+      get(API + "/meshes/" + mid)
+        .then(function (d) {
+          if (!d.ok) { msg("up-msg", d.error || "Lost that mesh.", "err"); sculptBtn.disabled = false; return; }
+          var s = d.mesh.status;
+                    if (s === "succeeded") {
+            stat("up-status", "done · " + d.products.length + " products now active");
+            msg("up-msg", "Ready. Studio and Shop are unlocked.", "ok");
+            sculptBtn.disabled = false;
+            sculptBtn.textContent = "Open the studio →";
+            sculptBtn.onclick = function () { document.querySelector('[data-tab="studio"]').click(); };
+            loadMe();   // roster + spotlight pick it up (auto-activates if it's the first)
+          }
+ else if (s === "failed") {
+            msg("up-msg", d.mesh.error || "The sculpt failed.", "err");
+            stat("up-status", ""); sculptBtn.disabled = false;
+          } else {
+            stat("up-status", s === "queued" ? "queued…" : "sculpting… (" + n + ")");
+            setTimeout(function () { poll(mid, n + 1); }, 1500);
+          }
+        })
+        .catch(function () { setTimeout(function () { poll(mid, n + 1); }, 2000); });
+    }
+
+    // ── studio tab ──────────────────────────────────────────
+    var metaLoaded = false;
+    function loadStudioMeta() {
+      if (metaLoaded) return; metaLoaded = true;
+      get(API + "/voices").then(function (d) {
+        if (!d.ok) return;
+        renderChips("st-voices", d.voices, "key", "label", state.voice, function (k) { state.voice = k; });
+        renderChips("st-scenes", d.scenes, "key", "label", state.scene, function (k) { state.scene = k; });
+      }).catch(function () { stat("st-status", "voice list unavailable"); });
+      get(API + "/credits?owner=" + encodeURIComponent(state.owner)).then(function (d) {
+        if (d.ok) $("st-credits").textContent = "Free videos left today: " +
+          d.credits.video.remaining + "/" + d.credits.video.limit +
+          " · watermarked: " + (d.watermark_free ? "yes" : "no");
+      }).catch(function () {});
+    }
+    function renderChips(id, items, valKey, labKey, current, onPick) {
+      var box = $(id); if (!box) return;
+      box.innerHTML = "";
+      items.forEach(function (it) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "chip" + (it[valKey] === current ? " on" : "");
+        b.textContent = it[labKey];
+        b.addEventListener("click", function () {
+          state.current = it[valKey];
+          var all = box.querySelectorAll(".chip");
+          for (var i = 0; i < all.length; i++) all[i].classList.remove("on");
+          b.classList.add("on");
+          onPick(it[valKey]);
+        });
+        box.appendChild(b);
+      });
+    }
+
+    var stGo = $("st-go");
+    if (stGo) stGo.addEventListener("click", function () {
+      var topic = ($("st-topic").value || "").trim();
+      if (!topic) { msg("st-msg", "Give me one funny detail — that's the whole joke.", "err"); return; }
+      if (!state.meshId) { msg("st-msg", "Sculpt your pet in the upload tab first.", "err"); return; }
+      stGo.disabled = true;
+      $("st-out").hidden = true;
+      stat("st-status", "writing, voicing, rendering — about 45 seconds…");
+      msg("st-msg", "", "");
+      post(API + "/videos", {
+        owner: state.owner, mesh_id: state.meshId, topic: topic,
+        voice: state.voice, scene: state.scene,
+        pet_name: ($("st-name").value || "").trim() || "your pet"
+      }).then(function (d) {
+        stGo.disabled = false;
+        if (!d.ok) { msg("st-msg", d.error || "Render failed.", "err"); stat("st-status", ""); return; }
+        stat("st-status", "");
+        msg("st-msg", "Free — cost you nothing.", "ok");
+        var url = "/backend" + d.download;
+        var v = $("st-video");
+        v.src = url; $("st-out").hidden = false;
+        $("st-dl").href = url;
+        $("st-meta").textContent = d.video.duration.toFixed(0) + "s · " +
+          (d.video.watermarked ? "free preview" : "no watermark") + " · " + d.video.voice;
+        v.play().catch(function () {});
+        if (d.credits_remaining !== undefined)
+          $("st-credits").textContent = "Free videos left today: " + d.credits_remaining;
+      }).catch(function (e) { stGo.disabled = false; msg("st-msg", "Error: " + e.message, "err"); stat("st-status", ""); });
+    });
+
+    // ── shop tab ────────────────────────────────────────────
+    var EMOJI = { figurine: "🗿", bauble: "🎄", video: "🎬", comedy_show: "🎤",
+                  card: "💌", sticker: "🌟", comedy_set: "🎙️", ar_show: "📱" };
+    var BLURB = {
+      figurine: "Your pet as a printed brick figure",
+      bauble: "Same sculpt, on the tree",
+      video: "A short clip, watermarked",
+      comedy_show: "A set at the comedy club",
+      card: "Printed and posted to the door",
+      sticker: "Peel, stick, repeat",
+      comedy_set: "Written for them, start to finish",
+      ar_show: "Scan it, watch them do the set"
+    };
+    var conceptsLoaded = false;
+    function loadConcepts() {
+      if (conceptsLoaded) return;
+      conceptsLoaded = true;
+      var sel = $("shop-concept");
+      if (!sel) return;
+      get(API + "/concepts").then(function (d) {
+        if (!d.ok) { sel.innerHTML = '<option value="">(catalogue unavailable)</option>'; return; }
+        var byWorld = {};
+        d.items.forEach(function (c) { (byWorld[c.world] = byWorld[c.world] || []).push(c); });
+        var html = '<option value="">no template — plain product card</option>';
+        Object.keys(byWorld).forEach(function (w) {
+          html += '<optgroup label="' + w + '">';
+          byWorld[w].forEach(function (c) {
+            html += '<option value="' + c.id + '">' + c.id + " · " + c.name + '</option>';
+          });
+          html += "</optgroup>";
+        });
+        sel.innerHTML = html;
+        if (state.concept) sel.value = state.concept;
+      }).catch(function () {});
+    }
+
+    function loadShop() {
+      var grid = $("shop-grid");
+      loadConcepts();
+      stat("shop-status", "loading…");
+      var q = "?owner=" + encodeURIComponent(state.owner);
+      if (state.concept) q += "&concept=" + encodeURIComponent(state.concept);
+      if (state.subject) q += "&subject=" + encodeURIComponent(state.subject);
+      get(API + "/products" + q)
+        .then(function (d) {
+          if (!d.ok) { stat("shop-status", ""); msg("shop-msg", d.error || "Couldn't reach the shop.", "err"); return; }
+          if (!d.count) {
+            stat("shop-status", ""); grid.innerHTML = "";
+            msg("shop-msg", d.hint || "Nothing yet — sculpt a photo in the spotlight tab first.", "err");
+            return;
+          }
+          state.meshId = d.active_mesh_id;
+          try { localStorage.setItem("pogpet.mesh", d.active_mesh_id); } catch (e) {}
+          stat("shop-status", "spotlight: " + shortName(d.active_mesh_id) + " · " + d.count +
+                " items" + (d.concept ? " · " + d.concept : "") +
+                (d.subject ? " for " + d.subject : "") + " · prices EST");
+          msg("shop-msg", "", "");
+          grid.innerHTML = "";
+          d.items.forEach(function (it) {
+            var el = document.createElement("div");
+            el.className = "card";
+            el.innerHTML =
+              '<img class="card__shot" src="' + art(it.image) + '" alt="' + it.label + '" loading="lazy">' +
+              '<div class="card__tag">prodigi · ' + it.shape + '</div>' +
+              '<div class="card__name">' + it.label + '</div>' +
+              '<div class="card__note">' + it.sku_note + '</div>' +
+              '<div class="card__price">$' + (it.price_cents / 100).toFixed(2) +
+                ' <small style="font-size:9px;color:var(--muted)">' + it.price_grade + '</small></div>' +
+              '<button class="card__btn" type="button">Add to cart</button>';
+            grid.appendChild(el);
+          });
+          msg("shop-msg", d.note || "", "");
+          // second: the products that come straight off the active mesh
+          return get(API + "/meshes/" + d.active_mesh_id + "/products");
+        })
+        .then(function (m) {
+          if (!m || !m.ok) return;
+          m.products.forEach(function (p) {
+            var el = document.createElement("div");
+            el.className = "card";
+            el.innerHTML =
+              '<div class="card__emoji">' + (EMOJI[p.product] || "\u{1F381}") + '</div>' +
+              '<div class="card__tag">from your mesh</div>' +
+              '<div class="card__name">' + p.product.replace(/_/g, " ") + '</div>' +
+              '<div class="card__desc">' + (BLURB[p.product] || "") + '</div>' +
+              '<div class="card__price">' + (p.price_cents === 0 ? "free" : "$" + (p.price_cents / 100).toFixed(2)) + '</div>' +
+              '<button class="card__btn" type="button">' + (p.status === "active" ? "Add to cart" : p.status) + '</button>';
+            $("shop-grid").appendChild(el);
+          });
+          $("shop-grid").querySelectorAll(".card__btn").forEach(function (b) {
+            if (b.dataset.wired) return;
+            b.dataset.wired = "1";
+            b.addEventListener("click", function () {
+              msg("shop-msg", "Cart isn't wired up yet — that's Stripe, which still needs keys.", "");
+            });
+          });
+        })
+        .catch(function () { stat("shop-status", ""); msg("shop-msg", "Backend unreachable.", "err"); });
+    }
+
+
+    // ── perform: talent show ─────────────────────────────────
+    var perfLoaded = false;
+    function loadPerf() {
+      if (perfLoaded) return;
+      perfLoaded = true;
+      get(API + "/acts").then(function (d) {
+        if (!d.ok) { stat("pf-status", d.error || "roster unavailable"); return; }
+        var box = $("pf-talents");
+        if (box) {
+          box.innerHTML = "";
+          d.talents.forEach(function (t) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "chip" + (t.key === state.talent ? " on" : "");
+            b.textContent = (t.icon || "") + " " + t.label;
+            b.addEventListener("click", function () {
+              state.talent = t.key;
+              var all = box.querySelectorAll(".chip");
+              for (var i = 0; i < all.length; i++) all[i].classList.remove("on");
+              b.classList.add("on");
+            });
+            box.appendChild(b);
+          });
+        }
+        var sel = $("pf-act");
+        if (sel) {
+          sel.innerHTML = '<option value="">your pet as themselves</option>' +
+            d.acts.map(function (a) {
+              return '<option value="' + a.slug + '">' + a.name + "</option>";
+            }).join("");
+          var showPremise = function () {
+            var o = sel.options[sel.selectedIndex];
+            var found = d.acts.filter(function (a) { return a.slug === (o && o.value); })[0];
+            var el = $("pf-premise");
+            if (el) el.textContent = found ? found.premise : "";
+          };
+          sel.addEventListener("change", showPremise);
+          showPremise();
+        }
+        var cr = $("pf-credits");
+        if (cr) cr.textContent = "Free: 5 videos a day · watermarked · cost you nothing";
+      }).catch(function () {
+        var st = $("pf-status");
+        if (st) st.textContent = "couldn\'t reach the roster";
+      });
+    }
+
+
+    var perfHistoryLoaded = false;
+    function loadPerfHistory(force) {
+      if (perfHistoryLoaded && !force) return;
+      perfHistoryLoaded = true;
+      var box = $("pf-history");
+      if (!box) return;
+      get(API + "/videos?owner=" + encodeURIComponent(state.owner)).then(function (d) {
+        if (!d.ok) return;
+        var rows = d.videos || [];
+        if (!rows.length) {
+          box.innerHTML = '<div class="roster__empty">Nothing yet — your first set lands here.</div>';
+          return;
+        }
+        box.innerHTML = rows.map(function (v) {
+          var when = new Date((v.created_at || 0) * 1000);
+          var stamp = isNaN(when) ? "" : (when.getMonth() + 1) + "/" + when.getDate();
+          return '<div class="rogue" data-v="' + v.id + '">' +
+            '<div class="rogue__ph">🎤</div>' +
+            '<div class="rogue__st">' + (v.talent || "comedy") + " · " +
+              Math.round(v.duration || 0) + "s</div>" +
+            '<div class="rogue__st">' + stamp + (v.watermarked ? " · free" : "") + "</div>" +
+            "</div>";
+        }).join("");
+        box.querySelectorAll(".rogue").forEach(function (el) {
+          el.addEventListener("click", function () {
+            var v = $("pf-video");
+            if (!v) return;
+            v.src = art("/api/videos/" + el.getAttribute("data-v") + "/file");
+            var o = $("pf-out"); if (o) o.hidden = false;
+            var dl = $("pf-dl"); if (dl) dl.href = art("/api/videos/" + el.getAttribute("data-v") + "/file");
+            v.play().catch(function () {});
+          });
+        });
+      }).catch(function () {});
+    }
+
+    var pfGo = $("pf-go");
+    if (pfGo) pfGo.addEventListener("click", function () {
+      var topicEl = $("pf-topic"), topic = topicEl ? (topicEl.value || "").trim() : "";
+      if (!topic) { msg("pf-msg", "Give me the bit — one funny detail.", "err"); return; }
+      if (!state.meshId) { msg("pf-msg", "Sculpt a pog in the spotlight first.", "err"); return; }
+      pfGo.disabled = true;
+      var out = $("pf-out"); if (out) out.hidden = true;
+      stat("pf-status", "writing, voicing, rendering — about 45 seconds…");
+      msg("pf-msg", "", "");
+      var actEl = $("pf-act"), nameEl = $("pf-name");
+      post(API + "/videos", {
+        owner: state.owner, mesh_id: state.meshId, topic: topic,
+        talent: state.talent, act: actEl ? actEl.value : "",
+        pet_name: nameEl && nameEl.value ? nameEl.value.trim() : "your pet",
+        voice: "ryan"
+      }).then(function (d) {
+        pfGo.disabled = false;
+        if (!d.ok) { msg("pf-msg", d.error || "Render failed.", "err"); stat("pf-status", ""); return; }
+        stat("pf-status", "");
+        msg("pf-msg", "On stage — free, watermarked.", "ok");
+        perfHistoryLoaded = false; loadPerfHistory(true);
+        var v = $("pf-video");
+        v.src = art(d.download);
+        var o = $("pf-out"); if (o) o.hidden = false;
+        var dl = $("pf-dl"); if (dl) dl.href = art(d.download);
+        var meta = $("pf-meta");
+        if (meta) meta.textContent = (d.video.talent || "comedy") + " · " +
+          d.video.duration.toFixed(0) + "s · " + d.video.voice;
+        v.play().catch(function () {});
+        var cr = $("pf-credits");
+        if (cr && d.credits_remaining !== undefined)
+          cr.textContent = "Free videos left today: " + d.credits_remaining;
+      }).catch(function (e) {
+        pfGo.disabled = false;
+        msg("pf-msg", "Error: " + e.message, "err");
+        stat("pf-status", "");
+      });
+    });
+
+    // ── shop: template + subject controls ───────────────────
+    var applyBtn = $("shop-apply");
+    if (applyBtn) applyBtn.addEventListener("click", function () {
+      var sel = $("shop-concept"), sub = $("shop-subject");
+      state.concept = sel ? sel.value : "";
+      state.subject = sub ? (sub.value || "").trim() : "";
+      loadShop();
+    });
+    if ($("shop-subject")) $("shop-subject").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && applyBtn) applyBtn.click();
+    });
+
+    // First paint: resolve who we are and which pog is active, so every tab
+    // (studio, shop, perform) has a mesh to work with without visiting the
+    // spotlight first. state.meshId from localStorage is only a hint.
+    if (document.readyState === "complete") loadMe();
+    else window.addEventListener("load", function () { loadMe(); });
+    if (state.meshId) stat("up-status", "previous sculpt remembered");
+  })();
+  </script>
+</body>
+</html>

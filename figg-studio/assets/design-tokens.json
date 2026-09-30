@@ -1,0 +1,21 @@
+{
+  "brand": "figg.",
+  "colors": {
+    "violet": "#8B3DFF",
+    "violetDark": "#6D2FD1",
+    "lilac": "#EAD8FF",
+    "ink": "#111111",
+    "paper": "#FAFAF8",
+    "line": "#E8E5E9"
+  },
+  "type": {
+    "display": "Arial Rounded / Nunito / system-ui",
+    "body": "Inter / system-ui"
+  },
+  "radii": {
+    "sm": 12,
+    "md": 24,
+    "lg": 36,
+    "xl": 54
+  }
+}

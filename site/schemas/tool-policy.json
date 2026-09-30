@@ -1,0 +1,151 @@
+{
+  "version": "1.0.0",
+  "description": "Tool execution policy for Bartholomew III — separates automatic UI actions from paid/commerce actions requiring explicit confirmation",
+  "tools": {
+    "update_gift_brief": {
+      "category": "AUTOMATIC",
+      "description": "Update the customer's GiftBrief with new information gathered from conversation",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "occasion": { "type": "string" },
+          "recipient": { "type": "string" },
+          "relationship": { "type": "string" },
+          "age": { "type": "integer" },
+          "interests": { "type": "array", "items": { "type": "string" } },
+          "personality": { "type": "string" },
+          "memories": { "type": "array", "items": { "type": "string" } },
+          "tone": { "type": "string" },
+          "creativeDirection": { "type": "string" },
+          "photos": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "get_gift_brief": {
+      "category": "AUTOMATIC",
+      "description": "Read the current GiftBrief state",
+      "parameters": { "type": "object", "properties": {} }
+    },
+    "fly_to": {
+      "category": "AUTOMATIC",
+      "description": "Move Bartholomew to a specific page element",
+      "parameters": {
+        "type": "object",
+        "required": ["target"],
+        "properties": {
+          "target": { "type": "string", "description": "CSS selector or element ID" },
+          "side": { "type": "string", "enum": ["left", "right", "above", "below"], "default": "right" }
+        }
+      }
+    },
+    "point_at": {
+      "category": "AUTOMATIC",
+      "description": "Fly to element and point at it",
+      "parameters": {
+        "type": "object",
+        "required": ["target"],
+        "properties": {
+          "target": { "type": "string", "description": "CSS selector or element ID" }
+        }
+      }
+    },
+    "set_expression": {
+      "category": "AUTOMATIC",
+      "description": "Change Bartholomew's facial expression",
+      "parameters": {
+        "type": "object",
+        "required": ["expression"],
+        "properties": {
+          "expression": { "type": "string", "enum": ["neutral", "happy", "wink", "listening", "thinking", "surprised", "confident", "talking", "presenting", "celebrate", "sleeping"] }
+        }
+      }
+    },
+    "show_products": {
+      "category": "AUTOMATIC",
+      "description": "Display relevant product recommendations",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "filter": { "type": "string", "description": "Optional filter for product type" }
+        }
+      }
+    },
+    "show_example": {
+      "category": "AUTOMATIC",
+      "description": "Show an example of a completed product",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "description": "Product type to show" }
+        }
+      }
+    },
+    "request_upload": {
+      "category": "AUTOMATIC",
+      "description": "Open the file upload UI for photos/videos",
+      "parameters": { "type": "object", "properties": {} }
+    },
+    "create_concept": {
+      "category": "AUTOMATIC",
+      "description": "Generate a free concept preview (no charge)",
+      "parameters": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "create_preview": {
+      "category": "CONFIRMATION_REQUIRED",
+      "description": "Generate a paid preview (charges customer)",
+      "parameters": {
+        "type": "object",
+        "required": ["productId", "customization"],
+        "properties": {
+          "productId": { "type": "string" },
+          "customization": { "type": "object" }
+        }
+      },
+      "confirmationMessage": "This will generate a preview for £{price}. Continue?"
+    },
+    "add_to_cart": {
+      "category": "CONFIRMATION_REQUIRED",
+      "description": "Add product to cart and proceed to checkout",
+      "parameters": {
+        "type": "object",
+        "required": ["productId", "variant"],
+        "properties": {
+          "productId": { "type": "string" },
+          "variant": { "type": "string" }
+        }
+      },
+      "confirmationMessage": "Ready to add this to your bag?"
+    },
+    "purchase": {
+      "category": "CONFIRMATION_REQUIRED",
+      "description": "Complete the purchase",
+      "parameters": {
+        "type": "object",
+        "required": ["orderId"],
+        "properties": {
+          "orderId": { "type": "string" }
+        }
+      },
+      "confirmationMessage": "Confirm purchase for £{total}?"
+    },
+    "send_email": {
+      "category": "CONFIRMATION_REQUIRED",
+      "description": "Send email notification to buyer or recipient",
+      "parameters": {
+        "type": "object",
+        "required": ["to", "template"],
+        "properties": {
+          "to": { "type": "string" },
+          "template": { "type": "string" }
+        }
+      },
+      "confirmationMessage": "Send this email?"
+    }
+  }
+}

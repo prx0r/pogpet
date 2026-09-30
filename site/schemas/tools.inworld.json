@@ -1,0 +1,137 @@
+[
+  {
+    "type": "function",
+    "name": "update_gift_brief",
+    "description": "Merge newly learned facts into the current GiftBrief. Call whenever the user reveals stable facts about the occasion, recipient, interests, personality, memories, tone, assets, budget or deadline.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["patch"],
+      "properties": {
+        "patch": {
+          "type": "object",
+          "description": "Partial GiftBrief object. Only include facts actually supported by the conversation.",
+          "additionalProperties": true
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "name": "get_gift_brief",
+    "description": "Read the current structured GiftBrief before deciding what information is still missing.",
+    "parameters": { "type": "object", "additionalProperties": false, "properties": {} }
+  },
+  {
+    "type": "function",
+    "name": "show_products",
+    "description": "Show at most three relevant MythicBee products in the page UI once enough context exists to make the choices meaningful.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_ids"],
+      "properties": {
+        "product_ids": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "type": "string" } },
+        "reason": { "type": "string", "maxLength": 300 }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "name": "show_example",
+    "description": "Reveal one specific example that helps the customer understand a creative direction or product.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["example_id"],
+      "properties": { "example_id": { "type": "string" } }
+    }
+  },
+  {
+    "type": "function",
+    "name": "fly_to",
+    "description": "Move Bartholomew next to a known page element. Use sparingly to guide attention, not continuously.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id"],
+      "properties": {
+        "element_id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$" },
+        "side": { "type": "string", "enum": ["left", "right", "above", "below"], "default": "right" }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "name": "point_at",
+    "description": "Have Bartholomew visibly point toward a known page element.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["element_id"],
+      "properties": { "element_id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,79}$" } }
+    }
+  },
+  {
+    "type": "function",
+    "name": "set_expression",
+    "description": "Set Bartholomew's expression/state. Use reactions that fit the conversation and do not over-animate.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expression"],
+      "properties": {
+        "expression": { "type": "string", "enum": ["neutral", "happy", "wink", "listening", "thinking", "surprised", "confident", "talking", "presenting", "celebrate", "sleeping"] }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "name": "request_upload",
+    "description": "Open the appropriate upload UI only when media would materially improve the concept or is required to proceed.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["photos", "video", "audio"] },
+        "prompt": { "type": "string", "maxLength": 300 },
+        "minimum_count": { "type": "integer", "minimum": 1, "maximum": 30 }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "name": "create_concept",
+    "description": "Generate a concise creative concept from the current GiftBrief when the brief is sufficiently complete.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": { "type": ["string", "null"], "maxLength": 600 }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "name": "create_preview",
+    "description": "Start generation of a customer-visible preview using the selected product and current GiftBrief. This may spend compute and should only happen after the UI obtains user confirmation.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_id"],
+      "properties": { "product_id": { "type": "string" } }
+    }
+  },
+  {
+    "type": "function",
+    "name": "add_to_cart",
+    "description": "Prepare a selected product for the cart. The client must show an explicit confirmation step before any purchase or charge.",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_id"],
+      "properties": { "product_id": { "type": "string" } }
+    }
+  }
+]

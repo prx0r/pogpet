@@ -1,0 +1,173 @@
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+/* Fade in up */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade in */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Star thread draw */
+@keyframes threadDraw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Star glow pulse */
+@keyframes glowPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 7px rgba(227, 180, 93, .3));
+  }
+  50% {
+    filter: drop-shadow(0 0 13px rgba(227, 180, 93, .5));
+  }
+}
+
+/* Star subtle rotate */
+@keyframes subtleRotate {
+  0%, 100% {
+    transform: rotate(-.25deg);
+  }
+  50% {
+    transform: rotate(.2deg);
+  }
+}
+
+/* Star subtle scale */
+@keyframes subtleScale {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.012);
+  }
+}
+
+/* Thread glint travel */
+@keyframes glintTravel {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+/* Star twinkle */
+@keyframes twinkle {
+  0%, 100% {
+    opacity: var(--tw-opacity-min, .12);
+  }
+  50% {
+    opacity: var(--tw-opacity-max, .55);
+  }
+}
+
+/* Reveal stagger */
+@keyframes revealStagger {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   ANIMATION CLASSES
+   ============================================ */
+.animate-fade-in {
+  animation: fadeIn var(--normal) var(--ease-premium) forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--normal) var(--ease-premium) forwards;
+}
+
+.animate-thread-draw {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: threadDraw 800ms var(--ease-premium) forwards;
+}
+
+.animate-glow {
+  animation: glowPulse 5.8s ease-in-out infinite;
+}
+
+.animate-rotate {
+  animation: subtleRotate 5.8s ease-in-out infinite;
+}
+
+.animate-scale {
+  animation: subtleScale 5.8s ease-in-out infinite;
+}
+
+/* Stagger delays */
+.stagger-1 { animation-delay: 90ms; }
+.stagger-2 { animation-delay: 180ms; }
+.stagger-3 { animation-delay: 270ms; }
+.stagger-4 { animation-delay: 360ms; }
+.stagger-5 { animation-delay: 450ms; }
+
+/* ============================================
+   SCROLL REVEAL
+   ============================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all var(--slow) var(--ease-premium);
+}
+
+.reveal--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================
+   REDUCED MOTION
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-fade-in-up,
+  .animate-thread-draw,
+  .animate-glow,
+  .animate-rotate,
+  .animate-scale {
+    animation: none !important;
+    opacity: 1 !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

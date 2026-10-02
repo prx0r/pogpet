@@ -1966,6 +1966,29 @@ def list_videos():
                     "videos": [db.dump(r) for r in rows]})
 
 
+@app.get("/api/videos/feed")
+def videos_feed():
+    """Public vertical-feed catalog — recent finished clips, any owner.
+
+    Lightweight swipe feed (Videos tab): one mp4 per slide, src = artifact
+    route. No secrets in the payload.
+    """
+    with db.connect() as c:
+        rows = c.execute(
+            """SELECT id,owner,scene,talent,voice,pet_name,topic,watermarked,
+                      duration,bytes,created_at
+               FROM videos
+               WHERE path IS NOT NULL AND path != ''
+               ORDER BY created_at DESC LIMIT 40""").fetchall()
+    items = []
+    for r in rows:
+        d = db.dump(r)
+        d["src"] = f"/api/videos/{d['id']}/file"
+        d["title"] = (d.get("pet_name") or "your star") + " · " + (d.get("topic") or d.get("scene") or "")
+        items.append(d)
+    return jsonify({"ok": True, "items": items, "count": len(items)})
+
+
 # ── jobs / artifacts ──────────────────────────────────────────────────
 
 @app.post("/api/run")
@@ -2073,6 +2096,315 @@ def health():
         "products": list(config.PRODUCTS),
         "counts": counts,
     })
+
+
+# ── studio: modular product lines, props, one-click order ────────────
+# Registry: config.STUDIO_LINES / STUDIO_COATS / STUDIO_HATS.
+# Stills live in data/productimg/prod → public /img/prod/.
+# Orders are intent + quote until Stripe/Shopify checkout lands.
+
+def _studio_still(name: str) -> str | None:
+    p = config.DATA / "productimg" / config.STUDIO_STILL_DIR / name
+    return f"/img/{config.STUDIO_STILL_DIR}/{name}" if p.exists() else None
+
+
+def _studio_stills_for(line: str, coat: str, hat: str) -> dict:
+    """Pick the best pre-rendered stills for this combo (0 credits)."""
+    coat = (coat or "none").lower()
+    hat = (hat or "none").lower()
+    prefix = ""
+    if hat != "none":
+        prefix = f"{hat}-"
+    elif coat not in ("", "none"):
+        prefix = f"coat-{coat}-"
+    elif line == "ornament":
+        prefix = "prod-"
+    elif line == "keychain":
+        prefix = "kc-"
+    else:
+        prefix = "prod-"
+    keys = ["hero", "front", "side", "back", "loop"]
+    out = {}
+    for k in keys:
+        url = _studio_still(f"{prefix}{k}.png")
+        if url:
+            out[k] = url
+    # fallbacks so the UI never blanks
+    if not out:
+        for k in keys:
+            url = _studio_still(f"prod-{k}.png")
+            if url:
+                out[k] = url
+    return out
+
+
+@app.get("/api/studio")
+def studio_state():
+    """Modular studio contract: lines, props, meshes, stills, prices."""
+    owner = (request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        prof = db.get_profile(c, owner)
+        pogs = db.pogs_for(c, owner)
+        active = prof.get("active_mesh_id") or ""
+        if not active:
+            ok = next((p for p in pogs if p["status"] == "succeeded"), None)
+            if ok:
+                active = ok["id"]
+                db.set_active(c, owner, active)
+        roster = []
+        for p in pogs:
+            if p["status"] != "succeeded":
+                continue
+            glb = storage.public_url(p["glb_key"]) if p.get("glb_key") else ""
+            roster.append({
+                "mesh_id": p["id"],
+                "label": short_mesh_label(p["id"]),
+                "glb_url": glb,
+                "active": p["id"] == active,
+                "stub": bool(p["stub"]),
+            })
+    # canonical demo mesh always available (exact product GLB)
+    demo = {
+        "mesh_id": "canonical",
+        "label": "canonical dog",
+        "glb_url": config.STUDIO_CANONICAL_GLB,
+        "active": not roster,
+        "stub": False,
+        "demo": True,
+    }
+    meshes = ([demo] + roster) if roster else [demo]
+    if active and roster:
+        for m in meshes:
+            m["active"] = m["mesh_id"] == active
+    lines = []
+    for lid, spec in config.STUDIO_LINES.items():
+        lines.append({"id": lid, **spec})
+    coats = list(config.STUDIO_COATS)
+    hats = []
+    for h in config.STUDIO_HATS:
+        hats.append({**h, "preview": _studio_stills_for("ornament", "none", h["id"])})
+    # calling card = exact product still under character select
+    calling = _studio_still("prod-hero.png") or config.STUDIO_CALLING_CARD
+    return jsonify({
+        "ok": True,
+        "owner": owner,
+        "active_mesh_id": active or ("canonical" if not roster else ""),
+        "meshes": meshes,
+        "lines": lines,
+        "coats": coats,
+        "hats": hats,
+        "calling_card": calling,
+        "stills": {
+            "exact": _studio_stills_for("ornament", "none", "none"),
+            "keychain": _studio_stills_for("keychain", "none", "none"),
+        },
+        "canonical_glb": config.STUDIO_CANONICAL_GLB,
+        "note": "Studio = character select + loadout config. "
+                "Prices and checkout live on the Products tab.",
+    })
+
+
+@app.get("/api/studio/stills")
+def studio_stills():
+    line = (request.args.get("line") or "ornament").strip()
+    coat = (request.args.get("coat") or "none").strip()
+    hat = (request.args.get("hat") or "none").strip()
+    return jsonify({"ok": True, "line": line, "coat": coat, "hat": hat,
+                    "stills": _studio_stills_for(line, coat, hat)})
+
+
+@app.post("/api/studio/customise")
+def studio_customise():
+    """Apply a customisation choice. Returns stills + what will be ordered.
+
+    Freeform agent text is parsed client-side into {line, coat, hat}; this
+    endpoint is the contract both the UI and MCP tools call.
+    """
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    line = (body.get("line") or "ornament").strip()
+    coat = (body.get("coat") or "none").strip().lower()
+    hat = (body.get("hat") or "none").strip().lower()
+    mesh_id = (body.get("mesh_id") or "").strip()
+    if line not in config.STUDIO_LINES:
+        return _err(f"unknown line — have: {', '.join(config.STUDIO_LINES)}", 400)
+    if coat not in {c["id"] for c in config.STUDIO_COATS}:
+        return _err("unknown coat", 400)
+    if hat not in {h["id"] for h in config.STUDIO_HATS}:
+        return _err("unknown hat", 400)
+    spec = config.STUDIO_LINES[line]
+    if spec.get("status") != "live":
+        return _err(f"{line} is not live yet ({spec.get('status')})", 409)
+    stills = _studio_stills_for(line, coat, hat)
+    return jsonify({
+        "ok": True,
+        "owner": owner,
+        "line": line,
+        "coat": coat,
+        "hat": hat,
+        "mesh_id": mesh_id,
+        "stills": stills,
+        "price_cents": spec.get("price_cents", 0),
+        "scale_mm": spec.get("scale_mm"),
+        "hint": "Preview grade only — multi-colour print is quoted live. "
+                "Hardware stays printed plastic.",
+    })
+
+
+@app.post("/api/studio/order")
+def studio_order():
+    """One-click order intent. Stores the combo + quote; checkout is next."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    line = (body.get("line") or "ornament").strip()
+    coat = (body.get("coat") or "none").strip().lower()
+    hat = (body.get("hat") or "none").strip().lower()
+    mesh_id = (body.get("mesh_id") or "").strip()
+    qty = max(1, min(20, int(body.get("qty") or 1)))
+    note = (body.get("note") or "")[:200]
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    spec = config.STUDIO_LINES[line]
+    if spec.get("status") != "live":
+        return _err(f"{line} is not orderable yet", 409)
+    price = int(spec.get("price_cents") or 0) * qty
+    with db.connect() as c:
+        order = db.create_order(
+            c, owner=owner, line=line, mesh_id=mesh_id, coat=coat, hat=hat,
+            qty=qty, price_cents=price, note=note,
+        )
+    return jsonify({
+        "ok": True,
+        "order": order,
+        "price_cents": price,
+        "status": "pending_checkout",
+        "hint": "Order reserved. Payment lands with Stripe/Shopify — "
+                "nothing charged yet.",
+    })
+
+
+@app.get("/api/products/studio")
+def products_studio():
+    """Products tab catalog: studio lines + relevant assets + stills + prices."""
+    owner = (request.args.get("owner") or "anon").strip()[:80]
+    with db.connect() as c:
+        prof = db.get_profile(c, owner)
+        active = prof.get("active_mesh_id") or ""
+    items = []
+    for lid, spec in config.STUDIO_LINES.items():
+        assets = spec.get("assets") or {"hats": ["none"], "coats": ["none"]}
+        hats = [h for h in config.STUDIO_HATS if h["id"] in assets.get("hats", ["none"])]
+        coats = [c0 for c0 in config.STUDIO_COATS if c0["id"] in assets.get("coats", ["none"])]
+        stills = _studio_stills_for(lid, "none", "none")
+        # xmas ornament gets a santa-forward still when available
+        if lid == "ornament":
+            s = _studio_stills_for("ornament", "none", "santa")
+            if s.get("hero"):
+                stills = {**stills, **{f"santa_{k}": v for k, v in s.items()}}
+        items.append({
+            "id": lid,
+            "label": spec.get("label", lid),
+            "blurb": spec.get("blurb", ""),
+            "status": spec.get("status", "live"),
+            "price_cents": spec.get("price_cents", 0),
+            "scale_mm": spec.get("scale_mm"),
+            "theme": spec.get("theme", ""),
+            "hardware": spec.get("hardware", ""),
+            "assets": {"hats": hats, "coats": coats},
+            "stills": stills,
+        })
+    return jsonify({
+        "ok": True,
+        "owner": owner,
+        "active_mesh_id": active,
+        "items": items,
+        "note": "One-click order reserves intent + quote. "
+                "MCP: figg_product_assets · figg_checkout.",
+    })
+
+
+@app.post("/api/products/personalise")
+def products_personalise():
+    """MCP / agent: personalise hat+coat on a product line for the active mesh."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    line = (body.get("line") or "ornament").strip()
+    coat = (body.get("coat") or "none").strip().lower()
+    hat = (body.get("hat") or "none").strip().lower()
+    mesh_id = (body.get("mesh_id") or "").strip()
+    texture_note = (body.get("texture") or body.get("texture_note") or "")[:200]
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    spec = config.STUDIO_LINES[line]
+    allowed = spec.get("assets") or {}
+    if coat not in (allowed.get("coats") or ["none"]):
+        return _err(f"coat {coat!r} is not an asset on {line}", 400)
+    if hat not in (allowed.get("hats") or ["none"]):
+        return _err(f"hat {hat!r} is not an asset on {line}", 400)
+    if spec.get("status") != "live":
+        return _err(f"{line} is not live yet", 409)
+    stills = _studio_stills_for(line, coat, hat)
+    return jsonify({
+        "ok": True,
+        "owner": owner,
+        "line": line,
+        "coat": coat,
+        "hat": hat,
+        "mesh_id": mesh_id,
+        "texture_note": texture_note,
+        "stills": stills,
+        "price_cents": spec.get("price_cents", 0),
+        "hint": "Personalisation applied as preview. Checkout via figg_checkout / "
+                "POST /api/products/order.",
+    })
+
+
+@app.post("/api/products/order")
+def products_order():
+    """Products-tab one-click order — same store as POST /api/studio/order."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    line = (body.get("line") or body.get("product") or "ornament").strip()
+    coat = (body.get("coat") or "none").strip().lower()
+    hat = (body.get("hat") or "none").strip().lower()
+    mesh_id = (body.get("mesh_id") or "").strip()
+    qty = max(1, min(20, int(body.get("qty") or 1)))
+    note = (body.get("note") or "")[:200]
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    spec = config.STUDIO_LINES[line]
+    if spec.get("status") != "live":
+        return _err(f"{line} is not orderable yet", 409)
+    price = int(spec.get("price_cents") or 0) * qty
+    with db.connect() as c:
+        order = db.create_order(
+            c, owner=owner, line=line, mesh_id=mesh_id, coat=coat, hat=hat,
+            qty=qty, price_cents=price, note=note,
+        )
+    return jsonify({
+        "ok": True,
+        "order": order,
+        "price_cents": price,
+        "status": "pending_checkout",
+        "hint": "Order reserved. Payment lands with Stripe/Shopify — nothing charged yet.",
+    })
+
+
+@app.get("/api/studio/orders")
+def studio_orders():
+    owner = (request.args.get("owner") or "anon").strip()[:80]
+    with db.connect() as c:
+        rows = db.orders_for(c, owner)
+    return jsonify({"ok": True, "owner": owner, "orders": rows, "count": len(rows)})
+
+
+def short_mesh_label(mesh_id: str) -> str:
+    if not mesh_id:
+        return "no mesh"
+    return "mesh " + mesh_id.replace("msh_", "")[:6]
 
 
 # ── worker ────────────────────────────────────────────────────────────

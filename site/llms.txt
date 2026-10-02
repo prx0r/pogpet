@@ -12,6 +12,7 @@ quote replaces them.
 
 - Storefront: https://oddhobb.com/
 - Categories: https://oddhobb.com/#/s/all — /#/s/board-games, /#/s/gifts, /#/s/cards
+- **Product gallery (ornament/keychain/custom + drag-able 3D mesh):** https://oddhobb.com/products.html
 - Greeting cards shelf: https://cards.oddhobb.com/
 - Gifts shelf: https://gifts.oddhobb.com/
 - Board games shelf: https://boardgames.oddhobb.com/

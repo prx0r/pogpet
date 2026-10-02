@@ -31,7 +31,8 @@ Tools are ordered around what a customer actually does — which mirrors
 6. see it        figg_products(owner)        → every preview, rendered, with URLs
 7. choose        figg_catalog / figg_sections → the library (21 products, 5 sections)
 8. price it      figg_quote(sku) / figg_check_sku → live money before committing
-9. own it        figg_order (…)              → ❌ NOT BUILT YET — see gaps
+9. own it        figg_studio_order (…)      → reserved order + quote (no charge)
+   9b. customise  figg_studio_state / figg_studio_customise → lines, coats, hats, stills
 10. play         figg_acts / figg_perform    → the stage, free tier
 ```
 

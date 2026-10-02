@@ -157,6 +157,22 @@ CREATE TABLE IF NOT EXISTS credits (
   used    INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (owner, day, kind)
 );
+
+-- Studio one-click orders. Checkout (Stripe/Shopify) lands later; this
+-- table is the intent + quote so nothing is lost between click and pay.
+CREATE TABLE IF NOT EXISTS orders (
+  id          TEXT PRIMARY KEY,
+  owner       TEXT NOT NULL DEFAULT '',
+  line        TEXT NOT NULL,
+  mesh_id     TEXT NOT NULL DEFAULT '',
+  coat        TEXT NOT NULL DEFAULT 'none',
+  hat         TEXT NOT NULL DEFAULT 'none',
+  qty         INTEGER NOT NULL DEFAULT 1,
+  price_cents INTEGER NOT NULL DEFAULT 0,
+  status      TEXT NOT NULL DEFAULT 'pending_checkout',
+  note        TEXT NOT NULL DEFAULT '',
+  created_at  REAL NOT NULL
+);
 """
 
 
@@ -249,6 +265,34 @@ def _migrate_photos_person(c: sqlite3.Connection) -> None:
 
 def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:20]}"
+
+
+def create_order(c: sqlite3.Connection, *, owner: str, line: str, mesh_id: str,
+                 coat: str, hat: str, qty: int, price_cents: int,
+                 note: str = "") -> dict:
+    oid = new_id("ord")
+    c.execute(
+        """INSERT INTO orders (id,owner,line,mesh_id,coat,hat,qty,price_cents,status,note,created_at)
+           VALUES (?,?,?,?,?,?,?,?, 'pending_checkout', ?, ?)""",
+        (oid, owner, line, mesh_id, coat, hat, max(1, int(qty)), int(price_cents),
+         note[:200], now()),
+    )
+    c.commit()
+    row = c.execute("SELECT * FROM orders WHERE id=?", (oid,)).fetchone()
+    return dict(row) if row else {}
+
+
+def get_order(c: sqlite3.Connection, oid: str) -> dict | None:
+    row = c.execute("SELECT * FROM orders WHERE id=?", (oid,)).fetchone()
+    return dict(row) if row else None
+
+
+def orders_for(c: sqlite3.Connection, owner: str, limit: int = 20) -> list[dict]:
+    rows = c.execute(
+        "SELECT * FROM orders WHERE owner=? ORDER BY created_at DESC LIMIT ?",
+        (owner, max(1, min(limit, 100))),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 def now() -> float:

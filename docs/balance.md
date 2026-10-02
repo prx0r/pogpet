@@ -87,3 +87,28 @@ an ornament — kept here as the reference if we ever need multi-pose balance.
 Hole clears jump rings, mini S-hooks (≥2.5), 3 mm ribbon; wire gives 2.4 mm wall
 (≥1.5 structural, survives annual handling); O.D. inside the 7–10 mm practice band.
 Keychain/pocket variant: `--inner 4.0` (same wire).
+
+## LOCKED production sizes (2026-10-01)
+
+One mesh profile per style. Contexts (ornament / keychain / desk) change the
+loop + packaging, not the body. Research: market pet figurines cluster at
+4/6/8/10/15 cm; brick pets at ~5–8 cm tall; Makr3D routes cheapest on a
+**256 mm** Bambu envelope — never design above **220 mm**.
+
+| SKU | Body height | Loop | Mount / pack | Ship target |
+|---|---|---|---|---|
+| **Pet core (desk)** | **80 mm** | — | plinth optional | 50–120 g |
+| Pet small | **60 mm** | — | keychain context | 30–60 g |
+| Pet large | **120 mm** | — | premium box | 150–250 g |
+| **Pet ornament** | **80 mm** | **inner 5.0 / wire 2.4** (tree S-hook) | ribbon + Xmas box | 50–120 g |
+| **Pet keychain** | **80 mm** (or 60 mm small) | **inner 4.0 / wire 2.4** (split ring) | split ring + backing card | 30–80 g |
+| **Brick core** | **75 mm** tall, ~50×40 mm footprint | ornament: 70 mm + 5.0 loop | gift box / build card | 80–150 g |
+| Brick set (person+pet) | ~100–120 mm | later | set box | Q |
+
+**Demo dog today is 200 mm (Meshy scale)** — that is an export artifact, not a
+SKU. Production STLs scale to **80 mm** (pets) / **75 mm** (bricks) before
+quoting Makr3D / Printie / 3D Vikings.
+
+**Custom requests** (santa hat, costume, prop): preview renders are free
+Blender addons on the approved mesh (`render_product.py --prop santa|…`).
+A *new body* from Meshy is a separate gated spend — always ask first.

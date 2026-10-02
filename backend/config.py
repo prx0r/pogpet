@@ -106,6 +106,78 @@ PRODUCTS: dict[str, dict] = {
     "ar_show":     {"label": "AR Comedy Show",    "price_cents": 1499, "source": "ar",     "free": False},
 }
 
+# ── studio: modular product lines + prop library ─────────────────────
+# Studio tab = character select + loadout config (NO prices).
+# Products tab = storefront for the same lines (prices + order + MCP).
+# Lines are SKUs of the SAME canonical mesh — scale + hardware only.
+STUDIO_LINES: dict[str, dict] = {
+    "ornament": {
+        "label": "Xmas ornament",
+        "product": "bauble",
+        "scale_mm": 80,
+        "hardware": "printed loop",
+        "blurb": "Tree hanger. Loop is part of the print.",
+        "status": "live",
+        "price_cents": 1299,
+        # props that make sense on THIS line (Products tab + MCP)
+        "assets": {
+            "hats": ["none", "santa"],
+            "coats": ["none", "cream", "golden", "chocolate", "black", "fawn", "grey"],
+        },
+        "theme": "xmas",
+    },
+    "keychain": {
+        "label": "Keychain",
+        "product": "figurine",
+        "scale_mm": 60,
+        "hardware": "printed loop",
+        "blurb": "Same design, smaller. No metal.",
+        "status": "live",
+        "price_cents": 1499,
+        "assets": {
+            "hats": ["none"],
+            "coats": ["none", "cream", "golden", "chocolate", "black", "fawn", "grey"],
+        },
+        "theme": "everyday",
+    },
+    "brick": {
+        "label": "Brick figure",
+        "product": "figurine",
+        "scale_mm": 75,
+        "hardware": "none",
+        "blurb": "Desk figure — modular props when the brick mesh lands.",
+        "status": "soon",
+        "price_cents": 1999,
+        "assets": {"hats": ["none"], "coats": ["none"]},
+        "theme": "desk",
+    },
+}
+
+# Coat = material grade on the existing texture (previews). Production
+# multi-colour is a live farm quote — never pretend a grade is a print SKU.
+STUDIO_COATS: list[dict] = [
+    {"id": "none",     "label": "As printed", "hex": ""},
+    {"id": "cream",    "label": "Cream",      "hex": "#EADBBE"},
+    {"id": "golden",   "label": "Golden",     "hex": "#E6B86B"},
+    {"id": "chocolate","label": "Chocolate",  "hex": "#6B4229"},
+    {"id": "black",    "label": "Black",      "hex": "#1F1F1F"},
+    {"id": "fawn",     "label": "Fawn",       "hex": "#D1AD85"},
+    {"id": "grey",     "label": "Grey",       "hex": "#8C8C8F"},
+]
+
+# Hats = free Blender props seated on the measured skull.
+STUDIO_HATS: list[dict] = [
+    {"id": "none",  "label": "None",     "asset": "", "status": "live"},
+    {"id": "santa", "label": "Santa hat","asset": "data/assets/hats/oga-santa/santa_hat.fbx",
+     "status": "live", "licence": "CC0", "lines": ["ornament"]},
+]
+
+# Canonical product GLB (loop amend) served from /img/prod/ — demo + fallback
+STUDIO_CANONICAL_GLB = "/img/prod/chibi-figure-hook.glb"
+STUDIO_STILL_DIR = "prod"  # data/productimg/prod → /img/prod/
+# Calling-card portrait under the character select (exact product still)
+STUDIO_CALLING_CARD = "/img/prod/prod-hero.png"
+
 # ── Google sign-in ──────────────────────────────────────────────────
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")

@@ -214,4 +214,181 @@ export default function (pi: ExtensionAPI) {
 			}
 		},
 	});
+
+	// ── studio (modular product lines + props + order) ────────────────
+	pi.registerTool({
+		name: "figg_studio_state",
+		label: "Studio state",
+		description:
+			"Read the modular product studio: product lines (ornament/keychain/brick), " +
+			"coat and hat props, the owner's meshes with GLB urls, and live prices.",
+		promptSnippet: "figg_studio_state(owner?) → lines, props, meshes",
+		parameters: Type.Object({
+			owner: Type.Optional(Type.String({ description: "Owner handle; defaults to agent" })),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const q = params.owner ? `?owner=${encodeURIComponent(params.owner)}` : "";
+				const { status, json } = await call("GET", `/api/studio${q}`);
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "studio failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_studio_customise",
+		label: "Customise studio preview",
+		description:
+			"Apply line/coat/hat to the product studio. Coat is a preview grade on " +
+			"the existing mesh texture; hat is a modular prop. Returns still URLs + price.",
+		promptSnippet: "figg_studio_customise({line,coat,hat}) → stills + price",
+		parameters: Type.Object({
+			line: Type.Optional(Type.String({ description: "ornament | keychain | brick" })),
+			coat: Type.Optional(Type.String({ description: "none|cream|golden|chocolate|black|fawn|grey" })),
+			hat: Type.Optional(Type.String({ description: "none|santa" })),
+			owner: Type.Optional(Type.String()),
+			mesh_id: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const { status, json } = await call("POST", "/api/studio/customise", {
+					line: params.line ?? "ornament",
+					coat: params.coat ?? "none",
+					hat: params.hat ?? "none",
+					owner: params.owner ?? "",
+					mesh_id: params.mesh_id ?? "",
+				});
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "customise failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_studio_order",
+		label: "One-click studio order",
+		description:
+			"Reserve a studio order (line + coat + hat + qty). Returns order id and " +
+			"price quote. Does NOT charge — checkout (Stripe/Shopify) is separate.",
+		promptSnippet: "figg_studio_order({line,coat,hat,qty}) → order + quote",
+		parameters: Type.Object({
+			line: Type.String({ description: "ornament | keychain" }),
+			coat: Type.Optional(Type.String()),
+			hat: Type.Optional(Type.String()),
+			qty: Type.Optional(Type.Number({ description: "1-20" })),
+			owner: Type.Optional(Type.String()),
+			mesh_id: Type.Optional(Type.String()),
+			note: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const { status, json } = await call("POST", "/api/studio/order", {
+					line: params.line,
+					coat: params.coat ?? "none",
+					hat: params.hat ?? "none",
+					qty: params.qty ?? 1,
+					owner: params.owner ?? "",
+					mesh_id: params.mesh_id ?? "",
+					note: params.note ?? "",
+				});
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "order failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	// ── products storefront (per-line assets + checkout) ──────────────
+	pi.registerTool({
+		name: "figg_product_assets",
+		label: "Product line assets",
+		description:
+			"List studio product lines with the props that make sense on each " +
+			"(e.g. xmas ornament → santa hat + coats; keychain → coats only), " +
+			"prices, stills and status.",
+		promptSnippet: "figg_product_assets() → lines + assets + prices",
+		parameters: Type.Object({
+			owner: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const q = params.owner ? `?owner=${encodeURIComponent(params.owner)}` : "";
+				const { status, json } = await call("GET", `/api/products/studio${q}`);
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "products failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_product_personalise",
+		label: "Personalise a product",
+		description:
+			"Apply coat/hat (and optional texture note) to a product line for the " +
+			"active mesh. Returns stills + price. Coat is preview grade; hat is a " +
+			"modular Blender prop. Validate assets against figg_product_assets first.",
+		promptSnippet: "figg_product_personalise({line,coat,hat}) → stills",
+		parameters: Type.Object({
+			line: Type.String({ description: "ornament | keychain" }),
+			coat: Type.Optional(Type.String()),
+			hat: Type.Optional(Type.String()),
+			texture: Type.Optional(Type.String({ description: "Optional texture/decal note" })),
+			owner: Type.Optional(Type.String()),
+			mesh_id: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const { status, json } = await call("POST", "/api/products/personalise", {
+					line: params.line,
+					coat: params.coat ?? "none",
+					hat: params.hat ?? "none",
+					texture: params.texture ?? "",
+					owner: params.owner ?? "",
+					mesh_id: params.mesh_id ?? "",
+				});
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "personalise failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_checkout",
+		label: "Checkout a personalised product",
+		description:
+			"Reserve an order for a product line with coat/hat/qty. Returns order id " +
+			"+ quote. Does NOT charge — Stripe/Shopify payment is separate. " +
+			"Always show the customer the price before calling this.",
+		promptSnippet: "figg_checkout({line,coat,hat,qty}) → order + quote",
+		parameters: Type.Object({
+			line: Type.String({ description: "ornament | keychain" }),
+			coat: Type.Optional(Type.String()),
+			hat: Type.Optional(Type.String()),
+			qty: Type.Optional(Type.Number({ description: "1-20" })),
+			owner: Type.Optional(Type.String()),
+			mesh_id: Type.Optional(Type.String()),
+			note: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const { status, json } = await call("POST", "/api/products/order", {
+					line: params.line,
+					coat: params.coat ?? "none",
+					hat: params.hat ?? "none",
+					qty: params.qty ?? 1,
+					owner: params.owner ?? "",
+					mesh_id: params.mesh_id ?? "",
+					note: params.note ?? "",
+				});
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "checkout failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
 }

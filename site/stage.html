@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stage — OddHobb live lipsync</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+<style>
+  :root{--bg:#f4f1ea;--ink:#141414;--gold:#c4891a;--panel:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif;min-height:100dvh}
+  .wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+  h1{font-family:Georgia,serif;font-size:22px;margin:0 0 4px}
+  p.lede{color:#666;margin:0 0 16px;font-size:14px}
+  .stage{background:var(--panel);border:1px solid #e8e4dc;border-radius:18px;overflow:hidden;position:relative}
+  model-viewer{width:100%;height:min(70vw,420px);background:#fff;display:block}
+  /* CSS mouth overlay — works even if morph API is fussy; morph is primary */
+  #mouthOverlay{
+    position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
+    width:14%;height:4%;border-radius:50%;background:#3a1e1e;opacity:0;
+    pointer-events:none;transition:opacity .08s linear;
+  }
+  #mouthOverlay.open{opacity:.85}
+  .bar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  button{border:0;border-radius:10px;padding:12px 16px;font:600 14px system-ui;cursor:pointer;background:#1a1a1a;color:#fff}
+  button.ghost{background:transparent;border:1px solid var(--gold);color:var(--gold)}
+  button:disabled{opacity:.4}
+  .status{font-family:ui-monospace,monospace;font-size:12px;color:#666;margin-top:10px;min-height:1.2em}
+  .meter{height:8px;background:#eee;border-radius:99px;overflow:hidden;margin-top:10px}
+  .meter i{display:block;height:100%;width:0;background:var(--gold);transition:width .05s linear}
+  .meta{font-size:12px;color:#777;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Stage</h1>
+  <p class="lede">Live lipsync — Web Audio → <code>jawOpen</code> morph on the dog mesh. No GPU.</p>
+  <div class="stage">
+    <model-viewer
+      id="mv"
+      src="/img/prod/chibi-figure-hook-jaw.glb"
+      alt="Dog figurine with jaw morph"
+      camera-controls
+      touch-action="pan-y"
+      shadow-intensity="0.4"
+      exposure="1.05"
+      interaction-prompt="none"
+      loading="lazy"
+      reveal="auto">
+    </model-viewer>
+    <div id="mouthOverlay"></div>
+  </div>
+  <div class="meter"><i id="meter"></i></div>
+  <div class="bar">
+    <button id="play" type="button">Play stand-up</button>
+    <button id="unmute" class="ghost" type="button">Enable sound</button>
+  </div>
+  <div class="status" id="status">load the clip, then play</div>
+  <div class="meta" id="meta"></div>
+</div>
+<audio id="audio" preload="auto" src="/backend/api/videos/vid_p0standup001/file"></audio>
+<script>
+(function(){
+  var mv = document.getElementById('mv');
+  var audio = document.getElementById('audio');
+  var playBtn = document.getElementById('play');
+  var unmuteBtn = document.getElementById('unmute');
+  var statusEl = document.getElementById('status');
+  var meter = document.getElementById('meter');
+  var mouth = document.getElementById('mouthOverlay');
+  var meta = document.getElementById('meta');
+  var ctx = null, analyser = null, srcNode = null, data = null;
+  var prev = 0;
+  var tok = new URLSearchParams(location.search).get('token') || '';
+  // bridge injects token on site; this page may be loaded from /stage.html
+  if (!tok) {
+    try { tok = localStorage.getItem('pogpet.bridge') || ''; } catch(e){}
+  }
+  if (tok && audio.src.indexOf('token=') < 0) {
+    audio.src = audio.src + (audio.src.indexOf('?')>=0?'&':'?') + 'token=' + encodeURIComponent(tok);
+  }
+
+  function setupAudio(){
+    if (ctx) return;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC();
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.55;
+    data = new Uint8Array(analyser.frequencyBinCount);
+    srcNode = ctx.createMediaElementSource(audio);
+    srcNode.connect(analyser);
+    analyser.connect(ctx.destination);
+  }
+
+  function morphInfluence(v){
+    // model-viewer morph API — best-effort across versions
+    try {
+      var model = mv.model;
+      if (!model) return false;
+      var meshes = model.meshes || [];
+      for (var i=0;i<meshes.length;i++){
+        var m = meshes[i];
+        if (m.morphTargets || (m.extras && m.extras.targetNames)) {
+          // three.js style
+        }
+      }
+      // @google/model-viewer exposes variant/morph via model.materials or scene
+      if (typeof mv.getModelAnimationNames === 'function') {}
+      // Common path: model.meshes[0].morphTargets — three.js GLTF
+      var scene = mv.scene;
+      if (scene) {
+        scene.traverse(function(obj){
+          if (obj.morphTargetInfluences && obj.morphTargetInfluences.length) {
+            obj.morphTargetInfluences[0] = v;
+          }
+          if (obj.morphTargetDictionary && obj.morphTargetDictionary.jawOpen !== undefined) {
+            obj.morphTargetInfluences[obj.morphTargetDictionary.jawOpen] = v;
+          }
+        });
+      }
+    } catch(e){}
+    // CSS mouth always tracks energy (freaktown web/static fallback)
+    if (v > 0.08) mouth.classList.add('open'); else mouth.classList.remove('open');
+    mouth.style.height = (3 + v * 14) + '%';
+    mouth.style.width = (12 + v * 10) + '%';
+    return true;
+  }
+
+  function tick(){
+    if (!analyser || audio.paused) { meter.style.width='0%'; requestAnimationFrame(tick); return; }
+    analyser.getByteFrequencyData(data);
+    var low=0, mid=0, high=0, total=0, n=data.length;
+    var lowEnd=Math.floor(n*0.15), midEnd=Math.floor(n*0.5);
+    for (var i=0;i<n;i++){
+      var v=data[i]/255; total+=v;
+      if (i<lowEnd) low+=v; else if (i<midEnd) mid+=v; else high+=v;
+    }
+    var energy = total/n;
+    var target = Math.min(1, energy*3.0);
+    prev = prev + (target - prev) * 0.35; // freaktown SMOOTH
+    morphInfluence(prev);
+    meter.style.width = Math.round(prev*100) + '%';
+    requestAnimationFrame(tick);
+  }
+
+  playBtn.addEventListener('click', function(){
+    setupAudio();
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    if (audio.paused) {
+      audio.muted = true; // autoplay policy until user gesture on unmute
+      var p = audio.play();
+      if (p && p.catch) p.catch(function(){ statusEl.textContent='tap Enable sound, then Play'; });
+      statusEl.textContent = 'playing (muted) — tap Enable sound for audio';
+      playBtn.textContent = 'Pause';
+      requestAnimationFrame(tick);
+    } else {
+      audio.pause();
+      playBtn.textContent = 'Play stand-up';
+      statusEl.textContent = 'paused';
+    }
+  });
+  unmuteBtn.addEventListener('click', function(){
+    setupAudio();
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    audio.muted = false;
+    statusEl.textContent = 'sound on — lipsync live';
+    if (audio.paused) playBtn.click();
+  });
+  audio.addEventListener('ended', function(){
+    playBtn.textContent = 'Play stand-up';
+    statusEl.textContent = 'done';
+    morphInfluence(0);
+  });
+  mv.addEventListener('load', function(){
+    meta.textContent = 'mesh loaded — jawOpen morph target';
+    statusEl.textContent = 'ready';
+  });
+  mv.addEventListener('error', function(){
+    meta.textContent = 'jaw GLB missing — run scripts/add_jaw_morph.py';
+  });
+})();
+</script>
+</body>
+</html>

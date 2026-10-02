@@ -59,9 +59,31 @@ standup script (dog minute)
 4. **Same dog mesh** as products/studio — one character.
 5. **0 Meshy credits** — no new sculpts for P0.
 
-## Later (P1+)
+## P0 decision: YES — lipsync without GPU (freaktown path)
 
-- GPU lipsync (Wav2Lip/SadTalker) on dog front stills
-- Morph targets on future Meshy builds (freaktown sniff path)
-- Live browser stage (model-viewer + Web Audio jaw) like freaktown
+Freaktown already solved this. Two layers:
+
+1. **Mesh must declare a mouth.** `basic_body.py` emits a GLB with a
+   **`jawOpen` morph target** (`extras.targetNames: ["jawOpen"]`). Caps:
+   `lipsync: true`. Our Meshy chibi had **0 morphs** — that's why it felt dead.
+2. **Browser drives the morph from Web Audio.** `packages/stage-runtime/src/LipSync.ts`
+   + `AudioBus` analyser: energy → `jawOpen` (or visemes aa/ih/ou if present).
+   CPU/Web Audio only. Stage CSS mouth is the 2D fallback (`stage/app.js`).
+
+### What we built on oddhobb
+
+| Piece | Path |
+|---|---|
+| Inject `jawOpen` into the dog GLB | `scripts/add_jaw_morph.py` → `data/uploads/chibi-figure-hook-jaw.glb` |
+| Live stage page (play clip, mouth moves) | `https://oddhobb.com/stage.html` |
+| Offline bake (mesh jaw + audio in mp4) | `scripts/p0_standup_morph.py` (Blender shape key ← envelope) |
+
+**Not needed for P0:** Wav2Lip / SadTalker / any GPU. Those are P1 quality upgrades
+(photoreal mouth) on a CUDA box — not required for a moving jaw on our mesh.
+
+### Later (P1+)
+
+- GPU lipsync (Wav2Lip/SadTalker) for photoreal mouth on dog stills
+- Full viseme set (aa/ih/ou/ee/oh) on future Meshy builds — freaktown sniff path
+- Live browser stage wired into the Videos tab as the default player
 - Multi-cam cuts, walkout sting, Ella-style judge cards

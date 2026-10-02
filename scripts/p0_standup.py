@@ -121,79 +121,107 @@ def stage_bg(w: int, h: int) -> Image.Image:
     """Warm white club stage — never pure black."""
     im = Image.new("RGB", (w, h), (244, 241, 234))
     d = ImageDraw.Draw(im)
-    # soft spotlight
-    for r in range(80, 0, -4):
-        a = int(18 * (1 - r / 80))
+    # spotlight pool on the floor
+    d.ellipse([w * 0.15, h * 0.55, w * 0.85, h * 0.92], fill=(252, 250, 246))
+    # curtain suggestion (soft vertical bands)
+    for i in range(8):
+        x0 = int(w * i / 8)
+        x1 = int(w * (i + 1) / 8)
+        shade = 236 if i % 2 == 0 else 240
+        d.rectangle([x0, 0, x1, int(h * 0.22)], fill=(shade, shade - 4, shade - 10))
+    # soft warm glow behind character
+    for r in range(200, 0, -8):
+        alpha = max(0, 30 - r // 8)
+        col = (min(255, 250 + alpha // 4), min(255, 245 + alpha // 5), min(255, 230 + alpha // 6))
         d.ellipse(
-            [w // 2 - r * 6, int(h * 0.22) - r * 4, w // 2 + r * 6, int(h * 0.22) + r * 5],
-            fill=(255, 255, 255),
+            [w // 2 - r, int(h * 0.38) - r, w // 2 + r, int(h * 0.38) + r],
+            fill=col,
         )
-    # floor line
     d.rectangle([0, int(h * 0.78), w, h], fill=(230, 224, 212))
-    d.line([(0, int(h * 0.78)), (w, int(h * 0.78))], fill=(210, 200, 180), width=3)
+    d.line([(0, int(h * 0.78)), (w, int(h * 0.78))], fill=(200, 188, 168), width=4)
+    # side vignette (subtle, not black)
+    vig = Image.new("L", (w, h), 0)
+    vd = ImageDraw.Draw(vig)
+    vd.ellipse([-w * 0.2, -h * 0.15, w * 1.2, h * 1.15], fill=40)
+    vig = vig.filter(ImageFilter.GaussianBlur(80))
+    dark = Image.new("RGB", (w, h), (210, 200, 185))
+    im = Image.composite(im, dark, vig.point(lambda p: 255 if p > 20 else 0))
     return im
 
 
 def draw_mic(draw: ImageDraw.ImageDraw, cx: int, cy: int, scale: float = 1.0) -> None:
-    """Simple stage mic prop."""
+    """Stage mic with a bit more polish."""
     s = scale
-    # stand
-    draw.line([(cx, cy + int(40 * s)), (cx, cy + int(160 * s))], fill=(60, 60, 66), width=max(2, int(6 * s)))
-    draw.line([(cx - int(30 * s), cy + int(160 * s)), (cx + int(30 * s), cy + int(160 * s))],
-              fill=(60, 60, 66), width=max(2, int(5 * s)))
-    # capsule
-    r = int(28 * s)
-    draw.ellipse([cx - r, cy - int(48 * s) - r, cx + r, cy - int(48 * s) + r], fill=(40, 40, 46))
-    draw.ellipse([cx - r + 4, cy - int(48 * s) - r + 4, cx + r - 4, cy - int(48 * s) + r - 4],
-                 fill=(90, 90, 100))
-    # grill lines
+    draw.line([(cx, cy + int(40 * s)), (cx, cy + int(170 * s))], fill=(50, 50, 56), width=max(3, int(7 * s)))
+    draw.line([(cx - int(34 * s), cy + int(170 * s)), (cx + int(34 * s), cy + int(170 * s))],
+              fill=(50, 50, 56), width=max(3, int(6 * s)))
+    # shock mount ring
+    rr = int(36 * s)
+    cy0 = cy - int(48 * s)
+    draw.ellipse([cx - rr, cy0 - rr, cx + rr, cy0 + rr], outline=(70, 70, 78), width=max(2, int(4 * s)))
+    r = int(26 * s)
+    draw.ellipse([cx - r, cy0 - r, cx + r, cy0 + r], fill=(35, 35, 40))
+    draw.ellipse([cx - r + 5, cy0 - r + 5, cx + r - 5, cy0 + r - 5], fill=(100, 100, 110))
     for i in range(-2, 3):
-        draw.line(
-            [(cx - r + 6, cy - int(48 * s) + i * int(8 * s)),
-             (cx + r - 6, cy - int(48 * s) + i * int(8 * s))],
-            fill=(55, 55, 62), width=1,
-        )
+        draw.line([(cx - r + 7, cy0 + i * int(8 * s)), (cx + r - 7, cy0 + i * int(8 * s))],
+                  fill=(55, 55, 62), width=1)
+    # red tally light
+    draw.ellipse([cx - 4, cy0 - r - 12, cx + 4, cy0 - r - 4], fill=(200, 40, 40))
 
 
 def draw_mouth(img: Image.Image, openness: float) -> None:
-    """Paint a soft muzzle mouth driven by envelope 0..1."""
+    """Soft muzzle mouth driven by envelope 0..1 — looks like a talking dog."""
     w, h = img.size
     l, t, r, b = FACE
     x0, y0, x1, y1 = int(w * l), int(h * t), int(w * r), int(h * b)
     cx = (x0 + x1) // 2
-    cy = y0 + int((y1 - y0) * 0.62)
+    cy = y0 + int((y1 - y0) * 0.58)
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(overlay)
-    open_px = int((y1 - y0) * (0.12 + 0.55 * openness))
-    wide = int((x1 - x0) * (0.22 + 0.18 * openness))
-    if open_px < 4:
-        # closed smile line
-        d.line([(cx - wide, cy), (cx + wide, cy)], fill=(50, 30, 28, 200), width=3)
+    wide = int((x1 - x0) * (0.26 + 0.12 * openness))
+    open_px = int((y1 - y0) * (0.10 + 0.48 * openness))
+    # muzzle shadow (helps the mouth read on cream fur)
+    d.ellipse([cx - int(wide * 1.15), cy - int(open_px * 0.2) - 8,
+               cx + int(wide * 1.15), cy + open_px + 14],
+              fill=(90, 70, 60, 50))
+    if open_px < 6:
+        d.arc([cx - wide, cy - 6, cx + wide, cy + 10], 20, 160, fill=(55, 32, 30, 220), width=4)
     else:
-        # mouth cavity
-        d.ellipse([cx - wide, cy - open_px // 3, cx + wide, cy + open_px],
-                  fill=(45, 22, 24, 230))
-        # teeth hint when wide open
-        if openness > 0.45:
-            d.ellipse([cx - wide // 2, cy - open_px // 4, cx + wide // 2, cy + open_px // 5],
-                      fill=(240, 230, 220, 180))
-        # lower lip shade
-        d.ellipse([cx - wide // 2, cy + open_px - 4, cx + wide // 2, cy + open_px + 6],
-                  fill=(80, 40, 40, 120))
-    overlay = overlay.filter(ImageFilter.GaussianBlur(1.2))
+        # cavity
+        d.ellipse([cx - wide, cy - open_px // 4, cx + wide, cy + open_px],
+                  fill=(42, 20, 22, 235))
+        # tongue
+        if openness > 0.35:
+            d.ellipse([cx - wide // 3, cy + open_px // 4, cx + wide // 3, cy + open_px - 2],
+                      fill=(170, 70, 75, 200))
+        # upper teeth strip
+        if openness > 0.5:
+            d.rectangle([cx - int(wide * 0.55), cy - open_px // 5,
+                         cx + int(wide * 0.55), cy + 2], fill=(245, 238, 228, 190))
+        # lower lip
+        d.ellipse([cx - int(wide * 0.7), cy + open_px - 6, cx + int(wide * 0.7), cy + open_px + 8],
+                  fill=(70, 35, 35, 140))
+    overlay = overlay.filter(ImageFilter.GaussianBlur(1.6))
     img.paste(overlay, (0, 0), overlay)
 
 
 def draw_plate(img: Image.Image, name: str, topic: str) -> None:
     w, h = img.size
     d = ImageDraw.Draw(img)
-    f_name = pick_font(int(h * 0.045))
-    f_sub = pick_font(int(h * 0.028))
-    bar_h = int(h * 0.12)
-    d.rectangle([0, h - bar_h, w, h], fill=(255, 255, 255))
-    d.rectangle([0, h - bar_h, w, h - bar_h + 6], fill=(196, 137, 26))
-    d.text((48, h - bar_h + 22), name.upper(), font=f_name, fill=(20, 20, 20))
-    d.text((48, h - bar_h + 22 + int(h * 0.048)), topic, font=f_sub, fill=(90, 90, 90))
+    f_name = pick_font(int(h * 0.042))
+    f_sub = pick_font(int(h * 0.026))
+    bar_h = int(h * 0.13)
+    # frosted bar
+    bar = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    bd = ImageDraw.Draw(bar)
+    bd.rectangle([0, h - bar_h, w, h], fill=(255, 255, 255, 235))
+    bd.rectangle([0, h - bar_h, w, h - bar_h + 8], fill=(196, 137, 26, 255))
+    img.paste(bar, (0, 0), bar)
+    d = ImageDraw.Draw(img)
+    d.text((52, h - bar_h + 28), name.upper(), font=f_name, fill=(18, 18, 18))
+    d.text((52, h - bar_h + 28 + int(h * 0.046)), topic, font=f_sub, fill=(100, 100, 100))
+    # oddhobb mark
+    d.text((w - 180, h - bar_h + 28), "oddhobb", font=pick_font(22), fill=(196, 137, 26))
 
 
 def render_frames(hero: Path, env: list[float], outdir: Path, name: str) -> list[Path]:

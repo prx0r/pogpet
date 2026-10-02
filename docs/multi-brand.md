@@ -2,7 +2,7 @@
 
 Date: 2026-10-02 · Definitive brands: **oddhobb · grimoirer · stonedoorway**
 
-> Commerce truth: `/root/oddhobbies` · Identity graph: `/root/bgraph`  
+> Commerce truth: `/root/oddhobbies` · **Identity spine: `/root/bgraph`**  
 > Link map: `/root/oddhobbies/docs/commerce/SITE-LINK.md`
 
 ## Why

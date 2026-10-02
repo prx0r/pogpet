@@ -3,183 +3,252 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Stage — OddHobb live lipsync</title>
-<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+<title>Stage — OddHobb</title>
 <style>
   :root{--bg:#f4f1ea;--ink:#141414;--gold:#c4891a;--panel:#fff}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif;min-height:100dvh}
-  .wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px 48px}
   h1{font-family:Georgia,serif;font-size:22px;margin:0 0 4px}
-  p.lede{color:#666;margin:0 0 16px;font-size:14px}
+  p.lede{color:#666;margin:0 0 14px;font-size:14px}
   .stage{background:var(--panel);border:1px solid #e8e4dc;border-radius:18px;overflow:hidden;position:relative}
-  model-viewer{width:100%;height:min(70vw,420px);background:#fff;display:block}
-  /* CSS mouth overlay — works even if morph API is fussy; morph is primary */
-  #mouthOverlay{
-    position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);
-    width:14%;height:4%;border-radius:50%;background:#3a1e1e;opacity:0;
-    pointer-events:none;transition:opacity .08s linear;
-  }
-  #mouthOverlay.open{opacity:.85}
-  .bar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-  button{border:0;border-radius:10px;padding:12px 16px;font:600 14px system-ui;cursor:pointer;background:#1a1a1a;color:#fff}
-  button.ghost{background:transparent;border:1px solid var(--gold);color:var(--gold)}
+  #c{display:block;width:100%;height:min(70vw,420px)}
+  .bar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  button, .btn{border:0;border-radius:10px;padding:11px 14px;font:600 13px system-ui;cursor:pointer;background:#1a1a1a;color:#fff;text-decoration:none;display:inline-flex;align-items:center}
+  button.ghost,.btn.ghost{background:transparent;border:1px solid var(--gold);color:var(--gold)}
   button:disabled{opacity:.4}
-  .status{font-family:ui-monospace,monospace;font-size:12px;color:#666;margin-top:10px;min-height:1.2em}
-  .meter{height:8px;background:#eee;border-radius:99px;overflow:hidden;margin-top:10px}
-  .meter i{display:block;height:100%;width:0;background:var(--gold);transition:width .05s linear}
-  .meta{font-size:12px;color:#777;margin-top:8px}
+  .status{font-family:ui-monospace,monospace;font-size:12px;color:#666;margin-top:8px;min-height:1.2em}
+  .meter{height:8px;background:#eee;border-radius:99px;overflow:hidden;margin-top:8px}
+  .meter i{display:block;height:100%;width:0;background:var(--gold)}
+  .editor{margin-top:18px;background:var(--panel);border:1px solid #e8e4dc;border-radius:14px;padding:14px}
+  .editor h2{margin:0 0 8px;font-family:Georgia,serif;font-size:18px}
+  .editor label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a6a2f;margin:10px 0 4px}
+  textarea,input,select{width:100%;border:1px solid #ddd;border-radius:10px;padding:10px 12px;font:14px system-ui;color:#111;background:#fff}
+  textarea{min-height:120px;resize:vertical}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .hint{font-size:12px;color:#777;margin-top:8px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Stage</h1>
-  <p class="lede">Live lipsync — Web Audio → <code>jawOpen</code> morph on the dog mesh. No GPU.</p>
-  <div class="stage">
-    <model-viewer
-      id="mv"
-      src="/img/prod/chibi-figure-hook-jaw.glb"
-      alt="Dog figurine with jaw morph"
-      camera-controls
-      touch-action="pan-y"
-      shadow-intensity="0.4"
-      exposure="1.05"
-      interaction-prompt="none"
-      loading="lazy"
-      reveal="auto">
-    </model-viewer>
-    <div id="mouthOverlay"></div>
-  </div>
+  <p class="lede">Your dog on the mic — live <code>jawOpen</code> lipsync (Web Audio, no GPU). Edit the set, render a shareable video.</p>
+
+  <div class="stage"><canvas id="c"></canvas></div>
   <div class="meter"><i id="meter"></i></div>
   <div class="bar">
-    <button id="play" type="button">Play stand-up</button>
-    <button id="unmute" class="ghost" type="button">Enable sound</button>
+    <button id="play" type="button">Play clip</button>
+    <button id="unmute" class="ghost" type="button">Sound on</button>
+    <a class="btn ghost" id="dl" href="#" download="oddhobb-standup.mp4">Download video</a>
+    <a class="btn ghost" href="/#videos">Feed</a>
   </div>
-  <div class="status" id="status">load the clip, then play</div>
-  <div class="meta" id="meta"></div>
+  <div class="status" id="status">loading mesh…</div>
+
+  <div class="editor">
+    <h2>Edit your set</h2>
+    <label for="lines">Set lines (one per line)</label>
+    <textarea id="lines">Evening. I'm the family dog. Yes, that dog.
+They said I'd guard the house. I guard the sofa. Different skillset.
+Walkies? I thought you said walk-aways. I walked away. For six hours.
+They bought me a smart collar. It tracked me to the bin. Twice.
+I have four beds. I sleep on the charging cable. You're welcome.
+They say I'm a good boy. Correct. That's the whole joke. Good night.</textarea>
+    <label for="name">Performer name</label>
+    <input id="name" value="Buster" maxlength="40">
+    <label for="voice">Voice</label>
+    <select id="voice">
+      <option value="ryan">Ryan — dry, deadpan</option>
+      <option value="andrew">Andrew — warm bloke</option>
+      <option value="jenny">Jenny — cheeky</option>
+      <option value="libby">Libby — young, silly</option>
+    </select>
+    <div class="row">
+      <button id="render" type="button">Render shareable video</button>
+    </div>
+    <div class="hint">Render runs the CPU pose bake (edge-tts + jawOpen morph). Lands in the Videos feed when ready.</div>
+    <div class="status" id="render-status"></div>
+  </div>
 </div>
-<audio id="audio" preload="auto" src="/backend/api/videos/vid_p0standup001/file"></audio>
-<script>
-(function(){
-  var mv = document.getElementById('mv');
-  var audio = document.getElementById('audio');
-  var playBtn = document.getElementById('play');
-  var unmuteBtn = document.getElementById('unmute');
-  var statusEl = document.getElementById('status');
-  var meter = document.getElementById('meter');
-  var mouth = document.getElementById('mouthOverlay');
-  var meta = document.getElementById('meta');
-  var ctx = null, analyser = null, srcNode = null, data = null;
-  var prev = 0;
-  var tok = new URLSearchParams(location.search).get('token') || '';
-  // bridge injects token on site; this page may be loaded from /stage.html
-  if (!tok) {
-    try { tok = localStorage.getItem('pogpet.bridge') || ''; } catch(e){}
-  }
-  if (tok && audio.src.indexOf('token=') < 0) {
-    audio.src = audio.src + (audio.src.indexOf('?')>=0?'&':'?') + 'token=' + encodeURIComponent(tok);
-  }
 
-  function setupAudio(){
-    if (ctx) return;
-    var AC = window.AudioContext || window.webkitAudioContext;
-    ctx = new AC();
-    analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.55;
-    data = new Uint8Array(analyser.frequencyBinCount);
-    srcNode = ctx.createMediaElementSource(audio);
-    srcNode.connect(analyser);
-    analyser.connect(ctx.destination);
-  }
+<audio id="audio" preload="auto"></audio>
+<script type="importmap">
+{"imports":{
+  "three":"https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.170.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-  function morphInfluence(v){
-    // model-viewer morph API — best-effort across versions
-    try {
-      var model = mv.model;
-      if (!model) return false;
-      var meshes = model.meshes || [];
-      for (var i=0;i<meshes.length;i++){
-        var m = meshes[i];
-        if (m.morphTargets || (m.extras && m.extras.targetNames)) {
-          // three.js style
-        }
-      }
-      // @google/model-viewer exposes variant/morph via model.materials or scene
-      if (typeof mv.getModelAnimationNames === 'function') {}
-      // Common path: model.meshes[0].morphTargets — three.js GLTF
-      var scene = mv.scene;
-      if (scene) {
-        scene.traverse(function(obj){
-          if (obj.morphTargetInfluences && obj.morphTargetInfluences.length) {
-            obj.morphTargetInfluences[0] = v;
-          }
-          if (obj.morphTargetDictionary && obj.morphTargetDictionary.jawOpen !== undefined) {
-            obj.morphTargetInfluences[obj.morphTargetDictionary.jawOpen] = v;
-          }
-        });
-      }
-    } catch(e){}
-    // CSS mouth always tracks energy (freaktown web/static fallback)
-    if (v > 0.08) mouth.classList.add('open'); else mouth.classList.remove('open');
-    mouth.style.height = (3 + v * 14) + '%';
-    mouth.style.width = (12 + v * 10) + '%';
-    return true;
-  }
+const canvas = document.getElementById('c');
+const statusEl = document.getElementById('status');
+const meter = document.getElementById('meter');
+const playBtn = document.getElementById('play');
+const unmuteBtn = document.getElementById('unmute');
+const audio = document.getElementById('audio');
+const dl = document.getElementById('dl');
 
-  function tick(){
-    if (!analyser || audio.paused) { meter.style.width='0%'; requestAnimationFrame(tick); return; }
+// token for /backend video file
+const q = new URLSearchParams(location.search);
+let tok = q.get('token') || '';
+try { if (!tok) tok = localStorage.getItem('pogpet.bridge') || ''; } catch(e){}
+const vid = 'vid_p0standup001';
+audio.src = `/backend/api/videos/${vid}/file` + (tok ? `?token=${encodeURIComponent(tok)}` : '');
+dl.href = audio.src;
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf4f1ea);
+const camera = new THREE.PerspectiveCamera(35, 1, 0.05, 20);
+camera.position.set(0.05, 0.12, 0.85);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 0.08, 0);
+controls.enableDamping = true;
+
+const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(0.5,0.8,0.6); scene.add(key);
+const fill = new THREE.DirectionalLight(0xfff2dd, 1.0); fill.position.set(-0.6,0.3,0.4); scene.add(fill);
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+
+function resize() {
+  const w = canvas.clientWidth || 360;
+  const h = canvas.clientHeight || 420;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+let jawMeshes = [];
+const loader = new GLTFLoader();
+loader.load('/img/prod/chibi-figure-hook-jaw.glb', (gltf) => {
+  const root = gltf.scene;
+  root.traverse((obj) => {
+    if (obj.isMesh && obj.morphTargetInfluences && obj.morphTargetInfluences.length) {
+      jawMeshes.push(obj);
+      const dict = obj.morphTargetDictionary || {};
+      console.log('morphs', Object.keys(dict), obj.name);
+    }
+  });
+  // scale/centre
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const centre = box.getCenter(new THREE.Vector3());
+  root.position.sub(centre);
+  const s = 0.42 / (Math.max(size.x, size.y, size.z) || 1);
+  root.scale.setScalar(s);
+  scene.add(root);
+  statusEl.textContent = jawMeshes.length
+    ? `mesh ready · ${jawMeshes.length} morph mesh(es) · jawOpen live`
+    : 'mesh loaded — no morph targets found (re-run add_jaw_morph)';
+}, undefined, (err) => {
+  statusEl.textContent = 'failed to load jaw GLB — ' + err;
+});
+
+// Web Audio → jawOpen
+let ctx=null, analyser=null, srcNode=null, data=null, prev=0;
+function setupAudio(){
+  if (ctx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctx = new AC();
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 256;
+  analyser.smoothingTimeConstant = 0.55;
+  data = new Uint8Array(analyser.frequencyBinCount);
+  srcNode = ctx.createMediaElementSource(audio);
+  srcNode.connect(analyser);
+  analyser.connect(ctx.destination);
+}
+function applyJaw(v){
+  for (const mesh of jawMeshes) {
+    const dict = mesh.morphTargetDictionary || {};
+    let idx = dict.jawOpen;
+    if (idx === undefined) {
+      // first morph is usually our injected target
+      idx = 0;
+    }
+    if (mesh.morphTargetInfluences && idx < mesh.morphTargetInfluences.length) {
+      mesh.morphTargetInfluences[idx] = v;
+    }
+  }
+  meter.style.width = Math.round(v*100)+'%';
+}
+function tick(){
+  if (analyser && !audio.paused) {
     analyser.getByteFrequencyData(data);
-    var low=0, mid=0, high=0, total=0, n=data.length;
-    var lowEnd=Math.floor(n*0.15), midEnd=Math.floor(n*0.5);
-    for (var i=0;i<n;i++){
-      var v=data[i]/255; total+=v;
-      if (i<lowEnd) low+=v; else if (i<midEnd) mid+=v; else high+=v;
-    }
-    var energy = total/n;
-    var target = Math.min(1, energy*3.0);
-    prev = prev + (target - prev) * 0.35; // freaktown SMOOTH
-    morphInfluence(prev);
-    meter.style.width = Math.round(prev*100) + '%';
-    requestAnimationFrame(tick);
+    let sum=0; for (let i=0;i<data.length;i++) sum += data[i]/255;
+    const energy = sum/data.length;
+    const target = Math.min(1, energy*3.2);
+    prev = prev + (target-prev)*0.35;
+    applyJaw(prev);
   }
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
 
-  playBtn.addEventListener('click', function(){
-    setupAudio();
-    if (ctx && ctx.state === 'suspended') ctx.resume();
-    if (audio.paused) {
-      audio.muted = true; // autoplay policy until user gesture on unmute
-      var p = audio.play();
-      if (p && p.catch) p.catch(function(){ statusEl.textContent='tap Enable sound, then Play'; });
-      statusEl.textContent = 'playing (muted) — tap Enable sound for audio';
-      playBtn.textContent = 'Pause';
-      requestAnimationFrame(tick);
-    } else {
-      audio.pause();
-      playBtn.textContent = 'Play stand-up';
-      statusEl.textContent = 'paused';
+playBtn.addEventListener('click', async () => {
+  setupAudio();
+  if (ctx && ctx.state === 'suspended') await ctx.resume();
+  if (audio.paused) {
+    audio.muted = true;
+    try { await audio.play(); } catch(e) {
+      statusEl.textContent = 'tap Sound on, then Play';
+      return;
     }
-  });
-  unmuteBtn.addEventListener('click', function(){
-    setupAudio();
-    if (ctx && ctx.state === 'suspended') ctx.resume();
-    audio.muted = false;
-    statusEl.textContent = 'sound on — lipsync live';
-    if (audio.paused) playBtn.click();
-  });
-  audio.addEventListener('ended', function(){
-    playBtn.textContent = 'Play stand-up';
-    statusEl.textContent = 'done';
-    morphInfluence(0);
-  });
-  mv.addEventListener('load', function(){
-    meta.textContent = 'mesh loaded — jawOpen morph target';
-    statusEl.textContent = 'ready';
-  });
-  mv.addEventListener('error', function(){
-    meta.textContent = 'jaw GLB missing — run scripts/add_jaw_morph.py';
-  });
-})();
+    statusEl.textContent = 'playing (muted) — tap Sound on';
+    playBtn.textContent = 'Pause';
+  } else {
+    audio.pause();
+    playBtn.textContent = 'Play clip';
+  }
+});
+unmuteBtn.addEventListener('click', async () => {
+  setupAudio();
+  if (ctx && ctx.state === 'suspended') await ctx.resume();
+  audio.muted = false;
+  statusEl.textContent = 'sound on — jawOpen tracking voice';
+  if (audio.paused) playBtn.click();
+});
+audio.addEventListener('ended', () => {
+  playBtn.textContent = 'Play clip';
+  applyJaw(0);
+  statusEl.textContent = 'done — download or edit the set';
+});
+
+// set editor → backend render (shareable video)
+const renderBtn = document.getElementById('render');
+const renderStatus = document.getElementById('render-status');
+renderBtn.addEventListener('click', async () => {
+  const lines = document.getElementById('lines').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const name = document.getElementById('name').value.trim() || 'Buster';
+  const voice = document.getElementById('voice').value;
+  const script = lines.join(' ');
+  renderBtn.disabled = true;
+  renderStatus.textContent = 'queued render (CPU pose bake)… this can take a few minutes';
+  try {
+    const headers = {'Content-Type':'application/json'};
+    if (tok) headers['X-API-Token'] = tok;
+    const r = await fetch('/backend/api/standup/render?token=' + encodeURIComponent(tok), {
+      method:'POST', headers, body: JSON.stringify({ name, voice, script })
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'render failed');
+    renderStatus.textContent = 'done · ' + (d.video_id || '') + ' — check Videos feed';
+    if (d.video_id) {
+      audio.src = `/backend/api/videos/${d.video_id}/file` + (tok ? `?token=${encodeURIComponent(tok)}` : '');
+      dl.href = audio.src;
+    }
+  } catch (e) {
+    renderStatus.textContent = 'error: ' + e.message;
+  }
+  renderBtn.disabled = false;
+});
 </script>
 </body>
 </html>

@@ -1989,6 +1989,62 @@ def videos_feed():
     return jsonify({"ok": True, "items": items, "count": len(items)})
 
 
+@app.post("/api/standup/render")
+def standup_render():
+    """Render a shareable standup video (pose bake + edge-tts). CPU only."""
+    import subprocess as sp
+    import time as _t
+
+    body = request.get_json(silent=True) or {}
+    name = (body.get("name") or "Buster").strip()[:40]
+    voice = (body.get("voice") or "ryan").strip()[:20]
+    script = (body.get("script") or "").strip()[:2000]
+    if not script:
+        return _err("script is required", 400)
+    script_path = config.ROOT / "scripts" / "pose_lipsync.py"
+    if not script_path.exists():
+        return _err("pose_lipsync.py missing", 500)
+    out_mp4 = config.DATA / "videos" / "p0_standup.mp4"
+    cmd = [
+        "python3", str(script_path),
+        "--name", name, "--voice", voice, "--script", script,
+        "--out", str(out_mp4),
+    ]
+    try:
+        proc = sp.run(cmd, cwd=str(config.ROOT), capture_output=True, text=True, timeout=900)
+    except sp.TimeoutExpired:
+        return _err("render timed out", 504)
+    if proc.returncode != 0 or not out_mp4.exists():
+        err = (proc.stderr or proc.stdout or "")[-400:]
+        return _err(f"render failed: {err}", 500)
+    vid = "vid_p0standup" + _t.strftime("%H%M%S")
+    r = sp.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "csv=p=0", str(out_mp4)], capture_output=True, text=True)
+    try:
+        dur = float((r.stdout or "20").strip())
+    except ValueError:
+        dur = 20.0
+    with db.connect() as c:
+        c.execute("DELETE FROM videos WHERE id=?", (vid,))
+        c.execute(
+            """INSERT INTO videos (id,owner,mesh_id,scene,talent,voice,pet_name,topic,
+                 script,lines,watermarked,duration,bytes,path,created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (vid, "demo", "msh_70edae28a4304f4cb7e9", "comedy_show", "comedy",
+             voice, name, "stand-up set", script[:500], "[]", 0, dur,
+             out_mp4.stat().st_size, str(out_mp4), _t.time()),
+        )
+        c.commit()
+    return jsonify({
+        "ok": True,
+        "video_id": vid,
+        "duration": dur,
+        "bytes": out_mp4.stat().st_size,
+        "download": f"/api/videos/{vid}/file",
+        "hint": "Shareable vertical mp4 with jawOpen lipsync. In the Videos feed.",
+    })
+
+
 # ── jobs / artifacts ──────────────────────────────────────────────────
 
 @app.post("/api/run")

@@ -3,6 +3,8 @@
 > Status: LIVE (2026-10-02). Two tabs, one mesh, modular props.
 > **Studio** = white character-select + loadout config (**no prices**).
 > **Products** = storefront (prices, one-click order, MCP personalise).
+> **Focus now:** products, Blender assets, gift cards. Stage/video parked
+> (`docs/standup-p0.md`). Full session log: `HANDOVER.md`.
 
 ## Studio (config page)
 

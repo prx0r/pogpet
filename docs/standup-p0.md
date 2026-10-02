@@ -1,8 +1,13 @@
 # P0 standup — dog, lips, face, vertical, mic
 
-> Status: PIPELINE LIVE (2026-10-02). Spec + implementation.
-> Goal: **the dog does stand-up** — voice, mouth moving, face alive, vertical
-> 9:16, speaking into a microphone. Not a black card with a still.
+> Status: **PARKED for oddhobb** (2026-10-02) — pogtown wedge, not product P0.
+> Research + implementation notes kept for later. Focus now = **products,
+> Blender assets, gift cards**. See `HANDOVER.md`.
+
+## Goal (when unparked)
+
+**The dog does stand-up** — voice, mouth moving, face alive, vertical 9:16,
+speaking into a microphone. Shareable clip; edit your set (pogtown).
 
 ## What we learned (freaktown + lipsync landscape)
 

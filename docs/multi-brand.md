@@ -1,93 +1,58 @@
 # Multi-brand: one codebase, many storefronts
 
-Date: 2026-09-30 · Round 5 · Status: seam live, ochema.co pending NS
+Date: 2026-10-02 · Definitive brands: **oddhobb · grimoirer · stonedoorway**
+
+> Commerce truth: `/root/oddhobbies` · Identity graph: `/root/bgraph`  
+> Link map: `/root/oddhobbies/docs/commerce/SITE-LINK.md`
 
 ## Why
 
-oddhobb.com is live. ochema.co was bought the same day. The question:
-rebuild the site per domain, or make the structure transferable? Answer —
-**transferable**: same Flask app, same bridge, same MCP, same premesh
-pipeline; brands are a config map + per-request Host resolution. Adding a
-brand is one dict entry, not a fork.
+oddhobb.com is live. New brands use the **same** Flask app + bridge + MCP + premesh.
+Brands are a config map + Host resolution — not a fork.
 
-## The seam (all in-repo, nothing private)
+## Definitive brand map
+
+| store_id | Primary host | Alias / note | Commerce packs | bgraph |
+|----------|--------------|--------------|----------------|--------|
+| **oddhobb** | oddhobb.com | pog.pet | oddhobbies/stores/oddhobb | registry/brands/oddhobb.json |
+| **grimoirer** | grimoirer.com | ochema.co (alias) | oddhobbies/stores/grimoirer | registry/brands/grimoirer.json |
+| **stonedoorway** | stonedoorway.com | scaffold until thesis | oddhobbies/stores/stonedoorway | registry/brands/stonedoorway.json |
+
+`BRANDS` in `backend/config.py` now includes `store_id`, `commerce_pack`, `bgraph`
+so site ↔ commerce ↔ organiser share one key.
+
+## The seam
 
 ```
 backend/config.py
-  BRANDS = {
-    "oddhobb.com": {"brand": "oddhobb", "tagline": "...",
-                    "support": "support@oddhobb.com"},
-    "ochema.co":   {"brand": "ochema",  "tagline": "...",
-                    "support": "support@ochema.co"},
-  }
-  DEFAULT_BRAND_HOST = "oddhobb.com"
-  def brand_for(host) -> dict      # www. stripped; subdomains inherit
-                                   # parent domain; unknown -> default
-                                   # (never 404, never leak)
+  BRANDS = { host → { brand, store_id, support, commerce_pack, … } }
+  def brand_for(host) -> dict
 
 backend/server.py
-  GET /api/brand                   # answers per request Host
-  premesh.normalize(..., zone=config.brand_for(request.host)["host"])
-                                   # staged sources live on the zone that
-                                   # actually serves them
+  GET /api/brand
+  premesh.normalize(..., zone=brand_for(host)["host"])
 
 site/index.html
-  window.__BRAND__ + applyBrand()  # boot fetches /api/brand, repaints
-  initBrand() on window load       # title, boot/greeting/topbar marks,
-                                   # section labels ("My oddhobbs" ->
-                                   # "My ochas" etc.), AI prompt line
-                                   # — no hardcoded brand strings left
+  window.__BRAND__ + applyBrand()  # boot fetches /api/brand
 ```
 
-Verified: `brand_for("oddhobb.com")` → oddhobb/support@oddhobb.com;
-`brand_for("www.ochema.co")` → ochema/support@ochema.co (subdomain
-inherits); unknown host → safe oddhobb fallback. Public tunnel check:
-`GET https://oddhobb.com/backend/api/brand` returns the oddhobb record.
+## Domain / tunnel checklist (new brand)
 
-## ochema.co — what's done vs what waits on you
+1. Cloudflare zone + NS (done for all three on account `954612…`)
+2. Email Routing hello@ / orders@ → Gmail (done)
+3. CNAME host + www → figgsite tunnel, proxied
+4. Tunnel ingress in `~/.cloudflared/figgsite.yml`
+5. `BRANDS` entry in config.py (done for grimoirer + stonedoorway)
+6. oddhobbies `stores/<id>/store.json` + packs
+7. bgraph `registry/brands/<id>.json`
 
-| Step | Status |
-|---|---|
-| Cloudflare zone created (account same as oddhobb) | done — id `1f0d6f8d88dec141c2d25011659e391c` |
-| **Nameservers to paste at Namecheap** | `gina.ns.cloudflare.com` / `pete.ns.cloudflare.com` |
-| Email routing rule `support@ochema.co` → tradesprior@gmail.com | done (activates with zone) |
-| CNAMEs ochema.co + www → tunnel `54295d83-…cfargotunnel.com`, proxied | done |
-| Tunnel ingress entries in `~/.cloudflared/figgsite.yml` | done, seamless rollover, pog.pet still 200 |
-| BRANDS entry + /api/brand + frontend repaint | done |
-| Zone **status** | **pending — waiting on NS at Namecheap** |
+## Shopify + feeds
 
-After the NS flip: zone goes active → MX/SPF apply → support@ochema.co
-forwards → DNS records resolve → `https://ochema.co/` serves the same
-storefront branded **ochema**. Zero code change.
+- Feed: `GET /backend/api/feeds/shopify.json` (mesh/personalised products)
+- Sync: `shopify-app/scripts/sync-catalog.mjs`
+- Commerce packs (15 SKUs) sync via `oddhobbies/shop/push_listings.py`
+- Unify SKUs later — see SITE-LINK.md
 
-To add a third brand later: one entry in `config.BRANDS`, optional
-section host mapping if it needs its own rail — everything else follows.
+## Money rules
 
-## Storefront / agent surface per brand
-
-- Same sections registry (`GET /api/sections`), same catalog, same MCP
-  (gate token per host via the same bridge), same feeds — brand only
-  changes painted strings + support address + premesh zone.
-- Agents (Muse/ChatGPT) see the same contract on either domain; llms.txt
-  is host-agnostic; MCP URL pattern documented there.
-
-## Shopify + 3D previews (researched this round, adopted pattern)
-
-See `shopify-app/ODDHOBB.md` for the full table. Short version:
-
-- **Adopt:** Google `<model-viewer>` + Shopify native product 3D media
-  (or `custom.model_3d_url` metafield as fallback) — the exact pattern in
-  the cloned public repo `brennan252/Immersive-Product-Display`
-  (reference-only clone in `/home/ubuntu/refs/`, not vendored): one Liquid
-  snippet, poster slot, free AR (Quick Look + Scene Viewer).
-- **Skip:** heavyweight theme engines (WebGI etc.).
-- **Our source assets:** Meshy-hung GLB (`data/uploads/chibi-figure-hook.glb`)
-  + PNG poster (already mirrored in `data/productimg/` → public `/img/`).
-- **Next for a real Shopify store:** `SHOPIFY_STORE` + `SHOPIFY_ADMIN_TOKEN`
-  → `npm run sync:catalog` (upsert-by-handle, `--dry-run` first).
-
-## Money rules (unchanged, apply per brand)
-
-Meshy/paid API usage always asks first. Ledger
-`data/meshy_credits.jsonl`. Balance 1,056 cr after the dog mesh. Amend /
-re-render = Blender only, 0 credits.
+Meshy/paid API always asks first. Ledger `data/meshy_credits.jsonl`.

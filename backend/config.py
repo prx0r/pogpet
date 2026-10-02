@@ -1358,17 +1358,51 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 PUBLIC_BASE = os.environ.get("PUBLIC_BASE", "https://oddhobb.com")
 
 # ── multi-brand: one codebase, many storefronts ─────────────────────
-# oddhobb.com, ochema.co (and pog.pet legacy) all serve this same app.
-# Brand strings NEVER live in frontend text: GET /api/brand answers per
-# request Host, and premesh zones follow the request host so Cloudflare
-# pulls transformation sources from the zone actually serving them.
+# One Flask app serves every brand host. Brand strings NEVER live in
+# frontend text: GET /api/brand answers per request Host, and premesh
+# zones follow the request host.
+# store_id MUST match oddhobbies commerce + bgraph organiser.
+# Domains: grimoirer.com is primary for Grimoirer (ochema.co kept as alias).
 BRANDS = {
-    "oddhobb.com": {"brand": "oddhobb",
-                    "tagline": "what odd thing shall we make you?",
-                    "support": "support@oddhobb.com"},
-    "ochema.co":   {"brand": "ochema",
-                    "tagline": "what odd thing shall we make you?",
-                    "support": "support@ochema.co"},
+    "oddhobb.com": {
+        "brand": "oddhobb",
+        "store_id": "oddhobb",
+        "tagline": "what odd thing shall we make you?",
+        "support": "support@oddhobb.com",
+        "commerce_pack": "oddhobbies/stores/oddhobb",
+        "bgraph": "bgraph/registry/brands/oddhobb.json",
+    },
+    "pog.pet": {
+        "brand": "oddhobb",
+        "store_id": "oddhobb",
+        "tagline": "what odd thing shall we make you?",
+        "support": "support@oddhobb.com",
+        "note": "legacy alias for oddhobb",
+    },
+    "ochema.co": {
+        "brand": "grimoirer",
+        "store_id": "grimoirer",
+        "tagline": "your practice, your way.",
+        "support": "support@grimoirer.com",
+        "note": "alias — prefer grimoirer.com",
+    },
+    "grimoirer.com": {
+        "brand": "grimoirer",
+        "store_id": "grimoirer",
+        "tagline": "your practice, your way.",
+        "support": "support@grimoirer.com",
+        "commerce_pack": "oddhobbies/stores/grimoirer",
+        "bgraph": "bgraph/registry/brands/grimoirer.json",
+    },
+    "stonedoorway.com": {
+        "brand": "stonedoorway",
+        "store_id": "stonedoorway",
+        "tagline": "TODO thesis",
+        "support": "support@stonedoorway.com",
+        "commerce_pack": "oddhobbies/stores/stonedoorway",
+        "bgraph": "bgraph/registry/brands/stonedoorway.json",
+        "status": "scaffold",
+    },
 }
 DEFAULT_BRAND_HOST = "oddhobb.com"
 

@@ -264,9 +264,12 @@ def main() -> int:
 
     want_hat = ((args.prop == "santa") or bool(args.hat_asset)) and not args.exact
     hat_imported = False
-    if want_hat:
-        hat_path = Path(args.hat_asset) if args.hat_asset else Path(
-            "data/assets/hats/oga-santa/santa_hat.fbx")
+    # Procedural santa is the reliable seat on the canonical dog mesh.
+    # OGA FBX is kept for explicit --hat-asset experiments; if it lands
+    # oversized/floating we discard it and fall through to procedural.
+    use_procedural_santa = (args.prop == "santa" and not args.hat_asset)
+    if want_hat and args.hat_asset and not use_procedural_santa:
+        hat_path = Path(args.hat_asset)
         if hat_path.exists() and hat_path.suffix.lower() in {".fbx", ".obj", ".glb", ".gltf"}:
             before = {o.name for o in bpy.context.scene.objects}
             if hat_path.suffix.lower() == ".fbx":
@@ -280,32 +283,41 @@ def main() -> int:
             if not hat_meshes:
                 hat_meshes = [o for o in bpy.context.scene.objects
                               if o.type == "MESH" and "hat" in o.name.lower()]
-            # head width from the big pet mesh
             dog = [o for o in bpy.context.scene.objects
                    if o.type == "MESH" and len(o.data.vertices) > 10000]
-            head_w = 0.10
+            head_w = 0.055
             mesh_zmax = 0.20
+            head_ymid = -0.05
+            head_xmid = 0.0
             if dog:
                 cs = [dog[0].matrix_world @ v.co for v in dog[0].data.vertices]
-                head_w = max(c.x for c in cs) - min(c.x for c in cs)
-                mesh_zmax = max(c.z for c in cs)
+                zs_all = [c.z for c in cs]
+                zmin_d, zmax_d = min(zs_all), max(zs_all)
+                h_d = max(zmax_d - zmin_d, 1e-6)
+                mesh_zmax = zmax_d
+                top = [c for c in cs if c.z >= zmax_d - 0.28 * h_d]
+                if len(top) < 20:
+                    top = sorted(cs, key=lambda c: -c.z)[: max(20, len(cs) // 10)]
+                head_w = max(c.x for c in top) - min(c.x for c in top)
+                head_ymid = sum(c.y for c in top) / len(top)
+                head_xmid = sum(c.x for c in top) / len(top)
+                if head_w < 1e-6:
+                    head_w = 0.055
             if hat_meshes:
                 coords = []
                 for o in hat_meshes:
                     coords += [o.matrix_world @ v.co for v in o.data.vertices]
-                xs = [c.x for c in coords]; ys = [c.y for c in coords]
+                xs = [c.x for c in coords]
                 zs = [c.z for c in coords]
                 w = max(xs) - min(xs); h = max(zs) - min(zs)
-                if w < 1e-6:
-                    w = 0.05
-                if h < 1e-6:
-                    h = 0.05
-                s = (head_w * 1.08) / w
-                if h * s > head_w * 1.15:
-                    s = (head_w * 1.15) / h
+                if w < 1e-6: w = 0.05
+                if h < 1e-6: h = 0.05
+                s = (head_w * 0.92) / w
+                max_h = head_w * 1.35
+                if h * s > max_h:
+                    s = max_h / h
                 for o in hat_meshes:
                     o.scale = (o.scale[0] * s, o.scale[1] * s, o.scale[2] * s)
-                # armatures that came with the FBX
                 for o in new:
                     if o.type == "ARMATURE":
                         o.scale = (s, s, s)
@@ -314,74 +326,109 @@ def main() -> int:
                 for o in hat_meshes:
                     coords += [o.matrix_world @ v.co for v in o.data.vertices]
                 zmin = min(c.z for c in coords)
+                zmax_h = max(c.z for c in coords)
                 ymid = sum(c.y for c in coords) / len(coords)
-                dz = (mesh_zmax - 0.004) - zmin
-                dy = (-0.095 * (mesh_zmax / 0.20)) - ymid
+                xmid = sum(c.x for c in coords) / len(coords)
+                hat_h = max(zmax_h - zmin, 1e-6)
+                brim_target = mesh_zmax - 0.06 * hat_h
+                dz = brim_target - zmin
+                dy = head_ymid - ymid
+                dx = head_xmid - xmid
                 for o in new:
                     if o.type in {"MESH", "ARMATURE"}:
                         o.location.z += dz
                         o.location.y += dy
-                hat_imported = True
-                # Force xmas palette on imported hats (OGA FBX often ignores PNG)
-                if args.prop == "santa" or "santa" in hat_path.name.lower():
-                    red = bpy.data.materials.new("hat_xmas_red")
-                    red.use_nodes = True
-                    rb = red.node_tree.nodes["Principled BSDF"]
-                    # Dark saturated red — AgX + white-bg lights wash bright red to pink
-                    rb.inputs["Base Color"].default_value = (0.38, 0.015, 0.015, 1)
-                    rb.inputs["Roughness"].default_value = 0.78
-                    for o in hat_meshes:
-                        o.data.materials.clear()
-                        o.data.materials.append(red)
-                    print("hat meshes recoloured xmas red")
-                print(f"hat-asset {hat_path.name}: s={s:.3f} "
-                      f"dz={dz:.4f} dy={dy:.4f} brim_w={head_w*1.08*1000:.1f}mm")
+                        o.location.x += dx
+                # QC: if hat still dwarfs the skull, abandon FBX
+                bpy.context.view_layer.update()
+                coords = []
+                for o in hat_meshes:
+                    coords += [o.matrix_world @ v.co for v in o.data.vertices]
+                hw = max(c.x for c in coords) - min(c.x for c in coords)
+                if hw > head_w * 1.6:
+                    print(f"hat-asset QC fail: brim {hw*1000:.1f}mm >> skull {head_w*1000:.1f}mm — using procedural")
+                    for o in new:
+                        bpy.data.objects.remove(o, do_unlink=True)
+                else:
+                    hat_imported = True
+                    if "santa" in hat_path.name.lower():
+                        red = bpy.data.materials.new("hat_xmas_red")
+                        red.use_nodes = True
+                        rb = red.node_tree.nodes["Principled BSDF"]
+                        rb.inputs["Base Color"].default_value = (0.22, 0.008, 0.008, 1)
+                        rb.inputs["Roughness"].default_value = 0.82
+                        for o in hat_meshes:
+                            o.data.materials.clear()
+                            o.data.materials.append(red)
+                    print(f"hat-asset {hat_path.name}: s={s:.3f} head_w={head_w*1000:.1f}mm "
+                          f"dz={dz:.4f} dy={dy:.4f} dx={dx:.4f}")
         else:
             print(f"hat-asset not usable: {hat_path}")
 
     if want_hat and not hat_imported and args.prop == "santa":
-        # procedural fallback (proportions locked to measured skull)
-        zs_all = [(ob.matrix_world @ v.co)
-                  for ob in bpy.context.scene.objects if ob.type == "MESH"
-                  for v in ob.data.vertices]
-        zmax = max(c.z for c in zs_all) if zs_all else 0.20
-        ymid = -0.095 * (zmax / 0.20)
-        brim_z = zmax - 0.004
-        brim_r = 0.048 * (zmax / 0.20)
-        cone_d = 0.095 * (zmax / 0.20)
-        head = Vector((0.0, ymid, brim_z))
+        # Procedural santa — measured seat on chibi-figure-hook.glb.
+        # Skull between ears: w≈0.05, ymid≈-0.107, upper skull z≈0.145.
+        # Blender 4 torus: major_radius = centre-of-tube radius (abso_* is ignored).
+        pts = [(ob.matrix_world @ v.co)
+               for ob in bpy.context.scene.objects if ob.type == "MESH"
+               for v in ob.data.vertices]
+        if not pts:
+            pts = [Vector((0, -0.10, 0.15))]
+        head_cluster = [p for p in pts if p.y < -0.04 and p.z > 0.12] or pts
+        skull = [p for p in head_cluster if abs(p.x) < 0.04] or head_cluster
+        head_w = (max(p.x for p in skull) - min(p.x for p in skull)) or 0.05
+        head_ymid = sum(p.y for p in skull) / len(skull)
+        # measured constants — do not inflate from full-body width
+        HEAD_W = 0.050
+        HEAD_Y = -0.107
+        BRIM_Z = 0.145
+        BRIM_R = 0.022
+        BRIM_MINOR = 0.007
+        CONE_D = 0.055
+        print(f"procedural santa SEAT head_w={head_w:.4f} using "
+              f"HEAD_Y={HEAD_Y} BRIM_Z={BRIM_Z} BRIM_R={BRIM_R}")
+        head = Vector((0.0, HEAD_Y, BRIM_Z))
         bpy.ops.mesh.primitive_cone_add(
-            radius1=brim_r * 0.92, radius2=0.006 * (zmax / 0.20),
-            depth=cone_d,
-            location=(head.x, head.y + 0.004, head.z + cone_d * 0.48))
+            vertices=24,
+            radius1=BRIM_R * 0.90,
+            radius2=0.004,
+            depth=CONE_D,
+            location=(head.x, head.y + 0.003, head.z + CONE_D * 0.5))
         cone = bpy.context.active_object
         cone.name = "santa_cone"
-        cone.rotation_euler = (0.22, 0.12, 0)
+        cone.rotation_euler = (0.18, 0.04, 0)
         red = bpy.data.materials.new("santa_red")
         red.use_nodes = True
         rb = red.node_tree.nodes["Principled BSDF"]
-        rb.inputs["Base Color"].default_value = (0.72, 0.04, 0.04, 1)
-        rb.inputs["Roughness"].default_value = 0.72
+        rb.inputs["Base Color"].default_value = (0.12, 0.004, 0.004, 1)
+        rb.inputs["Roughness"].default_value = 0.9
+        if "Specular IOR Level" in rb.inputs:
+            rb.inputs["Specular IOR Level"].default_value = 0.05
         cone.data.materials.append(red)
         bpy.ops.mesh.primitive_torus_add(
-            major_radius=brim_r, minor_radius=0.010 * (zmax / 0.20),
-            location=(head.x, head.y, head.z + 0.002))
+            major_radius=BRIM_R,
+            minor_radius=BRIM_MINOR,
+            major_segments=32,
+            minor_segments=12,
+            location=(head.x, head.y, head.z + 0.001))
         brim = bpy.context.active_object
         brim.name = "santa_brim"
-        brim.scale = (1.0, 0.85, 1.0)
+        brim.scale = (1.0, 0.90, 0.70)
         white = bpy.data.materials.new("santa_white")
         white.use_nodes = True
         wb = white.node_tree.nodes["Principled BSDF"]
-        wb.inputs["Base Color"].default_value = (0.94, 0.93, 0.90, 1)
-        wb.inputs["Roughness"].default_value = 0.88
+        wb.inputs["Base Color"].default_value = (0.90, 0.89, 0.84, 1)
+        wb.inputs["Roughness"].default_value = 0.92
         brim.data.materials.append(white)
+        print(f"santa brim dims={tuple(round(x,4) for x in brim.dimensions)}")
         bpy.ops.mesh.primitive_uv_sphere_add(
-            radius=0.014 * (zmax / 0.20),
-            location=(head.x + 0.012, head.y - 0.01, head.z + cone_d * 0.92))
+            segments=16, ring_count=12,
+            radius=BRIM_R * 0.35,
+            location=(head.x + 0.012, head.y + 0.015, head.z + CONE_D * 0.95))
         pomp = bpy.context.active_object
         pomp.name = "santa_pompom"
         pomp.data.materials.append(white)
-        print(f"procedural santa on skull z={brim_z:.3f}")
+        hat_imported = True
 
     if args.hat_text and not args.exact:
         zs_all = [(ob.matrix_world @ v.co)
@@ -444,7 +491,12 @@ def main() -> int:
         lo.location = loc
         lo.rotation_euler = (Vector(tgt) - Vector(loc)).to_track_quat(
             "-Z", "Y").to_euler()
+        # Must never appear as a white disc in the still (Cycles).
         lo.visible_camera = False
+        try:
+            lo.data.visible_camera = False
+        except Exception:
+            pass
 
     if args.bg == "white":
         # Product-photo lighting: flatter and dimmer than the first white

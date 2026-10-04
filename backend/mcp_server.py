@@ -46,9 +46,12 @@ def _key() -> str:
 
 
 mcp = MCPServer("figgsite", instructions=(
-    "fogg/pog.pet storefront API: pets become meshes, meshes become products, "
-    "meshes perform. Prices are LIVE when a Prodigi SKU is attached, otherwise "
-    "EST. Free tier: 3 sculpts and 5 videos per owner per day."
+    "OddHobb storefront API (oddhobb.com): pets become meshes, meshes become products, "
+    "meshes perform. Canonical funnel: ramble → figg_quick_map (confidence-ranked live "
+    "lines) → upload photo → mesh → figg_fullchain_personalise_order(fulfil=true) → "
+    "Shopify draft. Prices are EST until a Prodigi SKU is attached. Free tier: 3 sculpts "
+    "and 5 videos per owner per day. Always show price before order. Never Meshy-spend "
+    "without the human saying go. Controlled custom: registry coat/hat/pattern/line only."
 ))
 
 
@@ -276,13 +279,101 @@ async def figg_companygraph() -> str:
     return _j(await _call("GET", "/api/companygraph"))
 
 
+async def figg_playbook() -> str:
+    """Machine-readable funnel: ramble → confidence products → photo → mesh → checkout. Call this first when helping a customer shop."""
+    return _j(await _call("GET", "/api/agent/playbook"))
+
+
+async def figg_quick_map(text: str, owner: str = "") -> str:
+    """Map a customer ramble/query onto live studio lines with confidence scores. Returns ranked matches + recommended coat/hat/pattern + next-step funnel."""
+    return _j(await _call("POST", "/api/quick/map", {"text": text, "owner": owner}))
+
+
+async def figg_product_assets(owner: str = "") -> str:
+    """Studio product lines with stills, prices, assets (coats/hats/patterns) and the owner's active mesh id."""
+    return _j(await _call("GET", "/api/products/studio?owner=" + (owner or "anon")))
+
+
+async def figg_studio_props() -> str:
+    """Prop registry: hats, coats, patterns, per-line allowed combos, custom policy."""
+    return _j(await _call("GET", "/api/studio/props"))
+
+
+async def figg_studio_retexture(line: str = "ornament", coat: str = "none",
+                                hat: str = "none", pattern: str = "solid",
+                                owner: str = "", mesh_id: str = "",
+                                note: str = "") -> str:
+    """Retexture preview: pick coat colour, optional santa/xmas hat, optional pattern.
+    Returns stills for that combo + the full available registry. 0 Meshy credits.
+    Registry ids only (e.g. coat=chocolate hat=santa pattern=spots). Coat is a preview grade."""
+    return _j(await _call("POST", "/api/products/personalise", {
+        "line": line, "coat": coat, "hat": hat, "pattern": pattern,
+        "owner": owner, "mesh_id": mesh_id, "texture": note, "texture_note": note,
+    }))
+
+
+async def figg_studio_combos() -> str:
+    """List pre-rendered coat / santa hat / pattern still sets + allowed line assets."""
+    return _j(await _call("GET", "/api/studio/combos"))
+
+
+async def figg_product_personalise(line: str, coat: str = "none", hat: str = "none",
+                                    pattern: str = "solid", owner: str = "",
+                                    mesh_id: str = "") -> str:
+    """Validate controlled custom on a line → stills + price. Registry ids only."""
+    return _j(await _call("POST", "/api/products/personalise", {
+        "line": line, "coat": coat, "hat": hat, "pattern": pattern,
+        "owner": owner, "mesh_id": mesh_id,
+    }))
+
+
+async def figg_checkout(line: str, coat: str = "none", hat: str = "none",
+                        pattern: str = "solid", qty: int = 1,
+                        amount_cents: int = 0, fulfil: bool = False,
+                        owner: str = "", mesh_id: str = "", email: str = "",
+                        note: str = "") -> str:
+    """Reserve an order. fulfil=true also creates a Shopify draft (no card charge). Show price first."""
+    body = {
+        "line": line, "coat": coat, "hat": hat, "pattern": pattern,
+        "qty": qty, "fulfil": fulfil, "owner": owner, "mesh_id": mesh_id,
+        "email": email, "note": note,
+    }
+    if amount_cents:
+        body["amount_cents"] = amount_cents
+    return _j(await _call("POST", "/api/products/order", body))
+
+
+async def figg_fullchain_personalise_order(line: str, coat: str = "none",
+                                           pattern: str = "solid", hat: str = "none",
+                                           qty: int = 1, amount_cents: int = 0,
+                                           fulfil: bool = False, owner: str = "",
+                                           mesh_id: str = "", email: str = "") -> str:
+    """Personalise + order in one call for a studio line. Prefer this after figg_quick_map once the human confirms price."""
+    body = {
+        "line": line, "coat": coat, "pattern": pattern, "hat": hat,
+        "qty": qty, "fulfil": fulfil, "owner": owner, "mesh_id": mesh_id,
+        "email": email,
+    }
+    if amount_cents:
+        body["amount_cents"] = amount_cents
+    pers = await _call("POST", "/api/products/personalise", {
+        "line": line, "coat": coat, "hat": hat, "pattern": pattern,
+        "owner": owner, "mesh_id": mesh_id,
+    })
+    order = await _call("POST", "/api/products/order", body)
+    return _j({"ok": bool((order or {}).get("ok")), "personalise": pers, "order": order})
+
+
 # ── the manifest: adding a tool = adding it to an area. One place. ───────────
 TOOL_AREAS: dict[str, list] = {
-    "flow":      [figg_flow, figg_upload_photo, figg_start_mesh],
+    "flow":      [figg_flow, figg_upload_photo, figg_start_mesh, figg_playbook, figg_quick_map],
     "identity":  [figg_me, figg_create_account, figg_login, figg_credits],
     "mesh":      [figg_mesh_status, figg_measure, figg_print_export],
     "shop":      [figg_catalog, figg_products, figg_concepts, figg_quote,
-                  figg_check_sku],
+                  figg_check_sku, figg_product_assets, figg_studio_props,
+                  figg_studio_combos, figg_studio_retexture,
+                  figg_product_personalise, figg_checkout,
+                  figg_fullchain_personalise_order],
     "style":     [figg_styles, figg_install_style],
     "stage":     [figg_acts, figg_perform],
     "company":   [figg_companygraph],

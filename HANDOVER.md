@@ -78,13 +78,29 @@ Repo: **github.com/prx0r/pogpet** · this session commits:
 
 ## Products / Blender / gift cards — next
 
-1. **Gift card product line** — new `STUDIO_LINES` entry or cards catalog row; 2D PNG mockup + one-click order.
-2. **Blender asset library** — modular props under `data/assets/` (hats, scarves, handhelds) wired into `STUDIO_LINES.assets`.
-3. **Production quotes** — attach Prodigi/Makr3D SKUs so prices flip EST → LIVE (`GET /api/prodigi/check?sku=`).
-4. **Listing pass** — `render_product.py --size 2000` into figg-studio before-after templates for Etsy/Shopify.
-5. **Shopify `model-viewer`** — store token + metafield once Admin API is ready.
+1. **Controlled custom (IN PROGRESS)** — coat colour + pattern, hat ids, gift card
+   form, MCP full chain. Spec: `docs/studio-custom.md`.
+2. **Gift card** — live line `gift_card` (£25 default; £10/£25/£50). Digital fulfilment.
+3. **Blender asset library** — hats already: OGA santa + Khodrin xmas_hat under
+   `data/assets/hats/`. Patterns via `scripts/coat_retexture.py` (spots/stripes/fairisle).
+4. **Production quotes** — attach Prodigi/Makr3D SKUs so prices flip EST → LIVE.
+5. **Listing pass** — `render_product.py --size 2000` into figg-studio templates.
 6. **Santa seat QC** — eyeball `/img/prod/santa-hero.png`; publish gallery only if it sits.
-7. **Stripe/Shopify checkout** — flip `pending_checkout` orders.
+7. **Shopify checkout** — draft orders via `POST /api/products/order` `fulfil:true`
+   (`backend/shopify_fulfil.py`). Creds already in `.env`; needs `write_draft_orders`.
+8. **Pattern stills** — `coat-chocolate-spots-hero.png`, `coat-golden-stripes-hero.png`
+   published under `/img/prod/`.
+
+## MCP full chain (agents)
+
+```
+upload photo → start mesh → figg_mesh_manifest (machine-readable mesh + props)
+→ figg_studio_props / figg_product_assets
+→ figg_fullchain_personalise_order({line, coat, pattern, hat, qty, fulfil})
+→ order + optional Shopify draft
+```
+
+Custom is **controlled**: registry ids only (`config.STUDIO_CUSTOM_POLICY`).
 
 ## Gotchas
 

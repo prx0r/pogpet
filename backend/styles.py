@@ -18,6 +18,12 @@ from . import config, install
 
 # Curated, not auto-scanned: these are the ones with usable geometry.
 _SOURCES: list[dict] = [
+    {"id": "brick-figure", "label": "Brick figure",
+     "blurb": "Desk minifig · 75 mm · svatantrya brick A",
+     "path": "/home/ubuntu/figgsite/data/uploads/brick-figure-01a0feb8-7c26-7796-be37-b6fddb09d772.glb"},
+    {"id": "brick-figure-2", "label": "Brick figure 2",
+     "blurb": "Desk minifig · 75 mm · svatantrya brick B",
+     "path": "/home/ubuntu/figgsite/data/uploads/brick-figure-01a0ff52-f359-7728-ab0b-28b36f28be0c.glb"},
     {"id": "badger-classic", "label": "Badger",
      "blurb": "The mesh exemplar — 59k tris, textured, printable",
      "path": "/home/ubuntu/freaktown/freaks/badger-001/avatar.glb"},

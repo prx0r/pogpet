@@ -1,6 +1,6 @@
 # Test report — oddhobb
 
-> Run 2026-09-30 18:05 · `scripts/test_site.py` · **77/77 passed** · 0 credits
+> Run 2026-10-04 02:09 · `scripts/test_site.py` · **77/77 passed** · 0 credits
 
 | # | Result | Test | Detail |
 |---|---|---|---|
@@ -74,12 +74,12 @@
 | 68 | PASS | API without token -> 401 | HTTP 401 |
 | 69 | PASS | API bad token -> 401 | HTTP 401 |
 | 70 | PASS | POST /premesh (passthrough recipe) | HTTP 200 x-premesh-ok=1 bytes=7643 |
-| 71 | PASS | MCP initialize (token) | session c5ab586a |
-| 72 | PASS | MCP tools/list = 21 | 21 tools |
+| 71 | PASS | MCP initialize (token) | session 4270a5a1 |
+| 72 | PASS | MCP tools/list = 30 | 30 tools |
 | 73 | PASS | MCP foundation tools present |  |
 | 74 | PASS | MCP tools/call figg_flow | stage=ready mesh=msh_70edae28a4 |
 | 75 | PASS | MCP without token -> 401 | HTTP 401 |
-| 76 | PASS | api.log: no NEW tracebacks during this run | baseline=2 now=2 (2 historical = fixed flow bug) |
+| 76 | PASS | api.log: no NEW tracebacks during this run | baseline=0 now=0 (2 historical = fixed flow bug) |
 | 77 | PASS | oddhobb.com final smoke | HTTP 200 |
 
 Re-run: `python3 scripts/test_site.py` (exits non-zero on FAIL).

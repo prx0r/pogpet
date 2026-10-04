@@ -4,9 +4,31 @@
 > browse figurines, cards, gifts and video that already feature them.
 
 OddHobb turns a pet photo into a 3D mesh, then renders that mesh onto every
-product in the shop — cards, mugs, cushions, jigsaws, prints, stickers and
-more. Prices on the storefront are estimates (EST) until a live supplier
-quote replaces them.
+product in the shop — cards, mugs, cushions, jigsaws, prints, stickers and more.
+Prices on the storefront are estimates (EST) until a live supplier quote replaces them.
+
+## Canonical funnel (humans + ChatGPT agents)
+
+```
+ramble (voice/text)
+  → POST /backend/api/quick/map          # live lines + confidence
+  → show top matches (stream by confidence)
+  → upload photo  POST /backend/api/photos
+  → sculpt        POST /backend/api/meshes   # Meshy spend needs human OK
+  → personalise   POST /backend/api/products/personalise
+  → checkout      POST /backend/api/products/order {fulfil:true}
+                 # → Shopify draft, no card charge from this API
+```
+
+Machine-readable playbook: `GET /backend/api/agent/playbook`
+Shared mapper (same as the site Quick panel): `POST /backend/api/quick/map`
+Body: `{"text":"chocolate keychain for my dog","owner":"..."}` → `matches[].confidence`
+
+Human funnel (in the app): https://oddhobb.com/#quick — Products tab → Quick
+(same as `/quick.html` which redirects there).
+
+MCP: `figg_playbook` · `figg_quick_map` · `figg_product_assets` ·
+`figg_fullchain_personalise_order` — always show price before order.
 
 ## Shop
 
@@ -24,20 +46,21 @@ quote replaces them.
 - Google Merchant Center feed (RSS 2.0, GBP): https://oddhobb.com/backend/api/feeds/google.xml
 - Shopify-shaped feed (mirrors /products.json): https://oddhobb.com/backend/api/feeds/shopify.json
 - Sections registry: https://oddhobb.com/backend/api/sections
+- Agent playbook: https://oddhobb.com/backend/api/agent/playbook
+- Quick map: https://oddhobb.com/backend/api/quick/map
 
-All four endpoints are public and need no token. Product images in feeds are
-public render URLs under https://oddhobb.com/img/ — no token required.
+Catalog endpoints are public (no token). Product images in feeds are public
+render URLs under https://oddhobb.com/img/ — no token required.
 
 ## For AI assistants (MCP)
 
-OddHobb exposes a standard MCP server (streamable HTTP) with 20 tools
-covering pets, meshes, the full product library, quotes, styles and the
-stage: https://mcp.oddhobb.com/mcp
+OddHobb exposes a standard MCP server (streamable HTTP) covering pets, meshes,
+the studio product library, ramble→product mapping, quotes and checkout:
+https://mcp.oddhobb.com/mcp
 
 Connect with the bridge token as a query parameter:
 `https://mcp.oddhobb.com/mcp?token=<BRIDGE_TOKEN>` — without it the server
-answers 401. Start with `figg_tools` (self-describing manifest), then
-`figg_flow` for upload→mesh→preview state, `figg_catalog` for the library.
+answers 401. Start with `figg_tools`, then `figg_playbook` / `figg_quick_map`.
 
 ## Contact
 

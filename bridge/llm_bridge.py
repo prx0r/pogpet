@@ -313,6 +313,11 @@ class Handler(BaseHTTPRequestHandler):
         if raw.startswith("/api/"):
             self._json({"success": False, "error": "GET not supported"}, 405)
             return
+        if raw == "/products" or raw.startswith("/products/"):
+            # Products tab + per-line pages live in the SPA (site/index.html);
+            # boot opens the products panel from the pathname. /products.html
+            # (Etsy photo gallery file) does not match and still serves below.
+            raw = "/"
 
         root = ROOT / "site"
         rel = raw

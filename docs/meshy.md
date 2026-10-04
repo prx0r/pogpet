@@ -37,7 +37,41 @@ Base: `https://api.meshy.ai/openapi/v1` · header: `Authorization: Bearer $MESHY
 
 Other Creative Lab products follow the same `prototype` → `build` shape:
 `keychain`, `lamp`, `fridge-magnet`, `vinyl-figure`, `brick-figure`,
-`keycap`. Costs and quirks per product: `meshy-docs/md/en__api__creative-lab-*.md`.
+`keycap`, `fidget-pixel`, `fidget-collapsible`. Costs and quirks per product:
+`meshy-docs/md/en__api__creative-lab-*.md`. Machine-readable:
+`config.MESHY_CATALOG`.
+
+## Creative Lab product matrix (2026-10-02)
+
+| Product | Proto | Build | Total | Input | OddHobb use |
+|---|---:|---:|---:|---|---|
+| **figure** (chibi) | 6 | 30 | **36** | photo | Pet body → ornament/keychain/croc |
+| **brick-figure** | 6 | 30 | **36** | photo | Desk brick (~75 mm) |
+| **vinyl-figure** | 6 | 30 | **36** | photo | Collector vinyl SKU |
+| **keychain** (CL medallion) | 6 | 30 | **36** | photo | Badge relief ~50 mm — *not* our 3D pet keychain |
+| **fridge-magnet** | 6 | 30 | **36** | photo | Pet magnet SKU |
+| **lamp** | 30 | 6 | **36** | photo | Glowing lamp; Bambu MH001 60 mm fixture |
+| **keycap** | 12 | 50 | **62** | photo | Cherry MX 1u · head 10–40 mm |
+| **fidget-pixel** | 6 | 30 | **36** | photo | Desk fidget |
+| **fidget-collapsible** | — | 6 | **6** | photo | Cheap impulse |
+
+Also: **Image to 3D** (generic GLB), **3D Print multi-color 3MF (10 cr)**,
+printability **analyze free** / **repair 10 cr**.
+
+**API paths:** `/openapi/creative-lab/<product>/v1/prototype|build` —
+**not** under `/openapi/v1/`. Poll mirrors create path.
+
+## Can we ship with Meshy? **Yes**
+
+| Fulfilment | How |
+|---|---|
+| **Meshy Order Print** | Their store: print + ship ~2–3 weeks, 24 countries, free ship in US/CA/DE/ES/FR/IT/BR/CN/JP. Keychains ~$39 beta, fixed 50 mm. |
+| **Our print farm** | Makr3D / Prodigi — we control price, branding, Etsy listings. |
+| **Home print** | Download STL/3MF from Meshy build. |
+
+OddHobb path today: **generate** body with Meshy (or user GLB) → **previews free**
+(Blender) → **fulfil** via our farm or Meshy Order Print. Credits are generation
+only; physical cost is separate.
 
 ## The chibi flow (figure)
 

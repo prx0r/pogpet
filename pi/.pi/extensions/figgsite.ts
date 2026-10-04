@@ -247,7 +247,7 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({
 			line: Type.Optional(Type.String({ description: "ornament | keychain | brick" })),
 			coat: Type.Optional(Type.String({ description: "none|cream|golden|chocolate|black|fawn|grey" })),
-			hat: Type.Optional(Type.String({ description: "none|santa" })),
+			hat: Type.Optional(Type.String({ description: "none|santa|xmas_hat" })),
 			owner: Type.Optional(Type.String()),
 			mesh_id: Type.Optional(Type.String()),
 		}),
@@ -261,6 +261,61 @@ export default function (pi: ExtensionAPI) {
 					mesh_id: params.mesh_id ?? "",
 				});
 				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "customise failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_studio_retexture",
+		label: "Retexture preview (coat / santa / pattern)",
+		description:
+			"Controlled retexture on a studio line: coat colour, optional santa hat, " +
+			"optional pattern. Returns still URLs, available registry ids and price. " +
+			"0 Meshy credits. Registry ids only — coat is a preview grade, not a print SKU.",
+		promptSnippet:
+			"figg_studio_retexture({line:'ornament',coat:'chocolate',hat:'santa',pattern:'spots'})",
+		parameters: Type.Object({
+			line: Type.Optional(Type.String({ description: "ornament | keychain | brick" })),
+			coat: Type.Optional(Type.String({ description: "none|cream|golden|chocolate|black|fawn|grey" })),
+			hat: Type.Optional(Type.String({ description: "none|santa|xmas_hat" })),
+			pattern: Type.Optional(Type.String({ description: "solid|spots|stripes|fairisle" })),
+			owner: Type.Optional(Type.String()),
+			mesh_id: Type.Optional(Type.String()),
+			note: Type.Optional(Type.String({ description: "Optional free-text note stored on the preview" })),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const { status, json } = await call("POST", "/api/products/personalise", {
+					line: params.line ?? "ornament",
+					coat: params.coat ?? "none",
+					hat: params.hat ?? "none",
+					pattern: params.pattern ?? "solid",
+					owner: params.owner ?? "",
+					mesh_id: params.mesh_id ?? "",
+					texture: params.note ?? "",
+					texture_note: params.note ?? "",
+				});
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "retexture failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_studio_combos",
+		label: "List coat / santa / pattern stills",
+		description:
+			"Catalogue of pre-rendered coat colours, santa hat stills, coat×hat combos " +
+			"and pattern heroes, plus which assets each product line allows.",
+		promptSnippet: "figg_studio_combos() → available coats, hats, combos, patterns",
+		parameters: Type.Object({}),
+		execute: async () => {
+			try {
+				const { status, json } = await call("GET", "/api/studio/combos");
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "combos failed", status);
 			} catch (e) {
 				return fail(String(e));
 			}
@@ -361,15 +416,19 @@ export default function (pi: ExtensionAPI) {
 		name: "figg_checkout",
 		label: "Checkout a personalised product",
 		description:
-			"Reserve an order for a product line with coat/hat/qty. Returns order id " +
-			"+ quote. Does NOT charge — Stripe/Shopify payment is separate. " +
-			"Always show the customer the price before calling this.",
-		promptSnippet: "figg_checkout({line,coat,hat,qty}) → order + quote",
+			"Reserve an order for a product line with coat/hat/pattern/qty. Returns order id " +
+			"+ quote. Set fulfil=true to also create a Shopify draft order (no card charge). " +
+			"Always show the customer the price before calling this. Controlled custom only.",
+		promptSnippet: "figg_checkout({line,coat,hat,pattern,qty,fulfil?}) → order",
 		parameters: Type.Object({
-			line: Type.String({ description: "ornament | keychain" }),
+			line: Type.String({ description: "ornament | keychain | gift_card" }),
 			coat: Type.Optional(Type.String()),
 			hat: Type.Optional(Type.String()),
+			pattern: Type.Optional(Type.String({ description: "solid|spots|stripes|fairisle" })),
 			qty: Type.Optional(Type.Number({ description: "1-20" })),
+			amount_cents: Type.Optional(Type.Number({ description: "gift_card: 1000|2500|5000" })),
+			fulfil: Type.Optional(Type.Boolean({ description: "true = try Shopify draft order" })),
+			email: Type.Optional(Type.String()),
 			owner: Type.Optional(Type.String()),
 			mesh_id: Type.Optional(Type.String()),
 			note: Type.Optional(Type.String()),
@@ -380,12 +439,191 @@ export default function (pi: ExtensionAPI) {
 					line: params.line,
 					coat: params.coat ?? "none",
 					hat: params.hat ?? "none",
+					pattern: params.pattern ?? "solid",
 					qty: params.qty ?? 1,
+					amount_cents: params.amount_cents,
+					fulfil: params.fulfil ?? false,
+					email: params.email ?? "",
 					owner: params.owner ?? "",
 					mesh_id: params.mesh_id ?? "",
 					note: params.note ?? "",
 				});
 				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "checkout failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	// ── full agent chain: mesh manifest → props → personalise → order ──
+	pi.registerTool({
+		name: "figg_mesh_manifest",
+		label: "Mesh machine-readable manifest",
+		description:
+			"Machine-readable view of a mesh for agents: status, GLB url, photo facts, " +
+			"product bindings, studio lines, allowed hats/coats/patterns, custom policy. " +
+			"Call this after upload/sculpt before personalising.",
+		promptSnippet: "figg_mesh_manifest(mesh_id, owner?) → manifest",
+		parameters: Type.Object({
+			mesh_id: Type.String({ description: "mesh_id or 'canonical'" }),
+			owner: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const q = params.owner ? `?owner=${encodeURIComponent(params.owner)}` : "";
+				const { status, json } = await call(
+					"GET",
+					`/api/meshes/${encodeURIComponent(params.mesh_id)}/manifest${q}`,
+				);
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "manifest failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_studio_props",
+		label: "Prop library (hats, coats, patterns)",
+		description:
+			"Machine-readable prop registry: hats (with asset paths + licences), coat " +
+			"colours, retexture patterns, and per-line allowed combos. Controlled custom " +
+			"only — never invent prop ids.",
+		promptSnippet: "figg_studio_props() → hats, coats, patterns, lines",
+		parameters: Type.Object({}),
+		execute: async () => {
+			try {
+				const { status, json } = await call("GET", "/api/studio/props");
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "props failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_fullchain_personalise_order",
+		label: "Personalise + order (controlled)",
+		description:
+			"Full product chain for one SKU: validate coat/pattern/hat against the line's " +
+			"registry, return stills + price, then reserve an order. Optionally fulfil via " +
+			"Shopify draft (fulfil=true). Use figg_upload_photo + figg_start_mesh + " +
+			"figg_mesh_manifest first when starting from a customer photo.",
+		promptSnippet: "figg_fullchain_personalise_order({line,coat,pattern,hat,qty})",
+		parameters: Type.Object({
+			line: Type.String({ description: "ornament | keychain | croc_tag | gift_card" }),
+			coat: Type.Optional(Type.String()),
+			pattern: Type.Optional(Type.String()),
+			hat: Type.Optional(Type.String()),
+			qty: Type.Optional(Type.Number()),
+			amount_cents: Type.Optional(Type.Number()),
+			fulfil: Type.Optional(Type.Boolean()),
+			owner: Type.Optional(Type.String()),
+			mesh_id: Type.Optional(Type.String()),
+			email: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const owner = params.owner ?? "";
+				const mesh = params.mesh_id ?? "";
+				const pers = await call("POST", "/api/products/personalise", {
+					line: params.line,
+					coat: params.coat ?? "none",
+					pattern: params.pattern ?? "solid",
+					hat: params.hat ?? "none",
+					owner,
+					mesh_id: mesh,
+				});
+				if (pers.status !== 200 || !pers.json.ok) {
+					return fail(pers.json.error ?? "personalise failed", pers.status);
+				}
+				const ord = await call("POST", "/api/products/order", {
+					line: params.line,
+					coat: params.coat ?? "none",
+					pattern: params.pattern ?? "solid",
+					hat: params.hat ?? "none",
+					qty: params.qty ?? 1,
+					amount_cents: params.amount_cents,
+					fulfil: params.fulfil ?? false,
+					email: params.email ?? "",
+					owner,
+					mesh_id: mesh,
+				});
+				if (ord.status !== 200 || !ord.json.ok) {
+					return fail(ord.json.error ?? "order failed", ord.status);
+				}
+				return ok({
+					personalise: pers.json,
+					order: ord.json,
+					price_cents: ord.json.price_cents,
+					shopify: ord.json.shopify,
+				});
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_etsy_listing",
+		label: "Etsy listing pack",
+		description:
+			"Machine-readable Etsy listing for a product: pipe-delimited title, tags, " +
+			"sizes (mm), materials, processing days, photo slots. Use before writing " +
+			"a marketplace listing or syncing Shopify tags.",
+		promptSnippet: "figg_etsy_listing({product_id?}) → listing packs",
+		parameters: Type.Object({
+			product_id: Type.Optional(Type.String({
+				description: "ornament | keychain | croc_tag | gift_card | xmas_card",
+			})),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const q = params.product_id
+					? `?product_id=${encodeURIComponent(params.product_id)}`
+					: "";
+				const { status, json } = await call("GET", `/api/etsy/listings${q}`);
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "etsy failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_bricks_status",
+		label: "Brick meshes status",
+		description:
+			"List installed meshes and any GLB files waiting in data/uploads/ for the " +
+			"brick product line. Use when the owner says they've generated brick meshes.",
+		promptSnippet: "figg_bricks_status({owner?}) → meshes + pending GLBs",
+		parameters: Type.Object({
+			owner: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const q = params.owner ? `?owner=${encodeURIComponent(params.owner)}` : "";
+				const { status, json } = await call("GET", `/api/bricks/status${q}`);
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "bricks failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "figg_meshy_catalog",
+		label: "Meshy Creative Lab catalogue",
+		description:
+			"Machine-readable Meshy product types (figure, brick, vinyl, lamp, keychain " +
+			"medallion, fridge magnet, keycap, fidgets) with credit costs and how each " +
+			"maps to OddHobb SKUs. Generation only — spending still requires human approval.",
+		promptSnippet: "figg_meshy_catalog() → products + credits + ship note",
+		parameters: Type.Object({}),
+		execute: async () => {
+			try {
+				const { status, json } = await call("GET", "/api/meshy/catalog");
+				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "catalog failed", status);
 			} catch (e) {
 				return fail(String(e));
 			}

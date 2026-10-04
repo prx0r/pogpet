@@ -109,7 +109,7 @@ PRODUCTS: dict[str, dict] = {
 # ── studio: modular product lines + prop library ─────────────────────
 # Studio tab = character select + loadout config (NO prices).
 # Products tab = storefront for the same lines (prices + order + MCP).
-# Lines are SKUs of the SAME canonical mesh — scale + hardware only.
+# CONTROLLED custom only: fixed prop IDs + retexture params. No free-form mesh.
 STUDIO_LINES: dict[str, dict] = {
     "ornament": {
         "label": "Xmas ornament",
@@ -119,42 +119,78 @@ STUDIO_LINES: dict[str, dict] = {
         "blurb": "Tree hanger. Loop is part of the print.",
         "status": "live",
         "price_cents": 1299,
-        # props that make sense on THIS line (Products tab + MCP)
         "assets": {
-            "hats": ["none", "santa"],
+            "hats": ["none", "santa", "xmas_hat"],
             "coats": ["none", "cream", "golden", "chocolate", "black", "fawn", "grey"],
+            "patterns": ["solid", "spots", "stripes", "fairisle"],
         },
         "theme": "xmas",
+        "fulfilment": "print_farm",
     },
     "keychain": {
-        "label": "Keychain",
+        "label": "Keychain / keyring",
         "product": "figurine",
         "scale_mm": 60,
-        "hardware": "printed loop",
+        "hardware": "printed loop + ring",
         "blurb": "Same design, smaller. No metal.",
         "status": "live",
         "price_cents": 1499,
         "assets": {
             "hats": ["none"],
             "coats": ["none", "cream", "golden", "chocolate", "black", "fawn", "grey"],
+            "patterns": ["solid", "spots", "stripes"],
         },
         "theme": "everyday",
+        "fulfilment": "print_farm",
+    },
+    "croc_tag": {
+        "label": "Croc tag pin",
+        "product": "figurine",
+        "scale_mm": 28,
+        "hardware": "printed pin stem (Jibbitz-style)",
+        "blurb": "Charm that pops into Croc holes. Same mesh, tiny print.",
+        "status": "live",
+        "price_cents": 899,
+        "assets": {
+            "hats": ["none"],
+            "coats": ["none", "cream", "golden", "chocolate", "black", "fawn", "grey"],
+            "patterns": ["solid", "spots", "stripes"],
+        },
+        "theme": "everyday",
+        "fulfilment": "print_farm",
+        "size_mm": 28,
+        "pin_diameter_mm": 12,
+        "fits": "Crocs classic / most jibbitz holes",
+    },
+    "gift_card": {
+        "label": "Gift card",
+        "product": "gift_card",
+        "scale_mm": 0,
+        "hardware": "none",
+        "blurb": "Digital credit. Redeem on any OddHobb product.",
+        "status": "live",
+        "price_cents": 2500,
+        "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
+        "theme": "gift",
+        "fulfilment": "digital",
+        "amounts_cents": [1000, 2500, 5000],
     },
     "brick": {
         "label": "Brick figure",
         "product": "figurine",
         "scale_mm": 75,
         "hardware": "none",
-        "blurb": "Desk figure — modular props when the brick mesh lands.",
-        "status": "soon",
+        "blurb": "Desk figure — your star as a 75 mm brick-style minifig. Two figures live.",
+        "status": "live",
         "price_cents": 1999,
-        "assets": {"hats": ["none"], "coats": ["none"]},
+        "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "desk",
+        "fulfilment": "print_farm",
     },
 }
 
-# Coat = material grade on the existing texture (previews). Production
-# multi-colour is a live farm quote — never pretend a grade is a print SKU.
+# Coat = material grade + optional pattern on the existing texture (previews).
+# Production multi-colour is a live farm quote — never pretend a grade is a print SKU.
 STUDIO_COATS: list[dict] = [
     {"id": "none",     "label": "As printed", "hex": ""},
     {"id": "cream",    "label": "Cream",      "hex": "#EADBBE"},
@@ -165,18 +201,454 @@ STUDIO_COATS: list[dict] = [
     {"id": "grey",     "label": "Grey",       "hex": "#8C8C8F"},
 ]
 
-# Hats = free Blender props seated on the measured skull.
+# Controlled retexture patterns (Blender shader presets — not free-form art).
+STUDIO_PATTERNS: list[dict] = [
+    {"id": "solid",    "label": "Solid",     "blurb": "Flat colour on the coat"},
+    {"id": "spots",    "label": "Spots",     "blurb": "Irregular dots (dalmatian-ish)"},
+    {"id": "stripes",  "label": "Stripes",   "blurb": "Horizontal bands"},
+    {"id": "fairisle", "label": "Fair Isle", "blurb": "Knit-style geometric"},
+]
+
+# Hats = free Blender props seated on the measured skull. Controlled IDs only.
+# Assets: OGA CC0 + Khodrin (edit+redistribute) under data/assets/hats/.
 STUDIO_HATS: list[dict] = [
-    {"id": "none",  "label": "None",     "asset": "", "status": "live"},
-    {"id": "santa", "label": "Santa hat","asset": "data/assets/hats/oga-santa/santa_hat.fbx",
-     "status": "live", "licence": "CC0", "lines": ["ornament"]},
+    {"id": "none",     "label": "None",       "asset": "", "status": "live"},
+    {"id": "santa",    "label": "Santa hat",  "asset": "data/assets/hats/oga-santa/santa_hat.fbx",
+     "status": "live", "licence": "CC0", "source": "OpenGameArt", "lines": ["ornament"]},
+    {"id": "xmas_hat", "label": "Xmas hat",   "asset": "data/assets/hats/khodrin-christmas/christmas_hat.fbx",
+     "status": "live", "licence": "edit+redistribute", "source": "Khodrin",
+     "lines": ["ornament"], "maps": ["Albedo.png", "Normal.png"]},
 ]
 
 # Canonical product GLB (loop amend) served from /img/prod/ — demo + fallback
 STUDIO_CANONICAL_GLB = "/img/prod/chibi-figure-hook.glb"
+STUDIO_JAW_GLB = "/img/prod/chibi-figure-hook-jaw.glb"
+# Brick desk figures — parent GLBs from Creative Lab / svatantrya imports
+STUDIO_BRICK_GLB = "/img/prod/brick-figure.glb"
+STUDIO_BRICK_PORTRAIT = "/img/prod/brick-hero.png"
+# Second brick variant (svatantrya 01a0ff52) — studio lineup shows both
+STUDIO_BRICK2_GLB = "/img/prod/brick-figure-2.glb"
+STUDIO_BRICK2_PORTRAIT = "/img/prod/brick-hero-2.png"
+STUDIO_BRICKS = [
+    {
+        "id": "brick-demo",
+        "label": "brick figure",
+        "glb_url": STUDIO_BRICK_GLB,
+        "portrait": STUDIO_BRICK_PORTRAIT,
+        "style_id": "brick-figure",
+        "source": "svatantrya:01a0feb8",
+        "mesh_ids": ["msh_a984c413e47f48a19b63"],
+    },
+    {
+        "id": "brick-demo-2",
+        "label": "brick figure 2",
+        "glb_url": STUDIO_BRICK2_GLB,
+        "portrait": STUDIO_BRICK2_PORTRAIT,
+        "style_id": "brick-figure-2",
+        "source": "svatantrya:01a0ff52",
+        "mesh_ids": ["msh_8802c242b583455b9159"],
+    },
+]
+# mesh_id → studio label/portrait for installed brick pogs
+STUDIO_BRICK_MESH_MAP = {
+    "msh_a984c413e47f48a19b63": ("brick figure", STUDIO_BRICK_PORTRAIT, "brick-demo"),
+    "msh_8802c242b583455b9159": ("brick figure 2", STUDIO_BRICK2_PORTRAIT, "brick-demo-2"),
+}
 STUDIO_STILL_DIR = "prod"  # data/productimg/prod → /img/prod/
 # Calling-card portrait under the character select (exact product still)
 STUDIO_CALLING_CARD = "/img/prod/prod-hero.png"
+
+# Controlled custom is what MCP exposes. Free-form mesh edits stay out.
+STUDIO_CUSTOM_POLICY = {
+    "mode": "controlled",
+    "allowed": ["coat_color", "coat_pattern", "hat_id", "line", "qty", "amount_cents"],
+    "blocked": ["arbitrary_mesh", "unlisted_hat", "unlisted_pattern", "text_decal_until_live"],
+    "note": "Agents pick from registries only. Full free custom is not enabled.",
+}
+
+# ── Personal cards (Xmas etc.) — Cards tab + Etsy listings ───────────
+# Mix: dog mesh still + greeting text; or a real uploaded PNG.
+# Sizes locked to print-farm common SKUs (see PRODIGI + oddhobbies ETSY-SETUP).
+CARD_SIZES: dict[str, dict] = {
+    "A6":    {"label": "A6 postcard",   "mm": "105 × 148", "price_cents": 399,
+              "note": "Standard postcard · fits mail slots"},
+    "5x7":   {"label": "5×7 card",      "mm": "127 × 178", "price_cents": 799,
+              "note": "Fine Art greeting card · envelope included"},
+    "A5":    {"label": "A5 card",       "mm": "148 × 210", "price_cents": 999,
+              "note": "Larger greeting card"},
+    "A4":    {"label": "A4 print",      "mm": "210 × 297", "price_cents": 1499,
+              "note": "Wall print / poster"},
+}
+
+PERSONAL_CARDS: dict[str, dict] = {
+    "merry_xmas": {
+        "label": "Merry Xmas card",
+        "message": "Merry Xmas",
+        "sub": "from the whole pack",
+        "source": "mesh",          # mesh still + text
+        "theme": "christmas",
+        "price_cents": 799,
+        "sizes": ["A6", "5x7", "A5"],
+        "tags": ["christmas card", "personalised pet", "xmas gift", "dog card", "custom card"],
+        "blurb": "Your pet's 3D render on a Christmas card. Upload once — print on cards, ornaments, keychains.",
+        "etsy_title": "Personalised Pet Christmas Card | Custom Dog Card | Merry Xmas Card | Pet Gift | Holiday Card",
+    },
+    "happy_holidays": {
+        "label": "Happy Holidays card",
+        "message": "Happy Holidays",
+        "sub": "love, [pet name]",
+        "source": "mesh",
+        "theme": "christmas",
+        "price_cents": 799,
+        "sizes": ["A6", "5x7"],
+        "tags": ["holiday card", "personalised card", "pet gift", "christmas", "custom dog"],
+        "blurb": "Neutral holiday greeting with your pet's mesh render.",
+        "etsy_title": "Personalised Holiday Card | Custom Pet Card | Happy Holidays | Dog Christmas Card | Pet Gift",
+    },
+    "thank_you": {
+        "label": "Thank you card",
+        "message": "Thank you",
+        "sub": "— [pet name]",
+        "source": "mesh",
+        "theme": "everyday",
+        "price_cents": 699,
+        "sizes": ["A6", "5x7"],
+        "tags": ["thank you card", "personalised pet", "custom card", "dog thank you"],
+        "blurb": "Thank-you card starring your pet's 3D render.",
+        "etsy_title": "Personalised Thank You Card | Custom Dog Card | Pet Thank You | Custom Pet Gift",
+    },
+    "happy_birthday": {
+        "label": "Birthday card",
+        "message": "Happy Birthday",
+        "sub": "[pet name] says woof",
+        "source": "mesh",
+        "theme": "birthday",
+        "price_cents": 799,
+        "sizes": ["A6", "5x7"],
+        "tags": ["birthday card", "personalised pet", "dog birthday", "custom card"],
+        "blurb": "Birthday card with your pet's mesh render.",
+        "etsy_title": "Personalised Dog Birthday Card | Custom Pet Birthday | Birthday Gift | Pet Card",
+    },
+    "real_photo": {
+        "label": "Your photo card",
+        "message": "Merry Xmas",
+        "sub": "with love",
+        "source": "upload",        # customer PNG/JPEG — no mesh required
+        "theme": "christmas",
+        "price_cents": 699,
+        "sizes": ["A6", "5x7"],
+        "tags": ["photo card", "custom photo card", "personalised card", "christmas photo"],
+        "blurb": "Print your own photo on a greeting card — no 3D needed.",
+        "etsy_title": "Personalised Photo Card | Custom Christmas Card | Photo Greeting Card | Pet Photo Card",
+    },
+}
+
+# ── Etsy listing packs (title/tag/sizing — patterns from prx0r/oddhobbies) ──
+# Photo strategy adapted from oddhobbies/shop/ETSY-SETUP.md (10 slots).
+ETSY_PHOTO_SLOTS = [
+    "hero shot (product on clean surface)",
+    "in-use / lifestyle",
+    "scale reference (next to everyday object)",
+    "all variants (coats, hats, sizes)",
+    "detail close-up (loop, texture, print)",
+    "packaging",
+    "size diagram with measurements",
+    "personalisation example (name / message)",
+    "bundle shot",
+    "mesh / 3D viewer still",
+]
+
+ETSY_LISTINGS: dict[str, dict] = {
+    "ornament": {
+        "product_id": "ornament",
+        "title": "Personalised Pet Ornament | Custom Dog Christmas Bauble | 3D Printed Pet Gift | Pet Ornament | Holiday Decor",
+        "price_cents": 1299,
+        "price_band": "impulse/treat",
+        "currency": "GBP",
+        "sizes": [
+            {"id": "std", "label": "Standard", "height_mm": 80, "hole_mm": 5.0,
+             "weight_g": "50–120", "note": "printed loop · ribbon + box"},
+        ],
+        "materials": "PLA+ · printed loop (no metal) · single-colour or multi-colour quote",
+        "personalization": ["pet name on request", "coat colour", "santa hat addon"],
+        "processing_days": "3–7",
+        "ships_from": "UK print farm",
+        "tags": ["personalised pet ornament", "dog christmas gift", "custom bauble",
+                 "3d printed pet", "christmas ornament", "pet memorial ornament"],
+        "blurb": (
+            "One photo of your pet becomes a 3D-printed Christmas ornament with a printed "
+            "hanging loop (never metal). Same mesh as our keychains and cards — upload once."
+        ),
+        "photo_slots": ETSY_PHOTO_SLOTS,
+        "fulfilment": "print_farm",
+        "source_repo": "prx0r/oddhobbies ETSY-SETUP + ALL-PRODUCTS sizing patterns",
+    },
+    "keychain": {
+        "product_id": "keychain",
+        "title": "Personalised Pet Keychain | Custom Dog Keyring | 3D Printed Key Chain | Pet Gift | Dog Keychain",
+        "price_cents": 1499,
+        "price_band": "treat",
+        "currency": "GBP",
+        "sizes": [
+            {"id": "std", "label": "Standard", "height_mm": 80, "hole_mm": 4.0,
+             "weight_g": "30–80", "note": "printed loop + printed ring · backing card"},
+            {"id": "small", "label": "Small", "height_mm": 60, "hole_mm": 4.0,
+             "weight_g": "20–50", "note": "pocket size"},
+        ],
+        "materials": "PLA+ · printed plastic ring (no metal) · backing card",
+        "personalization": ["pet name", "coat colour"],
+        "processing_days": "3–7",
+        "ships_from": "UK print farm",
+        "tags": ["personalised dog keychain", "custom keyring", "3d printed keychain",
+                 "pet keychain", "christmas keychain", "pet gift"],
+        "blurb": (
+            "Same design as the ornament, smaller. Printed loop + printed plastic ring — "
+            "POD-safe, no metal split ring required."
+        ),
+        "photo_slots": ETSY_PHOTO_SLOTS,
+        "fulfilment": "print_farm",
+        "source_repo": "prx0r/oddhobbies ETSY-SETUP + ALL-PRODUCTS sizing patterns",
+    },
+    "croc_tag": {
+        "product_id": "croc_tag",
+        "title": "Personalised Pet Croc Charm | Crocs Tag Pin | Custom Dog Jibbitz | Pet Shoe Charm | Croc Accessory",
+        "price_cents": 899,
+        "price_band": "impulse",
+        "currency": "GBP",
+        "sizes": [
+            {"id": "std", "label": "Standard", "height_mm": 28, "pin_diameter_mm": 12,
+             "weight_g": "3–8", "note": "printed pin stem · pops into Croc holes"},
+        ],
+        "materials": "PLA+ · printed pin stem (no metal hardware required)",
+        "personalization": ["pet name", "coat colour"],
+        "processing_days": "3–7",
+        "ships_from": "UK print farm",
+        "tags": ["croc charm", "crocs jibbitz", "personalised croc pin", "dog shoe charm",
+                 "custom crocs accessory", "pet croc tag", "croc pin"],
+        "blurb": (
+            "Tiny 3D-printed charm of your pet that pops into Croc holes — Jibbitz-style. "
+            "Printed pin stem, no metal. Same mesh as ornaments and keychains."
+        ),
+        "photo_slots": ETSY_PHOTO_SLOTS,
+        "fulfilment": "print_farm",
+        "source_repo": "owner brainwave 2026-10-02 + oddhobbies ETSY-SETUP sizing pattern",
+    },
+    "brick": {
+        "product_id": "brick",
+        "title": "Personalised Brick Figure | Custom Pet Desk Toy | 3D Printed Minifig | Geek Gift | LEGO-Style Pet Figure",
+        "price_cents": 1999,
+        "price_band": "treat/gift",
+        "currency": "GBP",
+        "sizes": [
+            {"id": "std", "label": "Standard", "height_mm": 75,
+             "weight_g": "80–150", "note": "desk brick figure · no hardware"},
+        ],
+        "materials": "PLA+ · single-colour print · multi-colour quote on request",
+        "personalization": ["pet name", "coat colour (preview grade)"],
+        "processing_days": "3–7",
+        "ships_from": "UK print farm",
+        "tags": ["personalised brick figure", "custom pet toy", "3d printed minifig",
+                 "desk figure", "geek pet gift", "lego style pet"],
+        "blurb": (
+            "Your pet as a 75 mm brick-style desk figure — minifig proportions, "
+            "printed as one piece. Same photo-to-mesh pipeline as our ornaments."
+        ),
+        "photo_slots": ETSY_PHOTO_SLOTS,
+        "fulfilment": "print_farm",
+        "source_repo": "brick line live 2026-10-03 · mesh msh_a984c413 · Creative Lab brick-figure",
+    },
+    "gift_card": {
+        "product_id": "gift_card",
+        "title": "OddHobb Gift Card | Digital Gift Card | Personalised Pet Products | eGift Card | Instant Delivery",
+        "price_cents": 2500,
+        "price_band": "gift",
+        "currency": "GBP",
+        "sizes": [
+            {"id": "10", "label": "£10", "amount_cents": 1000, "note": "digital code"},
+            {"id": "25", "label": "£25", "amount_cents": 2500, "note": "digital code"},
+            {"id": "50", "label": "£50", "amount_cents": 5000, "note": "digital code"},
+        ],
+        "materials": "Digital delivery · redeemable on OddHobb",
+        "personalization": ["gift message"],
+        "processing_days": "0–1",
+        "ships_from": "email",
+        "tags": ["gift card", "digital gift card", "pet lover gift", "custom gift card",
+                 "instant delivery", "odd hobby gift"],
+        "blurb": "Digital credit toward personalised pet products. Instant email delivery.",
+        "photo_slots": ["gift card design mockup", "how-to-redeem graphic"],
+        "fulfilment": "digital",
+        "source_repo": "prx0r/oddhobbies ETSY-SETUP",
+    },
+    "xmas_card": {
+        "product_id": "xmas_card",
+        "title": "Personalised Pet Christmas Card | Custom Dog Xmas Card | Merry Xmas Card | Pet Holiday Card | Photo Card",
+        "price_cents": 799,
+        "price_band": "impulse",
+        "currency": "GBP",
+        "sizes": [
+            {"id": "A6", "label": "A6", "mm": "105 × 148", "price_cents": 399},
+            {"id": "5x7", "label": "5×7", "mm": "127 × 178", "price_cents": 799},
+            {"id": "A5", "label": "A5", "mm": "148 × 210", "price_cents": 999},
+        ],
+        "materials": "300–350gsm matte · full-colour print · envelope (5×7)",
+        "personalization": ["pet name", "message", "mesh style OR your own photo"],
+        "processing_days": "2–5",
+        "ships_from": "UK print farm",
+        "tags": ["personalised christmas card", "custom dog card", "merry xmas card",
+                 "pet christmas gift", "photo christmas card", "holiday greeting"],
+        "blurb": (
+            "Christmas card with your pet — 3D mesh render or your own photo. "
+            "Sizes A6 / 5×7 / A5. Print & post from the UK."
+        ),
+        "photo_slots": ETSY_PHOTO_SLOTS,
+        "fulfilment": "print_farm",
+        "source_repo": "prx0r/oddhobbies ETSY-SETUP photo strategy + SEO sizing",
+    },
+}
+
+# Machine-readable Etsy pack for agents / Shopify / listing tools
+ETSY_SOURCE_NOTE = (
+    "Listing patterns + photo-slot strategy adapted from prx0r/oddhobbies "
+    "(docs/ETSY-SETUP.md, KILLER-PRODUCTS.md, ALL-PRODUCTS.md). "
+    "OddHobb sizes from docs/balance.md + PRODIGI/SEO pack."
+)
+
+# ── Meshy Creative Lab catalogue (docs.meshy.ai · verified 2026-10-02) ──
+# Ship-with-Meshy path: photo → prototype → build → print (ours or Meshy Order Print).
+# Costs in credits. ALWAYS ask the human before any spend. Ledger: data/meshy_credits.jsonl
+MESHY_CATALOG: dict[str, dict] = {
+    "figure": {
+        "label": "Chibi figure",
+        "api": "creative-lab/figure/v1",
+        "prototype_credits": 6,
+        "build_credits": 30,
+        "total_credits": 36,
+        "input": "photo",
+        "output": "GLB + OBJ/MTL",
+        "oddhobb_use": "Primary pet body → ornament / keychain / croc / brick",
+        "notes": "Our dog mesh came from this track (manual webapp + API).",
+    },
+    "brick_figure": {
+        "label": "Brick figure",
+        "api": "creative-lab/brick-figure/v1",
+        "prototype_credits": 6,
+        "build_credits": 30,
+        "total_credits": 36,
+        "input": "photo",
+        "output": "GLB",
+        "oddhobb_use": "Desk brick SKU (~75 mm) — parent meshes may also be user-generated",
+        "notes": "Minifig-style; good for parents-as-bricks wedge.",
+    },
+    "vinyl_figure": {
+        "label": "Vinyl figure",
+        "api": "creative-lab/vinyl-figure/v1",
+        "prototype_credits": 6,
+        "build_credits": 30,
+        "total_credits": 36,
+        "input": "photo",
+        "output": "GLB",
+        "oddhobb_use": "Collector vinyl SKU (Funko-adjacent) — later product line",
+        "notes": "Toy-style collectible body.",
+    },
+    "keychain_cl": {
+        "label": "Keychain (Creative Lab medallion)",
+        "api": "creative-lab/keychain/v1",
+        "prototype_credits": 6,
+        "build_credits": 30,
+        "total_credits": 36,
+        "input": "photo",
+        "output": "GLB relief",
+        "oddhobb_use": "Optional badge/keychain *medallion* (depth relief) — not our 3D pet keychain",
+        "notes": "Fixed ~50 mm badge shape. Our pet keychain stays figure-track + printed ring.",
+        "size_mm": 50,
+    },
+    "fridge_magnet": {
+        "label": "Fridge magnet",
+        "api": "creative-lab/fridge-magnet/v1",
+        "prototype_credits": 6,
+        "build_credits": 30,
+        "total_credits": 36,
+        "input": "photo",
+        "output": "GLB relief + flat back",
+        "oddhobb_use": "New SKU — pet face relief magnet",
+        "notes": "Colourized depth relief, magnetic back.",
+    },
+    "lamp": {
+        "label": "Lamp / lampshade",
+        "api": "creative-lab/lamp/v1",
+        "prototype_credits": 30,
+        "build_credits": 6,
+        "total_credits": 36,
+        "input": "photo (or text in webapp)",
+        "output": "STL lampshade + optional base (Bambu MH001 60 mm fixture)",
+        "oddhobb_use": "New SKU — glowing pet lamp (Meshy Order Print available)",
+        "notes": "Build is processor: hollow, open bottom, fixture plate. diameter_mm options.",
+        "fixture_presets": ["bambu_mh001_60mm", "none"],
+    },
+    "keycap": {
+        "label": "Keycap (Cherry MX 1u)",
+        "api": "creative-lab/keycap/v1",
+        "prototype_credits": 12,
+        "build_credits": 50,
+        "total_credits": 62,
+        "input": "photo",
+        "output": "GLB keycap",
+        "oddhobb_use": "Desk collectible / keyboard wedge",
+        "notes": "head_size_mm 10–40 (default 23). Costs more than other CL products.",
+        "base_model": "cherry-mx-1x1-r1",
+    },
+    "fidget_pixel": {
+        "label": "Fidget pixel",
+        "api": "creative-lab/fidget-pixel/v1",
+        "prototype_credits": 6,
+        "build_credits": 30,
+        "total_credits": 36,
+        "input": "photo",
+        "output": "GLB",
+        "oddhobb_use": "Impulse desk toy SKU",
+        "notes": "Printable fidget from photo.",
+    },
+    "fidget_collapsible": {
+        "label": "Collapsible fidget",
+        "api": "creative-lab/fidget-collapsible/v1",
+        "prototype_credits": 0,
+        "build_credits": 6,
+        "total_credits": 6,
+        "input": "photo",
+        "output": "GLB",
+        "oddhobb_use": "Cheap impulse SKU",
+        "notes": "Single-stage generation (6 cr build only).",
+    },
+    # Non-Creative-Lab Meshy extras (still shippable)
+    "image_to_3d": {
+        "label": "Image to 3D (generic)",
+        "api": "image-to-3D",
+        "prototype_credits": 0,
+        "build_credits": 0,
+        "total_credits": None,  # varies; check pricing.md
+        "input": "photo",
+        "output": "GLB textured",
+        "oddhobb_use": "Fallback body if Creative Lab shape is wrong",
+        "notes": "Under /openapi/v1/image-to-3D — not Creative Lab.",
+    },
+    "multicolor_print": {
+        "label": "3D Print multi-color (3MF)",
+        "api": "3D Print Multi-Color",
+        "prototype_credits": 0,
+        "build_credits": 10,
+        "total_credits": 10,
+        "input": "textured model",
+        "output": "3MF",
+        "oddhobb_use": "Convert pet texture → multi-colour print file",
+        "notes": "Printability analyze is free; repair is 10 cr.",
+    },
+}
+
+MESHY_SHIP_NOTE = (
+    "Yes — Meshy can ship physical prints (Order Print, ~2–3 weeks, 24 countries, "
+    "free shipping in US/CA/DE/ES/FR/IT/BR/CN/JP). We can also print locally via "
+    "Makr3D/Prodigi. Generate with Meshy Creative Lab, fulfil via us or them."
+)
 
 # ── Google sign-in ──────────────────────────────────────────────────
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")

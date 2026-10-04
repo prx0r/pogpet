@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fit editor — oddhobb</title>
+<style>
+  html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#f4f1ea}
+  #c{position:fixed;inset:0;display:block}
+  #bar{position:fixed;left:0;right:0;top:0;display:flex;gap:8px;align-items:center;
+    padding:10px 12px;background:rgba(255,255,255,.92);border-bottom:1px solid #e5ddcf;
+    flex-wrap:wrap;z-index:5}
+  #bar b{font-size:14px}
+  #bar button{font-size:15px;padding:10px 14px;border-radius:10px;border:1px solid #d8cfae;
+    background:#fff;min-height:44px}
+  #bar button.on{background:#2f7a52;color:#fff;border-color:#2f7a52}
+  #bar button.save{background:#8a6a2f;color:#fff;border-color:#8a6a2f}
+  #status{position:fixed;left:12px;bottom:12px;right:12px;font-size:13px;color:#444;
+    background:rgba(255,255,255,.92);border:1px solid #e5ddcf;border-radius:10px;
+    padding:8px 10px;z-index:5;word-break:break-word}
+  #readout{font-size:12px;color:#666}
+</style>
+<script type="importmap">
+{"imports":{
+  "three":"https://unpkg.com/three@0.170.0/build/three.module.js",
+  "three/addons/":"https://unpkg.com/three@0.170.0/examples/jsm/"
+}}
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="bar">
+  <b id="title">Fit editor</b>
+  <button id="m-t" type="button" class="on">Move (T)</button>
+  <button id="m-r" type="button">Rotate (R)</button>
+  <button id="m-s" type="button">Resize (S)</button>
+  <button id="reset" type="button">Reset</button>
+  <button id="save" type="button" class="save">Save placement</button>
+  <span id="readout"></span>
+</div>
+<div id="status">loading…</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+const q = new URLSearchParams(location.search);
+const line = (q.get('line') || 'ornament').trim();
+const part = (q.get('part') || 'santa').trim();
+const tok = (window.__FIGG_TOKEN || q.get('token') || '');
+const statusEl = document.getElementById('status');
+const readoutEl = document.getElementById('readout');
+document.getElementById('title').textContent = `Fit editor — ${line} + ${part}`;
+const say = (m) => { statusEl.textContent = m; };
+
+const BODY = {
+  ornament: '/img/prod/chibi-figure-hook.glb',
+  keychain: '/img/prod/chibi-figure-hook.glb',
+  croc_tag: '/img/prod/chibi-figure-hook.glb',
+  brick: '/img/prod/brick-figure.glb',
+};
+const PARTS = { santa: '/img/prod/hat-santa.glb' };
+if (!BODY[line]) { say(`unknown line ${line}`); throw new Error('line'); }
+if (!PARTS[part]) { say(`no 3D part for ${part} yet (santa only)`); throw new Error('part'); }
+
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf4f1ea);
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.001, 50);
+camera.position.set(0.28, -0.42, 0.30);
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.target.set(0, -0.05, 0.10);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cfae, 1.1));
+const key = new THREE.DirectionalLight(0xffffff, 1.6);
+key.position.set(0.35, -0.45, 0.45);
+scene.add(key);
+
+const loader = new GLTFLoader();
+const load = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+const gizmo = new TransformControls(camera, renderer.domElement);
+gizmo.setSize(1.1);
+scene.add(gizmo);
+gizmo.addEventListener('dragging-changed', (e) => { orbit.enabled = !e.value; });
+gizmo.addEventListener('objectChange', show);
+
+let partGroup = null;
+let home = null; // {position, rotation, scale} as loaded
+const r3 = (v) => [v.x, v.y, v.z].map((n) => Math.round(n * 10000) / 10000);
+function show() {
+  if (!partGroup) return;
+  const p = partGroup;
+  readoutEl.textContent =
+    `pos ${r3(p.position)} rot ${r3(p.rotation).map((n) => Math.round(n * 57.3))}° ` +
+    `size ${r3(p.scale).map((n) => Math.round(n * 100) / 100)}×`;
+}
+
+function setMode(m) {
+  gizmo.setMode(m);
+  for (const [id, mm] of [['m-t', 'translate'], ['m-r', 'rotate'], ['m-s', 'scale']])
+    document.getElementById(id).classList.toggle('on', mm === m);
+}
+document.getElementById('m-t').onclick = () => setMode('translate');
+document.getElementById('m-r').onclick = () => setMode('rotate');
+document.getElementById('m-s').onclick = () => setMode('scale');
+addEventListener('keydown', (e) => {
+  if (e.key === 't' || e.key === 'T') setMode('translate');
+  if (e.key === 'r' || e.key === 'R') setMode('rotate');
+  if (e.key === 's' || e.key === 'S') setMode('scale');
+});
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+(function loop() { requestAnimationFrame(loop); orbit.update(); renderer.render(scene, camera); })();
+
+const api = (p, o) => fetch(`/backend/api${p}${p.includes('?') ? '&' : '?'}token=${encodeURIComponent(tok)}`, o);
+try {
+  say('loading meshes…');
+  const [bodyG, partG] = await Promise.all([load(BODY[line]), load(PARTS[part])]);
+  scene.add(bodyG.scene);
+  partGroup = new THREE.Group();
+  // The part file is pre-seated in body space (identity transform), so the
+  // group starts at the seated default and every saved transform stays
+  // relative to the body at identity — that is the learned relationship
+  // and it ports to any mesh via its anchors.
+  partGroup.add(partG.scene);
+  scene.add(partGroup);
+  const saved = await (await api(`/fit/placement?line=${encodeURIComponent(line)}&part=${encodeURIComponent(part)}`)).json();
+  if (saved && saved.ok && saved.placement) {
+    const t = saved.placement;
+    partGroup.position.fromArray(t.position);
+    partGroup.rotation.fromArray(t.rotation);
+    const s = t.scale;
+    partGroup.scale.set(s[0], s[1], s[2]);
+    say('loaded your saved placement — drag to adjust, Save to keep.');
+  } else {
+    say('drag the hat with the gizmo (orbit with the other finger / right-drag). Save when it sits right.');
+  }
+  home = { position: partGroup.position.clone(), rotation: partGroup.rotation.clone(), scale: partGroup.scale.clone() };
+  gizmo.attach(partGroup);
+  show();
+} catch (err) {
+  say(`load failed: ${(err && err.message) || err}`);
+  throw err;
+}
+
+document.getElementById('reset').onclick = () => {
+  if (!home || !partGroup) return;
+  partGroup.position.copy(home.position);
+  partGroup.rotation.copy(home.rotation);
+  partGroup.scale.copy(home.scale);
+  show();
+  say('reset to the seated default.');
+};
+document.getElementById('save').onclick = async () => {
+  if (!partGroup) return;
+  say('saving…');
+  const doc = {
+    line, part,
+    position: r3(partGroup.position),
+    rotation: r3(partGroup.rotation),
+    scale: r3(partGroup.scale),
+  };
+  try {
+    const r = await api('/fit/placement', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(doc),
+    });
+    const d = await r.json();
+    say(d && d.ok ? `saved ✔ pos ${d.position} rot ${d.rotation} size ${d.scale}` : `save failed: ${(d && d.error) || r.status}`);
+  } catch (err) {
+    say(`save failed: ${(err && err.message) || err}`);
+  }
+};
+</script>
+</body>
+</html>

@@ -1092,11 +1092,23 @@ def flow():
     with db.connect() as c:
         # photos have no status column (schema: id,owner,sha256,r2_key,mime,
         # width,height,bytes,orig_name,created_at) — presence IS the state.
-        photos = [{"id": r["id"], "mime": r["mime"], "size": [r["width"], r["height"]],
-                   "created_at": r["created_at"]}
-                  for r in c.execute(
-                      "SELECT id,mime,width,height,created_at FROM photos WHERE owner=?"
-                      " ORDER BY created_at DESC LIMIT 5", (owner,))]
+        photos = []
+        for r in c.execute(
+                "SELECT id,mime,width,height,created_at,r2_key,person,orig_name"
+                " FROM photos WHERE owner=?"
+                " ORDER BY created_at DESC LIMIT 48", (owner,)):
+            key = r["r2_key"] or ""
+            # Normalise to owners/<owner>/… for the artifacts gateway
+            if key and not key.startswith("owners/"):
+                key = f"owners/{owner}/{key}"
+            photos.append({
+                "id": r["id"], "mime": r["mime"],
+                "size": [r["width"], r["height"]],
+                "created_at": r["created_at"],
+                "r2_key": key,
+                "person": r["person"] or "",
+                "orig_name": r["orig_name"] or "",
+            })
         pogs = db.pogs_for(c, owner)
         prof = db.get_profile(c, owner)
     active = prof.get("active_mesh_id") or next(
@@ -2165,33 +2177,110 @@ def _studio_still(name: str) -> str | None:
 
 
 def _studio_stills_for(line: str, coat: str, hat: str) -> dict:
-    """Pick the best pre-rendered stills for this combo (0 credits)."""
+    """Pick the best pre-rendered stills for this combo (0 credits).
+
+    Prefix order (first hit wins):
+      1. coat-<coat>-<hat>-     combo stills (e.g. coat-chocolate-santa-)
+      2. <hat>-                 hat-only (santa-hero)
+      3. coat-<coat>-           coat-only
+      4. brick- / kc- / prod-   line defaults
+    """
     coat = (coat or "none").lower()
     hat = (hat or "none").lower()
-    prefix = ""
-    if hat != "none":
-        prefix = f"{hat}-"
-    elif coat not in ("", "none"):
-        prefix = f"coat-{coat}-"
-    elif line == "ornament":
-        prefix = "prod-"
-    elif line == "keychain":
-        prefix = "kc-"
-    else:
-        prefix = "prod-"
     keys = ["hero", "front", "side", "back", "loop"]
-    out = {}
-    for k in keys:
-        url = _studio_still(f"{prefix}{k}.png")
-        if url:
-            out[k] = url
-    # fallbacks so the UI never blanks
-    if not out:
+    prefixes = []
+    if coat not in ("", "none") and hat not in ("", "none"):
+        prefixes.append(f"coat-{coat}-{hat}-")
+    if hat not in ("", "none"):
+        prefixes.append(f"{hat}-")
+    if coat not in ("", "none"):
+        prefixes.append(f"coat-{coat}-")
+    if line == "ornament":
+        prefixes.append("prod-")
+    elif line == "keychain":
+        prefixes.append("kc-")
+    elif line == "brick":
+        prefixes.append("brick-")
+        prefixes.append("brick-hero.png")  # handled below
+    else:
+        prefixes.append("prod-")
+
+    for prefix in prefixes:
+        if prefix.endswith(".png"):
+            url = _studio_still(prefix)
+            if url:
+                return {k: url for k in keys}
+            continue
+        out = {}
         for k in keys:
-            url = _studio_still(f"prod-{k}.png")
+            url = _studio_still(f"{prefix}{k}.png")
             if url:
                 out[k] = url
-    return out
+        if out:
+            # fill remaining keys from line defaults so UI never blanks
+            for k in keys:
+                if k in out:
+                    continue
+                for fb in ("prod-", "kc-", "brick-"):
+                    u = _studio_still(f"{fb}{k}.png")
+                    if u:
+                        out[k] = u
+                        break
+            return out
+    # last resort
+    for k in keys:
+        url = _studio_still(f"prod-{k}.png")
+        if url:
+            return {k: url for k in keys}
+    return {}
+
+
+def _list_studio_combos() -> dict:
+    """Catalogue of pre-rendered coat/hat/pattern still sets for agents."""
+    prod = config.DATA / "productimg" / config.STUDIO_STILL_DIR
+    coats, hats, combos, patterns = [], [], [], []
+    if not prod.exists():
+        return {"coats": coats, "hats": hats, "combos": combos, "patterns": patterns}
+    names = {p.name for p in prod.glob("*.png")}
+    coat_ids = {c["id"] for c in config.STUDIO_COATS if c["id"] != "none"}
+    hat_ids = {h["id"] for h in config.STUDIO_HATS if h["id"] != "none"}
+    for cid in sorted(coat_ids):
+        if f"coat-{cid}-hero.png" in names:
+            coats.append({"id": cid, "hero": f"/img/prod/coat-{cid}-hero.png"})
+    for hid in sorted(hat_ids):
+        if f"{hid}-hero.png" in names:
+            hats.append({"id": hid, "hero": f"/img/prod/{hid}-hero.png"})
+    # combos coat-<coat>-<hat>-
+    for cid in sorted(coat_ids):
+        for hid in sorted(hat_ids):
+            if f"coat-{cid}-{hid}-hero.png" in names:
+                combos.append({
+                    "coat": cid, "hat": hid,
+                    "hero": f"/img/prod/coat-{cid}-{hid}-hero.png",
+                })
+    # patterns coat-<coat>-<pattern>-hero
+    for pat in ("spots", "stripes", "fairisle"):
+        for cid in sorted(coat_ids):
+            if f"coat-{cid}-{pat}-hero.png" in names:
+                patterns.append({
+                    "coat": cid, "pattern": pat,
+                    "hero": f"/img/prod/coat-{cid}-{pat}-hero.png",
+                })
+    return {
+        "coats": coats, "hats": hats, "combos": combos, "patterns": patterns,
+        "policy": config.STUDIO_CUSTOM_POLICY,
+        "lines": {
+            lid: {
+                "label": spec.get("label"),
+                "status": spec.get("status"),
+                "price_cents": spec.get("price_cents"),
+                "assets": spec.get("assets"),
+            }
+            for lid, spec in config.STUDIO_LINES.items()
+        },
+        "hint": "Use POST /api/products/personalise with these registry ids. "
+                "Coat = preview grade; multi-colour print is a live farm quote.",
+    }
 
 
 @app.get("/api/studio")
@@ -2215,14 +2304,33 @@ def studio_state():
             if p["status"] != "succeeded":
                 continue
             glb = storage.public_url(p["glb_key"]) if p.get("glb_key") else ""
+            label = short_mesh_label(p["id"])
+            prov = (p.get("provider") or "")
+            is_brick = (
+                p["id"] in config.STUDIO_BRICK_MESH_MAP
+                or prov in ("svatantrya", "brick", "style:brick-figure", "style:brick-figure-2")
+                or "brick" in prov.lower()
+                or "brick" in label.lower()
+            )
+            portrait = ""
+            kind = "pet"
+            if is_brick:
+                kind = "brick"
+                mapped = config.STUDIO_BRICK_MESH_MAP.get(p["id"])
+                if mapped:
+                    label, portrait, _demo_id = mapped
+                else:
+                    label = "brick figure"
+                    portrait = config.STUDIO_BRICK_PORTRAIT
             roster.append({
                 "mesh_id": p["id"],
-                "label": short_mesh_label(p["id"]),
+                "label": label,
                 "glb_url": glb,
+                "portrait": portrait,
                 "active": p["id"] == active,
                 "stub": bool(p["stub"]),
+                "kind": kind,
             })
-    # canonical demo mesh always available (exact product GLB)
     demo = {
         "mesh_id": "canonical",
         "label": "canonical dog",
@@ -2230,19 +2338,36 @@ def studio_state():
         "active": not roster,
         "stub": False,
         "demo": True,
+        "kind": "pet",
+        "portrait": config.STUDIO_CALLING_CARD,
     }
-    meshes = ([demo] + roster) if roster else [demo]
-    if active and roster:
+    # Studio lineup: dog + both brick demos + owner roster
+    meshes = [demo]
+    seen = {"canonical"}
+    for b in config.STUDIO_BRICKS:
+        meshes.append({
+            "mesh_id": b["id"],
+            "label": b["label"],
+            "glb_url": b["glb_url"],
+            "active": False,
+            "stub": False,
+            "demo": True,
+            "kind": "brick",
+            "portrait": b["portrait"],
+            "style_id": b.get("style_id", ""),
+        })
+        seen.add(b["id"])
+    for m in roster:
+        if m["mesh_id"] not in seen:
+            meshes.append(m)
+            seen.add(m["mesh_id"])
+    if active:
         for m in meshes:
             m["active"] = m["mesh_id"] == active
-    lines = []
-    for lid, spec in config.STUDIO_LINES.items():
-        lines.append({"id": lid, **spec})
-    coats = list(config.STUDIO_COATS)
+    lines = [{"id": lid, **spec} for lid, spec in config.STUDIO_LINES.items()]
     hats = []
     for h in config.STUDIO_HATS:
-        hats.append({**h, "preview": _studio_stills_for("ornament", "none", h["id"])})
-    # calling card = exact product still under character select
+        hats.append({**h, "preview": _studio_stills_for("ornament", "none", "none") if h["id"] == "none" else {}})
     calling = _studio_still("prod-hero.png") or config.STUDIO_CALLING_CARD
     return jsonify({
         "ok": True,
@@ -2250,26 +2375,663 @@ def studio_state():
         "active_mesh_id": active or ("canonical" if not roster else ""),
         "meshes": meshes,
         "lines": lines,
-        "coats": coats,
+        "coats": list(config.STUDIO_COATS),
+        "patterns": list(config.STUDIO_PATTERNS),
         "hats": hats,
         "calling_card": calling,
+        "custom_policy": config.STUDIO_CUSTOM_POLICY,
         "stills": {
             "exact": _studio_stills_for("ornament", "none", "none"),
             "keychain": _studio_stills_for("keychain", "none", "none"),
+            "brick": _studio_stills_for("brick", "none", "none"),
         },
         "canonical_glb": config.STUDIO_CANONICAL_GLB,
-        "note": "Studio = character select + loadout config. "
-                "Prices and checkout live on the Products tab.",
+        "brick_glb": config.STUDIO_BRICK_GLB,
+        "note": "Studio = character select + controlled loadout. "
+                "Prices/checkout on Products. Custom is registry-only.",
     })
+
+
+@app.get("/api/studio/props")
+def studio_props():
+    """Machine-readable prop library for agents (hats, coats, patterns)."""
+    from pathlib import Path as _P
+    hats = []
+    for h in config.STUDIO_HATS:
+        rec = dict(h)
+        asset = rec.get("asset") or ""
+        if asset:
+            p = _P(asset)
+            rec["exists"] = p.exists()
+            rec["bytes"] = p.stat().st_size if p.exists() else 0
+        hats.append(rec)
+    return jsonify({
+        "ok": True,
+        "hats": hats,
+        "coats": config.STUDIO_COATS,
+        "patterns": config.STUDIO_PATTERNS,
+        "policy": config.STUDIO_CUSTOM_POLICY,
+        "lines": {k: {
+            "label": v.get("label"),
+            "status": v.get("status"),
+            "price_cents": v.get("price_cents"),
+            "assets": v.get("assets"),
+            "fulfilment": v.get("fulfilment"),
+            "amounts_cents": v.get("amounts_cents"),
+            "scale_mm": v.get("scale_mm"),
+            "size_mm": v.get("size_mm"),
+        } for k, v in config.STUDIO_LINES.items()},
+    })
+
+
+@app.get("/api/etsy/listings")
+def etsy_listings():
+    """Etsy-ready listing packs (title, tags, sizes, materials, photo slots)."""
+    only = (request.args.get("product_id") or request.args.get("id") or "").strip()
+    packs = config.ETSY_LISTINGS
+    if only:
+        if only not in packs:
+            return _err(f"unknown listing {only!r} — have: {', '.join(packs)}", 404)
+        return jsonify({"ok": True, "listing": packs[only], "source": config.ETSY_SOURCE_NOTE})
+    return jsonify({
+        "ok": True,
+        "listings": packs,
+        "card_sizes": config.CARD_SIZES,
+        "personal_cards": config.PERSONAL_CARDS,
+        "source": config.ETSY_SOURCE_NOTE,
+    })
+
+
+@app.get("/api/meshy/catalog")
+def meshy_catalog():
+    """Meshy Creative Lab catalogue for agents — no spend, no key leak."""
+    return jsonify({
+        "ok": True,
+        "products": config.MESHY_CATALOG,
+        "ship": config.MESHY_SHIP_NOTE,
+        "money_rule": "Ask the human before every Meshy generation. "
+                      "Ledger: data/meshy_credits.jsonl. Physical print cost is separate.",
+        "api_base": "https://api.meshy.ai/openapi",
+        "creative_lab_path": "/creative-lab/<product>/v1/prototype|build",
+        "mirror": "/home/ubuntu/meshy-docs",
+    })
+
+
+# ── Quick / agent playbook: ramble → confidence products → photo → checkout ──
+
+_QUICK_SYNONYMS = {
+    "ornament": ["bauble", "xmas", "christmas", "hanging", "tree", "decoration"],
+    "keychain": ["key", "keyring", "key ring", "keys"],
+    "croc_tag": ["croc", "croc tag", "jibbitz", "charm", "shoe", "crocs"],
+    "gift_card": ["gift", "giftcard", "gift card", "voucher", "credit"],
+    "brick": ["desk", "figure", "figurine"],
+    "cream": ["beige", "ivory"],
+    "golden": ["gold", "blonde"],
+    "chocolate": ["brown"],
+    "black": ["dark"],
+    "fawn": ["tan"],
+    "grey": ["gray"],
+    "santa": ["xmas hat", "christmas hat", "santa hat"],
+    "xmas_hat": ["xmas hat", "christmas hat"],
+    "spots": ["dalmatian", "dots", "spotty"],
+    "stripes": ["striped"],
+    "fairisle": ["fair isle", "knit"],
+    "pet": ["dog", "cat", "puppy", "kitten", "pet"],
+}
+
+
+def _quick_score(hay: str, q: str) -> float:
+    hay = (hay or "").lower()
+    q = (q or "").lower()
+    if not q:
+        return 0.0
+    score = 0.0
+    for tok in q.split():
+        if not tok:
+            continue
+        if tok in hay:
+            score += 3.0
+        else:
+            for part in hay.replace("|", " ").split():
+                if part.startswith(tok):
+                    score += 1.5
+                    break
+        for k, syns in _QUICK_SYNONYMS.items():
+            if k.startswith(tok) or tok.startswith(k):
+                for s in syns:
+                    if s in hay:
+                        score += 1.2
+            for s in syns:
+                if s == tok and k in hay:
+                    score += 1.2
+    return score
+
+
+@app.post("/api/quick/map")
+def quick_map():
+    """Map a customer ramble onto live studio lines with confidence.
+
+    Shared by the storefront Quick panel and agents (ChatGPT/MCP).
+    Returns ranked products with confidence 0–1 and the next-step funnel.
+    """
+    body = request.get_json(silent=True) or {}
+    text = (body.get("text") or body.get("ramble") or body.get("q") or "").strip()[:2000]
+    owner = (body.get("owner") or "anon").strip()[:80]
+    boosts = body.get("boost_lines") or body.get("selected") or []
+    if isinstance(boosts, str):
+        boosts = [boosts]
+    boosts = [str(b).strip().lower() for b in boosts if str(b).strip()][:12]
+    if not text:
+        return _err("text is required — ramble something first", 400)
+    with db.connect() as c:
+        prof = db.get_profile(c, owner)
+        active = prof.get("active_mesh_id") or ""
+    q = text.lower()
+    scored = []
+    for lid, spec in config.STUDIO_LINES.items():
+        hay = " ".join([
+            lid, spec.get("label", ""), spec.get("blurb", ""),
+            spec.get("theme", ""), spec.get("hardware", ""),
+            spec.get("fulfilment", ""),
+            " ".join((spec.get("assets") or {}).get("coats") or []),
+            " ".join((spec.get("assets") or {}).get("hats") or []),
+            " ".join((spec.get("assets") or {}).get("patterns") or []),
+        ]).lower()
+        score = _quick_score(hay, q)
+        if lid in boosts:
+            score += 4.0  # customer shortlisted this line mid-ramble
+        if spec.get("status") != "live":
+            score *= 0.35
+        if score <= 0:
+            continue
+        coats = (spec.get("assets") or {}).get("coats") or ["none"]
+        hats = (spec.get("assets") or {}).get("hats") or ["none"]
+        patterns = (spec.get("assets") or {}).get("patterns") or ["solid"]
+        # light attribute pull from the ramble
+        coat = next((c0 for c0 in coats if c0 != "none" and c0 in q), "none")
+        hat = next((h for h in hats if h != "none" and h in q), "none")
+        pattern = next((p for p in patterns if p != "solid" and p in q), "solid")
+        scored.append({
+            "id": lid,
+            "label": spec.get("label", lid),
+            "blurb": spec.get("blurb", ""),
+            "status": spec.get("status", "live"),
+            "price_cents": spec.get("price_cents", 0),
+            "scale_mm": spec.get("scale_mm"),
+            "theme": spec.get("theme", ""),
+            "hardware": spec.get("hardware", ""),
+            "fulfilment": spec.get("fulfilment", "print_farm"),
+            "recommended_coat": coat,
+            "recommended_hat": hat,
+            "recommended_pattern": pattern,
+            "score": round(score, 2),
+            "stills": _studio_stills_for(lid, coat or "none", hat or "none"),
+        })
+    # normalise confidence: top hit ~0.92, floor 0.25, cap 0.97
+    if not scored:
+        return jsonify({
+            "ok": True,
+            "owner": owner,
+            "active_mesh_id": active,
+            "text": text,
+            "matches": [],
+            "confidence": 0.0,
+            "next": {
+                "stage": "upload",
+                "why": "Nothing in the warehouse matched that ramble clearly.",
+                "actions": ["rephrase", "upload_photo", "browse_products"],
+            },
+            "funnel": [
+                "1. ramble (voice/text) → POST /api/quick/map",
+                "2. show ranked live products with confidence",
+                "3. customer uploads photo → POST /api/photos → POST /api/meshes",
+                "4. mesh becomes active → products inherit",
+                "5. POST /api/products/order {fulfil:true} → Shopify draft",
+            ],
+        })
+    top = max(m["score"] for m in scored)
+    for m in scored:
+        # relative confidence vs best hit, clamped
+        conf = 0.25 + 0.72 * (m["score"] / top)
+        if m["status"] != "live":
+            conf = min(conf, 0.4)
+        m["confidence"] = round(min(0.97, conf), 2)
+    scored.sort(key=lambda m: (-m["confidence"], -m["score"], m["label"]))
+    best = scored[0]
+    return jsonify({
+        "ok": True,
+        "owner": owner,
+        "active_mesh_id": active,
+        "text": text,
+        "matches": scored,
+        "confidence": best["confidence"],
+        "recommended": best,
+        "next": {
+            "stage": "upload" if not active else "order",
+            "why": (
+                f"Strong match: {best['label']} "
+                f"({best.get('recommended_coat') or 'as printed'}"
+                + (f", {best['recommended_hat']}" if best.get("recommended_hat") not in (None, "none") else "")
+                + ")."
+            ),
+            "actions": (
+                ["upload_photo", "start_mesh", "order"]
+                if not active else
+                ["personalise", "order", "shopify_draft"]
+            ),
+            "mesh_id": active or "canonical",
+        },
+        "funnel": [
+            "1. ramble → POST /api/quick/map  (this endpoint)",
+            "2. show matches[] with confidence + stills",
+            "3. if no active mesh: upload photo + sculpt (ask before Meshy spend)",
+            "4. POST /api/products/personalise  (validate coat/hat/pattern)",
+            "5. POST /api/products/order {fulfil:true}  (Shopify draft, no card charge)",
+        ],
+        "agent_hint": (
+            "ChatGPT/MCP: call figg_quick_map with the customer's words, show the top "
+            "2–3 matches with confidence, then figg_upload_photo + figg_start_mesh "
+            "(human must approve Meshy), then figg_fullchain_personalise_order with "
+            "fulfil=true. Always show price before order."
+        ),
+    })
+
+
+@app.get("/api/agent/playbook")
+def agent_playbook():
+    """Machine-readable funnel for storefront + ChatGPT/MCP agents."""
+    lines = []
+    for lid, spec in config.STUDIO_LINES.items():
+        lines.append({
+            "id": lid,
+            "label": spec.get("label", lid),
+            "status": spec.get("status", "live"),
+            "price_cents": spec.get("price_cents", 0),
+            "fulfilment": spec.get("fulfilment", "print_farm"),
+            "scale_mm": spec.get("scale_mm"),
+            "assets": spec.get("assets") or {},
+        })
+    return jsonify({
+        "ok": True,
+        "brand": "oddhobb",
+        "funnel": {
+            "name": "ramble → confidence products → photo → mesh → checkout",
+            "steps": [
+                {"id": "ramble", "ui": "Products → Quick (voice or text)",
+                 "api": "POST /api/quick/map", "returns": "matches[].confidence"},
+                {"id": "show_products", "ui": "Stream tiles by confidence",
+                 "api": "GET /api/products/studio", "returns": "items + active_mesh_id"},
+                {"id": "upload_photo", "ui": "Upload tab",
+                 "api": "POST /api/photos", "returns": "photo.id"},
+                {"id": "start_mesh", "ui": "Sculpt",
+                 "api": "POST /api/meshes", "returns": "mesh.id",
+                 "money": "MESHY — human must approve before spend"},
+                {"id": "personalise", "ui": "Coat / hat / pattern chips",
+                 "api": "POST /api/products/personalise", "returns": "stills + price"},
+                {"id": "order", "ui": "One-click order → Shopify",
+                 "api": "POST /api/products/order",
+                 "body": {"fulfil": True},
+                 "returns": "order + shopify draft (no card charge from API)"},
+            ],
+        },
+        "money_rules": [
+            "Show price before any order tool.",
+            "Never call Meshy without the human saying go.",
+            "Orders are pending_checkout or Shopify draft — never charge from this API.",
+            "Controlled custom only: registry coat/hat/pattern/line ids.",
+        ],
+        "studio_lines": lines,
+        "endpoints": {
+            "quick_map": "/api/quick/map",
+            "products_studio": "/api/products/studio",
+            "personalise": "/api/products/personalise",
+            "order": "/api/products/order",
+            "playbook": "/api/agent/playbook",
+            "mcp": "https://mcp.oddhobb.com/mcp",
+        },
+        "chatgpt_script": (
+            "1) Listen to the ramble. 2) figg_quick_map(text) — show top matches + confidence. "
+            "3) If no mesh yet, ask for a photo; figg_upload_photo + figg_start_mesh (approve spend). "
+            "4) figg_fullchain_personalise_order({line,coat,hat,pattern,qty,fulfil:true}) "
+            "after showing the price. 5) Hand back order id + Shopify draft name."
+        ),
+    })
+
+
+@app.get("/api/bricks/status")
+def bricks_status():
+    """Which brick meshes are installed (user is generating parent GLBs)."""
+    owner = (request.args.get("owner") or "anon").strip()[:80]
+    uploads = []
+    updir = config.DATA / "uploads"
+    if updir.exists():
+        for p in sorted(updir.glob("*.glb")):
+            uploads.append({
+                "file": p.name,
+                "bytes": p.stat().st_size,
+                "path": str(p),
+            })
+    with db.connect() as c:
+        rows = db.pogs_for(c, owner)
+        bricks = [r for r in rows if r.get("status") == "succeeded"]
+    spec = config.STUDIO_LINES.get("brick") or {}
+    return jsonify({
+        "ok": True,
+        "owner": owner,
+        "brick_line": {
+            "status": spec.get("status"),
+            "scale_mm": spec.get("scale_mm"),
+            "price_cents": spec.get("price_cents"),
+        },
+        "installed_meshes": [{
+            "mesh_id": r.get("id"),
+            "status": r.get("status"),
+            "stub": bool(r.get("stub")),
+        } for r in bricks],
+        "upload_glbs": uploads,
+        "hint": "Drop parent GLBs in data/uploads/ or POST /api/meshes/glb. "
+                "Then flip STUDIO_LINES.brick.status to live.",
+    })
+
+
+@app.get("/api/meshes/<mid>/manifest")
+def mesh_manifest(mid: str):
+    """Machine-readable view of a mesh for agents (Muse / ChatGPT)."""
+    owner = (request.args.get("owner") or "anon").strip()[:80]
+    if mid in ("canonical", "demo", "dog"):
+        return jsonify({
+            "ok": True,
+            "mesh_id": "canonical",
+            "owner": owner,
+            "status": "succeeded",
+            "stub": False,
+            "print_ready": True,
+            "glb_url": config.STUDIO_CANONICAL_GLB,
+            "photo": {"person": "canonical dog", "note": "exact product mesh"},
+            "measure_hint": "scale_mm per line: ornament 80, keychain 60",
+            "products": [],
+            "studio_lines": list(config.STUDIO_LINES),
+            "props": {
+                "hats": [h["id"] for h in config.STUDIO_HATS],
+                "coats": [c0["id"] for c0 in config.STUDIO_COATS],
+                "patterns": [p["id"] for p in config.STUDIO_PATTERNS],
+            },
+            "custom_policy": config.STUDIO_CUSTOM_POLICY,
+            "canonical_glb": config.STUDIO_CANONICAL_GLB,
+        })
+    with db.connect() as c:
+        mesh = db.get_mesh(c, mid)
+        if not mesh:
+            return _err("no such mesh", 404)
+        photo = db.get_photo(c, mesh.get("photo_id") or "")
+        products = []
+        rows = c.execute(
+            """SELECT product,status,price_cents,source FROM product_bindings
+               WHERE mesh_id=?""", (mid,)).fetchall()
+        for r in rows:
+            products.append(db.dump(r))
+    glb = storage.public_url(mesh["glb_key"]) if mesh.get("glb_key") else ""
+    return jsonify({
+        "ok": True,
+        "mesh_id": mid,
+        "owner": (photo or {}).get("owner") or owner,
+        "status": mesh.get("status"),
+        "stub": bool(mesh.get("stub")),
+        "print_ready": bool(mesh.get("print_ready")),
+        "glb_url": glb,
+        "photo": {
+            "sha256": (photo or {}).get("sha256"),
+            "width": (photo or {}).get("width"),
+            "height": (photo or {}).get("height"),
+            "person": (photo or {}).get("person") or "",
+        },
+        "measure_hint": "scale_mm is per product line (ornament 80, keychain 60)",
+        "products": products,
+        "studio_lines": list(config.STUDIO_LINES),
+        "props": {
+            "hats": [h["id"] for h in config.STUDIO_HATS],
+            "coats": [c0["id"] for c0 in config.STUDIO_COATS],
+            "patterns": [p["id"] for p in config.STUDIO_PATTERNS],
+        },
+        "custom_policy": config.STUDIO_CUSTOM_POLICY,
+        "canonical_glb": config.STUDIO_CANONICAL_GLB,
+    })
+
+
+@app.post("/api/products/personalise")
+def products_personalise():
+    """Controlled personalise: coat colour + pattern + hat on a product line."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    line = (body.get("line") or "ornament").strip()
+    coat = (body.get("coat") or body.get("coat_color") or "none").strip().lower()
+    hat = (body.get("hat") or body.get("hat_id") or "none").strip().lower()
+    pattern = (body.get("pattern") or body.get("coat_pattern") or "solid").strip().lower()
+    mesh_id = (body.get("mesh_id") or "").strip()
+    texture_note = (body.get("texture") or body.get("texture_note") or "")[:200]
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    spec = config.STUDIO_LINES[line]
+    allowed = spec.get("assets") or {}
+    if coat not in (allowed.get("coats") or ["none"]):
+        return _err(f"coat {coat!r} is not allowed on {line}", 400)
+    if hat not in (allowed.get("hats") or ["none"]):
+        return _err(f"hat {hat!r} is not allowed on {line}", 400)
+    if pattern not in (allowed.get("patterns") or ["solid"]):
+        return _err(f"pattern {pattern!r} is not allowed on {line}", 400)
+    if pattern != "solid" and coat == "none":
+        # pattern without a coat colour is meaningless on as-printed fur
+        coat = "cream"
+    if spec.get("status") != "live":
+        return _err(f"{line} is not live yet", 409)
+    stills = _studio_stills_for(line, coat, hat)
+    # pattern stills if pre-rendered: coat-<coat>-<pattern>-hero.png
+    if pattern != "solid":
+        pat = _studio_still(f"coat-{coat}-{pattern}-hero.png")
+        if pat:
+            stills = {**stills, "hero": pat, "pattern_hero": pat}
+    # combo catalogue so agents know what exists
+    cat = _list_studio_combos()
+    available = {
+        "coats": [c["id"] for c in cat["coats"]],
+        "hats": [h["id"] for h in cat["hats"]],
+        "combos": cat["combos"],
+        "patterns": cat["patterns"],
+    }
+    return jsonify({
+        "ok": True,
+        "owner": owner,
+        "line": line,
+        "coat": coat,
+        "hat": hat,
+        "pattern": pattern,
+        "mesh_id": mesh_id,
+        "texture_note": texture_note,
+        "stills": stills,
+        "available": available,
+        "price_cents": spec.get("price_cents", 0),
+        "fulfilment": spec.get("fulfilment"),
+        "policy": "controlled",
+        "hint": "Registry-only custom. Coat is a preview grade — multi-colour print is a live farm quote. "
+                "Order via POST /api/products/order or figg_checkout.",
+    })
+
+
+@app.post("/api/products/order")
+def products_order():
+    """One-click order for controlled custom / gift card. Optional Shopify draft."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    line = (body.get("line") or body.get("product") or "ornament").strip()
+    coat = (body.get("coat") or "none").strip().lower()
+    hat = (body.get("hat") or "none").strip().lower()
+    pattern = (body.get("pattern") or "solid").strip().lower()
+    mesh_id = (body.get("mesh_id") or "").strip()
+    qty = max(1, min(20, int(body.get("qty") or 1)))
+    note = (body.get("note") or "")[:200]
+    email = (body.get("email") or "").strip()[:120]
+    amount_cents = body.get("amount_cents")
+    fulfil = bool(body.get("fulfil") or body.get("shopify"))
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    spec = config.STUDIO_LINES[line]
+    if spec.get("status") != "live":
+        return _err(f"{line} is not orderable yet", 409)
+    if line == "gift_card":
+        amounts = spec.get("amounts_cents") or [spec.get("price_cents", 2500)]
+        if amount_cents is None:
+            amount_cents = amounts[0]
+        amount_cents = int(amount_cents)
+        if amount_cents not in amounts:
+            return _err(f"amount_cents must be one of {amounts}", 400)
+        price = amount_cents * qty
+    else:
+        price = int(spec.get("price_cents") or 0) * qty
+    label = f"{spec.get('label', line)}"
+    if line != "gift_card":
+        extras = []
+        if coat != "none":
+            extras.append(f"coat:{coat}")
+        if pattern != "solid":
+            extras.append(f"pattern:{pattern}")
+        if hat != "none":
+            extras.append(f"hat:{hat}")
+        if extras:
+            label += " (" + ", ".join(extras) + ")"
+    custom_note = note
+    if line != "gift_card":
+        custom_note = (custom_note + " | " if custom_note else "") + \
+            f"custom coat={coat} pattern={pattern} hat={hat}"
+    with db.connect() as c:
+        order = db.create_order(
+            c, owner=owner, line=line, mesh_id=mesh_id, coat=coat, hat=hat,
+            qty=qty, price_cents=price, note=custom_note[:200],
+        )
+        # stash pattern on note line via update if column missing
+    shopify = {"attempted": False}
+    if fulfil:
+        shopify["attempted"] = True
+        try:
+            from backend import shopify_fulfil as sf
+            if not sf.configured():
+                shopify = {"attempted": True, "ok": False, "error": "Shopify not configured"}
+            else:
+                draft = sf.create_draft_order(label, price // max(1, qty), qty,
+                                             note=custom_note, email=email)
+                shopify.update(draft)
+                if draft.get("ok"):
+                    with db.connect() as c:
+                        c.execute(
+                            "UPDATE orders SET note=? WHERE id=?",
+                            ((custom_note + f" | shopify:{draft.get('draft_id') or draft.get('name')}")[:200],
+                             order.get("id")),
+                        )
+                        c.commit()
+        except Exception as e:  # noqa: BLE001
+            shopify = {"attempted": True, "ok": False, "error": str(e)[:300]}
+    return jsonify({
+        "ok": True,
+        "order": order,
+        "price_cents": price,
+        "status": "pending_checkout",
+        "label": label,
+        "shopify": shopify,
+        "hint": "Order reserved. Shopify draft only if fulfil=true and creds work. "
+                "No card charge from this endpoint.",
+    })
+
+
+@app.get("/api/studio/combos")
+def studio_combos():
+    """Pre-rendered coat/hat/pattern still sets + allowed line assets (agents)."""
+    return jsonify({"ok": True, **_list_studio_combos()})
 
 
 @app.get("/api/studio/stills")
 def studio_stills():
     line = (request.args.get("line") or "ornament").strip()
-    coat = (request.args.get("coat") or "none").strip()
-    hat = (request.args.get("hat") or "none").strip()
-    return jsonify({"ok": True, "line": line, "coat": coat, "hat": hat,
-                    "stills": _studio_stills_for(line, coat, hat)})
+    coat = (request.args.get("coat") or "none").strip().lower()
+    hat = (request.args.get("hat") or "none").strip().lower()
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    return jsonify({
+        "ok": True, "line": line, "coat": coat, "hat": hat,
+        "stills": _studio_stills_for(line, coat, hat),
+        "combo": _studio_still(f"coat-{coat}-{hat}-hero.png")
+                 if coat != "none" and hat != "none" else None,
+    })
+
+
+PLACEMENT_DIR = config.DATA / "placements"
+_PLACEMENT_RE = __import__("re").compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def _placement_path(line: str, part: str):
+    return PLACEMENT_DIR / f"{line}__{part}.json"
+
+
+def _placement_read(line: str, part: str):
+    try:
+        return json.loads(_placement_path(line, part).read_text())
+    except (OSError, ValueError):
+        return None
+
+
+@app.get("/api/fit/placement")
+def fit_placement_get():
+    """Saved hand placement for a line+part (fit editor). No placement yet
+    returns ok:true with placement:null — the caller uses the seated default.
+    """
+    line = (request.args.get("line") or "ornament").strip()
+    part = (request.args.get("part") or "santa").strip()
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    if not _PLACEMENT_RE.match(part):
+        return _err("bad part", 400)
+    return jsonify({"ok": True, "line": line, "part": part,
+                    "placement": _placement_read(line, part)})
+
+
+@app.post("/api/fit/placement")
+def fit_placement_save():
+    """Save a hand placement from the fit editor (/fit.html).
+
+    Body: {line, part, position:[x,y,z], rotation:[x,y,z] (euler XYZ radians),
+           scale:[x,y,z] or number}. Position clamp ±0.5m, scale 0.1–5.
+    Service-token gated like every other /api route (bridge swaps the token
+    server-side; the browser only holds the bridge token).
+    """
+    import math as _math
+    body = request.get_json(silent=True) or {}
+    line = str(body.get("line") or "ornament").strip()
+    part = str(body.get("part") or "santa").strip()
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    if not _PLACEMENT_RE.match(part):
+        return _err("bad part", 400)
+
+    def _vec(v, lo, hi, n=3):
+        if isinstance(v, (int, float)):
+            v = [v] * n
+        if not isinstance(v, (list, tuple)) or len(v) != n:
+            return None
+        out = []
+        for x in v:
+            if not isinstance(x, (int, float)) or not _math.isfinite(x):
+                return None
+            out.append(max(lo, min(hi, float(x))))
+        return out
+
+    pos = _vec(body.get("position"), -0.5, 0.5)
+    rot = _vec(body.get("rotation"), -_math.pi, _math.pi)
+    scl = _vec(body.get("scale", 1.0), 0.1, 5.0)
+    if pos is None or rot is None or scl is None:
+        return _err("bad transform (position/rotation/scale)", 400)
+    PLACEMENT_DIR.mkdir(parents=True, exist_ok=True)
+    doc = {"line": line, "part": part, "position": pos, "rotation": rot,
+           "scale": scl}
+    _placement_path(line, part).write_text(json.dumps(doc, indent=2))
+    return jsonify({"ok": True, **doc})
 
 
 @app.post("/api/studio/customise")
@@ -2351,15 +3113,27 @@ def products_studio():
         active = prof.get("active_mesh_id") or ""
     items = []
     for lid, spec in config.STUDIO_LINES.items():
-        assets = spec.get("assets") or {"hats": ["none"], "coats": ["none"]}
+        assets = spec.get("assets") or {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]}
         hats = [h for h in config.STUDIO_HATS if h["id"] in assets.get("hats", ["none"])]
         coats = [c0 for c0 in config.STUDIO_COATS if c0["id"] in assets.get("coats", ["none"])]
+        patterns = [p for p in config.STUDIO_PATTERNS if p["id"] in assets.get("patterns", ["solid"])]
         stills = _studio_stills_for(lid, "none", "none")
-        # xmas ornament gets a santa-forward still when available
         if lid == "ornament":
             s = _studio_stills_for("ornament", "none", "santa")
             if s.get("hero"):
                 stills = {**stills, **{f"santa_{k}": v for k, v in s.items()}}
+        if lid == "gift_card":
+            stills = {"hero": "/img/greeting_card_70edae28.png",
+                      "front": "/img/greeting_card_70edae28.png"}
+        if lid == "croc_tag":
+            stills = {"hero": "/img/prod/croc-tag-hero.png",
+                      "front": "/img/prod/croc-tag-hero.png"}
+        if lid == "brick":
+            stills = _studio_stills_for("brick", "none", "none")
+            if not stills.get("hero"):
+                stills = {"hero": config.STUDIO_BRICK_PORTRAIT,
+                          "front": config.STUDIO_BRICK_PORTRAIT}
+            # expose the mesh itself so shop tiles / viewers can load it
         items.append({
             "id": lid,
             "label": spec.get("label", lid),
@@ -2367,87 +3141,50 @@ def products_studio():
             "status": spec.get("status", "live"),
             "price_cents": spec.get("price_cents", 0),
             "scale_mm": spec.get("scale_mm"),
+            "size_mm": spec.get("size_mm") or spec.get("scale_mm"),
+            "sizes": _line_sizes(lid, spec),
             "theme": spec.get("theme", ""),
             "hardware": spec.get("hardware", ""),
-            "assets": {"hats": hats, "coats": coats},
+            "fulfilment": spec.get("fulfilment", "print_farm"),
+            "amounts_cents": spec.get("amounts_cents"),
+            "assets": {"hats": hats, "coats": coats, "patterns": patterns},
             "stills": stills,
+            "glb_url": config.STUDIO_BRICK_GLB if lid == "brick" else "",
         })
     return jsonify({
         "ok": True,
         "owner": owner,
         "active_mesh_id": active,
         "items": items,
-        "note": "One-click order reserves intent + quote. "
-                "MCP: figg_product_assets · figg_checkout.",
+        "custom_policy": config.STUDIO_CUSTOM_POLICY,
+        "card_sizes": config.CARD_SIZES,
+        "personal_cards": config.PERSONAL_CARDS,
+        "note": "Controlled custom · one-click order · optional Shopify draft (fulfil=true). "
+                "MCP: figg_mesh_manifest · figg_studio_props · figg_fullchain_personalise_order.",
     })
 
 
-@app.post("/api/products/personalise")
-def products_personalise():
-    """MCP / agent: personalise hat+coat on a product line for the active mesh."""
-    body = request.get_json(silent=True) or {}
-    owner = (body.get("owner") or "anon").strip()[:80]
-    line = (body.get("line") or "ornament").strip()
-    coat = (body.get("coat") or "none").strip().lower()
-    hat = (body.get("hat") or "none").strip().lower()
-    mesh_id = (body.get("mesh_id") or "").strip()
-    texture_note = (body.get("texture") or body.get("texture_note") or "")[:200]
-    if line not in config.STUDIO_LINES:
-        return _err("unknown line", 400)
-    spec = config.STUDIO_LINES[line]
-    allowed = spec.get("assets") or {}
-    if coat not in (allowed.get("coats") or ["none"]):
-        return _err(f"coat {coat!r} is not an asset on {line}", 400)
-    if hat not in (allowed.get("hats") or ["none"]):
-        return _err(f"hat {hat!r} is not an asset on {line}", 400)
-    if spec.get("status") != "live":
-        return _err(f"{line} is not live yet", 409)
-    stills = _studio_stills_for(line, coat, hat)
-    return jsonify({
-        "ok": True,
-        "owner": owner,
-        "line": line,
-        "coat": coat,
-        "hat": hat,
-        "mesh_id": mesh_id,
-        "texture_note": texture_note,
-        "stills": stills,
-        "price_cents": spec.get("price_cents", 0),
-        "hint": "Personalisation applied as preview. Checkout via figg_checkout / "
-                "POST /api/products/order.",
-    })
-
-
-@app.post("/api/products/order")
-def products_order():
-    """Products-tab one-click order — same store as POST /api/studio/order."""
-    body = request.get_json(silent=True) or {}
-    owner = (body.get("owner") or "anon").strip()[:80]
-    line = (body.get("line") or body.get("product") or "ornament").strip()
-    coat = (body.get("coat") or "none").strip().lower()
-    hat = (body.get("hat") or "none").strip().lower()
-    mesh_id = (body.get("mesh_id") or "").strip()
-    qty = max(1, min(20, int(body.get("qty") or 1)))
-    note = (body.get("note") or "")[:200]
-    if line not in config.STUDIO_LINES:
-        return _err("unknown line", 400)
-    spec = config.STUDIO_LINES[line]
-    if spec.get("status") != "live":
-        return _err(f"{line} is not orderable yet", 409)
-    price = int(spec.get("price_cents") or 0) * qty
-    with db.connect() as c:
-        order = db.create_order(
-            c, owner=owner, line=line, mesh_id=mesh_id, coat=coat, hat=hat,
-            qty=qty, price_cents=price, note=note,
-        )
-    return jsonify({
-        "ok": True,
-        "order": order,
-        "price_cents": price,
-        "status": "pending_checkout",
-        "hint": "Order reserved. Payment lands with Stripe/Shopify — nothing charged yet.",
-    })
-
+def _line_sizes(lid: str, spec: dict) -> list[dict]:
+    """Truthful size chips for a studio line / paper card."""
+    if lid == "gift_card":
+        amts = spec.get("amounts_cents") or [spec.get("price_cents", 2500)]
+        return [{"id": "amount", "label": f"£{a/100:.0f}", "mm": "", "price_cents": a} for a in amts]
+    if lid in ("ornament", "keychain", "croc_tag", "brick"):
+        mm = spec.get("size_mm") or spec.get("scale_mm") or 0
+        extra = []
+        if lid == "ornament":
+            extra = [{"id": "loop", "label": "5 mm loop", "mm": "loop Ø5", "price_cents": None}]
+        if lid == "keychain":
+            extra = [{"id": "hole", "label": "4 mm hole", "mm": "hole Ø4", "price_cents": None}]
+        if lid == "croc_tag":
+            extra = [{"id": "pin", "label": "pin stem", "mm": spec.get("pin_diameter_mm") or 12, "price_cents": None}]
+        return [{"id": "print", "label": f"{mm} mm", "mm": f"{mm} mm print", "price_cents": None}] + extra
+    if lid in ("greeting_card", "postcard", "xmas_card", "thank_you_card", "birthday_card"):
+        return [
+            {"id": k, "label": v["label"], "mm": v["mm"], "price_cents": v.get("price_cents")}
+            for k, v in config.CARD_SIZES.items()
+        ]
+    return []
 
 @app.get("/api/studio/orders")
 def studio_orders():

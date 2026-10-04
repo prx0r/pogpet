@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Product photos — OddHobb</title>
-<meta name="description" content="Exact product photos of the OddHobb pet figurine — ornament and keychain from the canonical mesh. Download for Etsy.">
+<meta name="description" content="Exact product photos of OddHobb pet products — ornament, keychain and brick figure from the canonical meshes. Etsy-ready downloads.">
 <link rel="canonical" href="https://oddhobb.com/products.html">
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
 <style>
@@ -74,13 +74,16 @@
   </div>
 
   <h1>Exact product photos</h1>
-  <p class="lede">Canonical mesh only. No props, no metal, no colour grades — these are snapshots of the product as it prints. Ornament = 80&nbsp;mm with printed loop. Keychain = same design, smaller.</p>
+  <p class="lede">Canonical mesh only. No props, no metal, no colour grades — these are snapshots of the product as it prints. Ornament = 80&nbsp;mm · keychain = smaller · brick = 75&nbsp;mm desk figure.</p>
 
   <div class="cta">
     <a class="btn" href="/#studio">Studio · character select</a>
     <a class="btn" href="/#products">Products · order</a>
+    <a class="btn ghost" href="#etsy-pack">Etsy listing pack</a>
     <a class="btn ghost" href="#downloads">Download list</a>
-    <a class="btn ghost" href="/img/prod/chibi-figure-hook.glb" download="oddhobb-chibi-figure-hook.glb">Download GLB</a>
+    <a class="btn ghost" href="/img/prod/chibi-figure-hook.glb" download="oddhobb-chibi-figure-hook.glb">Download dog GLB</a>
+    <a class="btn ghost" href="/img/prod/brick-figure.glb" download="oddhobb-brick-figure.glb">Download brick 1 GLB</a>
+    <a class="btn ghost" href="/img/prod/brick-figure-2.glb" download="oddhobb-brick-figure-2.glb">Download brick 2 GLB</a>
   </div>
 
   <section class="viewer-card" aria-label="3D product viewer">
@@ -117,6 +120,18 @@
     <div class="gallery" id="orn-gallery"></div>
   </section>
 
+  <!-- CUSTOM: coats + santa (preview grades + hat prop) -->
+  <section class="line" id="custom">
+    <div class="line-head">
+      <h2>Coats &amp; Santa</h2>
+      <span class="badge">preview grades · 0 credits</span>
+    </div>
+    <p>Same dog mesh, controlled custom. Coat = material preview (multi-colour print is a live farm quote). Santa hat = OGA CC0 prop seated on the measured skull. Pick these on <a href="/#products">Products</a> or via MCP <code>figg_studio_retexture</code>.</p>
+    <div class="gallery" id="coat-gallery"></div>
+    <div class="gallery" id="santa-gallery" style="margin-top:12px"></div>
+    <div class="gallery" id="combo-gallery" style="margin-top:12px"></div>
+  </section>
+
   <!-- KEYCHAIN — exact mesh @ smaller scale -->
   <section class="line" id="keychain">
     <div class="line-head">
@@ -127,9 +142,34 @@
     <div class="gallery" id="kc-gallery"></div>
   </section>
 
+  <!-- BRICK — desk figure @ 75mm -->
+  <section class="line" id="brick">
+    <div class="line-head">
+      <h2>Brick figures</h2>
+      <span class="badge">75&nbsp;mm · desk toy · 2 meshes</span>
+    </div>
+    <p>Exact products from the brick parent meshes — minifig proportions, printed as one piece. No props in these frames. Studio lineup: dog + brick 1 + brick 2.</p>
+    <div class="gallery" id="brick-gallery"></div>
+    <div class="gallery" id="brick2-gallery" style="margin-top:12px"></div>
+  </section>
+
+  <!-- ETSY LISTING PACK -->
+  <section class="panel" id="etsy-pack">
+    <h2>Etsy listing pack</h2>
+    <p class="hint" style="margin:0 0 12px;color:var(--muted);font-size:13px">
+      2000×2000 white background · one-click zip · titles/tags in
+      <a href="/api/etsy/listings">/api/etsy/listings</a> · P0 lines: ornament · keychain · brick.
+    </p>
+    <div class="cta" style="margin-bottom:14px">
+      <a class="btn" href="/img/etsy/oddhobb-etsy-listing-pack.zip" download="oddhobb-etsy-listing-pack.zip">Download full pack (.zip)</a>
+      <a class="btn ghost" href="/api/etsy/listings" target="_blank" rel="noopener">Listing JSON</a>
+    </div>
+    <div class="gallery" id="etsy-gallery"></div>
+  </section>
+
   <section class="panel" id="downloads">
     <h2>Download list</h2>
-    <p class="hint" style="margin:0 0 12px;color:var(--muted);font-size:13px">2000×2000 white background. Ready for Etsy. No props in any frame.</p>
+    <p class="hint" style="margin:0 0 12px;color:var(--muted);font-size:13px">2000×2000 white background. Ready for Etsy. No props in exact frames.</p>
     <table class="dl-table">
       <thead><tr><th>File</th><th>Line</th><th>Link</th></tr></thead>
       <tbody id="dl-body"></tbody>
@@ -155,11 +195,45 @@
     ["kc-hero.png","Hero"],["kc-front.png","Front"],["kc-side.png","Side"],
     ["kc-back.png","Back / loop"],["kc-loop.png","Loop detail"]
   ];
-  function fill(el, files, prefix, label){
+  var BRICK = [
+    ["brick-hero.png","Hero"],["brick-front.png","Front"],["brick-side.png","Side"],
+    ["brick-back.png","Back"],["brick-loop.png","Detail"]
+  ];
+  var BRICK2 = [
+    ["brick-hero-2.png","Hero 2"],["brick-hero-2.png","Portrait"]
+  ];
+  var COATS = [
+    ["coat-cream-hero.png","Cream"],["coat-golden-hero.png","Golden"],
+    ["coat-chocolate-hero.png","Chocolate"],["coat-black-hero.png","Black"],
+    ["coat-fawn-hero.png","Fawn"],["coat-grey-hero.png","Grey"]
+  ];
+  var SANTA = [
+    ["santa-hero.png","Santa hero"],["santa-front.png","Santa front"],
+    ["santa-side.png","Santa side"],["santa-back.png","Santa back"],
+    ["santa-hang.png","Santa hang"]
+  ];
+  var COMBOS = [
+    ["coat-cream-santa-hero.png","Cream + santa"],
+    ["coat-golden-santa-hero.png","Golden + santa"],
+    ["coat-chocolate-santa-hero.png","Chocolate + santa"],
+    ["coat-black-santa-hero.png","Black + santa"]
+  ];
+  var ETSY = [
+    ["etsy-orn-hero.png","Ornament hero"],["etsy-orn-front.png","Ornament front"],
+    ["etsy-orn-side.png","Ornament side"],["etsy-orn-back.png","Ornament back"],
+    ["etsy-orn-hang.png","Ornament hang"],["etsy-orn-loop-detail.png","Ornament loop"],
+    ["etsy-kc-hero.png","Keychain hero"],["etsy-kc-front.png","Keychain front"],
+    ["etsy-kc-back.png","Keychain back"],["etsy-kc-side.png","Keychain side"],
+    ["etsy-kc-ring-detail.png","Keychain ring"],
+    ["etsy-brick-hero.png","Brick hero"],["etsy-brick-front.png","Brick front"],
+    ["etsy-brick-side.png","Brick side"],["etsy-brick-back.png","Brick back"]
+  ];
+  function fill(el, files, prefix, label, base){
     var host = document.getElementById(el);
     if(!host) return;
+    base = base || "/img/prod/";
     host.innerHTML = files.map(function(f){
-      var src = "/img/prod/" + prefix + f[0];
+      var src = base + prefix + f[0];
       var dl = "oddhobb-" + label + "-" + f[0].replace(".png","");
       return '<figure class="shot">'+
         '<button class="thumb" type="button" data-src="'+src+'">'+
@@ -170,15 +244,33 @@
     }).join("");
   }
   fill("orn-gallery", ORN, "", "ornament");
+  fill("coat-gallery", COATS, "", "coat");
+  fill("santa-gallery", SANTA, "", "santa");
+  fill("combo-gallery", COMBOS, "", "combo");
   fill("kc-gallery", KC, "kc-", "keychain");
+  fill("brick-gallery", BRICK, "", "brick");
+  fill("brick2-gallery", BRICK2, "", "brick2");
+  fill("etsy-gallery", ETSY, "", "etsy", "/img/etsy/");
 
   var rows = [];
-  rows.push(["3D model (GLB)","all","/img/prod/chibi-figure-hook.glb","Download GLB"]);
+  rows.push(["3D model (GLB)","all","/img/prod/chibi-figure-hook.glb","Download dog GLB"]);
+  rows.push(["Brick 1 GLB","brick","/img/prod/brick-figure.glb","Download brick 1"]);
+  rows.push(["Brick 2 GLB","brick","/img/prod/brick-figure-2.glb","Download brick 2"]);
+  rows.push(["Etsy pack zip","all","/img/etsy/oddhobb-etsy-listing-pack.zip","Download zip"]);
   ORN.forEach(function(f){
     rows.push([f[0],"ornament","/img/prod/"+f[0],"Download"]);
   });
   KC.forEach(function(f){
     rows.push(["kc-"+f[0],"keychain","/img/prod/kc-"+f[0],"Download"]);
+  });
+  BRICK.forEach(function(f){
+    rows.push([f[0],"brick","/img/prod/"+f[0],"Download"]);
+  });
+  BRICK2.forEach(function(f){
+    rows.push([f[0],"brick 2","/img/prod/"+f[0],"Download"]);
+  });
+  ETSY.forEach(function(f){
+    rows.push([f[0],"etsy pack","/img/etsy/"+f[0],"Download"]);
   });
   document.getElementById("dl-body").innerHTML = rows.map(function(r){
     return "<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td><a href=\""+r[2]+"\" download>"+r[3]+"</a></td></tr>";

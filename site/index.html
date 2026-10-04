@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>oddhobb — Upload your pet, get free videos</title>
   <meta name="description" content="oddhobb — what odd thing shall we make you? Upload your pet once and browse figurines, cards, gifts and video that already feature them.">
-  <meta name="theme-color" content="#0B0B0F">
+  <meta name="theme-color" content="#000000">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://oddhobb.com/">
   <meta property="og:title" content="oddhobb — what odd thing shall we make you?">
@@ -26,20 +26,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
     :root{
-      /* Halloween: pumpkin replaces gold, graveyard purple in the glow */
-      --obsidian:#0B0B0F;
+      /* Inverse store theme: black chrome + white panels · pumpkin accent */
+      --obsidian:#000000;
       --gold:#FF7A1A;
       --ivory:#F5F0E8;
-      --charcoal:#1E1E24;
+      --charcoal:#141414;
       --muted:#8B8577;
       --pumpkin:#FF7A1A;
-      --violet:#8B3DFF;
-      --poison:#7CFF6B;
+      --violet:#8B8577; /* legacy token — neutrals only */
+      --poison:#F5F0E8; /* legacy token — ivory */
       --blood:#E5341B;
     }
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Inter',sans-serif;background:var(--obsidian);color:var(--ivory);height:100dvh;overflow:hidden}
-    .app{display:grid;grid-template-rows:1fr auto;height:100dvh;padding-left:72px;padding-top:102px;background:radial-gradient(ellipse at 50% 30%,#1E0F33 0%,var(--obsidian) 70%)}
+    .app{display:grid;grid-template-rows:1fr auto;height:100dvh;padding-left:72px;padding-top:102px;background:var(--obsidian)}
     .stage{position:relative;display:flex;align-items:center;justify-content:center;padding:20px}
     .barth{position:relative;width:200px;height:240px;animation:barthFloat 3s ease-in-out infinite}
     .barth img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5))}
@@ -157,9 +157,9 @@
 
     /* ── cinematic product cards (Higgsfield skin on catalog bones) ── */
     .card{transition:transform .22s ease,box-shadow .22s ease}
-    .card:hover{transform:translateY(-4px);box-shadow:0 12px 42px rgba(139,61,255,.22),0 4px 14px rgba(0,0,0,.5)}
+    .card:hover{transform:translateY(-4px);box-shadow:0 12px 42px rgba(255,122,26,.18),0 4px 14px rgba(0,0,0,.5)}
     .hero{border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:22px;
-      background:radial-gradient(ellipse at 20% 10%,rgba(139,61,255,.22) 0%,rgba(11,11,15,0) 60%),var(--charcoal);
+      background:var(--charcoal);
       margin-bottom:14px}
     .hero h3{font-family:'Playfair Display',serif;font-size:clamp(22px,4vw,30px);color:var(--ivory);letter-spacing:-.01em}
     .hero p{font-size:13px;color:var(--muted);margin:6px 0 12px}
@@ -183,8 +183,7 @@
     .person__hint{font-size:10px;color:var(--muted)}
 
     /* ── Greeting page ─────────────────────────────────────── */
-    .greet{position:fixed;inset:0 0 0 72px;z-index:200;background:
-      radial-gradient(ellipse at 50% 25%,#1E0F33 0%,var(--obsidian) 72%);
+    .greet{position:fixed;inset:0 0 0 72px;z-index:200;background:var(--obsidian);
       display:flex;align-items:center;justify-content:center;padding:28px 20px;
       transition:opacity .55s ease,visibility .55s ease}
     .greet.hidden{opacity:0;visibility:hidden;pointer-events:none}
@@ -240,7 +239,7 @@
     /* ── Tab panels (upload / studio / shop) ──────────────── */
     .panel{position:fixed;inset:0 0 0 72px;z-index:50;overflow-y:auto;
       -webkit-overflow-scrolling:touch;padding:26px 22px 70px;
-      background:radial-gradient(ellipse at 50% 20%,#1E0F33 0%,var(--obsidian) 72%);
+      background:var(--obsidian);
       opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s ease}
     .panel.open{opacity:1;visibility:visible;pointer-events:auto}
     .panel__inner{max-width:560px;margin:0 auto}
@@ -344,8 +343,128 @@
       border-color:rgba(196,137,26,.35)}
     body.studio-chrome .tabrail__sep{background:#e8e4dc}
     body.studio-chrome .panel.white{left:0;right:0}
-    body.studio-chrome .panel.white .panel__inner{padding-left:86px;padding-right:18px;padding-top:8px;max-width:960px}
+    body.studio-chrome .panel.white .panel__inner{padding-left:86px;padding-right:18px;padding-top:104px;max-width:960px}
     body.studio-chrome .panel.white.model-open{padding-left:86px}
+    /* search drop under the floating topbar — relevance-ranked live products */
+    .search-drop{position:fixed;left:72px;right:0;top:0;z-index:75;
+      background:rgba(255,255,255,.97);border-bottom:1px solid #ebe6dc;
+      box-shadow:0 12px 28px rgba(0,0,0,.08);display:none;padding:10px 16px 12px 86px}
+    .search-drop.open{display:block}
+    .search-drop__hd{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a6a2f;font-weight:700;margin-bottom:8px}
+    .search-drop .etsy{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;max-height:42vh;overflow:auto}
+    .search-drop .etsy__tile{animation:searchIn .22s ease}
+    @keyframes searchIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .search-drop__empty{font-size:13px;color:#666;padding:8px 0}
+    /* Quick — voice/text ramble (mythicbee gift-intelligence pattern) */
+    .quick{margin-top:14px;border-radius:14px;border:1px solid #ead9b8;background:linear-gradient(160deg,#fffaf2,#f7f1e4);padding:14px}
+    .quick__hd{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+    .quick__title{font-family:'Playfair Display',serif;font-size:18px;color:#2a1e0c}
+    .quick__sub{font-size:12px;color:#6b5a3c;margin-top:2px}
+    .quick__prompt{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a6a2f;background:#fff;
+      border:1px dashed #e0cfa8;border-radius:10px;padding:8px 10px;margin:8px 0;min-height:2.4em}
+    .quick__row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .quick textarea{flex:1;min-width:220px;min-height:72px;padding:10px 12px;border-radius:10px;
+      border:1px solid #e0dbd2;font:inherit;font-size:13px;color:#141414;background:#fff;resize:vertical}
+    .quick textarea:focus{outline:none;border-color:#c4891a}
+    .quick__mic{width:44px;height:44px;border-radius:50%;border:1px solid #d9d2c4;background:#fff;cursor:pointer;font-size:18px}
+    .quick__mic.rec{background:#e74c3c;border-color:#e74c3c;color:#fff}
+    .quick__go{background:#1a1a1a;color:#fff;border:none;border-radius:10px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer}
+    .quick__go:disabled{opacity:.45}
+    .quick__hits{margin-top:10px}
+    .quick__hits .etsy{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+    .pr-pick{margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+      padding:12px;border-radius:12px;background:#fff;border:1px solid #e4d2ad}
+    .pr-pick__name{font-weight:700;color:#141414;font-size:15px}
+    .pr-pick__meta{font-size:12px;color:#666;margin-top:2px}
+    .pr-pick__price{font-size:18px;font-weight:700;color:#8a6a2f}
+    .pr-pick__acts{display:flex;gap:8px;flex-wrap:wrap}
+    .funnel-steps{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+    .funnel-steps span{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#8a6a2f;
+      border:1px solid #e0cfa8;border-radius:999px;padding:4px 8px;background:#fff}
+    .funnel-steps span.on{background:#fff6e8;border-color:#c4891a;font-weight:700}
+    .qk-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a6a2f;font-weight:700;margin:14px 0 6px}
+    .qk-opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+    .qk-opt{text-align:left;background:#fff;border:1px solid #e0dbd2;border-radius:12px;padding:12px;
+      font:inherit;color:#141414;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+    .qk-opt:hover{border-color:#c4891a;box-shadow:0 6px 16px rgba(0,0,0,.06)}
+    .qk-opt b{display:block;font-size:14px;margin-bottom:2px}
+    .qk-opt span{display:block;font-size:12px;color:#666;line-height:1.35}
+    .qk-chat{margin-top:14px;padding-top:10px;border-top:1px solid #ebe6dc}
+    .pr-agent-input{flex:1;min-width:180px;padding:10px 12px;border-radius:10px;border:1px solid #e0dbd2;
+      font:inherit;font-size:13px;color:#141414;background:#fff}
+    .pr-agent-input:focus{outline:none;border-color:#c4891a}
+    .chip.qk-on{background:#fff6e8;border-color:#c4891a;color:#8a6a2f;font-weight:600}
+    /* ── Quick immersive stage ─────────────────────────────── */
+    body.studio-chrome .panel.white .panel__inner:has(.qk-stage){/* stage manages own layout */}
+    .panel.white[data-panel="quick"]{background:radial-gradient(ellipse at 50% 0%,#fff8ec 0%,#ffffff 55%)}
+    .qk-stage{max-width:820px;margin:0 auto;padding:104px 18px 48px;min-height:100dvh}
+    .qk-idle,.qk-live,.qk-results{text-align:center}
+    .qk-eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8a6a2f;font-weight:700;margin-bottom:8px}
+    .qk-hero{font-family:'Playfair Display',serif;font-size:clamp(32px,7vw,52px);color:#141414;line-height:1.1;margin:0 0 10px}
+    .qk-hero--sm{font-size:clamp(24px,5vw,34px)}
+    .qk-sub{font-size:15px;color:#5c5c5c;line-height:1.55;max-width:34em;margin:0 auto 18px}
+    .qk-how{text-align:left;max-width:420px;margin:0 auto 28px;background:#fff;border:1px solid #ead9b8;border-radius:14px;padding:14px 16px}
+    .qk-how__title{font-weight:700;color:#8a6a2f;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+    .qk-how ol{margin:0;padding-left:1.2em;color:#444;font-size:13px;line-height:1.55}
+    .qk-how li{margin:4px 0}
+    .qk-how-toggle{margin-top:8px;background:none;border:none;color:#8a6a2f;font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}
+    .qk-mic{position:relative;width:120px;height:120px;border-radius:50%;border:none;background:transparent;cursor:pointer;margin:8px auto 4px;display:block}
+    .qk-mic__core{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:42px;
+      background:linear-gradient(160deg,#FF7A1A,#e85d04);border-radius:50%;
+      box-shadow:0 12px 28px rgba(255,122,26,.35);transition:transform .15s}
+    .qk-mic:hover .qk-mic__core{transform:scale(1.04)}
+    .qk-mic__ring{position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(255,122,26,.35);animation:qkPulse 2.2s ease-out infinite}
+    .qk-mic.rec .qk-mic__core{background:linear-gradient(160deg,#FF7A1A,#e85d04);box-shadow:0 12px 28px rgba(255,122,26,.35)}
+    .qk-mic.rec .qk-mic__ring{border-color:rgba(255,122,26,.45);animation-duration:2.4s}
+    @keyframes qkPulse{0%{transform:scale(1);opacity:.8}70%{transform:scale(1.25);opacity:0}100%{opacity:0}}
+    .qk-mic-label{font-size:14px;color:#8a6a2f;font-weight:600;margin-top:6px}
+    .qk-timer{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;color:#e5341b;margin-top:8px}
+    .qk-live{padding-top:8px}
+    .qk-live__top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .qk-live__state{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#8a6a2f;font-weight:600}
+    .qk-live__timer{font-family:'JetBrains Mono',monospace;font-size:12px;color:#aaa;display:none}
+    .qk-flash{min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:28px 18px;border-radius:20px;background:transparent;
+      border:none;margin:0 0 8px;position:relative;overflow:hidden}
+    .qk-flash__label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#c4b59a;
+      font-weight:600;margin-bottom:10px;opacity:0;animation:qkFloatLabel 8s ease-in-out infinite}
+    .qk-flash__text{font-family:'Playfair Display',serif;font-size:clamp(24px,5.5vw,40px);
+      color:#1a1205;line-height:1.3;text-align:center;max-width:14em;font-weight:400;
+      opacity:0;transform:translateY(18px)}
+    .qk-flash.fade .qk-flash__text{animation:qkFloatIn 1.4s cubic-bezier(.22,.61,.36,1) forwards}
+    .qk-flash.fade .qk-flash__label{animation:qkFloatLabel 1.4s ease forwards, qkFloatLabel 10s ease 1.4s infinite}
+    @keyframes qkFloatIn{
+      0%{opacity:0;transform:translateY(22px) scale(.98);filter:blur(2px)}
+      40%{opacity:.85}
+      100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+    }
+    @keyframes qkFloatLabel{
+      0%,100%{opacity:.35}
+      50%{opacity:.75}
+    }
+    .qk-flash::before{content:"";position:absolute;width:180px;height:180px;border-radius:50%;
+      background:radial-gradient(circle,rgba(255,122,26,.08),transparent 70%);
+      top:10%;left:50%;transform:translateX(-50%);pointer-events:none;
+      animation:qkOrb 12s ease-in-out infinite}
+    @keyframes qkOrb{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-45%) translateY(12px)}}
+    .qk-viz{display:flex;align-items:flex-end;justify-content:center;gap:5px;height:28px;margin:4px 0 12px;opacity:.55}
+    .qk-viz i{display:block;width:5px;border-radius:3px;background:#e0b070;height:4px;transition:height .6s ease}
+    .qk-live__lean{text-align:left;background:rgba(255,255,255,.7);border:1px solid #ebe6dc;border-radius:12px;
+      padding:10px 12px;margin-bottom:12px;backdrop-filter:blur(6px)}
+    .qk-lean__hd{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8a6a2f;font-weight:700;margin-bottom:6px}
+    .qk-lean__row{display:flex;flex-wrap:wrap;gap:6px}
+    .qk-lean-chip{font-size:12px;font-weight:600;color:#333;background:#fff6e8;border:1px solid #e8dcc4;
+      border-radius:999px;padding:5px 10px;animation:qkChipIn .6s ease both}
+    @keyframes qkChipIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .qk-lean-chip small{color:#8a6a2f;margin-left:4px}
+    .qk-stop{width:100%;max-width:280px;margin:0 auto;display:block;background:transparent;
+      border:1px solid #d9d2c4;color:#5c5c5c;border-radius:999px;padding:12px 18px;
+      font:inherit;font-size:13px;cursor:pointer;transition:border-color .2s,color .2s}
+    .qk-stop:hover{border-color:#c4891a;color:#8a6a2f}
+    .qk-results{text-align:left;padding-bottom:20px}
+    .qk-results .qk-hero,.qk-results .qk-sub,.qk-results .qk-eyebrow{text-align:center}
+    .qk-mesh-chip-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-top:12px}
+    .panel.white[data-panel="quick"] .quick__hits{margin-top:0}
     body.studio-chrome .dialogue,
     body.studio-chrome .speech,
     body.studio-chrome .flash,
@@ -360,16 +479,44 @@
     body.studio-chrome .switcher a.here{color:#8a6a2f;background:#fff6e8}
 
     /* Etsy-style tiles */
-    .etsy{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:14px;margin-top:8px}
-    .etsy__tile{background:#fff;border:1px solid #ebe6dc;border-radius:12px;overflow:hidden;
-      cursor:pointer;transition:box-shadow .18s ease, transform .18s ease;text-align:left;padding:0}
-    .etsy__tile:hover{box-shadow:0 10px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
-    .etsy__tile.on{border-color:#c4891a;box-shadow:0 0 0 2px rgba(196,137,26,.25)}
-    .etsy__img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:#faf8f4}
+    .etsy{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:14px;margin-top:8px}
+    .etsy__tile{position:relative;background:#fff;border:1px solid #ebe6dc;border-radius:14px;overflow:hidden;
+      cursor:pointer;transition:box-shadow .18s ease, transform .18s ease;text-align:left;padding:0;font:inherit;color:inherit}
+    .etsy__tile:hover{box-shadow:0 12px 28px rgba(0,0,0,.10);transform:translateY(-3px)}
+    .etsy__tile.on{border-color:#c4891a;box-shadow:0 0 0 2px rgba(196,137,26,.28)}
+    .etsy__tile:disabled{opacity:.55;cursor:not-allowed}
+    .etsy__img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:linear-gradient(180deg,#faf8f4,#f3efe6)}
     .etsy__body{padding:10px 12px 12px}
     .etsy__name{font-size:13px;font-weight:600;color:#141414;line-height:1.3}
     .etsy__meta{font-size:11px;color:#777;margin-top:2px}
-    .etsy__price{font-size:15px;font-weight:700;color:#8a6a2f;margin-top:6px}
+    .etsy__price{font-size:15px;font-weight:700;color:#8a6a2f;margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .etsy__badges{position:absolute;top:8px;left:8px;right:8px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
+    .etsy__badge{font-size:10px;font-weight:700;letter-spacing:.03em;padding:3px 7px;border-radius:999px;
+      background:rgba(20,20,20,.78);color:#fff;backdrop-filter:blur(4px)}
+    .etsy__badge.gold{background:rgba(196,137,26,.92);color:#1a1205}
+    .etsy__badge.mesh{background:rgba(34,120,80,.88)}
+    .etsy__badge.soon{background:rgba(90,90,90,.85)}
+    .etsy__foot{margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+    .etsy__ship{font-size:10px;color:#2f7a52;font-weight:600}
+    .etsy__cta{font-size:11px;font-weight:700;color:#8a6a2f}
+    .pr-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      margin:4px 0 12px;padding:12px 14px;border-radius:12px;
+      background:linear-gradient(135deg,#fff8ec,#f7f1e4);border:1px solid #ead9b8}
+    .pr-banner__title{font-size:14px;font-weight:700;color:#3a2a10}
+    .pr-banner__sub{font-size:12px;color:#6b5a3c;margin-top:2px}
+    .pr-banner__mesh{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a6a2f;
+      background:#fff;border:1px solid #e4d2ad;border-radius:8px;padding:6px 8px}
+    .pr-agent{margin-top:12px;padding:12px;border-radius:12px;background:#fff;border:1px solid #ebe6dc}
+    .pr-agent label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a6a2f;margin-bottom:6px;font-weight:700}
+    .pr-agent__row{display:flex;gap:8px;flex-wrap:wrap}
+    .pr-agent input{flex:1;min-width:200px;padding:10px 12px;border-radius:10px;border:1px solid #e0dbd2;
+      font:inherit;font-size:13px;color:#141414;background:#fcfbf8}
+    .pr-agent input:focus{outline:none;border-color:#c4891a}
+    .pr-qty{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:#555}
+    .pr-qty button{width:28px;height:28px;border-radius:8px;border:1px solid #e0dbd2;background:#fff;cursor:pointer;font-weight:700}
+    .pr-order-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+    .btn-shopify{background:#96bf48!important;border-color:#96bf48!important;color:#1b2e0a!important}
+    .btn-ghost-dark{background:transparent!important;border:1px solid #d9d2c4!important;color:#333!important}
     .store-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
     .store-head h2{margin:0;font-family:'Playfair Display',serif;font-size:26px;color:#141414}
     .store-head p{margin:0;color:#666;font-size:13px}
@@ -451,14 +598,29 @@
     }
     .cs__live .cs__nm{font-family:'Playfair Display',Georgia,serif;font-size:20px;color:#141414;margin-top:4px}
     .cs__live .cs__num{font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a6a2f;letter-spacing:.14em}
+    .cs__active{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+      color:#8a6a2f;background:rgba(196,137,26,.12);border:1px solid rgba(196,137,26,.28);
+      border-radius:999px;padding:3px 10px;margin-top:6px}
+    .roster{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:8px 0 4px}
+    .roster__item{display:flex;flex-direction:column;align-items:center;gap:4px;
+      border:1px solid #ebe6dc;background:#fff;border-radius:12px;padding:8px 10px;
+      cursor:pointer;min-width:84px;transition:border-color .15s, box-shadow .15s}
+    .roster__item:hover{border-color:#c4891a}
+    .roster__item.on{border-color:#c4891a;box-shadow:0 0 0 2px rgba(196,137,26,.22)}
+    .roster__item img{width:56px;height:64px;object-fit:contain;background:#faf8f4;border-radius:8px}
+    .roster__item .nm{font-size:11px;color:#444;text-align:center;line-height:1.25;max-width:90px}
+    .roster__item .tag{font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a6a2f}
+    .photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-top:8px}
+    .photo{background:#fff;border:1px solid #ebe6dc;border-radius:12px;overflow:hidden}
+    .photo img{display:block;width:100%;aspect-ratio:1;object-fit:cover;background:#f3efe6}
+    .photo .meta{padding:6px 8px;font-size:11px;color:#666}
+    .photo .meta b{display:block;color:#222;font-weight:600;font-size:12px}
+    .photo-empty{grid-column:1/-1;color:#777;font-size:13px;padding:18px;text-align:center;
+      border:1px dashed #ddd;border-radius:12px;background:#faf8f4}
     /* legacy ids kept so JS can mount the viewer */
     #stv-viewer-host{display:contents}
     #stv-viewer{width:100%;height:min(58vw,340px);background:#fff;border-radius:18px;display:block}
-    .stv__shot,.stv__card,.stv__strip{display:none}
-    .stv__agent{display:flex;gap:8px;margin-top:10px}
-    .stv__agent input{flex:1}
-    .stv__more{margin-top:20px;border-top:1px solid rgba(0,0,0,.06);padding-top:12px}
-    .stv__more summary{cursor:pointer;color:#777;font-size:13px}
+    .stv__shot,.stv__card,.stv__strip,.stv__agent,.stv__more{display:none}
     .stv__order{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:12px 0 6px}
     .panel.white .panel__label{margin:14px 0 6px}
 
@@ -531,9 +693,9 @@
       border:1px solid rgba(255,122,26,.30);border-radius:20px;padding:18px 20px;
       position:relative;overflow:hidden}
     .spot::after{content:"";position:absolute;inset:0;pointer-events:none;
-      background:radial-gradient(circle at 22% 50%,rgba(139,61,255,.22),transparent 62%)}
+      background:radial-gradient(circle at 22% 50%,rgba(255,122,26,.12),transparent 62%)}
     .spot__ring{width:104px;height:104px;flex:0 0 104px;border-radius:50%;
-      border:3px solid var(--pumpkin);background:#12101a;display:flex;align-items:center;
+      border:3px solid var(--pumpkin);background:#0a0a0a;display:flex;align-items:center;
       justify-content:center;overflow:hidden;position:relative;z-index:1;
       box-shadow:0 0 0 6px rgba(255,122,26,.14),0 0 34px rgba(255,122,26,.35);
       animation:spotPulse 2.6s ease-in-out infinite}
@@ -558,7 +720,7 @@
     .rogue.on::after{content:"ACTIVE";position:absolute;top:-7px;left:50%;
       transform:translateX(-50%);background:var(--pumpkin);color:#141414;
       font-size:7px;letter-spacing:.1em;padding:2px 6px;border-radius:6px;font-weight:700}
-    .rogue__ph{width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#12101a;
+    .rogue__ph{width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#0a0a0a;
       display:flex;align-items:center;justify-content:center;font-size:22px}
     .rogue__ph img{width:100%;height:100%;object-fit:cover}
     .rogue__st{font-size:8px;letter-spacing:.08em;text-transform:uppercase;
@@ -576,26 +738,26 @@
 
     /* ── Shop grid with rendered product mockups ──────────── */
     .card__shot{width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;
-      background:#12101a;display:block;object-fit:cover}
+      background:#121212;display:block;object-fit:cover}
     .card__note{font-size:9px;color:var(--muted);opacity:.72;margin-top:7px;line-height:1.35;
       min-height:2.3em}
 
-    /* ── Boot / jumbled-words loading screen ───────────────── */
-    .pogboot{position:fixed;inset:0;z-index:300;background:var(--obsidian);
+    /* ── Boot / jumbled-words loading screen (pure black · inverse of white store) ── */
+    .pogboot{position:fixed;inset:0;z-index:300;background:#000000;
       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
       transition:opacity .7s ease,visibility .7s ease}
     .pogboot.hidden{opacity:0;visibility:hidden;pointer-events:none}
     .pogboot__mark{font-family:'Playfair Display',serif;font-size:clamp(40px,10vw,76px);
-      letter-spacing:-.02em;color:var(--ivory)}
+      letter-spacing:-.02em;color:#F5F0E8}
     .pogboot__mark i{color:var(--pumpkin);font-style:normal}
     .pogboot__words{font-family:'JetBrains Mono',monospace;
-      font-size:clamp(11px,3vw,15px);letter-spacing:.08em;color:var(--muted);
+      font-size:clamp(11px,3vw,15px);letter-spacing:.08em;color:#8B8577;
       min-height:1.7em;text-align:center;padding:0 16px}
-    .pogboot__words u{text-decoration:none;color:var(--poison)}
-    .pogboot__bar{width:min(260px,62vw);height:2px;background:rgba(255,255,255,.09);
+    .pogboot__words u{text-decoration:none;color:#FF7A1A}
+    .pogboot__bar{width:min(260px,62vw);height:2px;background:rgba(245,240,232,.12);
       border-radius:2px;overflow:hidden}
     .pogboot__bar i{display:block;height:100%;width:0;
-      background:linear-gradient(90deg,var(--pumpkin),var(--violet));transition:width .3s ease}
+      background:#FF7A1A;transition:width .3s ease}
     @media (prefers-reduced-motion: reduce){.pogboot__words{transition:none}}
   </style>
 </head>
@@ -611,7 +773,7 @@
   <div class="greet" id="greet">
     <div class="greet__inner">
       <div class="greet__mark">oddhobb<i>.</i></div>
-      <div class="greet__eyebrow">Welcome to the pogverse · spooky season · free to try</div>
+      <div class="greet__eyebrow">Odd things only · free to try · no catch</div>
       <p class="greet__sub">One photo of your pet, and you get them back as videos worth sharing. No card, no trial, no catch.</p>
       <ol class="greet__steps">
         <li><div><b>Upload your pet</b><span>One photo, front-on, good light. We do the rest.</span></div></li>
@@ -629,20 +791,19 @@
       </div>
       <div class="greet__who" id="g-who" hidden></div>
 
-      <p class="greet__fine">Already met Pogo? He's in the chat tab, bottom left.</p>
+      <p class="greet__fine">Already know what you want? Open <b>quick</b> — ramble, watch products appear.</p>
     </div>
   </div>
 
   <!-- left tab rail -->
   <nav class="tabrail" id="tabrail" aria-label="Sections">
-    <button class="brand-btn" id="brand-btn" type="button" aria-haspopup="true" aria-expanded="false" title="Switch world">p<i>.</i></button>
-    <div class="switcher" id="switcher" role="menu" aria-label="Switch world">
-      <div class="switcher__hd">the pogverse</div>
+    <button class="brand-btn" id="brand-btn" type="button" aria-haspopup="true" aria-expanded="false" title="Switch world">o<i>.</i></button>
+    <div class="switcher" id="switcher" role="menu" aria-label="Switch world" hidden>
+      <div class="switcher__hd">oddhobb</div>
       <a href="/" class="here" role="menuitem"><span>oddhobb.com</span><small>you are here</small></a>
-      <a href="https://pog.town/" role="menuitem"><span>pog.town</span><small>community</small></a>
     </div>
-    <button class="tab active" type="button" data-tab="chat">
-      <span class="tab__icon">💬</span>chat
+    <button class="tab active" type="button" data-tab="quick">
+      <span class="tab__icon">💬</span>quick
     </button>
     <div class="tabrail__sep"></div>
     <button class="tab" type="button" data-tab="studio">
@@ -679,7 +840,8 @@
   </header>
   <script>
   (function () {
-    var PHRASES = [
+    // Core boot lines — keep these; they already match the site voice.
+    var PHRASES_CORE = [
       "Summoning the familiar…",
       "Warming up the cauldron…",
       "Consulting the hive…",
@@ -687,6 +849,87 @@
       "Carving something with teeth…",
       "Recombobulating the pixels…"
     ];
+    // Neurospicy pass — the loading screen forgot its own job (on purpose).
+    var PHRASES_NEURO = [
+      "Am I odd, or are others even?",
+      "What was I loading again?",
+      "Opening the tab I already had open…",
+      "Remembering why I walked in here…",
+      "Where did I put the other thought?",
+      "Two tabs. One brain. Neither helpful.",
+      "Sorting snacks from tasks…",
+      "That thought left the room.",
+      "Checking if the oven is on (it isn't).",
+      "Starting three things. Finishing vibes.",
+      "Did we already do this bit?",
+      "Losing the sentence mid-load…",
+      "Putting the keys down somewhere sensible…",
+      "Squirrel… anyway, loading.",
+      "Buffering like I mean it.",
+      "The idea was here a second ago.",
+      "Prioritising chaos, alphabetically.",
+      "Zoom out. There is no zoom out."
+    ];
+    // Seeded from mythicbee / hive-activity + pog-pack (stallspy) — existing packs, not deleted.
+    var PHRASES_PACK = [
+      "Listening carefully…",
+      "Trying not to interrupt…",
+      "Filing this under suspiciously useful…",
+      "Recombobulating…",
+      "Finding the thing underneath the thing…",
+      "Consulting a very small clipboard…",
+      "Taking this far too seriously…",
+      "Comparing terrible ideas…",
+      "Trying the sensible idea first…",
+      "Trying the irresponsible idea second…",
+      "Looking for something they'd actually keep…",
+      "Ignoring one particularly bad suggestion…",
+      "Arguing with pixels…",
+      "Fixing the eyes again…",
+      "Removing something profoundly cursed…",
+      "Rolling cameras…",
+      "Hiring imaginary extras…",
+      "Rehearsing the impossible bit…",
+      "Adding a completely reasonable amount of confetti…",
+      "Checking gravity…",
+      "Opening a small portal…",
+      "Asking reality to cooperate…",
+      "Doing boring but essential maths…",
+      "Checking tomorrow really means tomorrow…",
+      "Remembering where we left off…",
+      "Briefly losing the clipboard…",
+      "Checking whether anyone told Gerald…",
+      "Polishing the tiny fangs…",
+      "Making this mildly cursed…",
+      "Locating Buster…",
+      "Removing forbidden sock…",
+      "Checking cheese reserves…",
+      "Hiding from Dave next door…",
+      "Consulting the town goblin…",
+      "Polishing wings…",
+      "Giving Kevin administrative privileges…",
+      "Removing Kevin's administrative privileges…",
+      "Moving glass away from table edge…"
+    ];
+
+    function shuffle(arr) {
+      var a = arr.slice();
+      for (var i = a.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+
+    // Keep the boot short: a rotating slice of core + neurospicy + pack.
+    function pickBootPhrases() {
+      var core = shuffle(PHRASES_CORE).slice(0, 2);
+      var neuro = shuffle(PHRASES_NEURO).slice(0, 3);
+      var pack = shuffle(PHRASES_PACK).slice(0, 3);
+      return core.concat(neuro, pack);
+    }
+
+    var PHRASES = pickBootPhrases();
     var GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&$@!?/\\|<>[]{}*+=~^";
     var words = document.getElementById("pogboot-words");
     var boot  = document.getElementById("pogboot");
@@ -775,6 +1018,11 @@
         var all = rail.querySelectorAll(".tab");
         for (var i = 0; i < all.length; i++) all[i].classList.remove("active");
         btn.classList.add("active");
+        var tabName = btn.getAttribute("data-tab");
+        var tabPath = (tabName === "products") ? "/products" : "/";
+        if (location.pathname !== tabPath) {
+          try { history.pushState({tab: tabName}, "", tabPath); } catch (e) {}
+        }
         document.dispatchEvent(new CustomEvent("pog:tab", {
           detail: { tab: btn.getAttribute("data-tab") }
         }));
@@ -787,7 +1035,7 @@
   <section class="panel" data-panel="upload" id="panel-upload" aria-label="Your people">
     <div class="panel__inner">
       <h2 class="panel__h">Your star</h2>
-      <p class="panel__lede">Your people, sorted automatically. One is the star — whatever’s active is what appears on every card, mug and sheet of wrapping paper.</p>
+      <p class="panel__lede">Your people, sorted automatically. One is the star — whatever’s active is what appears on every card, mug and sheet of wrapping paper. Coming from Quick? Upload here, then we’ll return you to your product.</p>
 
       <span class="panel__label">now showing</span>
       <div class="spot" id="spot">
@@ -832,9 +1080,14 @@
     </div>
   </section>
 
-  <!-- ══ TAB: studio — character select (Wii lineup) ══ -->
+  <!-- ══ TAB: studio — mesh roster + photo gallery ══ -->
   <section class="panel white" data-panel="studio" id="panel-studio" aria-label="Studio">
     <div class="panel__inner wide">
+      <div class="store-head" style="margin:0 0 10px">
+        <h2 style="font-size:22px;margin:0">Your meshes</h2>
+        <p style="margin:4px 0 0;color:#777;font-size:13px">Pick one — it becomes the active star and appears on Products.</p>
+      </div>
+
       <div class="stv" id="stv">
         <div class="cs" id="cs">
           <button class="cs__arrow" id="stv-prev" type="button" aria-label="Previous">&#8592;</button>
@@ -853,8 +1106,9 @@
                 loading="lazy"
                 reveal="auto">
               </model-viewer>
-              <div class="cs__num" id="stv-live-num">2</div>
-              <div class="cs__nm" id="stv-live-name">dog 2</div>
+              <div class="cs__num" id="stv-live-num"></div>
+              <div class="cs__nm" id="stv-live-name">dog</div>
+              <div class="cs__active" id="stv-active-tag">active star</div>
             </div>
             <div class="cs__side" id="cs-right"></div>
           </div>
@@ -862,25 +1116,18 @@
         </div>
       </div>
 
-      <div class="chips" id="stv-lines" role="group" aria-label="Line"></div>
-      <div class="chips" id="stv-coats" role="group" aria-label="Coat" style="margin-top:8px"></div>
-      <div class="chips" id="stv-hats" role="group" aria-label="Hat" style="margin-top:8px"></div>
+      <!-- full roster strip -->
+      <div class="roster" id="stv-roster" role="listbox" aria-label="Mesh roster"></div>
 
-      <div class="stv__order">
-        <button class="btn" id="stv-save" type="button">Save loadout</button>
-        <button class="btn ghost" id="stv-to-products" type="button">Products</button>
+      <div class="stv__order" style="justify-content:center;gap:10px">
+        <button class="btn ghost" id="stv-brick" type="button">Add brick 1</button>
+        <button class="btn ghost" id="stv-brick2" type="button">Add brick 2</button>
       </div>
-      <div class="panel__status" id="stv-status"></div>
       <div class="panel__msg" id="stv-msg" role="status" aria-live="polite"></div>
 
-      <div class="stv__agent">
-        <input type="text" id="stv-prompt" placeholder="chocolate coat, santa hat" maxlength="160">
-        <button class="btn ghost" id="stv-ask" type="button">Apply</button>
-      </div>
-
       <div class="store-head" style="margin-top:28px">
-        <h2 style="font-size:20px">Assets</h2>
-        <p>uploads · meshes · people</p>
+        <h2 style="font-size:20px">Photos</h2>
+        <p style="margin:4px 0 0;color:#777;font-size:13px">Your uploads — later we’ll do cool stuff with these.</p>
       </div>
       <div class="panel__status" id="as-status"></div>
       <div class="panel__msg" id="as-msg" role="status" aria-live="polite"></div>
@@ -888,37 +1135,115 @@
         <button class="btn ghost" id="as-ai" type="button" style="width:auto;margin:0">AI tag people</button>
         <button class="btn ghost" id="as-refresh" type="button" style="width:auto;margin:0">Refresh</button>
       </div>
-      <div class="asset-grid" id="as-grid"></div>
-
-      <details class="stv__more">
-        <summary>Video</summary>
-        <span class="panel__label">the joke</span>
-        <input type="text" id="st-topic" placeholder="e.g. he eats socks, only the left one" maxlength="180">
-        <span class="panel__label">voice</span>
-        <div class="chips" id="st-voices" role="group" aria-label="Voice"></div>
-        <span class="panel__label">scene</span>
-        <div class="chips" id="st-scenes" role="group" aria-label="Scene"></div>
-        <span class="panel__label">their name</span>
-        <input type="text" id="st-name" placeholder="Max" maxlength="40">
-        <button class="btn" id="st-go" type="button">Make the video</button>
-        <div class="panel__status" id="st-status"></div>
-        <div class="panel__msg" id="st-msg" role="status" aria-live="polite"></div>
-        <div class="out" id="st-out" hidden>
-          <video id="st-video" controls playsinline></video>
-          <div class="out__bar"><span id="st-meta"></span><a id="st-dl" download>Download</a></div>
-        </div>
-        <p class="panel__fine" id="st-credits"></p>
-      </details>
+      <div class="photo-grid" id="as-grid"></div>
     </div>
   </section>
 
-  <!-- ══ TAB: products — Etsy-style tiles ══ -->
+  <!-- search drop: relevance-ranked live products under the topbar -->
+  <div class="search-drop" id="search-drop" aria-live="polite">
+    <div class="search-drop__hd" id="search-drop-hd">Live matches</div>
+    <div class="etsy" id="search-grid"></div>
+    <div class="search-drop__empty" id="search-empty" hidden></div>
+  </div>
+
+  <!-- ══ TAB: quick — immersive ramble (mic-first, store theme) ══ -->
+  <section class="panel white" data-panel="quick" id="panel-quick" aria-label="Quick">
+    <div class="qk-stage" id="qk-stage">
+      <!-- IDLE: ready to ramble -->
+      <div class="qk-idle" id="qk-idle">
+        <div class="qk-eyebrow">oddhobb · quick</div>
+        <div class="pr-banner__mesh" id="qk-mesh-chip" style="display:inline-block;margin-bottom:12px">mesh —</div>
+        <h1 class="qk-hero">Ready to ramble?</h1>
+        <p class="qk-sub">Tell us about the person, pet, or occasion. We’ll find the odd thing that fits.</p>
+        <div class="qk-how" id="qk-how" data-collapsed="1">
+          <div class="qk-how__title">How it works</div>
+          <ol style="display:none">
+            <li>Hit the mic</li>
+            <li>Talk as long as you like — no timer, no rush</li>
+            <li>Soft prompts drift by only if we’re still unsure</li>
+            <li>Products lean in as confidence firms up</li>
+            <li>Tap the right lines, then checkout or upload a photo</li>
+          </ol>
+          <button class="qk-how-toggle" id="qk-how-toggle" type="button">How it works</button>
+        </div>
+        <button class="qk-mic" id="qk-mic-big" type="button" aria-label="Start rambling">
+          <span class="qk-mic__ring"></span>
+          <span class="qk-mic__core">🎤</span>
+        </button>
+        <div class="qk-mic-label" id="qk-mic-label">Tap when you’re ready</div>
+        <div class="qk-timer" id="qk-timer" hidden></div>
+        <div class="panel__msg" id="qk-msg" role="status" aria-live="polite"></div>
+      </div>
+
+      <!-- RECORDING: gentle floating prompts (no race) -->
+      <div class="qk-live" id="qk-live" hidden>
+        <div class="qk-live__top">
+          <div class="qk-live__state" id="qk-live-state">Listening — take your time</div>
+          <div class="qk-live__timer" id="qk-live-timer"></div>
+        </div>
+        <div class="qk-flash" id="qk-flash" aria-live="polite">
+          <div class="qk-flash__label">while you talk</div>
+          <div class="qk-flash__text" id="qk-flash-text">What’s the occasion?</div>
+        </div>
+        <div class="qk-viz" id="qk-viz" aria-hidden="true"></div>
+        <div class="qk-live__lean">
+          <div class="qk-lean__hd">Starting to lean</div>
+          <div class="qk-lean__row" id="qk-lean-row"></div>
+        </div>
+        <div class="qk-live__acts">
+          <button class="qk-stop" id="qk-stop" type="button">That’s enough — show me options</button>
+        </div>
+        <div class="panel__status" id="qk-status"></div>
+      </div>
+
+      <!-- RESULTS: shortlist + paths + bobdod -->
+      <div class="qk-results" id="qk-results" hidden>
+        <div class="qk-eyebrow">session complete</div>
+        <h2 class="qk-hero qk-hero--sm" id="qk-result-title">Here’s what we heard</h2>
+        <p class="qk-sub" id="qk-result-sub">Pick a path — or keep talking to bobdod.</p>
+        <div class="qk-label">Top matches</div>
+        <div class="quick__hits etsy" id="qk-hits"></div>
+        <div class="qk-label" id="qk-picked-label" hidden>Shortlist</div>
+        <div class="chips" id="qk-picked"></div>
+        <div class="qk-label">Where to next?</div>
+        <div class="qk-opts" id="qk-opts">
+          <button class="qk-opt" data-act="order" type="button"><b>Order this</b><span>One-click Shopify on the top match</span></button>
+          <button class="qk-opt" data-act="upload" type="button"><b>Upload a photo</b><span>Personal mesh → every product inherits</span></button>
+          <button class="qk-opt" data-act="products" type="button"><b>Browse all products</b><span>Full Etsy-style shelf</span></button>
+          <button class="qk-opt" data-act="gift" type="button"><b>Gift card</b><span>£10 / £25 / £50 digital</span></button>
+          <button class="qk-opt" data-act="chat" type="button"><b>Talk to bobdod</b><span>Agent guides the rest</span></button>
+          <button class="qk-opt" data-act="again" type="button"><b>Ramble again</b><span>Open the mic again</span></button>
+        </div>
+        <div class="panel__msg" id="qk-opt-msg" role="status" aria-live="polite"></div>
+        <div class="qk-chat">
+          <div class="qk-label">bobdod</div>
+          <div class="dialogue__text" id="qk-dt" style="color:#333;font-size:13px;min-height:2.4em"></div>
+          <div class="quick__row">
+            <input type="text" id="qk-ti" class="pr-agent-input" placeholder="Ask bobdod — or type instead of the mic" autocomplete="off">
+            <button class="quick__go" id="qk-send" type="button">Send</button>
+          </div>
+        </div>
+        <div class="qk-mesh-chip-row">
+          <div class="pr-banner__mesh" id="qk-mesh-chip">mesh —</div>
+          <button class="btn ghost" id="qk-shuffle" type="button" style="width:auto;margin:0;padding:8px 12px">Another prompt idea</button>
+        </div>
+        <div class="quick__prompt" id="qk-prompt" hidden>What’s their funniest habit?</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ TAB: products — 3D studio lines + gift card + prints/gifts ══ -->
   <section class="panel white" data-panel="products" id="panel-products" aria-label="Products">
     <div class="panel__inner">
-      <div class="store-head">
-        <h2>Products</h2>
-        <p>Active mesh · exact stills</p>
+      <div class="pr-banner">
+        <div>
+          <div class="pr-banner__title">Made from your active star</div>
+          <div class="pr-banner__sub">3D lines inherit your studio mesh · jackets &amp; hats are controlled custom · prints &amp; gifts below</div>
+        </div>
+        <div class="pr-banner__mesh" id="pr-mesh-chip">mesh —</div>
       </div>
+
+      <div class="qk-label" style="margin-top:0">Studio 3D · one-click Shopify</div>
       <div class="etsy" id="pr-grid"></div>
       <div class="detail-card" id="pr-detail" hidden>
         <h3 id="pr-d-name">—</h3>
@@ -928,27 +1253,48 @@
           <div>
             <div id="pr-d-price" style="font-size:24px;font-weight:700;color:#8a6a2f"></div>
             <div id="pr-d-meta" style="font-size:12px;color:#666;margin-top:4px"></div>
+            <div id="pr-d-mesh" style="font-size:11px;color:#2f7a52;margin-top:6px;font-weight:600"></div>
           </div>
         </div>
+        <model-viewer id="pr-d-viewer" alt="Product 3D preview" camera-controls
+          touch-action="pan-y" shadow-intensity="0.45" exposure="1.05"
+          interaction-prompt="none" loading="lazy" reveal="auto"
+          style="width:100%;height:280px;background:#fff;border:1px solid #eee;border-radius:10px;margin-top:10px;display:none"></model-viewer>
         <div class="chips" id="pr-coats" style="margin-top:12px"></div>
         <div class="chips" id="pr-hats" style="margin-top:8px"></div>
-        <button class="btn" id="pr-order" type="button" style="margin-top:14px">One-click order</button>
+        <div class="chips" id="pr-sizes" style="margin-top:8px"></div>
+        <div class="pr-qty">
+          <span>Qty</span>
+          <button type="button" id="pr-qty-dec" aria-label="Decrease qty">−</button>
+          <strong id="pr-qty-n">1</strong>
+          <button type="button" id="pr-qty-inc" aria-label="Increase qty">+</button>
+        </div>
+        <div class="pr-order-row">
+          <button class="btn btn-shopify" id="pr-order" type="button">One-click order → Shopify</button>
+          <button class="btn btn-ghost-dark" id="pr-order-reserve" type="button">Reserve only</button>
+          <button class="btn btn-ghost-dark" id="pr-fit" type="button" title="Move, rotate and resize the hat, then save">Fine-tune hat fit</button>
+        </div>
         <div class="panel__status" id="pr-status"></div>
         <div class="panel__msg" id="pr-msg" role="status" aria-live="polite"></div>
         <div class="pr-mcp">
-          <div style="font-weight:600;color:#8a6a2f;margin-bottom:4px">MCP</div>
-          <code>figg_product_assets</code> · <code>figg_product_personalise</code> · <code>figg_checkout</code>
+          <div style="font-weight:600;color:#8a6a2f;margin-bottom:4px">Agent / MCP</div>
+          <code>figg_quick_map</code> · <code>figg_fullchain_personalise_order</code> ·
+          <code>figg_checkout</code> · playbook <code>/api/agent/playbook</code>
         </div>
       </div>
+
+      <div class="qk-label">Prints &amp; gifts · mesh on the face</div>
+      <div class="etsy" id="pr-prints"></div>
+      <p class="panel__fine">Paper greeting cards live under <b>cards</b>. Ramble lives under <b>quick</b>.</p>
     </div>
   </section>
 
-  <!-- ══ TAB: cards — 2D print tiles (PNG mockups) ══ -->
+  <!-- ══ TAB: cards — paper stationery only ══ -->
   <section class="panel white" data-panel="cards" id="panel-cards" aria-label="Cards">
     <div class="panel__inner">
       <div class="store-head">
-        <h2>Cards &amp; prints</h2>
-        <p>2D art · PNG mockups</p>
+        <h2>Paper cards</h2>
+        <p>Greeting · postcard · xmas · posted to the door</p>
       </div>
       <div class="etsy" id="cards-grid"></div>
       <div class="detail-card" id="cards-detail" hidden>
@@ -961,10 +1307,31 @@
             <div id="cd-meta" style="font-size:12px;color:#666;margin-top:4px"></div>
           </div>
         </div>
-        <button class="btn" id="cd-order" type="button" style="margin-top:14px">Order print</button>
+        <div class="chips" id="cd-sizes" style="margin-top:12px"></div>
+        <button class="btn" id="cd-order" type="button" style="margin-top:14px">Order this card</button>
         <div class="panel__msg" id="cd-msg" role="status" aria-live="polite"></div>
       </div>
-      <p class="panel__fine">2D prints use your PNG / mockup art — no mesh required per card.</p>
+
+      <div class="qk-label">Personal paper · your star + message</div>
+      <div class="detail-card" id="pc-card">
+        <div class="chips" id="pc-templates" style="margin-bottom:10px"></div>
+        <div class="detail-row">
+          <img id="pc-img" src="/img/card-merry_xmas-5x7.png" alt="Personal card preview">
+          <div style="flex:1;min-width:180px">
+            <div style="font-weight:700;color:#141414" id="pc-name">Merry Xmas card</div>
+            <div style="font-size:12px;color:#666;margin:4px 0 8px" id="pc-blurb"></div>
+            <span class="panel__label" style="margin:0 0 4px">size</span>
+            <div class="chips" id="pc-sizes"></div>
+            <span class="panel__label" style="margin:10px 0 4px">message on the card</span>
+            <input type="text" id="pc-message" maxlength="80" placeholder="Merry Xmas" style="width:100%">
+            <span class="panel__label" style="margin:10px 0 4px">from</span>
+            <input type="text" id="pc-from" maxlength="40" placeholder="from the whole pack" style="width:100%">
+          </div>
+        </div>
+        <button class="btn" id="pc-order" type="button" style="margin-top:12px">Order personal card</button>
+        <div class="panel__msg" id="pc-msg" role="status" aria-live="polite"></div>
+      </div>
+      <p class="panel__fine">Only paper here. Mugs, cushions and other gifts are under <b>products</b>.</p>
     </div>
   </section>
 
@@ -1043,14 +1410,14 @@
     <div class="stage">
       <div class="flash" id="flash"></div>
       <div class="speech" id="speech"></div>
-      <div class="barth" id="barth">
-        <img src="assets/poses/01_neutral.webp" alt="Pogo" id="barth-img">
-        <div class="barth__tag">POGO</div>
+      <div class="barth" id="barth" hidden>
+        <img src="assets/poses/01_neutral.webp" alt="" id="barth-img">
+        <div class="barth__tag" hidden></div>
       </div>
     </div>
     <div class="dialogue">
       <div class="dialogue__inner">
-        <div class="dialogue__speaker" id="speaker">POGO</div>
+        <div class="dialogue__speaker" id="speaker">bobdod</div>
         <div class="dialogue__text" id="dt"></div>
         <div class="dialogue__input-row">
           <input type="text" class="dialogue__input" id="ti" placeholder="Type or press the mic…" autocomplete="off">
@@ -1104,7 +1471,7 @@
     // ═══════════════════════════════════════════════════════════
     // BEE SESSION
     // ═══════════════════════════════════════════════════════════
-    // CAST — bobdod is the main helper. Guests stay available as optional moods.
+    // CAST — bobdod is the main helper. Pogo disconnected from the picker (assets kept on disk).
     var BOBDOD = {
       name: 'bobdod',
       role: 'Store helper',
@@ -1114,7 +1481,6 @@
     var ARCHETYPES = [
       BOBDOD,
       { name: 'Buster', role: 'Dachshund Wizard', voice: 'grandiose-cheeky', traits: ['dramatic', 'cheese-motivated', 'secretly judgemental'] },
-      { name: 'Pogo', role: 'Spooky Season', voice: 'grandiose', traits: ['pompous', 'dramatic', 'formal'] },
       { name: 'Kevin', role: 'Angry Pigeon', voice: 'irate', traits: ['furious', 'territorial', 'shareable'] },
       { name: 'Pickles', role: 'Cat', voice: 'dry', traits: ['unimpressed', 'precise', 'dangerous'] },
       { name: 'Mog', role: 'Weird Goblin', voice: 'mischievous', traits: ['funny', 'strange', 'feral'] }
@@ -1131,11 +1497,13 @@
       mission: {}
     };
 
-    // Load from localStorage — bobdod unless a guest host was chosen on purpose
+    // Load from localStorage — bobdod unless a guest host was chosen on purpose.
+    // Pogo is disconnected: any saved Pogo session falls back to bobdod.
     try {
       var saved = JSON.parse(localStorage.getItem('mythicbee-session'));
       if (saved && saved.bee && saved.bee.name) session = saved;
       if (!session.bee || !session.bee.name) session.bee = BOBDOD;
+      if (session.bee && /pogo/i.test(session.bee.name || '')) session.bee = BOBDOD;
     } catch(e) { session.bee = BOBDOD; }
     function loadCompanyGraph() {
       return get(API + "/companygraph").then(function (d) {
@@ -1606,11 +1974,12 @@
     function showTab(name) {
       var g = document.getElementById("greet");
       if (g && !g.classList.contains("hidden")) g.classList.add("hidden");
+      if (name === "chat") name = "quick";
 
       for (var i = 0; i < panels.length; i++) {
         panels[i].classList.toggle("open", panels[i].getAttribute("data-panel") === name);
       }
-      var white = (name === "studio" || name === "products" || name === "cards" || name === "videos");
+      var white = (name === "studio" || name === "products" || name === "cards" || name === "videos" || name === "quick");
       document.body.classList.toggle("studio-chrome", white);
       if (name === "shop") loadShop();
       if (name === "studio") { loadStudio(); loadStudioMeta(); loadAssets(); }
@@ -1618,6 +1987,7 @@
       if (name === "cards") loadCards();
       if (name === "videos") loadVideoFeed();
       if (name === "upload") loadMe();
+      if (name === "quick") initQuickTab();
       if (name === "perform") { loadPerf(); loadPerfHistory(true); }
     }
     document.addEventListener("pog:tab", function (e) { showTab(e.detail.tab); });
@@ -1682,11 +2052,21 @@
     function applySection() {
       if (!shopLoaded) return;
       var grid = $("shop-grid"); if (!grid) return;
+      var q = (state.q || "").toLowerCase();
+      var cards = Array.prototype.slice.call(grid.querySelectorAll(".card"));
+      // relevance rank when searching; otherwise keep catalog order
+      if (q) {
+        cards.sort(function (a, b) {
+          var sa = scoreSearch({ hay: ((a.dataset.label||"") + " " + (a.dataset.sec||"")), label: a.dataset.label||"" }, q);
+          var sb = scoreSearch({ hay: ((b.dataset.label||"") + " " + (b.dataset.sec||"")), label: b.dataset.label||"" }, q);
+          return sb - sa;
+        });
+        cards.forEach(function (c) { grid.appendChild(c); });
+      }
       var vis = 0;
-      grid.querySelectorAll(".card").forEach(function (c) {
-        var q = (state.q || "").toLowerCase();
+      cards.forEach(function (c) {
         var show = (state.section === "all" || (c.dataset.sec || "") === state.section) &&
-                   (!q || (c.dataset.label || "").indexOf(q) >= 0);
+                   (!q || scoreSearch({ hay: ((c.dataset.label||"") + " " + (c.dataset.sec||"")), label: c.dataset.label||"" }, q) > 0);
         c.style.display = show ? "" : "none";
         if (show) vis++;
       });
@@ -1695,9 +2075,11 @@
       if (vis === 0) {
         var d = document.createElement("div");
         d.className = "secempty";
-        d.innerHTML = state.section === "board-games"
+        d.innerHTML = q
+          ? "No shelf match for <b>" + q + "</b> — try the <b>products</b> tab (studio lines) or <b>Quick</b>."
+          : (state.section === "board-games"
           ? "<b>Board games</b> are coming — the jigsaw lands here first.<br>Meanwhile the <b>All</b> shelf has everything."
-          : "<b>" + sectionLabel(state.section) + "</b> has nothing in stock yet.<br>Try <b>All</b> — everything we make lives there.";
+          : "<b>" + sectionLabel(state.section) + "</b> has nothing in stock yet.<br>Try <b>All</b> — everything we make lives there.");
         grid.appendChild(d);
       }
       var st = $("shop-status");
@@ -1729,18 +2111,34 @@
       if (location.hash === "#products") showTab("products");
       if (location.hash === "#cards") showTab("cards");
       if (location.hash === "#videos") showTab("videos");
+      if (location.hash === "#quick" || location.hash === "#chat") showTab("quick");
     });
     window.addEventListener("load", initSections);
     window.addEventListener("load", wireTopbar);
     window.addEventListener("load", initBrand);
     window.addEventListener("load", function () { mintSession(); });
     window.addEventListener("load", function () { loadCompanyGraph(); });
+    window.addEventListener("popstate", function () {
+      var p = location.pathname || "/";
+      if (p === "/products" || p.indexOf("/products/") === 0) showTab("products");
+      else if (p === "/" || p === "/index.html") showTab("quick");
+    });
+    var pendingProductLine = null;
     window.addEventListener("load", function () {
       var h = location.hash || "";
+      var path = location.pathname || "";
+      var mProd = path.match(/^\/products\/([a-z0-9_]+)/i);
+      if (path === "/products" || mProd) {
+        if (mProd) pendingProductLine = mProd[1];
+        showTab("products");
+        return;
+      }
       if (h === "#studio") showTab("studio");
       if (h === "#products") showTab("products");
       if (h === "#cards") showTab("cards");
       if (h === "#videos") showTab("videos");
+      if (h === "#quick" || h === "#chat") showTab("quick");
+      else if (!h || h === "#" || h === "#/") showTab("quick");
     });
 
     // ── multi-brand: same app, many storefronts ──────────────────────────
@@ -1776,12 +2174,25 @@
     }
     function wireTopbar() {
       var q = $("qsearch");
-      if (q) q.addEventListener("input", function () {
-        state.q = (q.value || "").trim().toLowerCase();
-        var shop = document.querySelector('.panel[data-panel="shop"]');
-        if (state.q && shop && !shop.classList.contains("open")) showTab("shop");
-        else applySection();
-      });
+      if (q) {
+        var searchTimer = null;
+        q.addEventListener("input", function () {
+          state.q = (q.value || "").trim().toLowerCase();
+          if (searchTimer) clearTimeout(searchTimer);
+          // stream relevance matches under the bar as they type
+          searchTimer = setTimeout(function () { runSearchDrop(state.q); }, 80);
+          var shop = document.querySelector('.panel[data-panel="shop"]');
+          if (state.q && shop && !shop.classList.contains("open")) showTab("shop");
+          else applySection();
+        });
+        q.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") {
+            q.value = ""; state.q = "";
+            runSearchDrop("");
+            applySection();
+          }
+        });
+      }
       var ab = $("acct-btn");
       if (ab) ab.onclick = function () {
         var g = document.getElementById("greet");
@@ -1798,6 +2209,176 @@
         if (t) { t.value = hq.value || ""; t.focus(); }
         if (hq.value) msg("shop-msg", "Pasted into the chat bar below — hit send.", "");
       };
+    }
+
+    // ── similarity search: live products ranked under the topbar ──
+    var SEARCH_SYNONYMS = {
+      ornament: ["bauble", "xmas", "christmas", "hanging", "tree"],
+      keychain: ["key", "keyring", "key ring", "keys"],
+      croc_tag: ["croc", "croc tag", "jibbitz", "charm", "shoe"],
+      gift_card: ["gift", "giftcard", "gift card", "voucher", "credit"],
+      brick: ["desk", "figure", "figurine"],
+      mug: ["cup", "coffee", "tea"],
+      cushion: ["pillow", "cushion"],
+      poster: ["print", "wall", "art"],
+      sticker: ["stickers", "peel"],
+      card: ["greeting", "postcard", "note"],
+      video: ["clip", "movie", "film"],
+      cream: ["beige", "ivory"],
+      golden: ["gold", "blonde"],
+      chocolate: ["brown"],
+      santa: ["xmas hat", "christmas hat"],
+      spots: ["dalmatian", "dots"],
+      stripes: ["striped"]
+    };
+
+    function searchCorpus() {
+      var rows = [];
+      (pr.items || []).forEach(function (it) {
+        var hay = [it.label, it.blurb, it.theme, it.hardware, it.fulfilment, it.id].join(" ");
+        (it.assets && it.assets.coats || []).forEach(function (c) { hay += " " + c.id + " " + c.label; });
+        (it.assets && it.assets.hats || []).forEach(function (h) { hay += " " + h.id + " " + h.label; });
+        (it.assets && it.assets.patterns || []).forEach(function (p) { hay += " " + p.id + " " + p.label; });
+        rows.push({
+          kind: "studio", id: it.id, label: it.label,
+          blurb: it.blurb || "", price_cents: it.price_cents || 0,
+          status: it.status, img: (it.stills && (it.stills.hero || it.stills.front)) || "/img/prod/prod-hero.png",
+          hay: hay.toLowerCase(), live: it.status === "live"
+        });
+      });
+      (typeof CARD_CATALOG !== "undefined" ? CARD_CATALOG : []).forEach(function (it) {
+        rows.push({
+          kind: "card", id: it.id, label: it.label,
+          blurb: it.blurb || "", price_cents: it.price_cents || 0,
+          status: "live", img: it.img, hay: (it.label + " " + it.blurb + " " + (it.section||"") + " " + it.id).toLowerCase(),
+          live: true
+        });
+      });
+      (typeof PRINTS_CATALOG !== "undefined" ? PRINTS_CATALOG : []).forEach(function (it) {
+        rows.push({
+          kind: "print", id: it.id, label: it.label,
+          blurb: it.blurb || "", price_cents: it.price_cents || 0,
+          status: "live", img: it.img, hay: (it.label + " " + it.blurb + " " + (it.section||"") + " " + it.id).toLowerCase(),
+          live: true
+        });
+      });
+      return rows;
+    }
+
+    function scoreSearch(row, q) {
+      if (!q) return 0;
+      var tokens = q.split(/\s+/).filter(Boolean);
+      if (!tokens.length) return 0;
+      var hay = row.hay + " " + row.label.toLowerCase();
+      var score = 0;
+      tokens.forEach(function (t) {
+        if (hay.indexOf(t) >= 0) score += 3;
+        else {
+          // prefix / substring soft match
+          var parts = hay.split(/[^a-z0-9]+/);
+          for (var i = 0; i < parts.length; i++) {
+            if (parts[i] && parts[i].indexOf(t) === 0) { score += 1.5; break; }
+          }
+        }
+        Object.keys(SEARCH_SYNONYMS).forEach(function (k) {
+          if (k.indexOf(t) === 0 || t.indexOf(k) === 0) {
+            SEARCH_SYNONYMS[k].forEach(function (s) {
+              if (hay.indexOf(s) >= 0) score += 1.2;
+            });
+          }
+          SEARCH_SYNONYMS[k].forEach(function (s) {
+            if (s === t && hay.indexOf(k) >= 0) score += 1.2;
+          });
+        });
+      });
+      if (row.live) score += 0.5;
+      return score;
+    }
+
+    function rankSearch(q) {
+      if (!q) return [];
+      return searchCorpus()
+        .map(function (r) { r.score = scoreSearch(r, q); return r; })
+        .filter(function (r) { return r.score > 0; })
+        .sort(function (a, b) { return b.score - a.score || a.label.localeCompare(b.label); });
+    }
+
+    function paintSearchTile(r) {
+      var tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "etsy__tile";
+      var conf = r.confidence != null ? Math.round((r.confidence || 0) * 100) : null;
+      var confBadge = conf != null && conf > 0
+        ? '<span class="etsy__badge mesh">' + conf + '% match</span>' : '';
+      var rec = "";
+      if (r.recommended_coat && r.recommended_coat !== "none") rec = r.recommended_coat;
+      if (r.recommended_hat && r.recommended_hat !== "none") rec += (rec ? " · " : "") + r.recommended_hat;
+      tile.innerHTML =
+        '<div class="etsy__badges"><span class="etsy__badge gold">' + (r.kind === "studio" || !r.kind ? "Studio" : "Print") + '</span>' +
+        confBadge +
+        (r.live || r.status === "live" ? '' : '<span class="etsy__badge soon">Soon</span>') + '</div>' +
+        '<img class="etsy__img" src="' + r.img + '" alt="' + r.label + '" loading="lazy">' +
+        '<div class="etsy__body">' +
+          '<div class="etsy__name">' + r.label + '</div>' +
+          '<div class="etsy__meta">' + (rec ? rec + " · " : "") + (r.blurb || "").slice(0, 42) + '</div>' +
+          '<div class="etsy__price">' + ((r.live || r.status === "live") ? "£" + ((r.price_cents||0)/100).toFixed(2) : "Soon") + '</div>' +
+        '</div>';
+      tile.addEventListener("click", function () {
+        if (r.kind === "card") {
+          showTab("cards");
+          selectCard(r.id);
+        } else if (r.kind === "print") {
+          showTab("products");
+          prPrintSel = r.id;
+          if (typeof loadPrints === "function") loadPrints();
+          msg("pr-msg", r.label + " — prints & gifts on Products.", "");
+        } else {
+          showTab("products");
+          if (itemById(r.id)) selectProduct(r.id);
+          if (r.recommended_coat) pr.coat = r.recommended_coat;
+          if (r.recommended_hat) pr.hat = r.recommended_hat;
+          if (r.recommended_pattern) pr.pattern = r.recommended_pattern;
+          var it = itemById(pr.sel || r.id);
+          if (it) {
+            paintProductChips(it);
+            paintProductGrid();
+            refreshProductStill(it);
+          }
+        }
+        var drop = $("search-drop");
+        if (drop) drop.classList.remove("open");
+      });
+      return tile;
+    }
+
+    function runSearchDrop(q) {
+      var drop = $("search-drop");
+      var grid = $("search-grid");
+      var empty = $("search-empty");
+      var hd = $("search-drop-hd");
+      if (!drop || !grid) return;
+      q = (q || "").trim();
+      if (!q) {
+        drop.classList.remove("open");
+        grid.innerHTML = "";
+        if (empty) empty.hidden = true;
+        return;
+      }
+      var hits = rankSearch(q);
+      drop.classList.add("open");
+      if (hd) hd.textContent = hits.length + " live match" + (hits.length === 1 ? "" : "es") + " · “" + q + "”";
+      grid.innerHTML = "";
+      // stream in relevance order — brief delay per tile for the “loading in” feel
+      if (!hits.length) {
+        if (empty) { empty.hidden = false; empty.textContent = "Nothing in the warehouse for that yet — try Quick below."; }
+        return;
+      }
+      if (empty) empty.hidden = true;
+      hits.slice(0, 12).forEach(function (r, i) {
+        setTimeout(function () {
+          grid.appendChild(paintSearchTile(r));
+        }, i * 40);
+      });
     }
 
     // ── spotlight / roster ──────────────────────────────────
@@ -2104,6 +2685,16 @@
               var s0 = $("shop-status"); if (s0) delete s0.dataset.base;
               loadShop();   // re-render every product preview against the new mesh
             }
+            // funnel: ramble → products → photo → land back on the mapped line
+            var pend = takePendingOrder();
+            if (pend && pend.line) {
+              pr.activeMesh = d.mesh && d.mesh.id ? d.mesh.id : (state.meshId || "");
+              applyIntentToProducts(pend, {
+                checkout: true,
+                message: "Photo sculpted — " + (pend.line) + " is ready on your mesh."
+              });
+              loadProducts();
+            }
           }
  else if (s === "failed") {
             msg("up-msg", d.mesh.error || "The sculpt failed.", "err");
@@ -2124,30 +2715,76 @@
     };
 
     function studioSlots() {
-      // Reuse the dog: fill a 3-slot lineup from roster, pad with canonical.
-      var out = [];
-      var src = stv.meshes.length ? stv.meshes : [{
-        mesh_id: "canonical", label: "dog", glb_url: configStudioGlb(), demo: true
+      // Unique meshes only: dog + both brick demos + owner-installed meshes.
+      var src = (stv.meshes && stv.meshes.length) ? stv.meshes : [{
+        mesh_id: "canonical", label: "canonical dog", glb_url: configStudioGlb(),
+        portrait: stv.calling, demo: true, kind: "pet"
       }];
-      for (var i = 0; i < 3; i++) {
-        var m = src[i % src.length];
+      var seen = {};
+      var uniq = [];
+      src.forEach(function (m) {
+        if (!m || !m.mesh_id || seen[m.mesh_id]) return;
+        seen[m.mesh_id] = 1;
+        uniq.push(m);
+      });
+      if (!seen["canonical"]) {
+        uniq.unshift({
+          mesh_id: "canonical", label: "canonical dog",
+          glb_url: configStudioGlb(), portrait: stv.calling, demo: true, kind: "pet"
+        });
+        seen["canonical"] = 1;
+      }
+      function hasLabel(exact) {
+        return uniq.some(function (m) { return (m.label || "") === exact; });
+      }
+      if (!seen["brick-demo"] && !hasLabel("brick figure")) {
+        uniq.splice(1, 0, {
+          mesh_id: "brick-demo", label: "brick figure",
+          glb_url: "/img/prod/brick-figure.glb",
+          portrait: "/img/prod/brick-hero.png",
+          demo: true, kind: "brick"
+        });
+        seen["brick-demo"] = 1;
+      }
+      if (!seen["brick-demo-2"] && !hasLabel("brick figure 2")) {
+        var at = 1;
+        for (var j = 0; j < uniq.length; j++) {
+          if (uniq[j].kind === "brick") { at = j + 1; break; }
+        }
+        uniq.splice(at, 0, {
+          mesh_id: "brick-demo-2", label: "brick figure 2",
+          glb_url: "/img/prod/brick-figure-2.glb",
+          portrait: "/img/prod/brick-hero-2.png",
+          demo: true, kind: "brick"
+        });
+        seen["brick-demo-2"] = 1;
+      }
+      // If owner already installed a brick, don't show a duplicate demo for it
+      var installedBrickLabels = {};
+      uniq.forEach(function (m) {
+        if (!m.demo && m.kind === "brick") installedBrickLabels[m.label] = 1;
+      });
+      var out = [];
+      uniq.forEach(function (m, i) {
+        // skip demo brick if an installed mesh already covers that label
+        if (m.demo && m.kind === "brick" && installedBrickLabels[m.label]) return;
+        var portrait = m.portrait
+          || (m.kind === "brick"
+              ? (/2$/.test(m.label || "") ? "/img/prod/brick-hero-2.png" : "/img/prod/brick-hero.png")
+              : stv.calling)
+          || stv.calling;
         out.push({
           mesh_id: m.mesh_id,
-          label: m.label || ("dog " + (i + 1)),
-          glb_url: m.glb_url,
+          label: m.label || (m.kind === "brick" ? "brick figure" : "dog"),
+          glb_url: m.glb_url || configStudioGlb(),
           demo: !!m.demo,
-          portrait: stv.calling,
-          n: i + 1
+          installed: !m.demo,
+          kind: m.kind || "pet",
+          portrait: portrait,
+          active: !!m.active,
+          n: out.length + 1
         });
-      }
-      // if we only have one real mesh, still show 1 / 2 / 3 as lineup slots
-      if (src.length === 1) {
-        out = [
-          { mesh_id: src[0].mesh_id, label: "dog 1", glb_url: src[0].glb_url, demo: !!src[0].demo, portrait: stv.calling, n: 1 },
-          { mesh_id: src[0].mesh_id, label: "dog 2", glb_url: src[0].glb_url, demo: !!src[0].demo, portrait: stv.calling, n: 2 },
-          { mesh_id: src[0].mesh_id, label: "dog 3", glb_url: src[0].glb_url, demo: !!src[0].demo, portrait: stv.calling, n: 3 }
-        ];
-      }
+      });
       return out;
     }
 
@@ -2156,25 +2793,66 @@
     }
 
     function loadStudio() {
-      get(API + "/studio?owner=" + encodeURIComponent(state.owner))
-        .then(function (d) {
-          if (!d.ok) { msg("stv-msg", d.error || "Studio unavailable.", "err"); return; }
-          stv.meshes = d.meshes || [];
-          stv.lines = d.lines || [];
-          stv.coats = d.coats || [];
-          stv.hats = d.hats || [];
-          stv.calling = d.calling_card || stv.calling;
-          stv.slots = studioSlots();
-          stv.idx = 1; // dog 2 active
-          var live = stv.lines.filter(function (l) { return l.status === "live"; });
-          stv.line = live.length ? live[0].id : "ornament";
-          paintCarousel();
-          mountViewer(stv.slots[stv.idx]);
-          paintStudioChips();
-          applyStudio({ silent: true });
-          stv.ready = true;
+      get(API + "/flow?owner=" + encodeURIComponent(state.owner))
+        .then(function (f) {
+          if (!f.ok) { msg("stv-msg", f.error || "Studio unavailable.", "err"); return; }
+          // roster = demos (dog + bricks) + owner installed meshes
+          return get(API + "/studio?owner=" + encodeURIComponent(state.owner))
+            .then(function (d) {
+              if (!d.ok) { msg("stv-msg", d.error || "Studio unavailable.", "err"); return; }
+              stv.meshes = d.meshes || [];
+              stv.calling = d.calling_card || stv.calling;
+              stv.flow = f;
+              stv.slots = studioSlots();
+              stv.idx = 0;
+              var activeId = d.active_mesh_id || f.active_mesh_id || "";
+              if (activeId) {
+                for (var i = 0; i < stv.slots.length; i++) {
+                  if (stv.slots[i].mesh_id === activeId) { stv.idx = i; break; }
+                }
+              }
+              paintCarousel();
+              paintRoster();
+              mountViewer(stv.slots[stv.idx]);
+              paintActiveTag();
+              stv.ready = true;
+              paintPhotos(f);
+            });
         })
         .catch(function () { msg("stv-msg", "Backend unreachable.", "err"); });
+    }
+
+    function paintRoster() {
+      var host = $("stv-roster"); if (!host) return;
+      host.innerHTML = "";
+      stv.slots.forEach(function (s, i) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "roster__item" + (i === stv.idx ? " on" : "");
+        b.setAttribute("role", "option");
+        b.setAttribute("aria-selected", i === stv.idx ? "true" : "false");
+        var tag = s.demo ? "preview" : "active";
+        if (!s.demo) tag = "active";
+        b.innerHTML =
+          '<img src="' + s.portrait + '" alt="" loading="lazy">' +
+          '<div class="nm">' + s.label + '</div>' +
+          '<div class="tag">' + tag + '</div>';
+        b.addEventListener("click", function () { setStudioMesh(i); });
+        host.appendChild(b);
+      });
+    }
+
+    function paintActiveTag() {
+      var el = $("stv-active-tag");
+      var s = stv.slots[stv.idx];
+      if (!el || !s) return;
+      if (s.demo) {
+        el.textContent = "preview · Add brick to use on products";
+        el.style.opacity = "0.7";
+      } else {
+        el.textContent = "active star · appears on products";
+        el.style.opacity = "1";
+      }
     }
 
     function paintCarousel() {
@@ -2182,7 +2860,7 @@
       if (!left || !right) return;
       left.innerHTML = "";
       right.innerHTML = "";
-      var n = stv.slots.length || 3;
+      var n = stv.slots.length || 1;
       var prev = (stv.idx - 1 + n) % n;
       var next = (stv.idx + 1) % n;
       function slotBtn(i, host) {
@@ -2193,16 +2871,16 @@
         b.className = "cs__slot";
         b.innerHTML =
           '<div class="cs__fig"><img src="' + s.portrait + '" alt="' + s.label + '" loading="lazy"></div>' +
-          '<div class="cs__num">' + s.n + '</div>' +
           '<div class="cs__nm">' + s.label + '</div>';
         b.addEventListener("click", function () { setStudioMesh(i); });
         host.appendChild(b);
       }
-      slotBtn(prev, left);
-      slotBtn(next, right);
+      if (n > 1) { slotBtn(prev, left); slotBtn(next, right); }
       var act = stv.slots[stv.idx];
-      var vn = $("stv-live-num"); if (vn) vn.textContent = act ? act.n : "";
+      var vn = $("stv-live-num"); if (vn) vn.textContent = act ? String(act.n || (stv.idx + 1)) : "";
       var nm = $("stv-live-name"); if (nm) nm.textContent = act ? act.label : "";
+      paintRoster();
+      paintActiveTag();
     }
 
     function mountViewer(slot) {
@@ -2211,66 +2889,7 @@
       var src = slot.glb_url;
       if (src.charAt(0) === "/" && src.indexOf("/img/") !== 0) src = art(src);
       else if (src.charAt(0) === "/") src = withTok(src);
-      // force reload when switching slots
       if (v.getAttribute("src") !== src) v.setAttribute("src", src);
-    }
-
-    function paintStudioChips() {
-      var lb = $("stv-lines"); if (!lb) return;
-      lb.innerHTML = "";
-      stv.lines.forEach(function (l) {
-        var b = document.createElement("button");
-        b.type = "button";
-        b.className = "chip" + (l.id === stv.line ? " on" : "");
-        b.textContent = l.label + (l.status !== "live" ? " · soon" : "");
-        if (l.status !== "live") b.disabled = true;
-        b.addEventListener("click", function () {
-          stv.line = l.id;
-          var spec = null;
-          for (var i = 0; i < stv.lines.length; i++) if (stv.lines[i].id === stv.line) spec = stv.lines[i];
-          var allowed = (spec && spec.assets) || null;
-          if (allowed) {
-            if (allowed.coats && allowed.coats.indexOf(stv.coat) < 0) stv.coat = allowed.coats[0] || "none";
-            if (allowed.hats && allowed.hats.indexOf(stv.hat) < 0) stv.hat = allowed.hats[0] || "none";
-          }
-          paintStudioChips();
-          applyStudio({ silent: true });
-        });
-        lb.appendChild(b);
-      });
-      var spec = null;
-      for (var i = 0; i < stv.lines.length; i++) if (stv.lines[i].id === stv.line) spec = stv.lines[i];
-      var allowC = (spec && spec.assets && spec.assets.coats) || stv.coats.map(function (c) { return c.id; });
-      var allowH = (spec && spec.assets && spec.assets.hats) || stv.hats.map(function (h) { return h.id; });
-      var cb = $("stv-coats"); if (cb) {
-        cb.innerHTML = "";
-        stv.coats.forEach(function (c) {
-          if (allowC.indexOf(c.id) < 0) return;
-          var b = document.createElement("button");
-          b.type = "button";
-          b.className = "chip" + (c.id === stv.coat ? " on" : "");
-          b.textContent = c.label;
-          if (c.hex) b.style.borderColor = c.hex;
-          b.addEventListener("click", function () {
-            stv.coat = c.id; paintStudioChips(); applyStudio();
-          });
-          cb.appendChild(b);
-        });
-      }
-      var hb = $("stv-hats"); if (hb) {
-        hb.innerHTML = "";
-        stv.hats.forEach(function (h) {
-          if (allowH.indexOf(h.id) < 0) return;
-          var b = document.createElement("button");
-          b.type = "button";
-          b.className = "chip" + (h.id === stv.hat ? " on" : "");
-          b.textContent = h.label;
-          b.addEventListener("click", function () {
-            stv.hat = h.id; paintStudioChips(); applyStudio();
-          });
-          hb.appendChild(b);
-        });
-      }
     }
 
     function setStudioMesh(i, opts) {
@@ -2279,32 +2898,107 @@
       stv.idx = (i + stv.slots.length) % stv.slots.length;
       var s = stv.slots[stv.idx];
       mountViewer(s);
+      paintCarousel();
+      // Looking at a real mesh = it IS the active star for Products.
+      // Demo previews are not installed yet — only activate real roster meshes.
       if (!s.demo && s.mesh_id) {
         state.meshId = s.mesh_id;
         try { localStorage.setItem("pogpet.mesh", s.mesh_id); } catch (e) {}
+        post(API + "/me/active", { owner: state.owner, mesh_id: s.mesh_id })
+          .then(function (d) {
+            if (d && d.ok) {
+              state.meshId = d.active_mesh_id;
+              s.active = true;
+              msg("stv-msg", s.label + " is now your active star.", "ok");
+              // refresh products when user leaves studio
+              if ($("panel-products") && $("panel-products").classList.contains("open")) loadProducts && loadProducts();
+            } else if (d && d.error) {
+              msg("stv-msg", d.error, "err");
+            }
+          })
+          .catch(function () {});
+      } else if (s.demo) {
+        msg("stv-msg", s.label + " — preview. Use Add brick to install it.", "");
       }
-      paintCarousel();
-      applyStudio({ silent: true });
-      if (!opts.silent) msg("stv-msg", s.label, "");
     }
 
-    function applyStudio(opts) {
-      opts = opts || {};
-      get(API + "/studio/stills?line=" + encodeURIComponent(stv.line) +
-             "&coat=" + encodeURIComponent(stv.coat) +
-             "&hat=" + encodeURIComponent(stv.hat))
-        .then(function (d) {
-          if (!d.ok || !d.stills) return;
-          // update active slot portrait when a still exists
-          var pick = d.stills.hero || d.stills.front;
-          if (pick && stv.slots[stv.idx]) {
-            stv.slots[stv.idx].portrait = pick;
-            paintCarousel();
-          }
-        })
-        .catch(function () {});
-      if (!opts.silent) msg("stv-msg", stv.line + " · " + stv.coat + " · " + stv.hat, "");
+    function paintPhotos(f) {
+      var grid = $("as-grid"); if (!grid) return;
+      var photos = (f && f.photos) || [];
+      var pogs = ((f && f.meshes) || []).filter(function (p) { return p.status === "succeeded"; });
+      var status = $("as-status");
+      if (status) status.textContent = photos.length + " photos · " + pogs.length + " meshes";
+      if (!photos.length && !pogs.length) {
+        grid.innerHTML = '<div class="photo-empty">No uploads yet — add a photo in Upload.</div>';
+        return;
+      }
+      var html = "";
+      photos.forEach(function (p) {
+        var src = p.r2_key ? art("/api/artifacts/" + p.r2_key) : "";
+        if (!src) return;
+        var who = p.person || p.orig_name || "photo";
+        html += '<figure class="photo">' +
+          '<img src="' + src + '" alt="" loading="lazy">' +
+          '<figcaption class="meta"><b>' + who + '</b>' +
+          (p.size ? p.size[0] + "×" + p.size[1] : "") +
+          '</figcaption></figure>';
+      });
+      pogs.forEach(function (p) {
+        var src = p.photo_key ? art("/api/artifacts/" + p.photo_key) : stv.calling;
+        var label = shortName(p.mesh_id);
+        if (p.active) label = "★ " + label;
+        html += '<figure class="photo">' +
+          '<img src="' + src + '" alt="" loading="lazy">' +
+          '<figcaption class="meta"><b>' + label + '</b>mesh</figcaption></figure>';
+      });
+      grid.innerHTML = html || '<div class="photo-empty">Nothing yet.</div>';
     }
+
+    function activate(meshId) {
+      if (!meshId) return;
+      post(API + "/me/active", { owner: state.owner, mesh_id: meshId })
+        .then(function (d) {
+          if (!d.ok) { msg("as-msg", d.error || "Couldn't switch.", "err"); return; }
+          state.meshId = d.active_mesh_id;
+          msg("as-msg", "Active star updated — Products follow this mesh.", "ok");
+          loadStudio();
+        })
+        .catch(function (e) { msg("as-msg", "Error: " + e.message, "err"); });
+    }
+
+    function installBrickStyle(styleId, btn, label) {
+      if (!btn) return;
+      btn.disabled = true;
+      msg("stv-msg", "Installing " + label + "…", "");
+      post(API + "/meshes/style", { style: styleId, owner: state.owner })
+        .then(function (d) {
+          btn.disabled = false;
+          if (!d || d.ok === false) {
+            msg("stv-msg", (d && d.error) || ("Could not install " + label + "."), "err");
+            return;
+          }
+          var mid = (d.mesh && d.mesh.id) || d.mesh_id || "";
+          if (mid) {
+            state.meshId = mid;
+            try { localStorage.setItem("pogpet.mesh", mid); } catch (e) {}
+          }
+          msg("stv-msg", label + " installed — now the active star.", "ok");
+          loadStudio();
+        })
+        .catch(function (e) {
+          btn.disabled = false;
+          msg("stv-msg", "Install failed: " + e.message, "err");
+        });
+    }
+
+    var stvBrick = $("stv-brick");
+    if (stvBrick) stvBrick.addEventListener("click", function () {
+      installBrickStyle("brick-figure", stvBrick, "Brick 1");
+    });
+    var stvBrick2 = $("stv-brick2");
+    if (stvBrick2) stvBrick2.addEventListener("click", function () {
+      installBrickStyle("brick-figure-2", stvBrick2, "Brick 2");
+    });
 
     var stvPrev = $("stv-prev"), stvNext = $("stv-next");
     if (stvPrev) stvPrev.addEventListener("click", function () { setStudioMesh(stv.idx - 1); });
@@ -2317,104 +3011,21 @@
       if (e.key === "ArrowRight") { e.preventDefault(); setStudioMesh(stv.idx + 1); }
     });
 
-    var stvSave = $("stv-save");
-    if (stvSave) stvSave.addEventListener("click", function () {
-      if (!stv.ready) return;
-      post(API + "/session", { owner: state.owner })
-        .catch(function () {});
-      // store loadout in localStorage for the Products tab
-      try {
-        localStorage.setItem("pogpet.loadout", JSON.stringify({
-          line: stv.line, coat: stv.coat, hat: stv.hat, mesh_id: state.meshId || ""
-        }));
-      } catch (e) {}
-      msg("stv-msg", "Loadout saved · " + stv.line + " · " + stv.coat + " · " + stv.hat +
-          " → open Products to order.", "ok");
-    });
+    // products live on the Products tab — studio no longer hosts line/coat/hat UI
 
-    var stvToPr = $("stv-to-products");
-    if (stvToPr) stvToPr.addEventListener("click", function () {
-      var rail = document.getElementById("tabrail");
-      var btn = rail && rail.querySelector('[data-tab="products"]');
-      if (btn) btn.click();
-    });
+    // ── products tab: Etsy storefront, mesh-inherited ──────
+    var pr = { items: [], sel: null, coat: "none", hat: "none", pattern: "solid", ready: false, qty: 1, activeMesh: "" };
 
-    function parseStudioPrompt(text) {
-      var t = (text || "").toLowerCase();
-      var out = { line: stv.line, coat: stv.coat, hat: stv.hat };
-      if (/keychain|key chain/.test(t)) out.line = "keychain";
-      else if (/ornament|bauble|xmas|christmas ball|hanging/.test(t)) out.line = "ornament";
-      else if (/brick|desk figure|figurine/.test(t)) out.line = "brick";
-      var coats = ["cream", "golden", "chocolate", "black", "fawn", "grey"];
-      for (var i = 0; i < coats.length; i++) {
-        if (t.indexOf(coats[i]) >= 0) { out.coat = coats[i]; break; }
-      }
-      if (/santa|xmas hat|christmas hat/.test(t)) out.hat = "santa";
-      else if (/\bhat\b|beanie/.test(t) && !/santa/.test(t)) out.hat = "santa";
-      if (/no hat|without hat|bare/.test(t)) out.hat = "none";
-      if (/as printed|no coat|original|default/.test(t)) out.coat = "none";
-      return out;
+    function paintMeshChip() {
+      var chip = $("pr-mesh-chip");
+      var dm = $("pr-d-mesh");
+      var short = pr.activeMesh || state.meshId || "canonical";
+      var label = short && short !== "canonical" && short !== ""
+        ? "inherits mesh " + String(short).replace("msh_", "").slice(0, 8)
+        : "canonical studio mesh";
+      if (chip) chip.textContent = label;
+      if (dm) dm.textContent = "✓ " + label + " · studio active mesh";
     }
-
-    function callStudioAgent(text) {
-      var sys = "Map a customer request onto OddHobb studio loadout fields. " +
-        "Reply ONLY compact JSON: {\"line\":\"ornament|keychain|brick\"," +
-        "\"coat\":\"none|cream|golden|chocolate|black|fawn|grey\"," +
-        "\"hat\":\"none|santa\",\"note\":\"one short sentence\"}. " +
-        "Santa hat only fits ornament. Default line=ornament coat=none hat=none.";
-      return fetch('/api/ai/cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            { role: 'system', content: sys },
-            { role: 'user', content: text }
-          ],
-          max_tokens: 120, temperature: 0.2
-        })
-      }).then(function (r) { return r.json(); }).then(function (res) {
-        if (!(res.success && res.result)) throw new Error('agent failed');
-        var raw = res.result.response || '';
-        var m = raw.match(/\{[\s\S]*\}/);
-        if (!m) return parseStudioPrompt(text);
-        var j = JSON.parse(m[0]);
-        var p = parseStudioPrompt(text);
-        if (j.line) p.line = j.line;
-        if (j.coat) p.coat = j.coat;
-        if (j.hat) p.hat = j.hat;
-        if (j.note) p.note = j.note;
-        return p;
-      });
-    }
-
-    var stvAsk = $("stv-ask"), stvPrompt = $("stv-prompt");
-    function runStudioAsk() {
-      var t = (stvPrompt && stvPrompt.value || "").trim();
-      if (!t) { msg("stv-msg", "Try: chocolate coat, santa hat", "err"); return; }
-      stat("stv-status", "asking the agent…");
-      callStudioAgent(t).then(function (p) {
-        stv.line = p.line || stv.line;
-        stv.coat = p.coat || stv.coat;
-        stv.hat = p.hat || stv.hat;
-        paintStudioChips();
-        applyStudio();
-        stat("stv-status", "");
-        msg("stv-msg", (p.note || "Applied.") + " → " + stv.line + " · " + stv.coat + " · " + stv.hat, "ok");
-      }).catch(function () {
-        var p = parseStudioPrompt(t);
-        stv.line = p.line; stv.coat = p.coat; stv.hat = p.hat;
-        paintStudioChips(); applyStudio();
-        stat("stv-status", "");
-        msg("stv-msg", "Applied locally: " + stv.line + " · " + stv.coat + " · " + stv.hat, "");
-      });
-    }
-    if (stvAsk) stvAsk.addEventListener("click", runStudioAsk);
-    if (stvPrompt) stvPrompt.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") { e.preventDefault(); runStudioAsk(); }
-    });
-
-    // ── products tab: storefront ─────────────────────────
-    var pr = { items: [], sel: null, coat: "none", hat: "none", ready: false };
 
     function loadProducts() {
       stat("pr-status", "loading products…");
@@ -2422,19 +3033,52 @@
         .then(function (d) {
           if (!d.ok) { stat("pr-status", ""); msg("pr-msg", d.error || "Products unavailable.", "err"); return; }
           pr.items = d.items || [];
-          // restore loadout from studio if present
+          if (d.active_mesh_id) {
+            pr.activeMesh = d.active_mesh_id;
+            if (!state.meshId) {
+              state.meshId = d.active_mesh_id;
+              try { localStorage.setItem("pogpet.mesh", state.meshId); } catch (e) {}
+            }
+          } else {
+            pr.activeMesh = state.meshId || "";
+          }
           try {
             var lo = JSON.parse(localStorage.getItem("pogpet.loadout") || "null");
             if (lo && lo.line) pr.sel = lo.line;
+            if (lo && lo.coat) pr.coat = lo.coat;
+            if (lo && lo.hat) pr.hat = lo.hat;
           } catch (e) {}
+          if (pendingProductLine && itemById(pendingProductLine)) {
+            pr.sel = pendingProductLine;
+          }
+          pendingProductLine = null;
           if (!pr.sel) {
             var live = pr.items.filter(function (i) { return i.status === "live"; });
             pr.sel = live.length ? live[0].id : (pr.items[0] && pr.items[0].id);
           }
+          paintMeshChip();
           paintProductGrid();
+          if (typeof loadPrints === "function") loadPrints();
           selectProduct(pr.sel, { silent: true });
-          stat("pr-status", pr.items.length + " lines · active mesh " + (d.active_mesh_id || "canonical"));
+          stat("pr-status", pr.items.length + " lines · " + (pr.activeMesh || state.meshId || "canonical mesh"));
           pr.ready = true;
+          // resume in-app funnel if Quick left a pending pick
+          var pend = takePendingOrder();
+          if (pend && pend.line && itemById(pend.line)) {
+            selectQuickProduct({
+              id: pend.line,
+              label: (itemById(pend.line) || {}).label,
+              recommended_coat: pend.coat,
+              recommended_hat: pend.hat,
+              recommended_pattern: pend.pattern,
+              price_cents: (itemById(pend.line) || {}).price_cents,
+              status: (itemById(pend.line) || {}).status,
+              scale_mm: (itemById(pend.line) || {}).scale_mm,
+              confidence: null
+            });
+            msg("quick-pick-msg", "Resumed from your last Quick pick — upload photo or checkout.", "ok");
+            setFunnelStep(pend.from === "quick" ? 2 : 4);
+          }
         })
         .catch(function () { stat("pr-status", ""); msg("pr-msg", "Backend unreachable.", "err"); });
     }
@@ -2444,24 +3088,65 @@
       return null;
     }
 
+    function money(cents) {
+      return "£" + ((cents || 0) / 100).toFixed(2);
+    }
+
     function paintProductGrid() {
       var grid = $("pr-grid"); if (!grid) return;
       grid.innerHTML = "";
+      var meshShort = (pr.activeMesh || state.meshId || "").replace("msh_", "").slice(0, 8);
       pr.items.forEach(function (it) {
+        var live = it.status === "live";
         var tile = document.createElement("button");
         tile.type = "button";
         tile.className = "etsy__tile" + (it.id === pr.sel ? " on" : "");
-        var img = (it.stills && (it.stills.santa_hero || it.stills.hero)) || "/img/prod/prod-hero.png";
+        tile.disabled = !live;
+        var img = (it.stills && (it.stills.hero || it.stills.front)) || "/img/prod/prod-hero.png";
+        // Coat/pattern stills are preview grades on the canonical studio mesh.
+        // Only swap when this line actually allows that coat and something is selected.
+        var coatOk = false;
+        if (live && pr.coat && pr.coat !== "none" && it.id === pr.sel && it.assets && it.assets.coats) {
+          for (var ci = 0; ci < it.assets.coats.length; ci++) {
+            if (it.assets.coats[ci].id === pr.coat) { coatOk = true; break; }
+          }
+        }
+        if (coatOk) {
+          if (pr.pattern && pr.pattern !== "solid") {
+            img = "/img/prod/coat-" + pr.coat + "-" + pr.pattern + "-hero.png";
+          } else {
+            img = "/img/prod/coat-" + pr.coat + "-hero.png";
+          }
+        }
+        var badges = '<div class="etsy__badges">';
+        if (live) badges += '<span class="etsy__badge gold">Personalised</span>';
+        else badges += '<span class="etsy__badge soon">Soon</span>';
+        if (live && it.fulfilment !== "digital" && meshShort) {
+          badges += '<span class="etsy__badge mesh">Your star · ' + meshShort + '</span>';
+        }
+        if (live && it.fulfilment === "digital") badges += '<span class="etsy__badge">Digital</span>';
+        badges += "</div>";
+        var ship = it.fulfilment === "digital" ? "Instant" : "UK print farm";
         tile.innerHTML =
+          badges +
           '<img class="etsy__img" src="' + img + '" alt="' + it.label + '" loading="lazy">' +
           '<div class="etsy__body">' +
             '<div class="etsy__name">' + it.label + '</div>' +
-            '<div class="etsy__meta">' + (it.scale_mm || "") + ' mm · ' + (it.theme || "product") + '</div>' +
-            '<div class="etsy__price">' + (it.status === "live" ? "£" + (it.price_cents / 100).toFixed(2) : "Soon") + '</div>' +
+            '<div class="etsy__meta">' + (it.scale_mm ? it.scale_mm + " mm · " : "") +
+              ((it.sizes && it.sizes[0] && it.sizes[0].mm) ? it.sizes[0].mm + " · " : "") +
+              (it.theme || "product") + (it.hardware ? " · " + it.hardware : "") + '</div>' +
+            '<div class="etsy__price">' + (live ? money(it.price_cents) : "Soon") + '</div>' +
+            '<div class="etsy__foot">' +
+              '<span class="etsy__ship">' + ship + '</span>' +
+              '<span class="etsy__cta">' + (live ? "Customise →" : "—") + '</span>' +
+            '</div>' +
           '</div>';
-        tile.addEventListener("click", function () { selectProduct(it.id); });
+        if (live) {
+          tile.addEventListener("click", function () { selectProduct(it.id); });
+        }
         grid.appendChild(tile);
       });
+      paintMeshChip();
     }
 
     function selectProduct(id, opts) {
@@ -2469,6 +3154,8 @@
       var it = itemById(id);
       if (!it) return;
       pr.sel = id;
+      pr.qty = 1;
+      var qn = $("pr-qty-n"); if (qn) qn.textContent = "1";
       try {
         var lo = JSON.parse(localStorage.getItem("pogpet.loadout") || "{}");
         if (lo.line === id) {
@@ -2478,51 +3165,132 @@
           pr.coat = "none"; pr.hat = "none";
         }
       } catch (e) { pr.coat = "none"; pr.hat = "none"; }
-      // clamp to assets
+      pr.pattern = "solid";
       var aC = (it.assets.coats || []).map(function (c) { return c.id; });
       var aH = (it.assets.hats || []).map(function (h) { return h.id; });
+      var aP = ((it.assets && it.assets.patterns) || [{id:"solid"}]).map(function (p) { return p.id; });
       if (aC.indexOf(pr.coat) < 0) pr.coat = aC[0] || "none";
       if (aH.indexOf(pr.hat) < 0) pr.hat = aH[0] || "none";
+      if (aP.indexOf(pr.pattern) < 0) pr.pattern = aP[0] || "solid";
 
       var det = $("pr-detail"); if (det) det.hidden = false;
+      if (det && !opts.silent && det.scrollIntoView) {
+        try { det.scrollIntoView({behavior: "smooth", block: "nearest"}); } catch (e) {}
+      }
       var n = $("pr-d-name"); if (n) n.textContent = it.label;
       var b = $("pr-d-blurb"); if (b) b.textContent = it.blurb || "";
-      var p = $("pr-d-price"); if (p) p.textContent = it.status === "live" ? "£" + (it.price_cents / 100).toFixed(2) : "—";
-      var m = $("pr-d-meta"); if (m) m.textContent = (it.scale_mm || "") + " mm · " + (it.hardware || "") + " · mesh " + (state.meshId || "canonical");
+      var p = $("pr-d-price"); if (p) p.textContent = it.status === "live" ? money(it.price_cents) : "—";
+      var m = $("pr-d-meta");
+      if (m) {
+        var sizeBits = [];
+        if (it.scale_mm) sizeBits.push(it.scale_mm + " mm");
+        if (it.size_mm && it.size_mm !== it.scale_mm) sizeBits.push(it.size_mm + " mm");
+        (it.sizes || []).forEach(function (s) {
+          if (s && s.mm && sizeBits.indexOf(s.mm) < 0) sizeBits.push(s.mm);
+          else if (s && s.label && !it.scale_mm) sizeBits.push(s.label);
+        });
+        m.textContent = (sizeBits.join(" · ") || "") +
+          (it.hardware ? " · " + it.hardware : "") +
+          " · " + (it.fulfilment || "print_farm") + " · qty affects price";
+      }
+      // size chips
+      var sb = $("pr-sizes");
+      if (sb) {
+        sb.innerHTML = "";
+        (it.sizes || []).forEach(function (s) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "chip";
+          b.textContent = s.label + (s.mm ? " · " + s.mm : "");
+          if (s.price_cents != null && it.id === "gift_card") {
+            b.onclick = function () {
+              pr.sel = it.id;
+              var p = $("pr-d-price");
+              if (p) p.textContent = money(s.price_cents);
+              msg("pr-msg", it.label + " · " + s.label, "");
+            };
+          }
+          sb.appendChild(b);
+        });
+      }
+      paintMeshChip();
       paintProductGrid();
       paintProductChips(it);
       refreshProductStill(it);
-      if (!opts.silent) msg("pr-msg", it.label + " selected", "");
+      if (!opts.silent) msg("pr-msg", it.label + " selected · " + (pr.activeMesh || state.meshId || "canonical"), "");
     }
 
     function paintProductChips(it) {
+      // Jacket = physical winter garment (not fur). Coat slot drives it:
+      // none = no jacket, colour = jacket in that colour. Fur patterns
+      // are intentionally NOT offered here (photo-grade only, agents only).
       var cb = $("pr-coats"); if (!cb) return;
+      // drop legacy pattern rows previous versions inserted as siblings
+      var par = cb.parentNode;
+      if (par) {
+        var kids = par.querySelectorAll(".chips");
+        for (var ki = 0; ki < kids.length; ki++) {
+          var kid = kids[ki];
+          if (kid.id !== "pr-coats" && kid.id !== "pr-hats" && kid.id !== "pr-sizes") {
+            par.removeChild(kid);
+          }
+        }
+      }
       cb.innerHTML = "";
-      (it.assets.coats || []).forEach(function (c) {
+      var coats = it.assets.coats || [];
+      if (coats.length > 1) {
+        var lab = document.createElement("div");
+        lab.style.cssText = "width:100%;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a6a2f;margin:8px 0 4px";
+        lab.textContent = "jacket — physical winter coat";
+        cb.appendChild(lab);
+      }
+      coats.forEach(function (c) {
         var b = document.createElement("button");
         b.type = "button";
         b.className = "chip" + (c.id === pr.coat ? " on" : "");
-        b.textContent = c.label;
+        b.textContent = (c.id === "none") ? "No jacket" : c.label + " jacket";
         if (c.hex) b.style.borderColor = c.hex;
         b.addEventListener("click", function () {
-          pr.coat = c.id; paintProductChips(it); refreshProductStill(it);
-          msg("pr-msg", it.label + " · coat " + c.label, "");
+          pr.coat = c.id; paintProductChips(it); paintProductGrid(); refreshProductStill(it);
+          msg("pr-msg", it.label + (c.id === "none" ? " · no jacket" : " · " + c.label + " jacket"), "");
         });
         cb.appendChild(b);
       });
       var hb = $("pr-hats"); if (!hb) return;
       hb.innerHTML = "";
-      (it.assets.hats || []).forEach(function (h) {
+      var hats = it.assets.hats || [];
+      if (hats.length > 1) {
+        var hlab = document.createElement("div");
+        hlab.style.cssText = "width:100%;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a6a2f;margin:8px 0 4px";
+        hlab.textContent = "hat";
+        hb.appendChild(hlab);
+      }
+      hats.forEach(function (h) {
         var b = document.createElement("button");
         b.type = "button";
         b.className = "chip" + (h.id === pr.hat ? " on" : "");
-        b.textContent = h.label;
+        b.textContent = (h.id === "none") ? "No hat" : h.label;
         b.addEventListener("click", function () {
           pr.hat = h.id; paintProductChips(it); refreshProductStill(it);
-          msg("pr-msg", it.label + " · hat " + h.label, "");
+          msg("pr-msg", it.label + (h.id === "none" ? " · no hat" : " · hat " + h.label), "");
         });
         hb.appendChild(b);
       });
+    }
+
+    // Composed product mesh for hat/jacket attach (P0: docs/p0-hat-coat.md).
+    // Coat slot = winter jacket garment in the chosen colour (NOT fur).
+    // Parts are pre-seated in dog space; files published under /img/prod/.
+    function productMeshUrl(it) {
+      if (!it) return "";
+      if (it.id === "brick") return "/img/prod/brick-figure.glb";
+      if (it.id !== "ornament" && it.id !== "keychain" && it.id !== "croc_tag") return "";
+      var hat = (pr.hat && pr.hat !== "none") ? pr.hat : "";
+      var coat = (pr.coat && pr.coat !== "none") ? pr.coat : "";
+      if (hat === "santa" && coat) return "/img/prod/dog-santa-jacket-" + coat + ".glb";
+      if (hat === "santa") return "/img/prod/dog-santa.glb";
+      if (coat) return "/img/prod/dog-jacket-" + coat + ".glb";
+      return "/img/prod/chibi-figure-hook.glb";
     }
 
     function refreshProductStill(it) {
@@ -2534,6 +3302,17 @@
           var img = $("pr-d-img");
           var pick = (d.stills && (d.stills.hero || d.stills.front)) || (it.stills && it.stills.hero);
           if (img && pick) img.src = pick;
+          var mv = $("pr-d-viewer");
+          var murl = productMeshUrl(it);
+          if (mv) {
+            if (murl) {
+              mv.style.display = "";
+              if (mv.getAttribute("src") !== murl) mv.setAttribute("src", murl);
+            } else {
+              mv.style.display = "none";
+              mv.removeAttribute("src");
+            }
+          }
         })
         .catch(function () {
           var img = $("pr-d-img");
@@ -2541,40 +3320,423 @@
         });
     }
 
-    var prOrder = $("pr-order");
-    if (prOrder) prOrder.addEventListener("click", function () {
+    function orderPayload(fulfil) {
       var it = itemById(pr.sel);
-      if (!it || it.status !== "live") { msg("pr-msg", "That line isn't orderable yet.", "err"); return; }
-      prOrder.disabled = true;
-      stat("pr-status", "reserving order…");
-      post(API + "/products/order", {
+      if (!it || it.status !== "live") return null;
+      return {
         owner: state.owner,
         line: it.id,
         coat: pr.coat,
         hat: pr.hat,
-        mesh_id: state.meshId || "",
-        qty: 1
-      }).then(function (d) {
-        prOrder.disabled = false;
+        pattern: pr.pattern || "solid",
+        mesh_id: pr.activeMesh || state.meshId || "",
+        qty: pr.qty || 1,
+        fulfil: !!fulfil,
+        email: (state.owner && state.owner.indexOf("@") > 0) ? state.owner : ""
+      };
+    }
+
+    function runOrder(fulfil) {
+      var it = itemById(pr.sel);
+      var body = orderPayload(fulfil);
+      if (!body) { msg("pr-msg", "That line isn't orderable yet.", "err"); return; }
+      var btn = $(fulfil ? "pr-order" : "pr-order-reserve");
+      if (btn) btn.disabled = true;
+      stat("pr-status", fulfil ? "creating Shopify draft…" : "reserving order…");
+      post(API + "/products/order", body).then(function (d) {
+        if (btn) btn.disabled = false;
         stat("pr-status", "");
         if (!d.ok) { msg("pr-msg", d.error || "Order failed.", "err"); return; }
-        msg("pr-msg", "Reserved · " + (d.order && d.order.id) + " · £" +
-            ((d.price_cents || 0) / 100).toFixed(2) + " · " + (d.hint || "pending checkout"), "ok");
+        var sh = "";
+        if (d.shopify && d.shopify.ok) {
+          sh = " · Shopify draft " + (d.shopify.name || d.shopify.draft_id || "ok");
+        } else if (d.shopify && d.shopify.attempted) {
+          sh = " · Shopify: " + (d.shopify.error || "not configured");
+        }
+        msg("pr-msg",
+          (fulfil ? "One-click " : "Reserved ") + "· " + (d.order && d.order.id) +
+          " · " + it.label + " ×" + body.qty +
+          " · " + money(d.price_cents) +
+          " · mesh " + (body.mesh_id || "canonical") + sh, "ok");
       }).catch(function (e) {
-        prOrder.disabled = false;
+        if (btn) btn.disabled = false;
         stat("pr-status", "");
         msg("pr-msg", "Error: " + e.message, "err");
       });
+    }
+
+    var prOrder = $("pr-order");
+    if (prOrder) prOrder.addEventListener("click", function () { runOrder(true); });
+    var prOrderReserve = $("pr-order-reserve");
+    if (prOrderReserve) prOrderReserve.addEventListener("click", function () { runOrder(false); });
+    var prFit = $("pr-fit");
+    if (prFit) prFit.addEventListener("click", function () {
+      var it = itemById(pr.sel);
+      var line = it ? it.id : "ornament";
+      var part = (pr.hat && pr.hat !== "none") ? pr.hat : "santa";
+      open("/fit.html?line=" + encodeURIComponent(line) + "&part=" + encodeURIComponent(part), "_blank");
+    });
+
+    var qInc = $("pr-qty-inc"), qDec = $("pr-qty-dec");
+    if (qInc) qInc.addEventListener("click", function () {
+      pr.qty = Math.min(20, (pr.qty || 1) + 1);
+      var qn = $("pr-qty-n"); if (qn) qn.textContent = String(pr.qty);
+      var it = itemById(pr.sel);
+      var p = $("pr-d-price");
+      if (it && it.status === "live" && p) p.textContent = money((it.price_cents || 0) * pr.qty);
+    });
+    if (qDec) qDec.addEventListener("click", function () {
+      pr.qty = Math.max(1, (pr.qty || 1) - 1);
+      var qn = $("pr-qty-n"); if (qn) qn.textContent = String(pr.qty);
+      var it = itemById(pr.sel);
+      var p = $("pr-d-price");
+      if (it && it.status === "live" && p) p.textContent = money((it.price_cents || 0) * pr.qty);
+    });
+
+    function setFunnelStep(n) {
+      var box = $("funnel-steps");
+      if (!box) return;
+      var spans = box.querySelectorAll("span");
+      for (var i = 0; i < spans.length; i++) spans[i].classList.toggle("on", i < n);
+    }
+
+    var prQuickPick = { item: null };
+
+    function paintQuickPick(m) {
+      var box = $("quick-pick");
+      if (!box || !m) return;
+      prQuickPick.item = m;
+      box.hidden = false;
+      var n = $("qp-name"); if (n) n.textContent = m.label || m.id;
+      var meta = $("qp-meta");
+      if (meta) {
+        var bits = [];
+        if (m.recommended_coat && m.recommended_coat !== "none") bits.push(m.recommended_coat);
+        if (m.recommended_hat && m.recommended_hat !== "none") bits.push(m.recommended_hat);
+        if (m.scale_mm) bits.push(m.scale_mm + " mm");
+        if (m.confidence != null) bits.push(Math.round(m.confidence * 100) + "% match");
+        meta.textContent = bits.join(" · ") || (m.blurb || "");
+      }
+      var p = $("qp-price");
+      if (p) p.textContent = m.status === "live" ? "£" + ((m.price_cents || 0) / 100).toFixed(2) : "Soon";
+      var o = $("qp-order");
+      if (o) o.disabled = m.status !== "live";
+      setPendingOrder({
+        line: m.id,
+        coat: m.recommended_coat || "none",
+        hat: m.recommended_hat || "none",
+        pattern: m.recommended_pattern || "solid",
+        qty: 1,
+        from: "quick"
+      });
+    }
+
+    function selectQuickProduct(m) {
+      if (!m) return;
+      if (itemById(m.id)) {
+        selectProduct(m.id, { silent: true });
+        if (m.recommended_coat) pr.coat = m.recommended_coat;
+        if (m.recommended_hat) pr.hat = m.recommended_hat;
+        if (m.recommended_pattern) pr.pattern = m.recommended_pattern;
+        var it = itemById(m.id);
+        if (it) {
+          paintProductChips(it);
+          paintProductGrid();
+          refreshProductStill(it);
+        }
+        var det = $("pr-detail");
+        if (det) det.hidden = false;
+      }
+      paintQuickPick(m);
+      setFunnelStep(2);
+    }
+
+    var qpUpload = $("qp-upload");
+    if (qpUpload) qpUpload.addEventListener("click", function () {
+      setFunnelStep(3);
+      showTab("upload");
+      msg("up-msg", "Upload a photo of the star — after sculpt we'll bring you back to this product.", "ok");
+    });
+
+    var qpOrder = $("qp-order");
+    if (qpOrder) qpOrder.addEventListener("click", function () {
+      var m = prQuickPick.item;
+      if (!m) { msg("quick-pick-msg", "Find a product first.", "err"); return; }
+      if (itemById(m.id)) {
+        selectProduct(m.id, { silent: true });
+        if (m.recommended_coat) pr.coat = m.recommended_coat;
+        if (m.recommended_hat) pr.hat = m.recommended_hat;
+        if (m.recommended_pattern) pr.pattern = m.recommended_pattern;
+        var it = itemById(m.id);
+        if (it) { paintProductChips(it); paintProductGrid(); refreshProductStill(it); }
+      }
+      setFunnelStep(4);
+      runOrder(true);
+      msg("quick-pick-msg", "Ordering " + (m.label || m.id) + " on mesh " +
+          (pr.activeMesh || state.meshId || "canonical") + "…", "");
+    });
+
+    // ── Quick: in-app funnel (Products tab) ────────────────
+    var QUICK_PROMPTS = [
+      "What's their funniest habit?",
+      "What do they do that makes you laugh every time?",
+      "What's their favourite thing in the world?",
+      "What's the most dramatic thing they've ever done?",
+      "What's a quirk that's purely theirs?",
+      "What would they say if they could talk?",
+      "What's their favourite spot in the house?",
+      "What's the cutest thing they do when nobody's watching?",
+      "What's a nickname you have for them?",
+      "Tell me about them. Start anywhere."
+    ];
+    var quickPi = 0;
+    var quickRec = null;
+
+    function paintQuickPrompt() {
+      var el = $("quick-prompt");
+      if (el) el.textContent = QUICK_PROMPTS[quickPi % QUICK_PROMPTS.length];
+    }
+    var quickShuffle = $("quick-shuffle");
+    if (quickShuffle) quickShuffle.addEventListener("click", function () {
+      quickPi = (quickPi + 1) % QUICK_PROMPTS.length;
+      paintQuickPrompt();
+    });
+    paintQuickPrompt();
+
+    function paintQuickHits(hits) {
+      var grid = $("quick-hits");
+      if (!grid) return;
+      grid.innerHTML = "";
+      if (!hits || !hits.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;color:#666;font-size:13px">No live line matched that ramble — try another angle or upload a photo first.</div>';
+        return;
+      }
+      hits.slice(0, 6).forEach(function (r, i) {
+        setTimeout(function () {
+          var t = paintSearchTile(r);
+          t.addEventListener("click", function () {
+            // paintSearchTile already navigates; also sync Quick pick bar
+            if (r.kind !== "card") selectQuickProduct(r);
+          });
+          grid.appendChild(t);
+        }, i * 50);
+      });
+    }
+
+    function setPendingOrder(intent) {
+      try { localStorage.setItem("oddhobb.pending_order", JSON.stringify(intent || null)); } catch (e) {}
+    }
+    function takePendingOrder() {
+      try {
+        var raw = localStorage.getItem("oddhobb.pending_order");
+        if (!raw) return null;
+        var o = JSON.parse(raw);
+        localStorage.removeItem("oddhobb.pending_order");
+        return o;
+      } catch (e) { return null; }
+    }
+
+    function applyIntentToProducts(intent, opts) {
+      opts = opts || {};
+      if (!intent || !intent.line) return;
+      showTab("products");
+      if (itemById(intent.line)) selectProduct(intent.line, { silent: true });
+      if (intent.coat) pr.coat = intent.coat;
+      if (intent.hat) pr.hat = intent.hat;
+      if (intent.pattern) pr.pattern = intent.pattern;
+      if (intent.qty) pr.qty = intent.qty;
+      var qn = $("pr-qty-n"); if (qn) qn.textContent = String(pr.qty || 1);
+      var it = itemById(pr.sel || intent.line);
+      if (it) {
+        paintProductChips(it);
+        paintProductGrid();
+        refreshProductStill(it);
+      }
+      paintMeshChip();
+      if (opts.message) msg("pr-msg", opts.message, "ok");
+      if (opts.checkout) {
+        // leave the button ready — human confirms price then clicks
+        msg("pr-msg", (opts.message || "Mesh ready.") + " Review the price, then One-click order → Shopify.", "ok");
+      }
+    }
+
+    function mapRambleToStudio(text) {
+      // Prefer the shared server mapper (same contract as ChatGPT/MCP).
+      return post(API + "/quick/map", { text: text, owner: state.owner })
+        .then(function (d) {
+          if (!d || !d.ok) throw new Error((d && d.error) || "map failed");
+          var matches = (d.matches || []).map(function (m) {
+            return {
+              kind: "studio", id: m.id, label: m.label, blurb: m.blurb || "",
+              price_cents: m.price_cents || 0, status: m.status,
+              confidence: m.confidence,
+              recommended_coat: m.recommended_coat,
+              recommended_hat: m.recommended_hat,
+              recommended_pattern: m.recommended_pattern,
+              img: (m.stills && (m.stills.hero || m.stills.front)) || "/img/prod/prod-hero.png",
+              hay: "", live: m.status === "live", score: m.score || 0
+            };
+          });
+          var best = d.recommended || matches[0] || null;
+          if (best) selectQuickProduct(best);
+          var intent = best ? {
+            line: best.id,
+            coat: best.recommended_coat || "none",
+            hat: best.recommended_hat || "none",
+            pattern: best.recommended_pattern || "solid",
+            qty: 1,
+            from: "quick",
+            text: text
+          } : null;
+          setPendingOrder(intent);
+          return {
+            mapped: best ? {
+              line: best.id, coat: best.recommended_coat, hat: best.recommended_hat,
+              pattern: best.recommended_pattern, note: (d.next && d.next.why) || ""
+            } : {},
+            hits: matches,
+            confidence: d.confidence,
+            next: d.next,
+            funnel: d.funnel,
+            pending: intent,
+            activeMesh: d.active_mesh_id || state.meshId || ""
+          };
+        })
+        .catch(function () {
+          // local fallback
+          var hits = rankSearch(text);
+          var primary = hits[0];
+          if (primary && primary.kind === "studio") {
+            selectProduct(primary.id, { silent: true });
+            setPendingOrder({ line: primary.id, coat: "none", hat: "none", pattern: "solid", qty: 1, from: "quick", text: text });
+          }
+          return {
+            mapped: primary ? { line: primary.id, note: "local rank (agent offline)" } : {},
+            hits: hits,
+            confidence: primary ? 0.45 : 0,
+            next: { stage: "upload", actions: ["upload_photo"] },
+            pending: primary && primary.kind === "studio" ? { line: primary.id, coat: "none", hat: "none", pattern: "solid", qty: 1, from: "quick", text: text } : null
+          };
+        });
+    }
+
+    function runQuick() {
+      var ta = $("quick-text");
+      var text = ((ta && ta.value) || "").trim();
+      if (!text) {
+        msg("quick-msg", "Ramble something first — or hit the mic.", "err");
+        return;
+      }
+      var go = $("quick-go");
+      if (go) go.disabled = true;
+      msg("quick-msg", "Reading the ramble against the warehouse…", "");
+      stat("pr-status", "quick: mapping ramble…");
+      mapRambleToStudio(text).then(function (r) {
+        if (go) go.disabled = false;
+        stat("pr-status", "");
+        var m = r.mapped || {};
+        var confPct = r.confidence != null ? Math.round(r.confidence * 100) + "% " : "";
+        var stage = (r.next && r.next.stage) || "products";
+        var nextLine = stage === "upload"
+          ? "Next: upload their photo → sculpt → auto-land on these products."
+          : "Mesh already active — review price, then One-click order → Shopify.";
+        msg("quick-msg",
+          confPct + (m.note || "Got it.") + " → " + (m.line || "—") +
+          " · " + (r.hits || []).length + " live line(s). " + nextLine, "ok");
+        paintQuickHits(r.hits);
+        setFunnelStep(stage === "upload" ? 3 : 4);
+        var fbox = $("funnel-steps");
+        // funnel text under hits
+        var grid = $("quick-hits");
+        if (grid && r.funnel && r.funnel.length) {
+          var old = grid.querySelector(".funnel-note");
+          if (old) old.remove();
+          var stepEl = document.createElement("div");
+          stepEl.className = "funnel-note";
+          stepEl.style.cssText = "grid-column:1/-1;font-size:12px;color:#6b5a3c;margin-top:4px;line-height:1.5";
+          stepEl.innerHTML = "<b>Next:</b> " + nextLine + " <span style='opacity:.75'>" + r.funnel.join(" · ") + "</span>";
+          grid.appendChild(stepEl);
+        }
+        if (stage === "upload" && r.pending) {
+          setPendingOrder(r.pending);
+          msg("quick-msg",
+            confPct + (m.note || "Matched.") + " → " + (m.line || "") +
+            ". Upload their photo next — we'll drop you back here.", "ok");
+        }
+      }).catch(function (e) {
+        if (go) go.disabled = false;
+        stat("pr-status", "");
+        var hits = rankSearch(text);
+        paintQuickHits(hits);
+        msg("quick-msg", "Mapper offline — ranked locally: " + hits.length + " match(es). " + e.message, "");
+      });
+    }
+    var quickGo = $("quick-go");
+    if (quickGo) quickGo.addEventListener("click", runQuick);
+    var quickText = $("quick-text");
+    if (quickText) quickText.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); runQuick(); }
+    });
+
+    var quickMic = $("quick-mic");
+    if (quickMic) quickMic.addEventListener("click", function () {
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        msg("quick-msg", "This browser has no Web Speech API — type the ramble instead.", "err");
+        return;
+      }
+      if (quickRec) {
+        try { quickRec.stop(); } catch (e) {}
+        quickRec = null;
+        quickMic.classList.remove("rec");
+        return;
+      }
+      quickRec = new SR();
+      quickRec.lang = "en-GB";
+      quickRec.interimResults = true;
+      quickRec.continuous = true;
+      var base = (quickText && quickText.value) ? quickText.value + " " : "";
+      quickRec.onstart = function () {
+        quickMic.classList.add("rec");
+        msg("quick-msg", "Listening — ramble away…", "");
+      };
+      quickRec.onresult = function (ev) {
+        var interim = "", final = "";
+        for (var i = ev.resultIndex; i < ev.results.length; i++) {
+          if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
+          else interim += ev.results[i][0].transcript;
+        }
+        if (quickText) quickText.value = (base + final + interim).trim();
+      };
+      quickRec.onerror = function () {
+        quickMic.classList.remove("rec");
+        msg("quick-msg", "Mic error — type it instead?", "err");
+      };
+      quickRec.onend = function () {
+        quickMic.classList.remove("rec");
+        quickRec = null;
+      };
+      try { quickRec.start(); } catch (e) {
+        msg("quick-msg", "Couldn't start mic: " + e.message, "err");
+      }
     });
 
     // ── cards tab: 2D print tiles (PNG mockups) ────────────
+    // ── cards tab: PAPER stationery only ───────────────────
     var CARD_CATALOG = [
-      { id: "greeting_card", label: "Greeting Card", price_cents: 799, img: "/img/greeting_card_70edae28.png", blurb: "Portal card · scan to summon them", section: "cards" },
-      { id: "postcard", label: "Postcard", price_cents: 399, img: "/img/postcard_70edae28.png", blurb: "Small print · mailbox size", section: "cards" },
-      { id: "poster", label: "Poster", price_cents: 1499, img: "/img/poster_70edae28.png", blurb: "Wall art from your 2D art", section: "cards" },
-      { id: "framed_print", label: "Framed Print", price_cents: 2499, img: "/img/framed_print_70edae28.png", blurb: "Ready to hang", section: "cards" },
+      { id: "greeting_card", label: "Greeting Card", price_cents: 799, img: "/img/greeting_card_70edae28.png", blurb: "Portal card · scan to summon them", section: "cards", kind: "paper" },
+      { id: "postcard", label: "Postcard", price_cents: 399, img: "/img/postcard_70edae28.png", blurb: "Small print · mailbox size", section: "cards", kind: "paper" },
+      { id: "xmas_card", label: "Xmas Card", price_cents: 899, img: "/img/card-merry_xmas-5x7.png", blurb: "Personal paper · A6 / 5×7", section: "cards", kind: "paper", studio_line: "xmas_card" },
+      { id: "thank_you_card", label: "Thank You Card", price_cents: 799, img: "/img/greeting_card_70edae28.png", blurb: "Paper note · posted", section: "cards", kind: "paper" },
+      { id: "birthday_card", label: "Birthday Card", price_cents: 799, img: "/img/greeting_card_70edae28.png", blurb: "Paper · their star on the front", section: "cards", kind: "paper" }
+    ];
+
+    // ── products tab: prints & gifts (NOT paper cards) ─────
+    var PRINTS_CATALOG = [
       { id: "mug", label: "Mug", price_cents: 1299, img: "/img/mug_70edae28.png", blurb: "Their face on mornings", section: "gifts" },
       { id: "cushion", label: "Cushion", price_cents: 2999, img: "/img/cushion_70edae28.png", blurb: "A throne for their face", section: "gifts" },
+      { id: "poster", label: "Poster", price_cents: 1499, img: "/img/poster_70edae28.png", blurb: "Wall art from your star", section: "gifts" },
+      { id: "framed_print", label: "Framed Print", price_cents: 2499, img: "/img/framed_print_70edae28.png", blurb: "Ready to hang", section: "gifts" },
       { id: "sticker", label: "Sticker Pack", price_cents: 499, img: "/img/sticker_70edae28.png", blurb: "Peel, stick, repeat", section: "gifts" },
       { id: "tote", label: "Tote Bag", price_cents: 1999, img: "/img/tote_70edae28.png", blurb: "Carry the legend", section: "gifts" },
       { id: "notebook", label: "Notebook", price_cents: 1199, img: "/img/notebook_70edae28.png", blurb: "Ideas for the star", section: "gifts" },
@@ -2584,6 +3746,7 @@
       { id: "canvas", label: "Canvas", price_cents: 2799, img: "/img/canvas_70edae28.png", blurb: "Gallery wrap", section: "gifts" }
     ];
     var cdSel = null;
+    var prPrintSel = null;
 
     function loadCards() {
       var grid = $("cards-grid"); if (!grid) return;
@@ -2593,16 +3756,148 @@
         tile.type = "button";
         tile.className = "etsy__tile" + (it.id === cdSel ? " on" : "");
         tile.innerHTML =
+          '<div class="etsy__badges"><span class="etsy__badge gold">Paper</span></div>' +
           '<img class="etsy__img" src="' + it.img + '" alt="' + it.label + '" loading="lazy">' +
           '<div class="etsy__body">' +
             '<div class="etsy__name">' + it.label + '</div>' +
-            '<div class="etsy__meta">' + (it.section || "print") + ' · 2D</div>' +
+            '<div class="etsy__meta">' + (it.section || "cards") + ' · posted</div>' +
             '<div class="etsy__price">£' + (it.price_cents / 100).toFixed(2) + '</div>' +
           '</div>';
         tile.addEventListener("click", function () { selectCard(it.id); });
         grid.appendChild(tile);
       });
       if (!cdSel && CARD_CATALOG.length) selectCard(CARD_CATALOG[0].id, { silent: true });
+      loadPersonalCards();
+    }
+
+    var pc = { template: null, size: "5x7", templates: [] };
+
+    function loadPersonalCards() {
+      get(API + "/etsy/listings").then(function (d) {
+        if (!d || !d.ok) return;
+        var packs = d.listings || {};
+        var sizes = d.card_sizes || {};
+        pc.templates = [];
+        Object.keys(packs).forEach(function (k) {
+          if (!/card|xmas|greeting|holiday|thank/i.test(k)) return;
+          var p = packs[k];
+          pc.templates.push({
+            id: k,
+            label: p.title || p.label || k,
+            blurb: (p.blurb || p.etsy_title || "").slice(0, 100),
+            img: (p.photo_slots && p.photo_slots[0]) || "/img/card-merry_xmas-5x7.png",
+            price_cents: (p.price_cents || (p.sizes && p.sizes[Object.keys(p.sizes||{5:1})[0]] && p.sizes[Object.keys(p.sizes)[0]].price_cents) || 799),
+            sizes: p.sizes || sizes
+          });
+        });
+        if (!pc.templates.length) {
+          pc.templates = [{
+            id: "merry_xmas", label: "Merry Xmas card",
+            blurb: "Your pet's render · Merry Xmas",
+            img: "/img/card-merry_xmas-5x7.png",
+            price_cents: 799,
+            sizes: sizes
+          }];
+        }
+        paintPersonal();
+      }).catch(function () {
+        pc.templates = [{
+          id: "merry_xmas", label: "Merry Xmas card",
+          blurb: "Your pet's render · Merry Xmas",
+          img: "/img/card-merry_xmas-5x7.png", price_cents: 799, sizes: {}
+        }];
+        paintPersonal();
+      });
+    }
+
+    function paintPersonal() {
+      var chips = $("pc-templates");
+      if (!chips) return;
+      chips.innerHTML = "";
+      if (!pc.template && pc.templates.length) pc.template = pc.templates[0];
+      pc.templates.forEach(function (t) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip" + (pc.template && pc.template.id === t.id ? " on" : "");
+        b.textContent = t.label.replace(/ card$/i, "");
+        b.onclick = function () { pc.template = t; paintPersonal(); };
+        chips.appendChild(b);
+      });
+      var t = pc.template;
+      if (!t) return;
+      var img = $("pc-img");
+      if (img) { img.src = t.img; img.alt = t.label; }
+      var n = $("pc-name"); if (n) n.textContent = t.label;
+      var bl = $("pc-blurb"); if (bl) bl.textContent = t.blurb || "";
+      var msgEl = $("pc-message");
+      if (msgEl && !msgEl.value) msgEl.placeholder = (t.id === "merry_xmas" || /xmas|christmas/i.test(t.id)) ? "Merry Xmas" : "With love";
+      var sizeBox = $("pc-sizes");
+      if (sizeBox) {
+        sizeBox.innerHTML = "";
+        var sizeDefs = t.sizes && Object.keys(t.sizes).length ? t.sizes : {
+          A6: { label: "A6 postcard", mm: "105 × 148", price_cents: 399 },
+          "5x7": { label: "5×7 card", mm: "127 × 178", price_cents: 799 },
+          A5: { label: "A5 card", mm: "148 × 210", price_cents: 999 }
+        };
+        Object.keys(sizeDefs).forEach(function (k) {
+          var s = sizeDefs[k];
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "chip" + (pc.size === k ? " on" : "");
+          b.textContent = (s.label || k) + (s.mm ? " · " + s.mm : "");
+          b.onclick = function () { pc.size = k; paintPersonal(); };
+          sizeBox.appendChild(b);
+        });
+      }
+    }
+
+    var pcOrder = $("pc-order");
+    if (pcOrder) pcOrder.addEventListener("click", function () {
+      var t = pc.template;
+      if (!t) { msg("pc-msg", "Pick a template first.", "err"); return; }
+      var message = ($("pc-message") && $("pc-message").value || "").trim();
+      var from = ($("pc-from") && $("pc-from").value || "").trim();
+      var line = t.id === "merry_xmas" || /xmas|christmas/i.test(t.id) ? "ornament" : "ornament";
+      var body = {
+        owner: state.owner,
+        line: line,
+        coat: "none", hat: "none", pattern: "solid",
+        qty: 1, fulfil: true,
+        mesh_id: state.meshId || "",
+        note: ("personal paper card: " + t.id + " size=" + pc.size +
+               (message ? " msg=" + message : "") + (from ? " from=" + from : "")).slice(0, 200)
+      };
+      post(API + "/products/order", body).then(function (d) {
+        if (!d.ok) { msg("pc-msg", d.error || "Order failed.", "err"); return; }
+        var sh = d.shopify && d.shopify.ok ? " · Shopify " + (d.shopify.name || d.shopify.draft_id || "") : "";
+        msg("pc-msg", "Personal card reserved · " + (d.order && d.order.id) +
+            " · " + t.label + " · " + pc.size + sh, "ok");
+      }).catch(function (e) { msg("pc-msg", "Error: " + e.message, "err"); });
+    });
+
+    function loadPrints() {
+      var grid = $("pr-prints"); if (!grid) return;
+      grid.innerHTML = "";
+      PRINTS_CATALOG.forEach(function (it) {
+        var tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "etsy__tile" + (it.id === prPrintSel ? " on" : "");
+        tile.innerHTML =
+          '<div class="etsy__badges"><span class="etsy__badge">Print &amp; gift</span></div>' +
+          '<img class="etsy__img" src="' + it.img + '" alt="' + it.label + '" loading="lazy">' +
+          '<div class="etsy__body">' +
+            '<div class="etsy__name">' + it.label + '</div>' +
+            '<div class="etsy__meta">' + (it.blurb || "").slice(0, 42) + '</div>' +
+            '<div class="etsy__price">£' + (it.price_cents / 100).toFixed(2) + '</div>' +
+          '</div>';
+        tile.addEventListener("click", function () {
+          prPrintSel = it.id;
+          loadPrints();
+          msg("pr-msg", it.label + " £" + (it.price_cents / 100).toFixed(2) +
+              " — mesh on the face · order via shop / agent (2D print path).", "");
+        });
+        grid.appendChild(tile);
+      });
     }
 
     function selectCard(id, opts) {
@@ -2615,8 +3910,30 @@
       var n = $("cd-name"); if (n) n.textContent = it.label;
       var b = $("cd-blurb"); if (b) b.textContent = it.blurb || "";
       var p = $("cd-price"); if (p) p.textContent = "£" + (it.price_cents / 100).toFixed(2);
-      var m = $("cd-meta"); if (m) m.textContent = (it.section || "") + " · PNG mockup · 2D print";
+      var m = $("cd-meta"); if (m) m.textContent = "paper · " + (it.section || "cards") + " · posted";
       var img = $("cd-img"); if (img) { img.src = it.img; img.alt = it.label; }
+      var sizeBox = $("cd-sizes");
+      if (sizeBox) {
+        sizeBox.innerHTML = "";
+        var defs = {
+          A6: { label: "A6 postcard", mm: "105 × 148", price_cents: 399 },
+          "5x7": { label: "5×7 card", mm: "127 × 178", price_cents: 799 },
+          A5: { label: "A5 card", mm: "148 × 210", price_cents: 999 }
+        };
+        Object.keys(defs).forEach(function (k) {
+          var s = defs[k];
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "chip";
+          b.textContent = s.label + " · " + s.mm;
+          b.onclick = function () {
+            var p = $("cd-price");
+            if (p) p.textContent = "£" + ((s.price_cents || it.price_cents) / 100).toFixed(2);
+            msg("cd-msg", it.label + " · " + s.label, "");
+          };
+          sizeBox.appendChild(b);
+        });
+      }
       var grid = $("cards-grid");
       if (grid) {
         var tiles = grid.querySelectorAll(".etsy__tile");
@@ -2630,19 +3947,587 @@
       var it = null;
       for (var i = 0; i < CARD_CATALOG.length; i++) if (CARD_CATALOG[i].id === cdSel) it = CARD_CATALOG[i];
       if (!it) return;
-      // reuse product order with line=card-ish ids when possible; else reserve note
-      post(API + "/products/order", {
-        owner: state.owner,
-        line: "keychain",
-        coat: "none", hat: "none",
-        mesh_id: state.meshId || "",
-        qty: 1,
-        note: "2D print: " + it.id
-      }).then(function (d) {
+      var line = it.studio_line || "ornament"; // paper mock orders still reserve via studio path
+      var body = {
+        owner: state.owner, line: line, coat: "none", hat: "none", pattern: "solid",
+        qty: 1, fulfil: true, mesh_id: state.meshId || "",
+        note: "paper card: " + it.id
+      };
+      post(API + "/products/order", body).then(function (d) {
         if (!d.ok) { msg("cd-msg", d.error || "Order failed.", "err"); return; }
-        msg("cd-msg", "Reserved · " + (d.order && d.order.id) + " · " + it.label + " £" + (it.price_cents / 100).toFixed(2), "ok");
+        var sh = d.shopify && d.shopify.ok ? " · Shopify draft " + (d.shopify.name || d.shopify.draft_id || "") : "";
+        msg("cd-msg", "Reserved · " + (d.order && d.order.id) + " · " + it.label +
+            " £" + ((d.price_cents || it.price_cents) / 100).toFixed(2) + sh, "ok");
       }).catch(function (e) { msg("cd-msg", "Error: " + e.message, "err"); });
     });
+
+    // ── quick tab: adaptive ramble (mythicbee GiftIntelligence pattern) ──
+    // Engine found: stallspy/brands/mythicbee/site/js/gift-intelligence.js
+    //   + prompt-bank.js + creation-flow prompt-card.
+    // Here: confidence is per PRODUCT LINE / use-case; prompts fire only to
+    // reduce uncertainty — not random spam. Ramble window = 60s.
+    var qk = {
+      ready: false, phase: "idle",
+      boosts: [], matches: [], top: null, rec: null, recLive: false,
+      text: "", interim: "", secondsLeft: 60, duration: 60,
+      tick: null, promptTimer: null, levelTimer: null, mapTimer: null,
+      lastPromptAt: 0, lastPromptText: "",
+      slots: {
+        who: 0, occasion: 0, use_case: 0, coat: 0, size_vibe: 0
+      },
+      lines: { ornament: 0, keychain: 0, croc_tag: 0, gift_card: 0, brick: 0 }
+    };
+
+    // Questions tagged by which slot / line confusion they resolve.
+    // weight = how much they reduce product uncertainty.
+    var QK_QBANK = [
+      { text: "What’s the occasion?", targets: ["occasion"], lines: [], w: 0.9 },
+      { text: "Who’s it for — pet or person?", targets: ["who"], lines: [], w: 0.85 },
+      { text: "Hanging on a tree, or something they carry?", targets: ["use_case"], lines: ["ornament", "keychain"], w: 1.0 },
+      { text: "Keys, shoes, or desk?", targets: ["use_case"], lines: ["keychain", "croc_tag", "brick"], w: 1.0 },
+      { text: "Tiny everyday charm, or a proper gift?", targets: ["use_case", "size_vibe"], lines: ["croc_tag", "ornament", "gift_card"], w: 0.95 },
+      { text: "Do you know their colouring?", targets: ["coat"], lines: [], w: 0.7 },
+      { text: "Christmas, or just because?", targets: ["occasion"], lines: ["ornament", "gift_card"], w: 0.8 },
+      { text: "Something they’ll use, or something that makes them laugh?", targets: ["use_case"], lines: ["keychain", "croc_tag", "ornament"], w: 0.85 },
+      { text: "Small enough for a stocking, or bigger?", targets: ["size_vibe"], lines: ["ornament", "croc_tag", "brick"], w: 0.75 },
+      { text: "What’s their funniest habit?", targets: [], lines: [], w: 0.35 },
+      { text: "What do they do that makes you laugh?", targets: [], lines: [], w: 0.3 },
+      { text: "What’s something only you know about them?", targets: [], lines: [], w: 0.25 },
+      { text: "What’s their superpower?", targets: [], lines: [], w: 0.25 },
+      { text: "What’s a tradition they have?", targets: [], lines: [], w: 0.2 }
+    ];
+
+    var QK_SIGNS = {
+      who_pet: /dog|cat|pet|puppy|kitten|bella|max|doggo|kitty/,
+      who_person: /dad|mum|mom|father|mother|husband|wife|partner|friend|sister|brother|nan|grandma|grandpa/,
+      occasion_xmas: /christmas|xmas|santa|stocking|december/,
+      occasion_bday: /birthday|bday|turning|cake/,
+      occasion_any: /just because|saw this|thought of|no reason/,
+      use_tree: /tree|hanging|bauble|ornament|christmas decoration|hang/,
+      use_keys: /key|keyring|keychain|keys|purse|bag zip/,
+      use_shoes: /crocs?|jibbitz|shoe|charm|trainer|sneaker/,
+      use_desk: /desk|shelf|office|figurine|brick|toy/,
+      use_gift: /gift|voucher|credit|present for|digital/,
+      coat: /\b(cream|golden|gold|chocolate|brown|black|fawn|grey|gray|beige|blonde)\b/,
+      festive: /christmas|xmas|festive|holidays?/
+    };
+
+    function qkSay(text, cls) { msg("qk-msg", text || "", cls || ""); }
+    function qkStatus(t) { stat("qk-status", t || ""); }
+    function qkAgentSay(text) {
+      var dt = $("qk-dt");
+      if (dt) dt.textContent = text || "";
+    }
+
+    function qkSetPhase(phase) {
+      qk.phase = phase;
+      var idle = $("qk-idle"), live = $("qk-live"), res = $("qk-results");
+      if (idle) idle.hidden = phase !== "idle";
+      if (live) live.hidden = phase !== "live";
+      if (res) res.hidden = phase !== "results";
+    }
+
+    function qkFmtClock(sec) {
+      var s = Math.max(0, sec | 0);
+      var m = Math.floor(s / 60);
+      var r = s % 60;
+      return m + ":" + (r < 10 ? "0" : "") + r;
+    }
+
+    // Update belief state from whatever we’ve heard (final + interim).
+    function qkUpdateBelief() {
+      var t = (qk.text + " " + qk.interim).toLowerCase();
+      if (!t) return;
+      if (QK_SIGNS.who_pet.test(t)) qk.slots.who = Math.max(qk.slots.who, 0.9);
+      if (QK_SIGNS.who_person.test(t)) qk.slots.who = Math.max(qk.slots.who, 0.85);
+      if (QK_SIGNS.occasion_xmas.test(t)) qk.slots.occasion = Math.max(qk.slots.occasion, 0.9);
+      if (QK_SIGNS.occasion_bday.test(t)) qk.slots.occasion = Math.max(qk.slots.occasion, 0.85);
+      if (QK_SIGNS.occasion_any.test(t)) qk.slots.occasion = Math.max(qk.slots.occasion, 0.7);
+      if (QK_SIGNS.use_tree.test(t)) {
+        qk.slots.use_case = Math.max(qk.slots.use_case, 0.9);
+        qk.lines.ornament = Math.max(qk.lines.ornament, 0.85);
+        qk.lines.keychain = Math.min(qk.lines.keychain, 0.4);
+      }
+      if (QK_SIGNS.use_keys.test(t)) {
+        qk.slots.use_case = Math.max(qk.slots.use_case, 0.9);
+        qk.lines.keychain = Math.max(qk.lines.keychain, 0.85);
+        qk.lines.ornament = Math.min(qk.lines.ornament, 0.45);
+      }
+      if (QK_SIGNS.use_shoes.test(t)) {
+        qk.slots.use_case = Math.max(qk.slots.use_case, 0.9);
+        qk.lines.croc_tag = Math.max(qk.lines.croc_tag, 0.9);
+        qk.lines.keychain = Math.min(qk.lines.keychain, 0.5);
+      }
+      if (QK_SIGNS.use_desk.test(t)) {
+        qk.slots.use_case = Math.max(qk.slots.use_case, 0.85);
+        qk.lines.brick = Math.max(qk.lines.brick, 0.7);
+      }
+      if (QK_SIGNS.use_gift.test(t)) {
+        qk.slots.use_case = Math.max(qk.slots.use_case, 0.85);
+        qk.lines.gift_card = Math.max(qk.lines.gift_card, 0.8);
+      }
+      if (QK_SIGNS.coat.test(t)) qk.slots.coat = Math.max(qk.slots.coat, 0.85);
+      if (/stocking|tiny|small|little|charm/.test(t)) qk.slots.size_vibe = Math.max(qk.slots.size_vibe, 0.7);
+      if (/big|large|desk|shelf|centrepiece/.test(t)) qk.slots.size_vibe = Math.max(qk.slots.size_vibe, 0.7);
+    }
+
+    function qkLineConfidence() {
+      // If we never heard use_case, lines stay low & flat (uncertain).
+      var vals = Object.keys(qk.lines).map(function (k) { return qk.lines[k]; });
+      var top = Math.max.apply(null, vals.concat([0]));
+      var sorted = vals.slice().sort(function (a, b) { return b - a; });
+      var second = sorted[1] || 0;
+      return { top: top, gap: top - second, ranked: sorted };
+    }
+
+    function qkUncertainty() {
+      var lc = qkLineConfidence();
+      var missing = 0;
+      ["who", "occasion", "use_case"].forEach(function (s) {
+        if (qk.slots[s] < 0.6) missing++;
+      });
+      // high uncertainty if little speech, missing critical slots, or top line not clearly ahead
+      var speechBoost = Math.min(0.25, (qk.text.split(/\s+/).filter(Boolean).length) * 0.01);
+      var unc = 0.55 * (missing / 3) + 0.35 * (1 - lc.top) + 0.25 * (lc.gap < 0.2 ? 1 : 0) - speechBoost;
+      return Math.max(0, Math.min(1, unc));
+    }
+
+    // Pick the next question that best reduces product uncertainty.
+    // Mirrors GiftIntelligence.getNextQuestion: score by unresolved targets.
+    function qkNextPrompt() {
+      qkUpdateBelief();
+      var lc = qkLineConfidence();
+      var eligible = QK_QBANK.filter(function (q) {
+        return qk.asked.indexOf(q.text) < 0;
+      });
+      if (!eligible.length) eligible = QK_QBANK.slice();
+
+      var scored = eligible.map(function (q) {
+        var score = q.w;
+        // boost questions whose targets are still soft
+        (q.targets || []).forEach(function (slot) {
+          if ((qk.slots[slot] || 0) < 0.6) score += 0.55;
+        });
+        // boost questions that separate the current top two lines
+        if (q.lines && q.lines.length >= 2 && lc.gap < 0.25) {
+          if (q.lines.indexOf("ornament") >= 0 && q.lines.indexOf("keychain") >= 0 &&
+              Math.abs((qk.lines.ornament || 0) - (qk.lines.keychain || 0)) < 0.3) score += 0.7;
+          if (q.lines.indexOf("croc_tag") >= 0 && lc.top < 0.55) score += 0.5;
+        }
+        // early: need who/occasion/use_case
+        if (!qk.asked.length && (q.text.indexOf("occasion") >= 0 || q.text.indexOf("pet or person") >= 0)) score += 0.4;
+        // penalise pure vibe questions when a line is still contested
+        if (lc.gap < 0.2 && q.targets && !q.targets.length && q.w < 0.4) score -= 0.3;
+        // don’t re-ask if that slot is already firm
+        (q.targets || []).forEach(function (slot) {
+          if ((qk.slots[slot] || 0) >= 0.75) score -= 0.5;
+        });
+        return { q: q, score: score };
+      }).sort(function (a, b) { return b.score - a.score; });
+
+      var best = scored[0] && scored[0].q;
+      if (!best) return null;
+      // If we’re already confident, only flash on a real gap — otherwise stay quiet.
+      if (lc.top >= 0.75 && lc.gap >= 0.2 && qk.slots.use_case >= 0.7 && qk.asked.length > 0) {
+        return null;
+      }
+      qk.asked.push(best.text);
+      qk.lastPromptText = best.text;
+      qk.lastPromptAt = Date.now();
+      return best;
+    }
+
+    function qkFlashPrompt(text) {
+      var box = $("qk-flash"), t = $("qk-flash-text");
+      if (!box || !t) return;
+      t.textContent = text;
+      box.classList.remove("fade");
+      void box.offsetWidth;
+      box.classList.add("fade");
+      var liveState = $("qk-live-state");
+      if (liveState) {
+        var lc = qkLineConfidence();
+        liveState.textContent = lc.top >= 0.7 && lc.gap >= 0.15
+          ? "Getting clearer…"
+          : "Listening — take your time";
+      }
+    }
+
+    function qkMaybePrompt() {
+      if (qk.phase !== "live") return;
+      var unc = qkUncertainty();
+      var now = Date.now();
+      // quiet if confident; prompt only when uncertainty is real
+      if (unc < 0.4 && qk.asked.length > 0) return;
+      // lazy: at most every ~12s — prompts float, they don’t nag
+      if (now - qk.lastPromptAt < 12000) return;
+      var p = qkNextPrompt();
+      if (p) qkFlashPrompt(p.text);
+    }
+
+    function qkEnsureViz() {
+      var host = $("qk-viz");
+      if (!host || host.childNodes.length) return;
+      for (var i = 0; i < 20; i++) host.appendChild(document.createElement("i"));
+    }
+
+    function qkPaintLean(matches) {
+      var row = $("qk-lean-row");
+      if (!row) return;
+      row.innerHTML = "";
+      var list = (matches || []).slice(0, 4);
+      if (!list.length) {
+        row.innerHTML = '<span class="qk-lean-chip">listening…</span>';
+        return;
+      }
+      list.forEach(function (m) {
+        var c = document.createElement("span");
+        c.className = "qk-lean-chip";
+        var conf = m.confidence != null ? Math.round(m.confidence * 100) + "%" : "";
+        c.innerHTML = m.label + (conf ? "<small>" + conf + "</small>" : "");
+        row.appendChild(c);
+      });
+    }
+
+    function qkCurrentText() {
+      return (qk.text + " " + qk.interim).replace(/\s+/g, " ").trim();
+    }
+
+    function qkMapLive() {
+      var text = qkCurrentText();
+      qkUpdateBelief();
+      // fold local line belief into boost if server map is thin
+      var boosts = qk.boosts.slice();
+      Object.keys(qk.lines).forEach(function (k) {
+        if (qk.lines[k] >= 0.75 && boosts.indexOf(k) < 0) boosts.push(k);
+      });
+      if (!text && !boosts.length) return;
+      post(API + "/quick/map", {
+        text: text || ("gift " + (Object.keys(qk.lines).filter(function (k) { return qk.lines[k] >= 0.6; })[0] || "something personal")),
+        owner: state.owner,
+        boost_lines: boosts
+      }).then(function (d) {
+        if (!d || !d.ok) return;
+        if (d.active_mesh_id) {
+          state.meshId = d.active_mesh_id;
+          var chips = document.querySelectorAll("#qk-mesh-chip");
+          for (var ci = 0; ci < chips.length; ci++) {
+            chips[ci].textContent = "mesh " + String(d.active_mesh_id).replace("msh_", "").slice(0, 8);
+          }
+        }
+        qk.matches = d.matches || [];
+        qk.top = d.recommended || qk.matches[0] || null;
+        if (qk.phase === "live") qkPaintLean(qk.matches);
+        if (qk.top) {
+          setPendingOrder({
+            line: qk.top.id,
+            coat: qk.top.recommended_coat || "none",
+            hat: qk.top.recommended_hat || "none",
+            pattern: qk.top.recommended_pattern || "solid",
+            qty: 1,
+            from: "quick-immersive"
+          });
+        }
+        var lc = qkLineConfidence();
+        qkStatus(
+          (qk.matches.length) + " line(s)" +
+          (qk.top ? " · lean " + qk.top.label : "") +
+          " · conf " + Math.round((1 - qkUncertainty()) * 100) + "%"
+        );
+      }).catch(function () {});
+    }
+
+    function qkScheduleMap() {
+      if (qk.mapTimer) clearTimeout(qk.mapTimer);
+      qk.mapTimer = setTimeout(function () {
+        qkMapLive();
+        qkMaybePrompt();
+      }, 450);
+    }
+
+    function qkBuildResults() {
+      qkSetPhase("results");
+      paintQkHits(qk.matches);
+      paintQkPicked();
+      qkUpdateBelief();
+      var title = $("qk-result-title");
+      var sub = $("qk-result-sub");
+      var conf = qk.top && qk.top.confidence != null ? Math.round(qk.top.confidence * 100) + "%" : "";
+      var unc = Math.round((1 - qkUncertainty()) * 100);
+      if (title) title.textContent = qk.top
+        ? (conf + " " + qk.top.label)
+        : "Here’s what we heard";
+      if (sub) sub.textContent = qk.top
+        ? ("Overall confidence " + unc + "% · " +
+           (qk.top.recommended_coat && qk.top.recommended_coat !== "none" ? qk.top.recommended_coat + " · " : "") +
+           "Pick a path, or talk to bobdod.")
+        : "Keep rambling later — or browse products now.";
+      qkAgentSay(qk.top
+        ? "Heard enough to lean " + qk.top.label + " at " + conf + ". Paths below."
+        : "Still fuzzy — pick a path or ask bobdod.");
+      if (qk.top) {
+        msg("qk-opt-msg", "Top match ready — Order this or Upload a photo to personalise it.", "ok");
+      }
+    }
+
+    function qkStartLive() {
+      qkSetPhase("live");
+      // no countdown — stay as long as you like
+      qk.secondsLeft = 0;
+      qk.asked = [];
+      qk.interim = "";
+      qk.slots = { who: 0, occasion: 0, use_case: 0, coat: 0, size_vibe: 0 };
+      qk.lines = { ornament: 0, keychain: 0, croc_tag: 0, gift_card: 0, brick: 0 };
+      qk.lastPromptAt = Date.now();
+      var micBig = $("qk-mic-big");
+      if (micBig) micBig.classList.add("rec");
+      var label = $("qk-mic-label");
+      if (label) label.textContent = "Listening — whenever you’re ready";
+      qkEnsureViz();
+      qkFlashPrompt("What’s the occasion?");
+      qk.asked.push("What’s the occasion?");
+      qk.lastPromptText = "What’s the occasion?";
+      qkPaintLean(qk.matches);
+      var liveTimer = $("qk-live-timer");
+      if (liveTimer) liveTimer.textContent = "";
+      qkStatus("mic open — no rush");
+      qkAgentSay("Take your time. We’ll only nudge if we’re stuck.");
+      qkScheduleMap();
+
+      if (qk.promptTimer) clearInterval(qk.promptTimer);
+      qk.promptTimer = setInterval(function () {
+        if (qk.phase !== "live") return;
+        qkMaybePrompt();
+      }, 4000);
+
+      qkEnsureViz();
+      var bars = $("qk-viz") ? $("qk-viz").querySelectorAll("i") : [];
+      if (qk.levelTimer) clearInterval(qk.levelTimer);
+      qk.levelTimer = setInterval(function () {
+        if (qk.phase !== "live") return;
+        for (var i = 0; i < bars.length; i++) {
+          var base = qk.recLive ? 8 + Math.random() * 16 : 4 + Math.random() * 6;
+          bars[i].style.height = base + "px";
+        }
+      }, 400);
+
+      // no tick / no auto-stop — user ends when ready
+      if (qk.tick) { clearInterval(qk.tick); qk.tick = null; }
+
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        qkSay("No voice API — type into bobdod after, or browse products.", "err");
+        return;
+      }
+      try {
+        qk.rec = new SR();
+        qk.rec.lang = "en-GB";
+        qk.rec.interimResults = true;
+        qk.rec.continuous = true;
+        qk.rec.onstart = function () { qk.recLive = true; };
+        qk.rec.onresult = function (ev) {
+          var interim = "", final = "";
+          for (var i = ev.resultIndex; i < ev.results.length; i++) {
+            if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
+            else interim += ev.results[i][0].transcript;
+          }
+          qk.interim = interim;
+          if (final) {
+            qk.text = (qk.text + " " + final).trim();
+            qk.interim = "";
+          }
+          qkScheduleMap();
+        };
+        qk.rec.onend = function () {
+          qk.recLive = false;
+          if (qk.phase === "live" && qk.rec) {
+            try { qk.rec.start(); } catch (e) {}
+          }
+        };
+        qk.rec.onerror = function () { qk.recLive = false; };
+        qk.rec.start();
+      } catch (e) {
+        qkSay("Mic blocked: " + e.message, "err");
+      }
+    }
+
+    function qkStopLive(auto) {
+      if (qk.phase !== "live") return;
+      if (qk.tick) clearInterval(qk.tick);
+      if (qk.promptTimer) clearInterval(qk.promptTimer);
+      if (qk.levelTimer) clearInterval(qk.levelTimer);
+      if (qk.rec) {
+        try { qk.rec.onend = null; qk.rec.stop(); } catch (e) {}
+        qk.rec = null;
+      }
+      qk.recLive = false;
+      var micBig = $("qk-mic-big");
+      if (micBig) micBig.classList.remove("rec");
+      var label = $("qk-mic-label");
+      if (label) label.textContent = "Tap to ramble";
+      qkMapLive();
+      setTimeout(function () {
+        qkBuildResults();
+        qkStatus(auto ? "done" : "paused — options below");
+      }, 500);
+    }
+
+    function paintQkPicked() {
+      var box = $("qk-picked");
+      var lab = $("qk-picked-label");
+      if (!box) return;
+      box.innerHTML = "";
+      if (!qk.boosts.length) { if (lab) lab.hidden = true; return; }
+      if (lab) lab.hidden = false;
+      qk.boosts.forEach(function (id) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip qk-on";
+        b.textContent = id.replace(/_/g, " ");
+        b.onclick = function () {
+          qk.boosts = qk.boosts.filter(function (x) { return x !== id; });
+          paintQkPicked();
+          qkMapLive();
+        };
+        box.appendChild(b);
+      });
+    }
+
+    function paintQkHits(matches) {
+      var grid = $("qk-hits");
+      if (!grid) return;
+      grid.innerHTML = "";
+      (matches || []).slice(0, 6).forEach(function (m, i) {
+        setTimeout(function () {
+          var t = paintSearchTile(m);
+          if (qk.boosts.indexOf(m.id) >= 0) t.classList.add("on");
+          t.addEventListener("click", function () {
+            if (qk.boosts.indexOf(m.id) < 0) qk.boosts.push(m.id);
+            // customer tap = strong signal — raise that line in belief state
+            qk.lines[m.id] = Math.max(qk.lines[m.id] || 0, 0.9);
+            qk.slots.use_case = Math.max(qk.slots.use_case, 0.85);
+            paintQkPicked();
+            qk.top = m;
+            if (typeof itemById === "function" && itemById(m.id)) selectQuickProduct(m);
+            qkAgentSay("Shortlisted " + m.label + " — that firms the product.");
+            qkMapLive();
+          });
+          grid.appendChild(t);
+        }, i * 40);
+      });
+    }
+
+    function initQuickTab() {
+      if (qk.ready) return;
+      qk.ready = true;
+      qkSetPhase("idle");
+      get(API + "/products/studio?owner=" + encodeURIComponent(state.owner || "anon"))
+        .then(function (d) {
+          if (d && d.ok && d.active_mesh_id) {
+            state.meshId = d.active_mesh_id;
+            var chips = document.querySelectorAll("#qk-mesh-chip");
+            for (var i = 0; i < chips.length; i++) {
+              chips[i].textContent = "mesh " + String(d.active_mesh_id).replace("msh_", "").slice(0, 8);
+            }
+          }
+        }).catch(function () {});
+      qkMapLive();
+    }
+
+    var qkMicBig = $("qk-mic-big");
+    if (qkMicBig) qkMicBig.onclick = function () {
+      if (qk.phase === "live") qkStopLive(false);
+      else qkStartLive();
+    };
+    var qkStopBtn = $("qk-stop");
+    if (qkStopBtn) qkStopBtn.onclick = function () { qkStopLive(false); };
+
+    var qkHowToggle = $("qk-how-toggle");
+    if (qkHowToggle) qkHowToggle.onclick = function () {
+      var how = $("qk-how");
+      if (!how) return;
+      var ol = how.querySelectorAll("ol")[0];
+      if (how.hasAttribute("data-collapsed")) {
+        how.removeAttribute("data-collapsed");
+        if (ol) ol.style.display = "";
+        qkHowToggle.textContent = "Hide";
+      } else {
+        how.setAttribute("data-collapsed", "1");
+        if (ol) ol.style.display = "none";
+        qkHowToggle.textContent = "How it works";
+      }
+    };
+
+    var qkOpts = $("qk-opts");
+    if (qkOpts) qkOpts.addEventListener("click", function (e) {
+      var btn = e.target.closest ? e.target.closest(".qk-opt") : null;
+      if (!btn) return;
+      var act = btn.getAttribute("data-act");
+      var top = qk.top;
+      if (act === "order") {
+        if (!top) { msg("qk-opt-msg", "No top match yet — ramble or shortlist one.", "err"); return; }
+        setPendingOrder({
+          line: top.id, coat: top.recommended_coat || "none",
+          hat: top.recommended_hat || "none", pattern: top.recommended_pattern || "solid",
+          qty: 1, from: "quick-immersive"
+        });
+        showTab("products");
+        msg("quick-pick-msg", "From Quick: " + top.label + " — review price, then One-click Shopify.", "ok");
+      } else if (act === "upload") {
+        if (top) {
+          setPendingOrder({
+            line: top.id, coat: top.recommended_coat || "none",
+            hat: top.recommended_hat || "none", pattern: top.recommended_pattern || "solid",
+            qty: 1, from: "quick-immersive"
+          });
+        }
+        showTab("upload");
+        msg("up-msg", "Upload the star — after sculpt we’ll bring you back to your product.", "ok");
+      } else if (act === "products") {
+        showTab("products");
+      } else if (act === "gift") {
+        setPendingOrder({ line: "gift_card", coat: "none", hat: "none", pattern: "solid", qty: 1, from: "quick-immersive" });
+        qk.lines.gift_card = 0.9;
+        showTab("products");
+        selectProduct("gift_card");
+        msg("pr-msg", "Gift card — pick an amount in the detail, then checkout.", "ok");
+      } else if (act === "chat") {
+        qkAgentSay("I’m here. Who’s it for, and what do they love?");
+        var ti = $("qk-ti"); if (ti) ti.focus();
+      } else if (act === "again") {
+        qkSetPhase("idle");
+        qkStartLive();
+      }
+    });
+
+    var qkSend = $("qk-send"), qkTi = $("qk-ti");
+    function qkChatSend() {
+      var t = (qkTi && qkTi.value || "").trim();
+      if (!t) return;
+      qk.text = (qk.text + " " + t).trim();
+      qkTi.value = "";
+      qkUpdateBelief();
+      qkAgentSay("Noted — “" + t.slice(0, 80) + "”");
+      qkMapLive();
+      if (/gift|voucher/.test(t.toLowerCase())) qkAgentSay("Gift card is a clean finish — or keep describing them.");
+      else if (/photo|upload/.test(t.toLowerCase())) qkAgentSay("Upload tab is ready when you are.");
+      else if (qk.top) qkAgentSay("Front-runner is still " + qk.top.label + ".");
+      else qkAgentSay("Keep going — or hit mic for another minute.");
+      if (qk.phase === "results") {
+        setTimeout(function () { paintQkHits(qk.matches); paintQkPicked(); }, 400);
+      }
+    }
+    if (qkSend) qkSend.onclick = qkChatSend;
+    if (qkTi) qkTi.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); qkChatSend(); }
+    });
+
+    var qkShuffle = $("qk-shuffle");
+    if (qkShuffle) qkShuffle.onclick = function () {
+      var p = qkNextPrompt() || { text: "What’s the occasion?" };
+      qkFlashPrompt(p.text);
+      qkSay("Prompt: " + p.text, "");
+    };
 
     // ── videos: vertical swipe feed (scroll-snap + IO) ────
     var vf = { items: [], obs: null, muted: true, active: 0 };
@@ -2795,57 +4680,46 @@
       };
     }
 
-    // ── studio assets: uploads + AI people tags ──────────
+    // ── studio photos gallery (uploads + mesh portraits) ──
     function loadAssets() {
       var grid = $("as-grid"); if (!grid) return;
-      stat("as-status", "loading assets…");
-      get(API + "/me?owner=" + encodeURIComponent(state.owner))
-        .then(function (d) {
-          if (!d.ok) { stat("as-status", ""); return; }
-          paintAssets(d);
-          stat("as-status", (d.pogs || []).length + " meshes · " + (d.owner || ""));
+      stat("as-status", "loading photos…");
+      get(API + "/flow?owner=" + encodeURIComponent(state.owner))
+        .then(function (f) {
+          if (!f.ok) { stat("as-status", ""); return; }
+          stv.flow = f;
+          paintPhotos(f);
         })
-        .catch(function () { stat("as-status", ""); });
+        .catch(function () {
+          get(API + "/me?owner=" + encodeURIComponent(state.owner))
+            .then(function (d) {
+              if (!d.ok) { stat("as-status", ""); return; }
+              paintAssets(d);
+              stat("as-status", (d.pogs || []).length + " meshes");
+            })
+            .catch(function () { stat("as-status", ""); });
+        });
     }
 
     function paintAssets(d) {
+      // fallback when /flow is unavailable — mesh thumbs only
       var grid = $("as-grid"); if (!grid) return;
       grid.innerHTML = "";
       var pogs = d.pogs || [];
       if (!pogs.length) {
-        grid.innerHTML = '<div class="feed__empty" style="grid-column:1/-1;color:#777">No meshes yet — sculpt in Upload.</div>';
+        grid.innerHTML = '<div class="photo-empty">No meshes yet — sculpt in Upload.</div>';
         return;
       }
+      var html = "";
       pogs.forEach(function (p) {
-        var el = document.createElement("div");
-        el.className = "asset";
-        var img = art("/api/artifacts/" + (p.photo_key || ""));
-        if (!p.photo_key) img = stv.calling;
-        el.innerHTML =
-          '<img src="' + img + '" alt="" loading="lazy">' +
-          '<div class="asset__meta">' +
-            '<div class="asset__name">' + (p.active ? "★ " : "") + shortName(p.mesh_id) + '</div>' +
-            '<div class="asset__sub">' + p.status + (p.stub ? " · stub" : "") + '</div>' +
-          '</div>' +
-          '<div class="asset__acts">' +
-            '<button type="button" data-act="star">Star</button>' +
-            '<button type="button" data-act="name">Name</button>' +
-          '</div>';
-        el.querySelector('[data-act="star"]').addEventListener("click", function () { activate(p.mesh_id); loadAssets(); });
-        el.querySelector('[data-act="name"]').addEventListener("click", function () {
-          var n = prompt("Name this character", shortName(p.mesh_id));
-          if (!n) return;
-          // store locally for now; people rename API is upload-scoped
-          try {
-            var map = JSON.parse(localStorage.getItem("pogpet.names") || "{}");
-            map[p.mesh_id] = n;
-            localStorage.setItem("pogpet.names", JSON.stringify(map));
-          } catch (e) {}
-          msg("as-msg", "Named " + n, "ok");
-          loadAssets();
-        });
-        grid.appendChild(el);
+        var src = p.photo_key ? art("/api/artifacts/" + p.photo_key) : stv.calling;
+        var label = shortName(p.mesh_id);
+        if (p.active) label = "★ " + label;
+        html += '<figure class="photo">' +
+          '<img src="' + src + '" alt="" loading="lazy">' +
+          '<figcaption class="meta"><b>' + label + '</b>' + p.status + '</figcaption></figure>';
       });
+      grid.innerHTML = html;
     }
 
     var asAi = $("as-ai");

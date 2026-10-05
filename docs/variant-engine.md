@@ -49,7 +49,15 @@ jank, and iOS Safari's memory ceiling (crashes seen with just a few models).
 Google's own guidance: max ~3–5 visible instances. So:
 
 - Grid tiles are **stills only**. Always. No exceptions.
-- At most **3 live viewers**: spotlight hero + open detail card + one
+- Default viewer is a **snapshot viewer**, not WebGL: 12–24 pre-rendered
+  angles per (subject, line, seed), drag/swipe to spin. Zero GPU contexts,
+  zero crash surface, ~360KB of WebP versus multi-MB GLBs, works on every
+  phone ever made. The angle sets are already what the fan-out renders —
+  shooting 16 instead of 5 is the only cost change.
+- Full `model-viewer` sits behind a **"3D" toggle** in the detail card (zoom,
+  AR, inspect) with the same 3-instance cap, recycle-on-swap, and
+  hover-prefetch rules below. Progressive enhancement, not the default path.
+- At most **3 live model-viewers**: spotlight hero + open detail card + one
   hover-prefetch slot. Recycle elements carousel-style (swap `src`) rather
   than mounting new ones.
 - `reveal="interaction"` everywhere below the fold; custom slotted posters

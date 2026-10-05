@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Supplier registry unit tests — offline, no keys, no network.
+
+    python3 -m unittest tests.test_suppliers -v
+"""
+from __future__ import annotations
+
+import sys
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from backend import suppliers as sup  # noqa: E402
+
+
+class TestRegistry(unittest.TestCase):
+    def test_seven_suppliers(self):
+        self.assertEqual(len(sup.SUPPLIERS), 7)
+        for sid, s in sup.SUPPLIERS.items():
+            for k in ("label", "ships", "materials", "order", "est"):
+                self.assertIn(k, s, sid)
+
+    def test_home_farm_present(self):
+        self.assertIn("PLA", sup.SUPPLIERS["makr3d"]["materials"])
+        self.assertEqual(sup.SUPPLIERS["makr3d"]["est"]["kind"], "band")
+
+
+class TestEstimate(unittest.TestCase):
+    def test_tiny_pla_band(self):
+        r = sup.estimate("makr3d", material="PLA", weight_g=1.6)
+        self.assertTrue(r["feasible"])
+        self.assertEqual(r["est_cents"], 129)
+
+    def test_per_cm3(self):
+        r = sup.estimate("fdfarm", material="PLA", volume_cm3=2.63)
+        self.assertTrue(r["feasible"])
+        self.assertEqual(r["est_cents"], round(2.63 * 320))
+
+    def test_material_gap(self):
+        r = sup.estimate("makr3d", material="TPU")
+        self.assertFalse(r["feasible"])
+        self.assertTrue(any("TPU" in g for g in r["gaps"]))
+
+    def test_color_gap(self):
+        r = sup.estimate("makr3d", material="PLA", colors=5)
+        self.assertFalse(r["feasible"])
+
+    def test_build_gap(self):
+        r = sup.estimate("makr3d", material="PLA", dims_mm=[300, 10, 10])
+        self.assertFalse(r["feasible"])
+
+    def test_quote_suppliers(self):
+        for sid in ("treatstock", "craftcloud", "dapi3d", "sculpteo", "yorkshire3d"):
+            r = sup.estimate(sid, material="PLA", weight_g=5)
+            self.assertTrue(r["feasible"])
+            self.assertIsNone(r["est_cents"])  # live quote, never faked
+
+    def test_options_ranking(self):
+        opts = sup.options_for(material="PLA", weight_g=1.6, region="UK")
+        self.assertTrue(opts[0]["feasible"])
+        infeasible = [o for o in opts if not o["feasible"]]
+        self.assertEqual(infeasible, [])  # everything ships UK/worldwide
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -3768,6 +3768,27 @@ def _custom_schema(lid: str, spec: dict) -> dict:
     return {"requires": [], "optional": [], "modes": [], "levels": []}
 
 
+def _supplier_options(spec: dict) -> list[dict]:
+    """Per-line supplier options with feasibility + estimates (vision:
+    costs per supplier as data, so AI designs inside true constraints)."""
+    from backend import suppliers as _sup
+    mat = spec.get("material") or "PLA"
+    weight = spec.get("weight_g")
+    vol = round(weight / 1.24, 2) if isinstance(weight, (int, float)) else None
+    return _sup.options_for(material=mat, colors=1,
+                            dims_mm=spec.get("dims_mm"), volume_cm3=vol,
+                            weight_g=weight)
+
+
+@app.get("/api/suppliers")
+def supplier_list():
+    """Supplier registry + estimator. Estimates are bands, live quotes win."""
+    from backend import suppliers as _sup
+    return jsonify({"ok": True, "suppliers": [
+        {"id": sid, **{k: v for k, v in spec.items() if k != "est"},
+         "pricing": spec["est"]} for sid, spec in _sup.SUPPLIERS.items()]})
+
+
 @app.get("/api/products/studio")
 def products_studio():
     """Products tab catalog: studio lines + relevant assets + stills + prices."""
@@ -3829,6 +3850,7 @@ def products_studio():
             "personalization": spec.get("personalization"),
             "occasion": spec.get("occasion"),
             "suggested_motif": suggestion,
+            "suppliers": _supplier_options(spec),
         })
     return jsonify({
         "ok": True,

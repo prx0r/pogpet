@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
 import sys
 import threading
@@ -377,6 +378,221 @@ def set_subject_profile():
             birthday=str(body.get("birthday") or ""))
     return jsonify({"ok": True, "owner": owner, "profile": prof,
                     "suggestion": _suggest_motif(prof.get("interests", []))})
+
+
+# ── guided personal shopper ───────────────────────────────────────────
+# Person first, no search bar: ramble -> profile -> photos -> mesh -> packs.
+
+def _guide_pack_items(owner: str, state: dict, active_mesh: str = "") -> list[dict]:
+    """Curated packs: budget-filtered lines with the subject's suggestion.
+    Max 3 per theme — the customer never scrolls."""
+    from backend import guide as _g
+    budget = state.get("budget_cents") or 0
+    rec = state.get("recipient", {})
+    suggestion = _suggest_motif(rec.get("interests", []))
+    prefs = state.get("prefs", {})
+    excluded = set(prefs.get("exclude", []))
+    motif = prefs.get("motif") or (suggestion or {}).get("motif", "")
+    groups: dict[str, list] = {}
+    for lid, spec in config.STUDIO_LINES.items():
+        if spec.get("status") != "live" or spec.get("fulfilment") == "digital":
+            continue
+        if lid in excluded:
+            continue
+        price = spec.get("price_cents", 0)
+        if budget and price > budget:
+            continue
+        stills = _studio_stills_for(lid, "none", "none")
+        why = ""
+        if motif:
+            why = f"Picked for {rec.get('name') or 'them'}: {motif.replace('_', ' ')}."
+        elif suggestion:
+            why = (f"Picked for {rec.get('name') or 'them'}: "
+                   f"{suggestion['motif'].replace('_', ' ')} "
+                   f"({suggestion['interest']}).")
+        groups.setdefault(spec.get("theme", "everyday"), []).append({
+            "id": lid, "label": spec.get("label", lid),
+            "price_cents": price, "material": spec.get("material"),
+            "dims_mm": spec.get("dims_mm"), "stills": stills,
+            "customization_schema": _custom_schema(lid, spec),
+            "motif": motif, "why": why,
+        })
+    packs = []
+    for theme in ("stocking", "game_night", "gamer", "christmas", "everyday", "desk"):
+        items = sorted(groups.get(theme, []), key=lambda i: i["price_cents"])[:3]
+        if items:
+            packs.append({"theme": theme, "items": items})
+    return packs
+
+
+@app.post("/api/guide/open")
+def guide_open():
+    from backend import guide as _g
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    if not owner:
+        return _err("owner is required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        sid = _g.new_id()
+        _g.save_session(c, sid, owner, "ramble", _g.blank_state())
+    return jsonify({"ok": True, "session_id": sid, "stage": "ramble",
+                    "prompt": "Who are we shopping for — and what's the occasion?"})
+
+
+@app.post("/api/guide/turn")
+def guide_turn():
+    """One ramble/refine message. Routes by stage; accumulates, never restarts."""
+    from backend import guide as _g
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    sid = (body.get("session_id") or "").strip()
+    text = (body.get("text") or "").strip()
+    if not owner or not sid or not text:
+        return _err("owner, session_id and text are required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        s = _g.get_session(c, sid, owner)
+        if not s:
+            return _err("no such session", 404)
+        state, stage = s["state"], s["stage"]
+        low = text.lower()
+        rec0 = state.get("recipient", {})
+        complete = bool(rec0.get("name") and state.get("occasion") and state.get("budget_cents"))
+        looks_refine = bool(_g._extract_budget(text)
+                            or re.search(r"(?:motif|make it|i want|cheaper|under|not\s+the|no\s+[a-z])", low))
+        if stage in ("ready", "refining") or (complete and looks_refine and stage == "photos"):
+            # refine: budget shifts, motif picks, line vetoes
+            prefs = state.setdefault("prefs", {"motif": "", "exclude": []})
+            changed = []
+            b = _g._extract_budget(text)
+            if b:
+                state["budget_cents"] = b
+                changed.append(f"budget under {b // 100}")
+            m = re.search(r"(?:motif|make it|i want)\s+([a-z_ ]{3,30})", low)
+            if m:
+                prefs["motif"] = m.group(1).strip().replace(" ", "_")[:30]
+                changed.append(f"motif {prefs['motif']}")
+            for lid in config.STUDIO_LINES:
+                if re.search(r"\bnot\s+(the\s+)?" + re.escape(lid.replace("_", " ")) + r"\b", low) \
+                        or f"no {lid.replace('_', ' ')}" in low:
+                    if lid not in prefs["exclude"]:
+                        prefs["exclude"].append(lid)
+                        changed.append(f"dropped {lid}")
+            state["events"] = _g.compute_events(state)
+            _g.save_session(c, sid, owner, "refining", state)
+            packs = _guide_pack_items(owner, state)
+            reply = ("Done" + (": " + ", ".join(changed) if changed else
+                                " — tell me budget, motif, or what to drop") + ".")
+            return jsonify({"ok": True, "session_id": sid, "stage": "refining",
+                            "reply": reply, "packs": packs,
+                            "events": state.get("events", [])})
+        state, prompt = _g.ramble_turn(state, text)
+        rec = state.get("recipient", {})
+        if rec.get("name") and state.get("occasion") and state.get("budget_cents"):
+            stage = "photos"
+        _g.save_session(c, sid, owner, stage, state)
+        return jsonify({"ok": True, "session_id": sid, "stage": stage,
+                        "reply": prompt, "recipient": rec,
+                        "occasion": state.get("occasion", ""),
+                        "budget_cents": state.get("budget_cents", 0),
+                        "events": state.get("events", [])})
+
+
+@app.post("/api/guide/photos")
+def guide_photos():
+    """Attach up to 10 owned photos to the session."""
+    from backend import guide as _g
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    sid = (body.get("session_id") or "").strip()
+    pids = body.get("photo_ids") or []
+    if not owner or not sid or not isinstance(pids, list):
+        return _err("owner, session_id and photo_ids[] are required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        s = _g.get_session(c, sid, owner)
+        if not s:
+            return _err("no such session", 404)
+        state = s["state"]
+        have = [p for p in state.get("photo_ids", [])]
+        for pid in pids[:_g.MAX_PHOTOS]:
+            ph = db.get_photo(c, str(pid))
+            if ph and (ph["owner"] or "anon") == owner and str(pid) not in have \
+                    and len(have) < _g.MAX_PHOTOS:
+                have.append(str(pid))
+        state["photo_ids"] = have
+        _g.save_session(c, sid, owner, "photos" if not state.get("mesh_id") else s["stage"], state)
+    return jsonify({"ok": True, "session_id": sid, "photo_ids": have,
+                    "reply": f"{len(have)} photo{'s' if len(have) != 1 else ''} kept. "
+                             f"Say the word and I'll sculpt the mesh."})
+
+
+@app.post("/api/guide/mesh")
+def guide_mesh():
+    """Sculpt the session mesh from an attached photo (free-tier quota applies)."""
+    from backend import guide as _g
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    sid = (body.get("session_id") or "").strip()
+    pid = (body.get("photo_id") or "").strip()
+    if not owner or not sid:
+        return _err("owner and session_id are required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        s = _g.get_session(c, sid, owner)
+        if not s:
+            return _err("no such session", 404)
+        state = s["state"]
+        if not pid:
+            pid = (state.get("photo_ids") or [""])[0]
+        if not pid or pid not in state.get("photo_ids", []):
+            return _err("pick one of the session photos first", 400)
+        try:
+            from backend import pipeline as _p
+            res = _p.start_mesh(pid)
+        except Exception as e:
+            code = getattr(e, "code", 500) if hasattr(e, "code") else 500
+            return _err(str(e)[:300], code if isinstance(code, int) else 500)
+        mesh = res.get("mesh", {})
+        state["mesh_id"] = mesh.get("id", "")
+        state["mesh_status"] = mesh.get("status", "")
+        rec = state.setdefault("recipient", {})
+        rec["mesh_id"] = state["mesh_id"]
+        _g.save_session(c, sid, owner, "ready" if mesh.get("status") == "succeeded" else "meshing", state)
+    return jsonify({"ok": True, "session_id": sid, "mesh": mesh,
+                    "reused": res.get("reused", False),
+                    "reply": "Mesh underway — packs appear as soon as it lands."})
+
+
+@app.get("/api/guide/packs")
+def guide_packs():
+    """Curated gift packs: no scroll, no search. Budget-filtered, motif-picked."""
+    from backend import guide as _g
+    owner = (request.args.get("owner") or "").strip()[:80]
+    sid = (request.args.get("session_id") or "").strip()
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        s = _g.get_session(c, sid, owner)
+        if not s:
+            return _err("no such session", 404)
+        state = s["state"]
+        prof = db.get_profile(c, owner)
+        packs = _guide_pack_items(owner, state, prof.get("active_mesh_id") or "")
+    return jsonify({"ok": True, "session_id": sid, "packs": packs,
+                    "recipient": state.get("recipient", {}),
+                    "budget_cents": state.get("budget_cents", 0),
+                    "events": state.get("events", [])})
 
 
 def _ensure_mockup(owner, short, pid, spec, src_path, concept, subject, have):

@@ -221,6 +221,24 @@ async def figg_rooms(owner: str = "") -> str:
     return _j(await _call("GET", "/api/videos/rooms?owner=" + owner))
 
 
+async def figg_guide_open(owner: str = "") -> str:
+    """Open a personal-shopper session: ramble-first gifting, no search bar."""
+    return _j(await _call("POST", "/api/guide/open", {"owner": owner}))
+
+
+async def figg_guide_turn(session_id: str, text: str, owner: str = "") -> str:
+    """One shopper message: builds profile, refines packs, answers next step."""
+    return _j(await _call("POST", "/api/guide/turn",
+                         {"session_id": session_id, "text": text, "owner": owner}))
+
+
+async def figg_guide_packs(session_id: str, owner: str = "") -> str:
+    """Curated gift packs for the session: budget-filtered, motif-picked."""
+    import urllib.parse
+    q = urllib.parse.quote
+    return _j(await _call("GET", f"/api/guide/packs?owner={q(owner)}&session_id={q(session_id)}"))
+
+
 async def figg_credits(owner: str = "") -> str:
     """Today's free allowance: sculpts and videos remaining."""
     return _j(await _call("GET", f"/api/credits?owner={owner}"))
@@ -437,7 +455,8 @@ async def figg_card_reserve(design_id: str, revision: int, idempotency_key: str,
 TOOL_AREAS: dict[str, list] = {
     "cards":     [figg_card_library, figg_card_save, figg_card_render,
                   figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve],
-    "flow":      [figg_flow, figg_upload_photo, figg_start_mesh, figg_playbook, figg_quick_map],
+    "flow":      [figg_flow, figg_upload_photo, figg_start_mesh, figg_playbook, figg_quick_map,
+                  figg_guide_open, figg_guide_turn, figg_guide_packs],
     "identity":  [figg_me, figg_create_account, figg_login, figg_credits],
     "mesh":      [figg_mesh_status, figg_measure, figg_print_export],
     "shop":      [figg_catalog, figg_products, figg_concepts, figg_quote,

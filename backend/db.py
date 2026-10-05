@@ -152,6 +152,17 @@ CREATE TABLE IF NOT EXISTS subject_profiles (
   PRIMARY KEY (owner, mesh_id)
 );
 
+-- Guided personal-shopper sessions: person first, no search bar. State is
+-- a JSON blob (occasion, budget, recipient, photos, mesh, packs, events).
+CREATE TABLE IF NOT EXISTS guide_sessions (
+  id         TEXT PRIMARY KEY,
+  owner      TEXT NOT NULL DEFAULT '',
+  stage      TEXT NOT NULL DEFAULT 'ramble',
+  state      TEXT NOT NULL DEFAULT '{}',
+  created_at REAL NOT NULL,
+  updated_at REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS upload_ledger (
   owner     TEXT NOT NULL,
   day       TEXT NOT NULL,

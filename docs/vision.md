@@ -66,3 +66,8 @@ landed estimates (`backend/suppliers.py`); multi-supplier live quotes next.
 - **Consumer-first.** Most people never touch Blender and never should. The
   parametric/advanced path exists for agents, Dots and power users via MCP;
   everyone else gets ramble → packs → checkout.
+- **No-commitment ordering.** Every farm takes qty 1 with no relationship —
+  API to demand, they ship. Verified per supplier (`can_single_order`).
+- **Creators submit, we accept.** Community products arrive with provenance,
+  we accept or reject, royalties flow at $1. Simple core catalog stays
+  designed in-house; the bank grows by curation, not by upload firehose.

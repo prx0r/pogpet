@@ -14,6 +14,8 @@ SUPPLIERS: dict[str, dict] = {
         "materials": ["PLA", "PETG"], "colors_max": 4,
         "build_mm": [256, 256, 256],
         "order": "api", "api": "Shopify/Etsy/CSV/manual/public API",
+        "min_qty": 1, "account": "free, no card",
+        "commitment": "none — pay per order",
         "dispatch_days": [1, 2],
         "notes": "Home farm. Instant file quotes (£1.29 benchy / £2.50 fidget / "
                  "£7.60 articulated ex-VAT), £1 min per order. Human QA per order.",
@@ -26,6 +28,8 @@ SUPPLIERS: dict[str, dict] = {
         "materials": ["PLA", "PETG", "TPU", "ASA"], "colors_max": 40,
         "build_mm": [256, 256, 256],
         "order": "quote", "api": "written quote, 1 business day",
+        "min_qty": 1, "account": "quote-based",
+        "commitment": "none — pay per quote; tiers 50+",
         "dispatch_days": [3, 10],
         "notes": "Escape hatch for TPU/ASA/assemblies/inserts. Volume tiers 50+.",
         "est": {"kind": "quote", "ccy": "GBP"},
@@ -36,6 +40,8 @@ SUPPLIERS: dict[str, dict] = {
         "materials": ["PLA", "PETG", "TPU", "Resin"], "colors_max": 14,
         "build_mm": [256, 256, 256],
         "order": "manual", "api": "browser quote tool (no public API)",
+        "min_qty": 1, "account": "none needed",
+        "commitment": "none — one part to fifty",
         "dispatch_days": [2, 2],
         "notes": "Per-cm3 published rates. Backup UK farm.",
         "est": {"kind": "per_cm3", "PLA": 320, "PETG": 450, "ccy": "GBP"},
@@ -46,6 +52,8 @@ SUPPLIERS: dict[str, dict] = {
         "materials": ["PLA", "PETG", "TPU", "Resin", "Nylon"], "colors_max": 99,
         "build_mm": [500, 500, 500],
         "order": "api", "api": "v2: upload→price(location[country])→order; key via support",
+        "min_qty": 1, "account": "free",
+        "commitment": "none — single object to 10000+ parts",
         "dispatch_days": [2, 7],
         "notes": "The per-country engine: location[country] returns local vendor "
                  "offers. Affiliate rewards per order. No key stored.",
@@ -57,6 +65,8 @@ SUPPLIERS: dict[str, dict] = {
         "materials": ["PLA", "PETG", "TPU", "Nylon", "Resin"], "colors_max": 99,
         "build_mm": [500, 500, 500],
         "order": "api", "api": "v5: model→parse→price→cart→order (+MCP via Kiln)",
+        "min_qty": 1, "account": "free",
+        "commitment": "none — no minimum order value",
         "dispatch_days": [3, 7],
         "notes": "Best for one-off compare shopping, not store sync.",
         "est": {"kind": "quote", "ccy": "USD"},
@@ -67,6 +77,8 @@ SUPPLIERS: dict[str, dict] = {
         "materials": ["PLA", "PETG"], "colors_max": 4,
         "build_mm": [256, 256, 256],
         "order": "api", "api": "Shopify/Etsy/eBay/Woo + API; SKU mapping",
+        "min_qty": 1, "account": "free plan",
+        "commitment": "none — pay per order",
         "dispatch_days": [2, 5],
         "notes": "US/EU answer to MAKR3D: store-connected dropship fulfilment.",
         "est": {"kind": "quote", "ccy": "USD"},
@@ -77,6 +89,8 @@ SUPPLIERS: dict[str, dict] = {
         "materials": ["PLA", "PETG", "Nylon", "Resin"], "colors_max": 99,
         "build_mm": [500, 500, 500],
         "order": "api", "api": "upload/quote/cart/track; key via partnership",
+        "min_qty": 1, "account": "free",
+        "commitment": "none — pay per print",
         "dispatch_days": [3, 7],
         "notes": "Premium/EU lane. Free API access, pay per print.",
         "est": {"kind": "quote", "ccy": "EUR"},
@@ -121,6 +135,18 @@ def estimate(supplier_id: str, *, material: str = "PLA", colors: int = 1,
     return {"feasible": True, "gaps": [], "est_cents": est,
             "ccy": model.get("ccy", "GBP"), "basis": basis,
             "dispatch_days": spec["dispatch_days"]}
+
+
+def can_single_order(supplier_id: str) -> dict:
+    """Qty-1 with no relationship: every registered farm takes single orders
+    with no account commitment beyond (at most) a free account."""
+    spec = SUPPLIERS.get(supplier_id)
+    if not spec:
+        return {"ok": False, "reason": "unknown supplier"}
+    ok = spec.get("min_qty", 1) == 1
+    return {"ok": ok, "min_qty": spec.get("min_qty", 1),
+            "account": spec.get("account", "unknown"),
+            "commitment": spec.get("commitment", "unknown")}
 
 
 def options_for(*, material: str = "PLA", colors: int = 1,

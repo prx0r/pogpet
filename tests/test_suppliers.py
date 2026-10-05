@@ -88,3 +88,18 @@ class TestStorefrontAnonymity(unittest.TestCase):
             for fid in FARM_IDS:
                 self.assertNotIn(fid.replace("3d", "3d"), blob, lid)
             self.assertTrue(opts["printable"])
+
+
+class TestNoCommitment(unittest.TestCase):
+    def test_qty1_everywhere(self):
+        from backend import suppliers as sup
+        for sid in sup.SUPPLIERS:
+            r = sup.can_single_order(sid)
+            self.assertTrue(r["ok"], sid)
+            self.assertEqual(r["min_qty"], 1, sid)
+
+    def test_registry_fields(self):
+        from backend import suppliers as sup
+        for sid, s in sup.SUPPLIERS.items():
+            for k in ("min_qty", "account", "commitment"):
+                self.assertIn(k, s, sid)

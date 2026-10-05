@@ -126,6 +126,7 @@ STUDIO_LINES: dict[str, dict] = {
         },
         "theme": "xmas",
         "fulfilment": "print_farm",
+        "personalization": {"method": "face_swap", "zone": "full_mesh", "max_chars": 0},
     },
     "keychain": {
         "label": "Keychain / keyring",
@@ -142,6 +143,7 @@ STUDIO_LINES: dict[str, dict] = {
         },
         "theme": "everyday",
         "fulfilment": "print_farm",
+        "personalization": {"method": "face_swap", "zone": "full_mesh", "max_chars": 0},
     },
     "croc_tag": {
         "label": "Croc tag pin",
@@ -158,6 +160,7 @@ STUDIO_LINES: dict[str, dict] = {
         },
         "theme": "everyday",
         "fulfilment": "print_farm",
+        "personalization": {"method": "face_swap", "zone": "full_mesh", "max_chars": 0},
         "size_mm": 28,
         "pin_diameter_mm": 12,
         "fits": "Crocs classic / most jibbitz holes",
@@ -186,6 +189,7 @@ STUDIO_LINES: dict[str, dict] = {
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "desk",
         "fulfilment": "print_farm",
+        "personalization": {"method": "face_swap", "zone": "full_mesh", "max_chars": 0},
     },
     # ── Christmas 20 factory lines (canonical format v1 — see factory_registry.json).
     # status "soon": visible in shop with fallback stills, not orderable until
@@ -550,6 +554,32 @@ STUDIO_LINES: dict[str, dict] = {
         "recipes": {"render": "todo", "production_3mf": "todo"},
         "occasion": "christmas", "sample": "needed",
     },
+}
+
+# ── personalisation levels (agent-visible contract) ─────────────────
+# L0 name/initials (instant, no Meshy) · L1 photo/2D asset (seconds) ·
+# L2 relief/silhouette (short) · L3 full 3D mesh (slowest, costs credits).
+# Derived per line from personalization.method — no per-line bookkeeping:
+#   emboss    -> L0, requires recipient_name, modes [text]
+#   relief    -> L0+L2, requires nothing, modes [text, relief]
+#   face_swap -> L3, requires photo, modes [full_mesh]
+# Overrides only where a line spans further (golf marker takes a pet face).
+CUSTOM_SCHEMA_OVERRIDES = {
+    "golf_marker": {
+        "requires": [],
+        "optional": ["recipient_name", "initials", "motif", "colour", "photo"],
+        "modes": ["text", "relief", "pet_mesh"],
+        "levels": ["L0", "L2"],
+    },
+}
+
+# Greeting cards are a structured 2D composition problem, not manufacturing:
+# requires occasion; everything else optional. Agents compose semantically.
+CARD_CUSTOMIZATION_SCHEMA = {
+    "requires": ["occasion"],
+    "optional": ["recipient", "photo", "message", "style", "inside_message"],
+    "modes": ["photo", "illustrated", "character", "typography"],
+    "levels": ["L1", "L2", "L3"],
 }
 
 # Coat = material grade + optional pattern on the existing texture (previews).

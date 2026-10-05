@@ -2364,7 +2364,10 @@ def studio_state():
     if active:
         for m in meshes:
             m["active"] = m["mesh_id"] == active
-    lines = [{"id": lid, **spec} for lid, spec in config.STUDIO_LINES.items()]
+    lines = [{"id": lid, **spec,
+              "customization_schema": _custom_schema(lid, spec),
+              "personalization_levels": _custom_schema(lid, spec)["levels"]}
+             for lid, spec in config.STUDIO_LINES.items()]
     hats = []
     for h in config.STUDIO_HATS:
         hats.append({**h, "preview": _studio_stills_for("ornament", "none", "none") if h["id"] == "none" else {}})
@@ -3104,6 +3107,30 @@ def studio_order():
     })
 
 
+def _custom_schema(lid: str, spec: dict) -> dict:
+    """Agent-visible customisation contract, derived from personalization.method.
+
+    L0 name/initials (instant) · L1 photo/2D (seconds) · L2 relief (short) ·
+    L3 full mesh (costs credits). Single source of truth — new lines inherit
+    it; only genuine multi-mode lines take CUSTOM_SCHEMA_OVERRIDES.
+    """
+    if lid in config.CUSTOM_SCHEMA_OVERRIDES:
+        o = config.CUSTOM_SCHEMA_OVERRIDES[lid]
+        return {"requires": o["requires"], "optional": o["optional"],
+                "modes": o["modes"], "levels": o["levels"]}
+    method = (spec.get("personalization") or {}).get("method", "")
+    if method == "emboss":
+        return {"requires": ["recipient_name"], "optional": ["motif", "colour"],
+                "modes": ["text"], "levels": ["L0"]}
+    if method == "relief":
+        return {"requires": [], "optional": ["recipient_name", "motif", "photo", "colour"],
+                "modes": ["text", "relief"], "levels": ["L0", "L2"]}
+    if method == "face_swap":
+        return {"requires": ["photo"], "optional": ["coat", "pattern"],
+                "modes": ["full_mesh"], "levels": ["L3"]}
+    return {"requires": [], "optional": [], "modes": [], "levels": []}
+
+
 @app.get("/api/products/studio")
 def products_studio():
     """Products tab catalog: studio lines + relevant assets + stills + prices."""
@@ -3150,6 +3177,8 @@ def products_studio():
             "assets": {"hats": hats, "coats": coats, "patterns": patterns},
             "stills": stills,
             "glb_url": config.STUDIO_BRICK_GLB if lid == "brick" else "",
+            "customization_schema": _custom_schema(lid, spec),
+            "personalization_levels": _custom_schema(lid, spec)["levels"],
         })
     return jsonify({
         "ok": True,
@@ -3159,6 +3188,7 @@ def products_studio():
         "custom_policy": config.STUDIO_CUSTOM_POLICY,
         "card_sizes": config.CARD_SIZES,
         "personal_cards": config.PERSONAL_CARDS,
+        "card_customization_schema": config.CARD_CUSTOMIZATION_SCHEMA,
         "note": "Controlled custom · one-click order · optional Shopify draft (fulfil=true). "
                 "MCP: figg_mesh_manifest · figg_studio_props · figg_fullchain_personalise_order.",
     })

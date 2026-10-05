@@ -306,6 +306,23 @@ LINES = [
 ]
 
 
+def custom_schema(line_id: str, method: str) -> dict:
+    """Mirror of server._custom_schema: L0-L3 + requires/optional/modes."""
+    if line_id == "golf_marker":
+        return {"requires": [], "optional": ["recipient_name", "initials", "motif", "colour", "photo"],
+                "modes": ["text", "relief", "pet_mesh"], "levels": ["L0", "L2"]}
+    if method == "emboss":
+        return {"requires": ["recipient_name"], "optional": ["motif", "colour"],
+                "modes": ["text"], "levels": ["L0"]}
+    if method == "relief":
+        return {"requires": [], "optional": ["recipient_name", "motif", "photo", "colour"],
+                "modes": ["text", "relief"], "levels": ["L0", "L2"]}
+    if method == "face_swap":
+        return {"requires": ["photo"], "optional": ["coat", "pattern"],
+                "modes": ["full_mesh"], "levels": ["L3"]}
+    return {"requires": [], "optional": [], "modes": [], "levels": []}
+
+
 def _validate_verdicts() -> dict[str, str]:
     out: dict[str, str] = {}
     for name in ("validate.json", "validate_masters.json"):
@@ -356,6 +373,9 @@ def main() -> int:
         ready, missing = production_gates(e, verdicts)
         e["production_ready"] = ready
         e["missing_gates"] = missing
+        schema = custom_schema(e["id"], (e.get("personalization") or {}).get("method", ""))
+        e["customization_schema"] = schema
+        e["personalization_levels"] = schema["levels"]
         # lifecycle can only advance by evidence: validated requires a PASS
         # master, sampled/production_ready are derived, never declared
         out[e["id"]] = e

@@ -1759,14 +1759,71 @@
     // VOICE
     // ═══════════════════════════════════════════════════════════
     var mediaRecorder = null, audioChunks = [];
+    var speechRec = null;
+    // Web Speech first (free, on-device where offered, Chrome/Edge/Safari);
+    // MediaRecorder→server whisper stays as the fallback path.
+    function speechSupported() {
+      return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    }
     if ($('mic')) {
       $('mic').onclick = async function() {
+        if (speechRec) {
+          try { speechRec.stop(); } catch (e) {}
+          speechRec = null;
+          $('mic').classList.remove('recording');
+          if (ti) ti.placeholder = 'Type or press the mic…';
+          setPose('neutral');
+          return;
+        }
         if (mediaRecorder && mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
           $('mic').classList.remove('recording');
           if (ti) ti.placeholder = 'Type or press the mic…';
           setPose('neutral');
           return;
+        }
+        if (speechSupported()) {
+          try {
+            setPose('listening');
+            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            speechRec = new SR();
+            speechRec.lang = 'en-GB';
+            speechRec.interimResults = true;
+            speechRec.continuous = false;
+            $('mic').classList.add('recording');
+            if (ti) ti.placeholder = 'Listening… speak now';
+            speechRec.onresult = function (ev) {
+              var interim = '', final = '';
+              for (var i = ev.resultIndex; i < ev.results.length; i++) {
+                if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
+                else interim += ev.results[i][0].transcript;
+              }
+              if (interim && dt) dt.innerHTML = '<span style="opacity:.6">' + interim + '…</span>';
+              if (final && final.trim()) {
+                var t = final.trim();
+                speechRec = null;
+                $('mic').classList.remove('recording');
+                if (ti) ti.placeholder = 'Type or press the mic…';
+                turn(t);
+              }
+            };
+            speechRec.onerror = function () {
+              speechRec = null;
+              $('mic').classList.remove('recording');
+              if (ti) ti.placeholder = 'Type or press the mic…';
+              setPose('neutral');
+            };
+            speechRec.onend = function () {
+              if (speechRec) {
+                speechRec = null;
+                $('mic').classList.remove('recording');
+                if (ti) ti.placeholder = 'Type or press the mic…';
+                setPose('neutral');
+              }
+            };
+            speechRec.start();
+            return;
+          } catch (e) { speechRec = null; }
         }
         try {
           setPose('listening');

@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Factory measure: canonical dims + weight for STL masters (stdlib only).
+
+    python3 scripts/factory/measure.py data/3dprint/masters/*.stl
+
+Parses binary STL (uint32 count + 50-byte facets), computes the signed
+volume, and reports bbox dims in mm plus estimated print weight for PLA
+(1.24 g/cm3) and PETG (1.27 g/cm3), at 100% infill. Real prints use lower
+infill, so treat weight as the conservative upper bound — the farm quotes
+against it and the customer never sees a heavier parcel than listed.
+
+Outputs one JSON object per file on stdout; --json writes a single file.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import struct
+from pathlib import Path
+
+PLA_DENSITY = 1.24  # g / cm3
+PETG_DENSITY = 1.27  # g / cm3
+
+
+def stl_volume_dims(path: Path) -> dict:
+    raw = path.read_bytes()
+    if len(raw) < 84:
+        raise ValueError(f"{path.name}: too small for binary STL")
+    (n,) = struct.unpack("<I", raw[80:84])
+    if len(raw) != 84 + 50 * n:
+        raise ValueError(f"{path.name}: not binary STL (ASCII or corrupt?)")
+    vol = 0.0
+    xs: list[float] = []
+    ys: list[float] = []
+    zs: list[float] = []
+    off = 84
+    for _ in range(n):
+        ax, ay, az, bx, by, bz, cx, cy, cz = struct.unpack("<9f", raw[off + 12:off + 48])
+        vol += (ax * (by * cz - bz * cy) + ay * (bz * cx - bx * cz) + az * (bx * cy - by * cx)) / 6.0
+        xs += [ax, bx, cx]
+        ys += [ay, by, cy]
+        zs += [az, bz, cz]
+        off += 50
+    vol_cm3 = abs(vol) / 1000.0
+    dims = [round(max(xs) - min(xs), 1), round(max(ys) - min(ys), 1), round(max(zs) - min(zs), 1)]
+    return {
+        "file": path.name,
+        "facets": n,
+        "dims_mm": dims,
+        "volume_cm3": round(vol_cm3, 2),
+        "weight_pla_g": round(vol_cm3 * PLA_DENSITY, 1),
+        "weight_petg_g": round(vol_cm3 * PETG_DENSITY, 1),
+    }
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("files", nargs="+")
+    ap.add_argument("--json", default="", help="write combined JSON here")
+    a = ap.parse_args()
+    out = [stl_volume_dims(Path(f)) for f in a.files]
+    for rec in out:
+        print(json.dumps(rec))
+    if a.json:
+        Path(a.json).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.json).write_text(json.dumps(out, indent=2))
+        print(f"wrote {a.json}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

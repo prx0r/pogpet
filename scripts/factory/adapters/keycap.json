@@ -1,0 +1,7 @@
+{
+  "line": "keycap",
+  "base": "masters/mx_keycap.stl",
+  "surface": {"origin_mm": [0, 0, 11], "normal": [0, 0, 1],
+              "width_mm": 12, "height_mm": 12, "embed_mm": 0.4},
+  "text": {"size_mm": 8, "depth_mm": 1.0, "max_chars": 6, "auto_fit": true}
+}

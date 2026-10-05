@@ -1,0 +1,7 @@
+{
+  "line": "line_reader",
+  "base": "masters/line_reader.stl",
+  "surface": {"origin_mm": [0, 0, 2], "normal": [0, 0, 1],
+              "width_mm": 120, "height_mm": 20, "embed_mm": 0.4},
+  "text": {"size_mm": 10, "depth_mm": 1.2, "max_chars": 12, "auto_fit": true}
+}

@@ -37,6 +37,11 @@ MESH_CONVERT = {".3mf", ".step", ".stp"}
 DOC = {".pdf", ".txt", ".md", ".licence", ".license"}
 GCODE = {".gcode", ".bgcode"}
 
+# Community ZIPs are untrusted input: cap per-member and per-archive totals
+# (decompression bombs and 2GB Windows builds both exist in the wild).
+MAX_MEMBER_BYTES = 500_000_000
+MAX_ARCHIVE_BYTES = 2_000_000_000
+
 
 def slug_of(zip_path: Path) -> str:
     s = zip_path.stem
@@ -107,16 +112,28 @@ def ingest(zip_path: Path, redo: bool = False) -> dict:
         kind = kind_of(zip_path.name, found)
         verdict = verdict_of(found)
         if redo or not dest.exists():
+            total = 0
             for n in found["stl"] + found["obj"] + found["threemf"] + found["step"] + found["docs"]:
                 try:
-                    data = z.read(n)
+                    info = z.getinfo(n)
                 except KeyError:
                     continue
-                target = dest / Path(n).name
+                if info.file_size > MAX_MEMBER_BYTES:
+                    print(f"  SKIP oversize member ({info.file_size}b): {n}")
+                    continue
+                total += info.file_size
+                if total > MAX_ARCHIVE_BYTES:
+                    print(f"  STOP archive cap reached: {zip_path.name}")
+                    break
+                # preserve full archive-internal path: two objects called
+                # part.stl in different folders must not collide on one basename
+                rel = Path(n)
+                parts = [p for p in rel.parts if p not in (".", "..") and not p.startswith("/")]
+                target = dest / Path(*parts)
                 if target.exists() and not redo:
                     continue
-                dest.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(data)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(z.read(n))
     return {
         "src_zip": zip_path.name,
         "kind": kind,
@@ -127,7 +144,8 @@ def ingest(zip_path: Path, redo: bool = False) -> dict:
         "step": [Path(n).name for n in found["step"]],
         "gcode": [Path(n).name for n in found["gcode"]],
         "docs": [Path(n).name for n in found["docs"]],
-        "dir": str(dest.relative_to(ROOT)),
+        "dir": (str(dest.relative_to(ROOT)) if dest.is_relative_to(ROOT)
+                else str(dest)),
     }
 
 

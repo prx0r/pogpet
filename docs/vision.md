@@ -50,6 +50,19 @@ shipping, available materials, the loved one's profile, the budget.
 ## Status
 
 Live in parts: canonical format v1 carries dims/weight/material/supplier
-(`backend/config.py`, `factory_registry.json`); multi-supplier costs and
-machine-enforced design envelopes are next. This file is the direction all
-of it points.
+(`backend/config.py`, `factory_registry.json`); supplier registry with
+landed estimates (`backend/suppliers.py`); multi-supplier live quotes next.
+
+## House rules (2026-10-05)
+
+- **Suppliers stay invisible.** No farm name ever reaches the storefront —
+  the API serves capability summaries (materials, colours, dispatch range),
+  routing happens server-side. Shoppers customise freely; we pick the optimal
+  physical implementation and propose adjustments ("make it this big") when
+  close to a better fit.
+- **Remix pays $1, always.** Designing with someone else's mesh adds a flat
+  $1 royalty to the original designer at checkout. The bank of community
+  designs accrues from these — provenance-gated before anything prints.
+- **Consumer-first.** Most people never touch Blender and never should. The
+  parametric/advanced path exists for agents, Dots and power users via MCP;
+  everyone else gets ramble → packs → checkout.

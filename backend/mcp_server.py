@@ -376,13 +376,16 @@ async def figg_checkout(line: str, coat: str = "none", hat: str = "none",
                         pattern: str = "solid", qty: int = 1,
                         amount_cents: int = 0, fulfil: bool = False,
                         owner: str = "", mesh_id: str = "", email: str = "",
-                        note: str = "") -> str:
-    """Reserve an order. fulfil=true also creates a Shopify draft (no card charge). Show price first."""
+                        note: str = "", remix_of: dict | None = None) -> str:
+    """Reserve an order. fulfil=true also creates a Shopify draft (no card charge). Show price first.
+    remix_of={designer, design} adds a flat $1 royalty to the original designer."""
     body = {
         "line": line, "coat": coat, "hat": hat, "pattern": pattern,
         "qty": qty, "fulfil": fulfil, "owner": owner, "mesh_id": mesh_id,
         "email": email, "note": note,
     }
+    if remix_of:
+        body["remix_of"] = remix_of
     if amount_cents:
         body["amount_cents"] = amount_cents
     return _j(await _call("POST", "/api/products/order", body))

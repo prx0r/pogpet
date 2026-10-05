@@ -789,6 +789,7 @@
   <link rel="stylesheet" href="/css/cards-studio.css">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/cards-studio.js"></script>
+  <script src="/js/card-gallery.js"></script>
   <script src="/js/oddy.js"></script>
 </head>
 <body>
@@ -1610,7 +1611,7 @@
       <div class="panel__status" id="shop-status"></div>
       <div class="cards" id="shop-grid"></div>
       <div class="panel__msg" id="shop-msg" role="status" aria-live="polite"></div>
-      <p class="panel__fine">Physical ships from Makr3D / Prodigi. Digital lands instantly.</p>
+      <p class="panel__fine">Physical ships from our print farm partners. Digital lands instantly.</p>
     </div>
   </section>
 
@@ -5323,6 +5324,28 @@
       }
     });
     window.addEventListener("load", function () { cardReady().then(function () {
+      try {
+        var panel = document.querySelector('#panel-cards .panel__inner');
+        if (panel && window.OddHobbGallery) {
+          window.OddHobbGallery.mount(panel, {
+            get: function (path) {
+              return get(API + path + (path.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner))
+                .then(function (d) { if (!d.ok) throw new Error(d.error || "Request failed"); return d; });
+            },
+            post: function (path, body) {
+              body.owner = state.owner;
+              return post(API + path, body).then(function (d) { if (!d.ok) throw new Error(d.error || "Request failed"); return d; });
+            },
+            asset: function (path) {
+              var u = path.indexOf("/api/") === 0 ? "/backend" + path : API + path;
+              u += (u.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner);
+              try { u += "&owner_sig=" + encodeURIComponent(localStorage.getItem("pogpet.ownersig") || ""); } catch (e) {}
+              if (state.apiKey) u += "&api_key=" + encodeURIComponent(state.apiKey);
+              return withTok(u);
+            }
+          });
+        }
+      } catch (e) {}
       cardStudio.refresh(); if (location.hash === "#cards") cardStudio.open();
     }).catch(function () {}); });
 

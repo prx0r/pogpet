@@ -66,3 +66,25 @@ class TestEstimate(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+FARM_IDS = {"makr3d", "yorkshire3d", "3dfarm", "treatstock", "craftcloud", "dapi3d", "sculpteo"}
+
+
+class TestStorefrontAnonymity(unittest.TestCase):
+    def test_fulfilment_options_carry_no_names(self):
+        import sys
+        sys.path.insert(0, ".")
+        from backend import suppliers as sup
+        import backend.server  # noqa: F401 (ensures _fulfilment_options importable)
+        from backend.server import _fulfilment_options
+        for lid, spec in {
+            "golf_marker": {"material": "PLA", "weight_g": 1.2, "dims_mm": [24, 12, 24]},
+            "controller_stand": {"material": "PLA", "weight_g": 286.9,
+                                 "dims_mm": [124.5, 67.6, 56.9]},
+        }.items():
+            opts = _fulfilment_options(spec)
+            blob = __import__("json").dumps(opts).lower()
+            for fid in FARM_IDS:
+                self.assertNotIn(fid.replace("3d", "3d"), blob, lid)
+            self.assertTrue(opts["printable"])

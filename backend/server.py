@@ -3538,10 +3538,23 @@ def products_order():
             extras.append(f"hat:{hat}")
         if extras:
             label += " (" + ", ".join(extras) + ")"
+    # Remix royalty: designing with someone else's mesh adds a flat $1,
+    # always, to them. Recorded on the order; the bank of designs pays out.
+    REMIX_CENTS = 100
+    remix_of = body.get("remix_of") or {}
+    remix_designer, remix_design = "", ""
+    if isinstance(remix_of, dict):
+        remix_designer = str(remix_of.get("designer") or "")[:60]
+        remix_design = str(remix_of.get("design") or "")[:80]
+    if remix_designer and line != "gift_card":
+        price += REMIX_CENTS * qty
     custom_note = note
     if line != "gift_card":
         custom_note = (custom_note + " | " if custom_note else "") + \
             f"custom coat={coat} pattern={pattern} hat={hat}"
+    if remix_designer and line != "gift_card":
+        custom_note = (custom_note + " | " if custom_note else "") + \
+            f"remix $1 to {remix_designer}" + (f" for {remix_design}" if remix_design else "")
     with db.connect() as c:
         order = db.create_order(
             c, owner=owner, line=line, mesh_id=mesh_id, coat=coat, hat=hat,
@@ -3769,8 +3782,7 @@ def _custom_schema(lid: str, spec: dict) -> dict:
 
 
 def _supplier_options(spec: dict) -> list[dict]:
-    """Per-line supplier options with feasibility + estimates (vision:
-    costs per supplier as data, so AI designs inside true constraints)."""
+    """Full per-supplier options (server-side routing only — never served)."""
     from backend import suppliers as _sup
     mat = spec.get("material") or "PLA"
     weight = spec.get("weight_g")
@@ -3778,6 +3790,32 @@ def _supplier_options(spec: dict) -> list[dict]:
     return _sup.options_for(material=mat, colors=1,
                             dims_mm=spec.get("dims_mm"), volume_cm3=vol,
                             weight_g=weight)
+
+
+def _fulfilment_options(spec: dict) -> dict:
+    """What the customer (and agents) may see: capabilities, never names.
+
+    Suppliers stay invisible. Shoppers customise freely; we pick the optimal
+    physical implementation server-side and propose adjustments ("make it
+    this big") when close to a better fit.
+    """
+    from backend import suppliers as _sup
+    opts = [o for o in _supplier_options(spec) if o["feasible"]]
+    if not opts:
+        return {"printable": False, "note": "No farm fits this design yet."}
+    mats, colors, ships, disp = set(), 0, set(), []
+    for o in opts:
+        s = _sup.SUPPLIERS[o["supplier"]]
+        mats.update(s["materials"])
+        colors = max(colors, s["colors_max"])
+        ships.update(s["ships"])
+        disp.append(s["dispatch_days"])
+    lo = min(d[0] for d in disp)
+    hi = max(d[1] for d in disp)
+    return {"printable": True, "materials": sorted(mats),
+            "colors_max": colors, "ships": sorted(ships),
+            "dispatch_days": [lo, hi],
+            "options_count": len(opts)}
 
 
 @app.get("/api/suppliers")
@@ -3850,7 +3888,7 @@ def products_studio():
             "personalization": spec.get("personalization"),
             "occasion": spec.get("occasion"),
             "suggested_motif": suggestion,
-            "suppliers": _supplier_options(spec),
+            "fulfilment_options": _fulfilment_options(spec),
         })
     return jsonify({
         "ok": True,

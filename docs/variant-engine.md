@@ -57,6 +57,10 @@ Google's own guidance: max ~3–5 visible instances. So:
 - Full `model-viewer` sits behind a **"3D" toggle** in the detail card (zoom,
   AR, inspect) with the same 3-instance cap, recycle-on-swap, and
   hover-prefetch rules below. Progressive enhancement, not the default path.
+- Motion demos (fidget flex, jaw talk, lamp glow) are **muted looping MP4**,
+  never GIF: ~15× smaller, hardware-decoded, autoplay-inline on iOS. The
+  videos feed already plays exactly this. Spin is interactive snapshots;
+  action is autoplay video; GIF is neither.
 - At most **3 live model-viewers**: spotlight hero + open detail card + one
   hover-prefetch slot. Recycle elements carousel-style (swap `src`) rather
   than mounting new ones.

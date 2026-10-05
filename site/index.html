@@ -633,6 +633,17 @@
     .pr-card__name{font-size:14px;font-weight:600;color:var(--ivory);margin:4px 0 2px}
     .pr-card__desc{font-size:11px;color:var(--muted);line-height:1.4}
     .pr-card__price{font-size:16px;color:var(--pumpkin);font-weight:700;margin-top:6px}
+    /* art-wall: lightweight gallery — white cards, warm shadow, air */
+    .etsy__tile{background:#fff;border:1px solid #ece5d8;border-radius:20px;padding:12px;
+      box-shadow:0 1px 0 rgba(90,60,20,.05),0 18px 40px -28px rgba(90,60,20,.35);
+      transition:transform .18s ease,box-shadow .18s ease}
+    .etsy__tile:hover{transform:translateY(-2px);
+      box-shadow:0 2px 0 rgba(90,60,20,.05),0 26px 48px -28px rgba(90,60,20,.45)}
+    .etsy__tile.on{outline:2px solid #c4891a;outline-offset:2px}
+    .etsy__img{border-radius:14px;background:#fff}
+    .spin-hint{font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+      color:#a08c5b;text-align:center;margin-top:6px}
+    #pr-d-img{touch-action:pan-y;cursor:ew-resize;border-radius:16px;background:#fff}
     .pr-card__btn{width:100%;margin-top:8px;background:transparent;border:1px solid rgba(255,122,26,.5);
       color:var(--pumpkin);font-family:inherit;font-size:12px;font-weight:600;padding:8px;
       border-radius:9px;cursor:pointer}
@@ -1249,7 +1260,10 @@
         <h3 id="pr-d-name">—</h3>
         <p id="pr-d-blurb"></p>
         <div class="detail-row">
-          <img id="pr-d-img" alt="">
+          <div>
+            <img id="pr-d-img" alt="">
+            <div class="spin-hint" id="pr-spin-hint" style="display:none">drag to spin</div>
+          </div>
           <div>
             <div id="pr-d-price" style="font-size:24px;font-weight:700;color:#8a6a2f"></div>
             <div id="pr-d-meta" style="font-size:12px;color:#666;margin-top:4px"></div>
@@ -3302,6 +3316,16 @@
           var img = $("pr-d-img");
           var pick = (d.stills && (d.stills.hero || d.stills.front)) || (it.stills && it.stills.hero);
           if (img && pick) img.src = pick;
+          // snapshot spin: drag cycles hero/front/side/back, no WebGL needed
+          if (img) {
+            var frames = ["hero", "front", "side", "back"]
+              .map(function (k) { return d.stills && d.stills[k]; })
+              .filter(Boolean);
+            img._spin = frames.length > 1 ? frames : null;
+            img._spinI = 0;
+            var hint = $("pr-spin-hint");
+            if (hint) hint.style.display = img._spin ? "" : "none";
+          }
           var mv = $("pr-d-viewer");
           var murl = productMeshUrl(it);
           if (mv) {
@@ -3364,6 +3388,23 @@
         msg("pr-msg", "Error: " + e.message, "err");
       });
     }
+
+    // snapshot spin, bound once: horizontal drag steps through frames
+    (function () {
+      var img = $("pr-d-img");
+      if (!img || img._spinBound) return;
+      img._spinBound = true;
+      var x0 = null;
+      img.addEventListener("pointerdown", function (e) { x0 = e.clientX; });
+      window.addEventListener("pointerup", function (e) {
+        if (x0 === null || !img._spin || img._spin.length < 2) { x0 = null; return; }
+        var dx = e.clientX - x0;
+        x0 = null;
+        if (Math.abs(dx) < 24) return;
+        img._spinI = (img._spinI + (dx < 0 ? 1 : img._spin.length - 1)) % img._spin.length;
+        img.src = img._spin[img._spinI];
+      });
+    })();
 
     var prOrder = $("pr-order");
     if (prOrder) prOrder.addEventListener("click", function () { runOrder(true); });

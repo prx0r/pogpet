@@ -2189,6 +2189,12 @@ def _studio_stills_for(line: str, coat: str, hat: str) -> dict:
     hat = (hat or "none").lower()
     keys = ["hero", "front", "side", "back", "loop"]
     prefixes = []
+    # factory stills: each line's own <line>-{hero,front,side,back}.png set
+    # wins over the shared fallbacks (real photos, not placeholders)
+    if line not in ("ornament", "keychain", "brick"):
+        prefixes.append(f"{line}-")
+    if line == "brick_keychain":
+        prefixes.append("brick-")
     if coat not in ("", "none") and hat not in ("", "none"):
         prefixes.append(f"coat-{coat}-{hat}-")
     if hat not in ("", "none"):

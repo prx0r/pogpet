@@ -364,8 +364,62 @@ async def figg_fullchain_personalise_order(line: str, coat: str = "none",
     return _j({"ok": bool((order or {}).get("ok")), "personalise": pers, "order": order})
 
 
+async def figg_card_library(owner: str = "") -> str:
+    """Photo library + card scenes. Photo cards need no mesh or Meshy spend."""
+    import urllib.parse
+    q = urllib.parse.quote(owner)
+    return _j({"photos": await _call("GET", "/api/cards/photos?owner=" + q),
+               "scenes": await _call("GET", "/api/cards/templates?owner=" + q),
+               "designs": await _call("GET", "/api/cards/designs?owner=" + q)})
+
+
+async def figg_card_save(spec: dict, owner: str = "", design_id: str = "",
+                         expected_revision: int = 0) -> str:
+    """Save a card scene: template, format, photos[{photo_id,crop,focus,cutout}], headline, recipient, sender, inside_message."""
+    body = {"owner": owner, "spec": spec}
+    if design_id:
+        body.update(id=design_id, expected_revision=expected_revision)
+    return _j(await _call("POST", "/api/cards/designs", body))
+
+
+async def figg_card_render(design_id: str, revision: int, kind: str = "preview",
+                           owner: str = "") -> str:
+    """Render saved card preview/export/motion. Returns async job; same revision drives paper and MP4."""
+    return _j(await _call("POST", f"/api/cards/{design_id}/render",
+                         {"owner": owner, "revision": revision, "kind": kind}))
+
+
+async def figg_card_scene(design_id: str, owner: str = "", revision: int = 0) -> str:
+    """Get the shared card/video scene manifest and available output capabilities."""
+    import urllib.parse
+    path="/api/cards/"+urllib.parse.quote(design_id,safe="")+"/scene?owner="+urllib.parse.quote(owner)
+    if revision:
+        path+="&revision="+str(revision)
+    return _j(await _call("GET",path))
+
+
+async def figg_card_job(job_id: str, owner: str = "") -> str:
+    """Check card render job status; ready results include owner-gated download URLs."""
+    import urllib.parse
+    return _j(await _call("GET", f"/api/cards/jobs/{job_id}?owner=" + urllib.parse.quote(owner)))
+
+
+async def figg_card_cutout(photo_id: str, crop: list[float], owner: str = "") -> str:
+    """Remove background after explicitly cropping the subject in a group photo. No face recognition or generative upscale."""
+    return _j(await _call("POST", "/api/cards/cutouts", {"owner": owner, "photo_id": photo_id, "crop": crop}))
+
+
+async def figg_card_reserve(design_id: str, revision: int, idempotency_key: str,
+                            qty: int = 1, owner: str = "") -> str:
+    """Reserve a real card with approved export and server price. Show price first. No payment or supplier fulfilment."""
+    return _j(await _call("POST", f"/api/cards/{design_id}/order",
+                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}))
+
+
 # ── the manifest: adding a tool = adding it to an area. One place. ───────────
 TOOL_AREAS: dict[str, list] = {
+    "cards":     [figg_card_library, figg_card_save, figg_card_render,
+                  figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve],
     "flow":      [figg_flow, figg_upload_photo, figg_start_mesh, figg_playbook, figg_quick_map],
     "identity":  [figg_me, figg_create_account, figg_login, figg_credits],
     "mesh":      [figg_mesh_status, figg_measure, figg_print_export],

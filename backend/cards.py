@@ -1,0 +1,456 @@
+"""Owner-scoped saved cards and immutable artwork revisions.
+
+Registered by server.py, sharing its auth gate and SQLite/R2 contracts.
+Jobs are bounded, persisted, and recoverable after process interruption.
+"""
+from __future__ import annotations
+
+import hashlib
+import io
+import json
+import math
+import sqlite3
+import threading
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+from flask import Blueprint, jsonify, request, send_file
+from PIL import Image
+
+from . import card_scenes as scenes, config, db, storage
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS card_designs (
+ id TEXT PRIMARY KEY, owner TEXT NOT NULL, latest INTEGER NOT NULL,
+ created_at REAL NOT NULL, updated_at REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS card_design_owner ON card_designs(owner,updated_at);
+CREATE TABLE IF NOT EXISTS card_revisions (
+ design_id TEXT NOT NULL REFERENCES card_designs(id), revision INTEGER NOT NULL,
+ spec TEXT NOT NULL, created_at REAL NOT NULL, PRIMARY KEY(design_id,revision));
+CREATE TABLE IF NOT EXISTS card_jobs (
+ id TEXT PRIMARY KEY, owner TEXT NOT NULL, design_id TEXT NOT NULL,
+ revision INTEGER NOT NULL, kind TEXT NOT NULL, status TEXT NOT NULL,
+ error TEXT NOT NULL DEFAULT '', created_at REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS card_cutouts (
+ id TEXT PRIMARY KEY, owner TEXT NOT NULL, photo_id TEXT NOT NULL,
+ crop TEXT NOT NULL, asset_key TEXT NOT NULL, created_at REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS card_orders (
+ id TEXT PRIMARY KEY, owner TEXT NOT NULL, design_id TEXT NOT NULL,
+ revision INTEGER NOT NULL, qty INTEGER NOT NULL, price_cents INTEGER NOT NULL,
+ spec TEXT NOT NULL, export_key TEXT NOT NULL, status TEXT NOT NULL,
+ idempotency_key TEXT NOT NULL, created_at REAL NOT NULL,
+ UNIQUE(owner,idempotency_key));
+"""
+_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="card-render")
+_slots = threading.BoundedSemaphore(6)
+_lock = threading.Lock()
+
+
+class CardError(Exception):
+    def __init__(self, message, code=400):
+        super().__init__(message); self.code=code
+
+
+def init():
+    with db.connect() as c:
+        c.executescript(SCHEMA)
+        c.execute("UPDATE card_jobs SET status='failed',error='Render interrupted. Retry this revision.' WHERE status IN ('queued','running')")
+        c.commit()
+
+
+def json_dump(x):
+    return json.dumps(x, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+
+
+def number(x):
+    if isinstance(x,bool):
+        raise CardError("Crop coordinates must be numbers")
+    try:
+        n=float(x)
+    except (ValueError,TypeError):
+        raise CardError("Crop coordinates must be numbers") from None
+    if not math.isfinite(n):
+        raise CardError("Crop coordinates must be finite")
+    return n
+
+
+def crop_box(x):
+    if not isinstance(x,list) or len(x)!=4:
+        raise CardError("crop must be [x,y,width,height] between 0 and 1")
+    a,b,w,h=map(number,x)
+    if a<0 or b<0 or w<.02 or h<.02 or a+w>1.000001 or b+h>1.000001:
+        raise CardError("Crop is outside the photo or too small")
+    return [a,b,w,h]
+
+
+def photo(owner,pid):
+    with db.connect() as c:
+        row=c.execute("SELECT * FROM photos WHERE id=? AND owner=?",(pid,owner)).fetchone()
+    if row is None:
+        raise CardError("Photo not found",404)
+    return dict(row)
+
+
+def cutout(owner,cid,pid):
+    with db.connect() as c:
+        row=c.execute("SELECT * FROM card_cutouts WHERE id=? AND owner=? AND photo_id=?",(cid,owner,pid)).fetchone()
+    if row is None:
+        raise CardError("Cutout does not belong to this photo",404)
+    return dict(row)
+
+
+def validate(owner,b):
+    if not isinstance(b,dict):
+        raise CardError("Expected a card design object")
+    tid=b.get("template","portrait")
+    if not isinstance(tid,str) or not isinstance(b.get("format","5x7"),str) or tid not in scenes.TEMPLATES or b.get("format","5x7") not in scenes.FORMATS:
+        raise CardError("Unknown card template or format")
+    tpl=scenes.TEMPLATES[tid]
+    items=b.get("photos",[])
+    if not isinstance(items,list) or not tpl["min_photos"]<=len(items)<=tpl["max_photos"]:
+        raise CardError(f"This template needs {tpl['min_photos']}–{tpl['max_photos']} photos")
+    slots=[]
+    for p in items:
+        if not isinstance(p,dict):
+            raise CardError("Invalid photo slot")
+        pid=str(p.get("photo_id",""))
+        photo(owner,pid)
+        box=crop_box(p.get("crop",[0,0,1,1]))
+        focus=p.get("focus",[.5,.5])
+        if not isinstance(focus,list) or len(focus)!=2:
+            raise CardError("focus must be [x,y]")
+        focus=list(map(number,focus))
+        if not all(0<=v<=1 for v in focus):
+            raise CardError("Photo focus must be between 0 and 1")
+        cid=str(p.get("cutout", ""))
+        if cid:
+            co=cutout(owner,cid,pid)
+            if json_dump(box)!=co["crop"]:
+                raise CardError("Crop changed. Remove the cutout or cut it out again.")
+        slots.append({"photo_id":pid,"crop":box,"focus":focus,"cutout":cid})
+    spec={"template":tid,"template_version":scenes.VERSION,"format":b.get("format","5x7"),"photos":slots}
+    for field,limit,default in [("headline",160,tpl["headline"]),("recipient",60,""),("sender",100,""),("inside_message",1200,"")]:
+        value=b.get(field,default)
+        if not isinstance(value,str) or len(value)>limit:
+            raise CardError(f"{field} must be text up to {limit} characters")
+        spec[field]=value.strip()
+    if not spec["headline"]:
+        raise CardError("Add a headline")
+    return spec
+
+
+def record(owner,did,revision=None):
+    with db.connect() as c:
+        d=c.execute("SELECT * FROM card_designs WHERE id=? AND owner=?",(did,owner)).fetchone()
+        if d is None:
+            raise CardError("Card not found",404)
+        rev=revision or d["latest"]
+        row=c.execute("SELECT * FROM card_revisions WHERE design_id=? AND revision=?",(did,rev)).fetchone()
+        if row is None:
+            raise CardError("Card revision not found",404)
+    return {"id":did,"revision":rev,"latest":d["latest"],"spec":json.loads(row["spec"]),"updated_at":d["updated_at"]}
+
+
+def key(owner,did,rev,kind):
+    names={"preview":"front.png","inside":"inside.png","export":"print.pdf","motion":"scene.mp4"}
+    return f"owners/{storage._slug(owner)}/cards/{did}/r{rev}/{names[kind]}"
+
+
+def cached(k):
+    # Hash the complete key so no owner slug collision can cross local paths.
+    p=config.DATA/"cards"/"cache"/(hashlib.sha256(k.encode()).hexdigest()+"."+k.rsplit(".",1)[-1])
+    p.parent.mkdir(parents=True,exist_ok=True)
+    return p
+
+
+def local_asset(k):
+    p=cached(k)
+    if not p.exists():
+        storage.get(k,p)
+    return p
+
+
+def assets(owner,spec):
+    result={}
+    for slot in spec["photos"]:
+        p=photo(owner,slot["photo_id"])
+        k=cutout(owner,slot["cutout"],slot["photo_id"])["asset_key"] if slot["cutout"] else p["r2_key"]
+        with Image.open(local_asset(k)) as im:
+            result[slot["photo_id"]]=im.convert("RGBA")
+    return result
+
+
+def render_job(jid):
+    with db.connect() as c:
+        row=dict(c.execute("SELECT * FROM card_jobs WHERE id=?",(jid,)).fetchone())
+        c.execute("UPDATE card_jobs SET status='running' WHERE id=?",(jid,));c.commit()
+    temp = None
+    try:
+        owner,did,rev,kind=[row[k] for k in ("owner","design_id","revision","kind")]
+        spec=record(owner,did,rev)["spec"]
+        aa=assets(owner,spec)
+        dest=cached(key(owner,did,rev,kind))
+        # Never expose a partial render, and never overwrite approved revisions.
+        temp=dest.with_name(dest.stem+"-"+jid+dest.suffix)
+        if kind=="preview":
+            scenes.front(spec,aa).save(temp,"PNG")
+            inside_path=cached(key(owner,did,rev,"inside"))
+            scenes.inside(spec).save(inside_path,"PNG")
+            storage.put(inside_path,key(owner,did,rev,"inside"))
+        elif kind=="export":
+            scenes.print_pdf(spec,aa,temp)
+        else:
+            scenes.motion(spec,aa,temp)
+        storage.put(temp,key(owner,did,rev,kind))
+        temp.replace(dest)
+        with db.connect() as c:
+            c.execute("UPDATE card_jobs SET status='ready',error='' WHERE id=?",(jid,));c.commit()
+    except Exception as e:
+        with db.connect() as c:
+            c.execute("UPDATE card_jobs SET status='failed',error=? WHERE id=?",(str(e)[:250],jid));c.commit()
+    finally:
+        if temp is not None:
+            temp.unlink(missing_ok=True)
+        _slots.release()
+
+
+def enqueue(owner,did,rev,kind):
+    if not isinstance(kind,str) or kind not in ("preview","export","motion"):
+        raise CardError("Unknown render kind")
+    record(owner,did,rev)
+    with _lock,db.connect() as c:
+        old=c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind=? AND status IN ('queued','running','ready') ORDER BY created_at DESC LIMIT 1",(owner,did,rev,kind)).fetchone()
+        if old:
+            return dict(old)
+        if not _slots.acquire(blocking=False):
+            raise CardError("Render queue is busy. Try again shortly.",429)
+        jid="crj_"+uuid.uuid4().hex
+        try:
+            c.execute("INSERT INTO card_jobs(id,owner,design_id,revision,kind,status,created_at) VALUES (?,?,?,?,?,'queued',?)",(jid,owner,did,rev,kind,time.time()));c.commit()
+            _pool.submit(render_job,jid)
+        except Exception:
+            _slots.release();raise
+        return dict(c.execute("SELECT * FROM card_jobs WHERE id=?",(jid,)).fetchone())
+
+
+def job_payload(row):
+    return {"id":row["id"],"design_id":row["design_id"],"revision":row["revision"],"kind":row["kind"],"status":row["status"],"error":row["error"],"url":f"/api/cards/{row['design_id']}/r{row['revision']}/{row['kind']}" if row["status"]=="ready" else ""}
+
+
+def register(app,owner_denied):
+    bp=Blueprint("cards",__name__)
+
+    @bp.before_request
+    def auth():
+        b=request.get_json(silent=True) or {}
+        if not isinstance(b,dict):
+            raise CardError("Expected a JSON object")
+        owner=str(request.args.get("owner") or b.get("owner") or "anon").strip()[:80]
+        request.card_owner=owner
+        return owner_denied(owner)
+
+    @bp.errorhandler(CardError)
+    def card_error(e):
+        return jsonify(ok=False,error=str(e)),e.code
+
+    @bp.errorhandler(storage.StorageError)
+    def storage_error(e):
+        return jsonify(ok=False,error="Photo storage unavailable. Try again shortly."),502
+
+    @bp.get("/api/cards/templates")
+    def templates():
+        return jsonify(ok=True,version=scenes.VERSION,templates=[{"id":k,**v} for k,v in scenes.TEMPLATES.items()],formats=scenes.FORMATS,motion_available=__import__('shutil').which("ffmpeg") is not None,print_status="Generic PDF export; supplier fulfilment is not connected.")
+
+    @bp.get("/api/cards/photos")
+    def photos():
+        owner=request.card_owner
+        with db.connect() as c:
+            rows=c.execute("SELECT id,orig_name,width,height,person FROM photos WHERE owner=? ORDER BY created_at DESC LIMIT 200",(owner,)).fetchall()
+        return jsonify(ok=True,photos=[{**dict(p),"url":f"/api/cards/photos/{p['id']}/image"} for p in rows])
+
+    @bp.get("/api/cards/photos/<pid>/image")
+    def image(pid):
+        p=photo(request.card_owner,pid)
+        res=send_file(local_asset(p["r2_key"]),mimetype=p["mime"],max_age=0)
+        res.headers["Cache-Control"]="private, no-store"
+        return res
+
+    @bp.post("/api/cards/cutouts")
+    def make_cutout():
+        # Explicitly crop Dad out of a group before asking foreground segmentation.
+        # This is a cutout tool, not an automatic person-recognition claim.
+        from dataclasses import replace
+        import premesh
+        b=request.get_json() or {};owner=request.card_owner
+        pid=str(b.get("photo_id", ""));box=crop_box(b.get("crop",[0,0,1,1]))
+        p=photo(owner,pid)
+        fingerprint=hashlib.sha256((owner+pid+json_dump(box)).encode()).hexdigest()
+        cid="cut_"+fingerprint[:32]
+        with db.connect() as c:
+            old=c.execute("SELECT * FROM card_cutouts WHERE id=? AND owner=?",(cid,owner)).fetchone()
+        if old:
+            return jsonify(ok=True,cutout_id=cid,url=f"/api/cards/cutouts/{cid}/image")
+        with Image.open(local_asset(p["r2_key"])) as im:
+            im=scenes.cropped(im,box)
+            if min(im.size)<256:
+                raise CardError("Choose a larger subject area or a higher-resolution photo")
+            buf=io.BytesIO();im.convert("RGB").save(buf,"PNG")
+        # Disable generative upscaling: preserve real likeness and avoid new spend.
+        recipe=replace(premesh.RECIPES["card"],prelude=(),prelude_below=0)
+        try:
+            out=premesh.normalize(buf.getvalue(),recipe,zone=config.brand_for(request.host)["host"],timeout=45,retries=0)
+        except premesh.TransformError:
+            raise CardError("Background removal is unavailable. Your original photo is safe; retry or use it as a photo.",502) from None
+        if not out.ok:
+            raise CardError("Cutout did not pass quality checks. Tighten the subject crop or use another photo.",422)
+        k=f"owners/{storage._slug(owner)}/cards/cutouts/{cid}.png"
+        dest=cached(k);dest.write_bytes(out.data);storage.put(dest,k)
+        with db.connect() as c:
+            c.execute("INSERT OR IGNORE INTO card_cutouts VALUES (?,?,?,?,?,?)",(cid,owner,pid,json_dump(box),k,time.time()));c.commit()
+        return jsonify(ok=True,cutout_id=cid,url=f"/api/cards/cutouts/{cid}/image")
+
+    @bp.get("/api/cards/cutouts/<cid>/image")
+    def cutout_image(cid):
+        with db.connect() as c:
+            row=c.execute("SELECT * FROM card_cutouts WHERE id=? AND owner=?",(cid,request.card_owner)).fetchone()
+        if not row:
+            raise CardError("Cutout not found",404)
+        res=send_file(local_asset(row["asset_key"]),mimetype="image/png",max_age=0)
+        res.headers["Cache-Control"]="private, no-store";return res
+
+    @bp.route("/api/cards/designs",methods=["GET","POST"])
+    def designs():
+        owner=request.card_owner
+        if request.method=="GET":
+            with db.connect() as c:
+                rows=c.execute("SELECT id,latest FROM card_designs WHERE owner=? ORDER BY updated_at DESC LIMIT 100",(owner,)).fetchall()
+            return jsonify(ok=True,designs=[record(owner,r["id"],r["latest"]) for r in rows])
+        b=request.get_json() or {};spec=validate(owner,b.get("spec",{}))
+        did=str(b.get("id") or "card_"+uuid.uuid4().hex)
+        with db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            old=c.execute("SELECT * FROM card_designs WHERE id=?",(did,)).fetchone()
+            if old:
+                if old["owner"]!=owner:
+                    raise CardError("Card not found",404)
+                if b.get("expected_revision")!=old["latest"]:
+                    raise CardError("This card changed elsewhere. Reload before saving.",409)
+                prev=c.execute("SELECT spec FROM card_revisions WHERE design_id=? AND revision=?",(did,old["latest"])).fetchone()
+                if prev["spec"]==json_dump(spec):
+                    rev=old["latest"]
+                else:
+                    rev=old["latest"]+1
+                    c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",(did,rev,json_dump(spec),time.time()))
+                    c.execute("UPDATE card_designs SET latest=?,updated_at=? WHERE id=?",(rev,time.time(),did))
+            else:
+                if b.get("id"):
+                    raise CardError("Card not found",404)
+                rev=1;t=time.time()
+                c.execute("INSERT INTO card_designs VALUES (?,?,?,?,?)",(did,owner,rev,t,t))
+                c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",(did,rev,json_dump(spec),t))
+            c.commit()
+        warnings=[]
+        count=len(spec["photos"])
+        cols=1 if count<=1 else 2
+        rows=max(1,math.ceil(count/cols))
+        mm=scenes.FORMATS[spec["format"]]["mm"]
+        for slot in spec["photos"]:
+            p=photo(owner,slot["photo_id"])
+            cw,ch=slot["crop"][2:]
+            dpi=round(min(p["width"]*cw/(mm[0]*.84/cols/25.4),p["height"]*ch/(mm[1]*.49/rows/25.4)))
+            if dpi<200:
+                warnings.append(f"Photo {p['orig_name']} is approximately {dpi} dpi in this layout; it may print soft. Use a larger photo or a wider crop.")
+        return jsonify(ok=True,design=record(owner,did,rev),warnings=warnings)
+
+    @bp.get("/api/cards/designs/<did>")
+    def get_design(did):
+        return jsonify(ok=True,design=record(request.card_owner,did))
+
+    @bp.get("/api/cards/<did>/scene")
+    def scene(did):
+        owner=request.card_owner
+        revision=request.args.get("revision")
+        if revision is not None:
+            try:
+                revision=int(revision)
+            except ValueError:
+                raise CardError("Choose a saved revision") from None
+            if revision<1:
+                raise CardError("Choose a saved revision")
+        design=record(owner,did,revision)
+        rev=design["revision"]
+        with db.connect() as c:
+            rows=c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? ORDER BY created_at",(owner,did,rev)).fetchall()
+        outputs={kind:{"status":"not_rendered","url":""} for kind in ("preview","export","motion")}
+        for row in rows:
+            outputs[row["kind"]]=job_payload(row)
+        return jsonify(ok=True,scene={
+            "version":"oddhobb.scene.v1", "id":did, "revision":rev,
+            "renderer":"photo_composition", "spec":design["spec"],
+            "outputs":outputs,
+            "character":None, "performance":None,
+            "capabilities":{"card":True,"video":__import__('shutil').which("ffmpeg") is not None,
+                            "character_animation":False,"ar":False},
+            "poster":{"kind":"preview","url":outputs["preview"]["url"]},
+        })
+
+    @bp.post("/api/cards/<did>/render")
+    def render(did):
+        b=request.get_json() or {}
+        rev=b.get("revision")
+        if not isinstance(rev,int) or isinstance(rev,bool) or rev<1:
+            raise CardError("Choose a saved revision")
+        return jsonify(ok=True,job=job_payload(enqueue(request.card_owner,did,rev,b.get("kind","preview"))))
+
+    @bp.get("/api/cards/jobs/<jid>")
+    def job(jid):
+        with db.connect() as c:
+            row=c.execute("SELECT * FROM card_jobs WHERE id=? AND owner=?",(jid,request.card_owner)).fetchone()
+        if not row:
+            raise CardError("Render not found",404)
+        return jsonify(ok=True,job=job_payload(row))
+
+    @bp.get("/api/cards/<did>/r<int:rev>/<kind>")
+    def artwork(did,rev,kind):
+        owner=request.card_owner;record(owner,did,rev)
+        if kind not in ("preview","inside","export","motion"):
+            raise CardError("Unknown artwork",404)
+        jobkind="preview" if kind=="inside" else kind
+        with db.connect() as c:
+            ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind=? AND status='ready'",(owner,did,rev,jobkind)).fetchone()
+        if not ready:
+            raise CardError("Artwork is not ready",409)
+        p=local_asset(key(owner,did,rev,kind))
+        res=send_file(p,mimetype={"preview":"image/png","inside":"image/png","export":"application/pdf","motion":"video/mp4"}[kind],as_attachment=kind=="export",download_name=f"{did}-r{rev}.{p.suffix[1:]}",max_age=0)
+        res.headers["Cache-Control"]="private, no-store";return res
+
+    @bp.post("/api/cards/<did>/order")
+    def order(did):
+        owner=request.card_owner;b=request.get_json() or {}
+        qty=b.get("qty",1);rev=b.get("revision");idem=b.get("idempotency_key","")
+        if not isinstance(qty,int) or isinstance(qty,bool) or not 1<=qty<=20 or not isinstance(rev,int) or isinstance(rev,bool):
+            raise CardError("Choose a valid quantity and saved revision")
+        if not isinstance(idem,str) or not 12<=len(idem)<=100:
+            raise CardError("An idempotency key is required")
+        spec=record(owner,did,rev)["spec"]
+        validate(owner,spec)  # photos still exist and belong to caller
+        with db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            old=c.execute("SELECT * FROM card_orders WHERE owner=? AND idempotency_key=?",(owner,idem)).fetchone()
+            if old:
+                if (old["design_id"],old["revision"],old["qty"])!=(did,rev,qty):
+                    raise CardError("This order key was used for a different design",409)
+                return jsonify(ok=True,order=dict(old),reused=True)
+            ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='export' AND status='ready'",(owner,did,rev)).fetchone()
+            if not ready:
+                raise CardError("Export the saved artwork before reserving this card",409)
+            oid="ord_card_"+uuid.uuid4().hex
+            price=scenes.FORMATS[spec["format"]]["price_cents"]*qty
+            c.execute("INSERT INTO card_orders VALUES (?,?,?,?,?,?,?,?,?,?,?)",(oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"pending_checkout",idem,time.time()))
+            c.commit()
+            result=dict(c.execute("SELECT * FROM card_orders WHERE id=?",(oid,)).fetchone())
+        return jsonify(ok=True,order=result,currency="GBP",price_grade="EST",hint="Card reserved. No charge. Supplier checkout is not connected.")
+
+    app.register_blueprint(bp)

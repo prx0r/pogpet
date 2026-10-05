@@ -183,8 +183,8 @@ def upload_photo():
 
         if db.count_uploads_today(c, owner, day) >= config.DAILY_UPLOAD_LIMIT:
             return _err(
-                f"That's {config.DAILY_UPLOAD_LIMIT} uploads today — the sculpt "
-                "credits reset tomorrow. Try a different photo?", 429)
+                f"That's {config.DAILY_UPLOAD_LIMIT} uploads today — upload "
+                "allowance resets tomorrow. Your existing photos are still available.", 429)
 
         key = storage.photo_key(owner, accepted.sha256)
         try:
@@ -3316,6 +3316,10 @@ def short_mesh_label(mesh_id: str) -> str:
     return "mesh " + mesh_id.replace("msh_", "")[:6]
 
 
+from backend import cards as card_api
+card_api.register(app, _owner_denied)
+
+
 # ── worker ────────────────────────────────────────────────────────────
 
 def _worker(interval: float = 0.4) -> None:
@@ -3328,6 +3332,7 @@ def _worker(interval: float = 0.4) -> None:
 
 def main() -> None:
     db.init()
+    card_api.init()
     config.ensure_dirs()
     threading.Thread(target=_worker, daemon=True, name="figg-worker").start()
     print(f"figgsite backend  http://127.0.0.1:{config.API_TOKEN and 8798}")

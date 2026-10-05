@@ -771,6 +771,8 @@
       background:#FF7A1A;transition:width .3s ease}
     @media (prefers-reduced-motion: reduce){.pogboot__words{transition:none}}
   </style>
+  <link rel="stylesheet" href="/css/cards-studio.css">
+  <script src="/js/cards-studio.js"></script>
 </head>
 <body>
   <!-- boot screen: jumbled words resolve into status lines, then it lifts -->
@@ -1310,42 +1312,8 @@
         <h2>Paper cards</h2>
         <p>Greeting · postcard · xmas · posted to the door</p>
       </div>
-      <div class="etsy" id="cards-grid"></div>
-      <div class="detail-card" id="cards-detail" hidden>
-        <h3 id="cd-name">—</h3>
-        <p id="cd-blurb"></p>
-        <div class="detail-row">
-          <img id="cd-img" alt="">
-          <div>
-            <div id="cd-price" style="font-size:24px;font-weight:700;color:#8a6a2f"></div>
-            <div id="cd-meta" style="font-size:12px;color:#666;margin-top:4px"></div>
-          </div>
-        </div>
-        <div class="chips" id="cd-sizes" style="margin-top:12px"></div>
-        <button class="btn" id="cd-order" type="button" style="margin-top:14px">Order this card</button>
-        <div class="panel__msg" id="cd-msg" role="status" aria-live="polite"></div>
-      </div>
+      <p>Loading your card studio…</p>
 
-      <div class="qk-label">Personal paper · your star + message</div>
-      <div class="detail-card" id="pc-card">
-        <div class="chips" id="pc-templates" style="margin-bottom:10px"></div>
-        <div class="detail-row">
-          <img id="pc-img" src="/img/card-merry_xmas-5x7.png" alt="Personal card preview">
-          <div style="flex:1;min-width:180px">
-            <div style="font-weight:700;color:#141414" id="pc-name">Merry Xmas card</div>
-            <div style="font-size:12px;color:#666;margin:4px 0 8px" id="pc-blurb"></div>
-            <span class="panel__label" style="margin:0 0 4px">size</span>
-            <div class="chips" id="pc-sizes"></div>
-            <span class="panel__label" style="margin:10px 0 4px">message on the card</span>
-            <input type="text" id="pc-message" maxlength="80" placeholder="Merry Xmas" style="width:100%">
-            <span class="panel__label" style="margin:10px 0 4px">from</span>
-            <input type="text" id="pc-from" maxlength="40" placeholder="from the whole pack" style="width:100%">
-          </div>
-        </div>
-        <button class="btn" id="pc-order" type="button" style="margin-top:12px">Order personal card</button>
-        <div class="panel__msg" id="pc-msg" role="status" aria-live="polite"></div>
-      </div>
-      <p class="panel__fine">Only paper here. Mugs, cushions and other gifts are under <b>products</b>.</p>
     </div>
   </section>
 
@@ -1354,10 +1322,11 @@
     <div class="panel__inner wide">
       <div class="store-head">
         <h2>Videos</h2>
-        <p>Swipe · your mesh on stage</p>
+        <p>Your saved scenes and character performances</p>
       </div>
       <div style="margin:0 0 10px">
         <a class="btn ghost" href="/stage.html" style="width:auto;display:inline-flex;margin:0">Open live stage (jawOpen lipsync)</a>
+        <a class="oc-button" href="/rehearse.html">Rehearse a recorded performance / AR</a>
       </div>
       <div class="feed" id="vid-feed" tabindex="0" role="feed" aria-label="Video feed"></div>
       <div class="panel__msg" id="vid-msg" role="status" aria-live="polite"></div>
@@ -1520,7 +1489,8 @@
       if (session.bee && /pogo/i.test(session.bee.name || '')) session.bee = BOBDOD;
     } catch(e) { session.bee = BOBDOD; }
     function loadCompanyGraph() {
-      return get(API + "/companygraph").then(function (d) {
+      return fetch("/backend/api/companygraph?token=" + encodeURIComponent(window.__FIGG_TOKEN || ""))
+        .then(function (r) { return r.json(); }).then(function (d) {
         if (d && d.ok) window.__COMPANY__ = d;
       }).catch(function () {});
     }
@@ -1996,10 +1966,10 @@
       var white = (name === "studio" || name === "products" || name === "cards" || name === "videos" || name === "quick");
       document.body.classList.toggle("studio-chrome", white);
       if (name === "shop") loadShop();
-      if (name === "studio") { loadStudio(); loadStudioMeta(); loadAssets(); }
+      if (name === "studio") { loadStudio(); loadStudioMeta(); loadAssets(); if (cardStudio) cardStudio.refresh(); }
       if (name === "products") loadProducts();
-      if (name === "cards") loadCards();
-      if (name === "videos") loadVideoFeed();
+      if (name === "cards") { if (cardStudio) cardStudio.open(); }
+      if (name === "videos") { loadVideoFeed(); if (cardStudio) cardStudio.videos(); }
       if (name === "upload") loadMe();
       if (name === "quick") initQuickTab();
       if (name === "perform") { loadPerf(); loadPerfHistory(true); }
@@ -3763,16 +3733,6 @@
       }
     });
 
-    // ── cards tab: 2D print tiles (PNG mockups) ────────────
-    // ── cards tab: PAPER stationery only ───────────────────
-    var CARD_CATALOG = [
-      { id: "greeting_card", label: "Greeting Card", price_cents: 799, img: "/img/greeting_card_70edae28.png", blurb: "Portal card · scan to summon them", section: "cards", kind: "paper" },
-      { id: "postcard", label: "Postcard", price_cents: 399, img: "/img/postcard_70edae28.png", blurb: "Small print · mailbox size", section: "cards", kind: "paper" },
-      { id: "xmas_card", label: "Xmas Card", price_cents: 899, img: "/img/card-merry_xmas-5x7.png", blurb: "Personal paper · A6 / 5×7", section: "cards", kind: "paper", studio_line: "xmas_card" },
-      { id: "thank_you_card", label: "Thank You Card", price_cents: 799, img: "/img/greeting_card_70edae28.png", blurb: "Paper note · posted", section: "cards", kind: "paper" },
-      { id: "birthday_card", label: "Birthday Card", price_cents: 799, img: "/img/greeting_card_70edae28.png", blurb: "Paper · their star on the front", section: "cards", kind: "paper" }
-    ];
-
     // ── products tab: prints & gifts (NOT paper cards) ─────
     var PRINTS_CATALOG = [
       { id: "mug", label: "Mug", price_cents: 1299, img: "/img/mug_70edae28.png", blurb: "Their face on mornings", section: "gifts" },
@@ -3787,135 +3747,7 @@
       { id: "wrapping_paper", label: "Wrapping Paper", price_cents: 899, img: "/img/wrapping_paper_70edae28.png", blurb: "Grade Q · festive wrap", section: "gifts" },
       { id: "canvas", label: "Canvas", price_cents: 2799, img: "/img/canvas_70edae28.png", blurb: "Gallery wrap", section: "gifts" }
     ];
-    var cdSel = null;
     var prPrintSel = null;
-
-    function loadCards() {
-      var grid = $("cards-grid"); if (!grid) return;
-      grid.innerHTML = "";
-      CARD_CATALOG.forEach(function (it) {
-        var tile = document.createElement("button");
-        tile.type = "button";
-        tile.className = "etsy__tile" + (it.id === cdSel ? " on" : "");
-        tile.innerHTML =
-          '<div class="etsy__badges"><span class="etsy__badge gold">Paper</span></div>' +
-          '<img class="etsy__img" src="' + it.img + '" alt="' + it.label + '" loading="lazy">' +
-          '<div class="etsy__body">' +
-            '<div class="etsy__name">' + it.label + '</div>' +
-            '<div class="etsy__meta">' + (it.section || "cards") + ' · posted</div>' +
-            '<div class="etsy__price">£' + (it.price_cents / 100).toFixed(2) + '</div>' +
-          '</div>';
-        tile.addEventListener("click", function () { selectCard(it.id); });
-        grid.appendChild(tile);
-      });
-      if (!cdSel && CARD_CATALOG.length) selectCard(CARD_CATALOG[0].id, { silent: true });
-      loadPersonalCards();
-    }
-
-    var pc = { template: null, size: "5x7", templates: [] };
-
-    function loadPersonalCards() {
-      get(API + "/etsy/listings").then(function (d) {
-        if (!d || !d.ok) return;
-        var packs = d.listings || {};
-        var sizes = d.card_sizes || {};
-        pc.templates = [];
-        Object.keys(packs).forEach(function (k) {
-          if (!/card|xmas|greeting|holiday|thank/i.test(k)) return;
-          var p = packs[k];
-          pc.templates.push({
-            id: k,
-            label: p.title || p.label || k,
-            blurb: (p.blurb || p.etsy_title || "").slice(0, 100),
-            img: (p.photo_slots && p.photo_slots[0]) || "/img/card-merry_xmas-5x7.png",
-            price_cents: (p.price_cents || (p.sizes && p.sizes[Object.keys(p.sizes||{5:1})[0]] && p.sizes[Object.keys(p.sizes)[0]].price_cents) || 799),
-            sizes: p.sizes || sizes
-          });
-        });
-        if (!pc.templates.length) {
-          pc.templates = [{
-            id: "merry_xmas", label: "Merry Xmas card",
-            blurb: "Your pet's render · Merry Xmas",
-            img: "/img/card-merry_xmas-5x7.png",
-            price_cents: 799,
-            sizes: sizes
-          }];
-        }
-        paintPersonal();
-      }).catch(function () {
-        pc.templates = [{
-          id: "merry_xmas", label: "Merry Xmas card",
-          blurb: "Your pet's render · Merry Xmas",
-          img: "/img/card-merry_xmas-5x7.png", price_cents: 799, sizes: {}
-        }];
-        paintPersonal();
-      });
-    }
-
-    function paintPersonal() {
-      var chips = $("pc-templates");
-      if (!chips) return;
-      chips.innerHTML = "";
-      if (!pc.template && pc.templates.length) pc.template = pc.templates[0];
-      pc.templates.forEach(function (t) {
-        var b = document.createElement("button");
-        b.type = "button";
-        b.className = "chip" + (pc.template && pc.template.id === t.id ? " on" : "");
-        b.textContent = t.label.replace(/ card$/i, "");
-        b.onclick = function () { pc.template = t; paintPersonal(); };
-        chips.appendChild(b);
-      });
-      var t = pc.template;
-      if (!t) return;
-      var img = $("pc-img");
-      if (img) { img.src = t.img; img.alt = t.label; }
-      var n = $("pc-name"); if (n) n.textContent = t.label;
-      var bl = $("pc-blurb"); if (bl) bl.textContent = t.blurb || "";
-      var msgEl = $("pc-message");
-      if (msgEl && !msgEl.value) msgEl.placeholder = (t.id === "merry_xmas" || /xmas|christmas/i.test(t.id)) ? "Merry Xmas" : "With love";
-      var sizeBox = $("pc-sizes");
-      if (sizeBox) {
-        sizeBox.innerHTML = "";
-        var sizeDefs = t.sizes && Object.keys(t.sizes).length ? t.sizes : {
-          A6: { label: "A6 postcard", mm: "105 × 148", price_cents: 399 },
-          "5x7": { label: "5×7 card", mm: "127 × 178", price_cents: 799 },
-          A5: { label: "A5 card", mm: "148 × 210", price_cents: 999 }
-        };
-        Object.keys(sizeDefs).forEach(function (k) {
-          var s = sizeDefs[k];
-          var b = document.createElement("button");
-          b.type = "button";
-          b.className = "chip" + (pc.size === k ? " on" : "");
-          b.textContent = (s.label || k) + (s.mm ? " · " + s.mm : "");
-          b.onclick = function () { pc.size = k; paintPersonal(); };
-          sizeBox.appendChild(b);
-        });
-      }
-    }
-
-    var pcOrder = $("pc-order");
-    if (pcOrder) pcOrder.addEventListener("click", function () {
-      var t = pc.template;
-      if (!t) { msg("pc-msg", "Pick a template first.", "err"); return; }
-      var message = ($("pc-message") && $("pc-message").value || "").trim();
-      var from = ($("pc-from") && $("pc-from").value || "").trim();
-      var line = t.id === "merry_xmas" || /xmas|christmas/i.test(t.id) ? "ornament" : "ornament";
-      var body = {
-        owner: state.owner,
-        line: line,
-        coat: "none", hat: "none", pattern: "solid",
-        qty: 1, fulfil: true,
-        mesh_id: state.meshId || "",
-        note: ("personal paper card: " + t.id + " size=" + pc.size +
-               (message ? " msg=" + message : "") + (from ? " from=" + from : "")).slice(0, 200)
-      };
-      post(API + "/products/order", body).then(function (d) {
-        if (!d.ok) { msg("pc-msg", d.error || "Order failed.", "err"); return; }
-        var sh = d.shopify && d.shopify.ok ? " · Shopify " + (d.shopify.name || d.shopify.draft_id || "") : "";
-        msg("pc-msg", "Personal card reserved · " + (d.order && d.order.id) +
-            " · " + t.label + " · " + pc.size + sh, "ok");
-      }).catch(function (e) { msg("pc-msg", "Error: " + e.message, "err"); });
-    });
 
     function loadPrints() {
       var grid = $("pr-prints"); if (!grid) return;
@@ -3941,67 +3773,6 @@
         grid.appendChild(tile);
       });
     }
-
-    function selectCard(id, opts) {
-      opts = opts || {};
-      var it = null;
-      for (var i = 0; i < CARD_CATALOG.length; i++) if (CARD_CATALOG[i].id === id) it = CARD_CATALOG[i];
-      if (!it) return;
-      cdSel = id;
-      var det = $("cards-detail"); if (det) det.hidden = false;
-      var n = $("cd-name"); if (n) n.textContent = it.label;
-      var b = $("cd-blurb"); if (b) b.textContent = it.blurb || "";
-      var p = $("cd-price"); if (p) p.textContent = "£" + (it.price_cents / 100).toFixed(2);
-      var m = $("cd-meta"); if (m) m.textContent = "paper · " + (it.section || "cards") + " · posted";
-      var img = $("cd-img"); if (img) { img.src = it.img; img.alt = it.label; }
-      var sizeBox = $("cd-sizes");
-      if (sizeBox) {
-        sizeBox.innerHTML = "";
-        var defs = {
-          A6: { label: "A6 postcard", mm: "105 × 148", price_cents: 399 },
-          "5x7": { label: "5×7 card", mm: "127 × 178", price_cents: 799 },
-          A5: { label: "A5 card", mm: "148 × 210", price_cents: 999 }
-        };
-        Object.keys(defs).forEach(function (k) {
-          var s = defs[k];
-          var b = document.createElement("button");
-          b.type = "button";
-          b.className = "chip";
-          b.textContent = s.label + " · " + s.mm;
-          b.onclick = function () {
-            var p = $("cd-price");
-            if (p) p.textContent = "£" + ((s.price_cents || it.price_cents) / 100).toFixed(2);
-            msg("cd-msg", it.label + " · " + s.label, "");
-          };
-          sizeBox.appendChild(b);
-        });
-      }
-      var grid = $("cards-grid");
-      if (grid) {
-        var tiles = grid.querySelectorAll(".etsy__tile");
-        for (var j = 0; j < tiles.length; j++) tiles[j].classList.toggle("on", j === CARD_CATALOG.indexOf(it));
-      }
-      if (!opts.silent) msg("cd-msg", it.label + " selected", "");
-    }
-
-    var cdOrder = $("cd-order");
-    if (cdOrder) cdOrder.addEventListener("click", function () {
-      var it = null;
-      for (var i = 0; i < CARD_CATALOG.length; i++) if (CARD_CATALOG[i].id === cdSel) it = CARD_CATALOG[i];
-      if (!it) return;
-      var line = it.studio_line || "ornament"; // paper mock orders still reserve via studio path
-      var body = {
-        owner: state.owner, line: line, coat: "none", hat: "none", pattern: "solid",
-        qty: 1, fulfil: true, mesh_id: state.meshId || "",
-        note: "paper card: " + it.id
-      };
-      post(API + "/products/order", body).then(function (d) {
-        if (!d.ok) { msg("cd-msg", d.error || "Order failed.", "err"); return; }
-        var sh = d.shopify && d.shopify.ok ? " · Shopify draft " + (d.shopify.name || d.shopify.draft_id || "") : "";
-        msg("cd-msg", "Reserved · " + (d.order && d.order.id) + " · " + it.label +
-            " £" + ((d.price_cents || it.price_cents) / 100).toFixed(2) + sh, "ok");
-      }).catch(function (e) { msg("cd-msg", "Error: " + e.message, "err"); });
-    });
 
     // ── quick tab: adaptive ramble (mythicbee GiftIntelligence pattern) ──
     // Engine found: stallspy/brands/mythicbee/site/js/gift-intelligence.js
@@ -5127,6 +4898,57 @@
     if ($("shop-subject")) $("shop-subject").addEventListener("keydown", function (e) {
       if (e.key === "Enter" && applyBtn) applyBtn.click();
     });
+
+    var cardSession = null, cardSessionOwner = "";
+    function cardReady() {
+      if (cardSessionOwner !== state.owner) cardSession = null;
+      if (!cardSession) {
+        cardSessionOwner = state.owner;
+        if (state.apiKey) return Promise.resolve();
+        var sig = "";
+        try { sig = localStorage.getItem("pogpet.ownersig") || ""; } catch (e) {}
+        cardSession = post(API + "/session", { owner: state.owner, owner_sig: sig }).then(function (d) {
+          if (!d.ok || !d.owner_sig) throw new Error(d.error || "Session unavailable. Please reload.");
+          state.owner = d.owner; cardSessionOwner = d.owner;
+          try { localStorage.setItem("pogpet.owner",d.owner); localStorage.setItem("pogpet.ownersig",d.owner_sig); } catch (e) {}
+        }).catch(function (e) { cardSession = null; throw e; });
+      }
+      return cardSession;
+    }
+    var cardStudio = window.OddHobbCards({
+      tab: function (name) {
+        var button = document.querySelector('.tab[data-tab="' + name + '"]');
+        if (button) button.click();
+        location.hash = name;
+      },
+      ready: cardReady,
+      get: function (path) {
+        return get(API + path + (path.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner))
+          .then(function (d) { if (!d.ok) throw new Error(d.error || "Request failed"); return d; });
+      },
+      post: function (path, body) {
+        body.owner = state.owner;
+        return post(API + path, body).then(function (d) { if (!d.ok) throw new Error(d.error || "Request failed"); return d; });
+      },
+      asset: function (path) {
+        var u = path.indexOf("/api/") === 0 ? "/backend" + path : API + path;
+        u += (u.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner);
+        try { u += "&owner_sig=" + encodeURIComponent(localStorage.getItem("pogpet.ownersig") || ""); } catch (e) {}
+        if (state.apiKey) u += "&api_key=" + encodeURIComponent(state.apiKey);
+        return withTok(u);
+      },
+      upload: function (file) {
+        return cardReady().then(function () {
+          var fd = new FormData(); fd.append("photo", file, file.name); fd.append("owner", state.owner);
+          return fetch(withTok(API + "/photos"), {method:"POST",headers:authHeaders(),body:fd})
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (!d.ok) throw new Error(d.error || "Upload failed"); return d; });
+        });
+      }
+    });
+    window.addEventListener("load", function () { cardReady().then(function () {
+      cardStudio.refresh(); if (location.hash === "#cards") cardStudio.open();
+    }).catch(function () {}); });
 
     // First paint: resolve who we are and which pog is active, so every tab
     // (studio, shop, perform) has a mesh to work with without visiting the

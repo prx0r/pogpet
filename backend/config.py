@@ -29,7 +29,7 @@ MESHY_BASE = os.environ.get("MESHY_BASE", "https://api.meshy.ai/openapi/v1")
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 10 * 1024 * 1024))
 ALLOWED_MIME = {"image/jpeg", "image/png"}
 MAX_EDGE = 2048                 # downscale anything larger (Meshy is happy, R2 stays cheap)
-DAILY_UPLOAD_LIMIT = int(os.environ.get("DAILY_UPLOAD_LIMIT", 3))
+DAILY_UPLOAD_LIMIT = int(os.environ.get("DAILY_UPLOAD_LIMIT", 30))
 
 # ── free tier ─────────────────────────────────────────────────────────
 # The wedge: generation is free, physical is the revenue.

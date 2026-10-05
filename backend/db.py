@@ -413,6 +413,12 @@ def claim_assets(c: sqlite3.Connection, from_owner: str, to_handle: str) -> dict
         if table in tables:
             cur=c.execute(f"UPDATE {table} SET owner=? WHERE owner=? AND owner<>?",(to_handle,from_owner,to_handle))
             out[table]=cur.rowcount
+    # Guided sessions and friend profiles move with the shopper — otherwise
+    # claiming an account 404s the session they were just using.
+    for table in ("guide_sessions","subject_profiles"):
+        if table in tables:
+            cur=c.execute(f"UPDATE {table} SET owner=? WHERE owner=? AND owner<>?",(to_handle,from_owner,to_handle))
+            out[table]=cur.rowcount
     return out
 
 

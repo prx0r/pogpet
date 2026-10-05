@@ -383,9 +383,87 @@ def set_subject_profile():
 # ── guided personal shopper ───────────────────────────────────────────
 # Person first, no search bar: ramble -> profile -> photos -> mesh -> packs.
 
+CARD_A6_CENTS = 500  # cheapest card format; MP4 greetings are free-tier
+SHELF_MAX = 8
+
+
+def _guide_shelf(state: dict) -> list[dict]:
+    """Ranked alternatives with truthful reasons — not bundles.
+
+    Scores the ramble (full log) plus interests against every live line;
+    disliked interests veto outright. Sorted best-first, capped.
+    """
+    rec = state.get("recipient", {})
+    suggestion = _suggest_motif(rec.get("interests", []))
+    prefs = state.get("prefs", {})
+    excluded = set(prefs.get("exclude", []))
+    dislikes = set(rec.get("dislikes", []))
+    motif = prefs.get("motif") or (suggestion or {}).get("motif", "")
+    corpus = " ".join([e.get("turn", "") for e in state.get("log", [])]
+                      + rec.get("interests", []) + ([motif] if motif else []))
+    shelf = []
+    for lid, spec in config.STUDIO_LINES.items():
+        if spec.get("status") != "live" or spec.get("fulfilment") == "digital":
+            continue
+        if lid in excluded:
+            continue
+        hay = f"{lid} {spec.get('label', '')} {spec.get('blurb', '')} {spec.get('theme', '')}".lower()
+        if any(d and d in hay for d in dislikes):
+            continue  # stated dislike beats a passing match
+        score = _quick_score(hay, corpus)
+        if lid.replace("_", " ") in corpus.lower():
+            score += 4.0  # named outright mid-ramble
+        if score <= 0:
+            continue
+        why = ""
+        if motif:
+            why = f"Picked for {rec.get('name') or 'them'}: {motif.replace('_', ' ')}."
+        elif suggestion:
+            why = (f"Picked for {rec.get('name') or 'them'}: "
+                   f"{suggestion['motif'].replace('_', ' ')} "
+                   f"({suggestion['interest']}).")
+        shelf.append({
+            "id": lid, "label": spec.get("label", lid),
+            "price_cents": spec.get("price_cents", 0),
+            "material": spec.get("material"), "dims_mm": spec.get("dims_mm"),
+            "stills": _studio_stills_for(lid, "none", "none"),
+            "customization_schema": _custom_schema(lid, spec),
+            "motif": motif, "why": why, "score": round(score, 2),
+        })
+    shelf.sort(key=lambda i: -i["score"])
+    return shelf[:SHELF_MAX]
+
+
+def _guide_bundles(state: dict, shelf: list[dict]) -> list[dict]:
+    """Up to 3 purchasable bundles with validated totals.
+
+    Bundle = physical + A6 card + MP4 greeting. Shipping is UNKNOWN until
+    checkout, so totals are stated ex-shipping and a bundle is only quoted
+    when the known total fits the budget. Unknown delivery stays unknown.
+    """
+    budget = state.get("budget_cents") or 0
+    rec = state.get("recipient", {})
+    bundles = []
+    for item in shelf:
+        total = item["price_cents"] + CARD_A6_CENTS  # MP4 is free-tier
+        if budget and total > budget:
+            continue
+        bundles.append({
+            "id": f"pack_{item['id']}",
+            "label": f"{rec.get('name') or 'Gift'} pack: {item['label']}",
+            "physical": item, "card_format": "A6", "card_cents": CARD_A6_CENTS,
+            "mp4_cents": 0, "total_cents": total,
+            "shipping": "unknown — added at checkout",
+            "within_budget": True,
+        })
+        if len(bundles) >= 3:
+            break
+    return bundles
+
+
 def _guide_pack_items(owner: str, state: dict, active_mesh: str = "") -> list[dict]:
-    """Curated packs: budget-filtered lines with the subject's suggestion.
-    Max 3 per theme — the customer never scrolls."""
+    """Legacy theme groups (kept for the products grid); shelf+bundles are
+    the shopper surface. Max 3 per theme — the customer never scrolls."""
     from backend import guide as _g
     budget = state.get("budget_cents") or 0
     rec = state.get("recipient", {})
@@ -455,11 +533,27 @@ def guide_turn():
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
+    seq = body.get("seq") or body.get("transcript_seq") or 0
+    try:
+        seq = int(seq)
+    except (ValueError, TypeError):
+        seq = 0
+    speak = body.get("speak", True)
+    if not isinstance(speak, bool):
+        speak = True
     with db.connect() as c:
         s = _g.get_session(c, sid, owner)
         if not s:
             return _err("no such session", 404)
         state, stage = s["state"], s["stage"]
+        if seq and seq <= int(state.get("last_seq", 0)):
+            # stale/async transcript replay: idempotent snapshot, no rework
+            return jsonify({"ok": True, "session_id": sid, "stage": stage,
+                            "stale": True, "rev": state.get("revision", 0),
+                            "recipient": state.get("recipient", {}),
+                            "events": state.get("events", [])})
+        if seq:
+            state["last_seq"] = seq
         low = text.lower()
         rec0 = state.get("recipient", {})
         complete = bool(rec0.get("name") and state.get("occasion") and state.get("budget_cents"))
@@ -484,22 +578,38 @@ def guide_turn():
                         prefs["exclude"].append(lid)
                         changed.append(f"dropped {lid}")
             state["events"] = _g.compute_events(state)
-            _g.save_session(c, sid, owner, "refining", state)
+            if state.get("delivery", {}).get("deadline"):
+                _g.answer_prompt(state, "deadline")
+            if state.get("delivery", {}).get("destination"):
+                _g.answer_prompt(state, "destination")
             packs = _guide_pack_items(owner, state)
             reply = ("Done" + (": " + ", ".join(changed) if changed else
                                 " — tell me budget, motif, or what to drop") + ".")
+            prompt = _g.next_prompt(state)
+            _g.save_session(c, sid, owner, "refining", state)
             return jsonify({"ok": True, "session_id": sid, "stage": "refining",
                             "reply": reply, "packs": packs,
+                            "prompt": prompt, "speak": speak,
+                            "rev": state.get("revision", 0),
                             "events": state.get("events", [])})
         state, prompt = _g.ramble_turn(state, text)
         rec = state.get("recipient", {})
         if rec.get("name") and state.get("occasion") and state.get("budget_cents"):
             stage = "photos"
+        if rec.get("name"):
+            _g.answer_prompt(state, "who")
+        if state.get("occasion"):
+            _g.answer_prompt(state, "occasion")
+        if state.get("budget_cents"):
+            _g.answer_prompt(state, "budget")
+        float_prompt = _g.next_prompt(state)
         _g.save_session(c, sid, owner, stage, state)
         return jsonify({"ok": True, "session_id": sid, "stage": stage,
                         "reply": prompt, "recipient": rec,
                         "occasion": state.get("occasion", ""),
                         "budget_cents": state.get("budget_cents", 0),
+                        "prompt": float_prompt, "speak": speak,
+                        "rev": state.get("revision", 0),
                         "events": state.get("events", [])})
 
 
@@ -528,6 +638,8 @@ def guide_photos():
                     and len(have) < _g.MAX_PHOTOS:
                 have.append(str(pid))
         state["photo_ids"] = have
+        if have:
+            _g.answer_prompt(state, "photos")
         _g.save_session(c, sid, owner, "photos" if not state.get("mesh_id") else s["stage"], state)
     return jsonify({"ok": True, "session_id": sid, "photo_ids": have,
                     "reply": f"{len(have)} photo{'s' if len(have) != 1 else ''} kept. "
@@ -589,7 +701,14 @@ def guide_packs():
         state = s["state"]
         prof = db.get_profile(c, owner)
         packs = _guide_pack_items(owner, state, prof.get("active_mesh_id") or "")
+        shelf = _guide_shelf(state)
+        bundles = _guide_bundles(state, shelf)
+        _g.emit(state, "picks.updated",
+                {"shelf": [i["id"] for i in shelf],
+                 "bundles": [b["id"] for b in bundles]})
+        _g.save_session(c, sid, owner, s["stage"], state)
     return jsonify({"ok": True, "session_id": sid, "packs": packs,
+                    "shelf": shelf, "bundles": bundles,
                     "recipient": state.get("recipient", {}),
                     "budget_cents": state.get("budget_cents", 0),
                     "events": state.get("events", [])})
@@ -2338,6 +2457,95 @@ def voice_session():
                     "connect": "wss with ephemeral_token as the API key"})
 
 
+@app.post("/api/voice/room")
+def voice_room():
+    """Bind a LiveKit room to a guide session for one authenticated shopper.
+
+    Verifies existing owner proof, creates or resumes the session, assigns a
+    private room, and stores the binding server-side. The browser receives its
+    room token; model tools receive a scoped server-side capability bound to
+    the session owner — the model never chooses the owner. Worker dispatch
+    stays pending until LiveKit credentials exist (see docs/voice-room.md).
+    """
+    from backend import guide as _g
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    sid = (body.get("session_id") or "").strip()
+    if not owner:
+        return _err("owner is required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        if sid:
+            s = _g.get_session(c, sid, owner)
+            if not s:
+                return _err("no such session", 404)
+        else:
+            sid = _g.new_id()
+            _g.save_session(c, sid, owner, "ramble", _g.blank_state())
+            s = _g.get_session(c, sid, owner)
+        state = s["state"]
+        room = (state.get("room") or {})
+        if not room.get("id"):
+            room = {"id": f"shop-{sid}", "created_at":
+                    datetime.now(timezone.utc).timestamp(),
+                    "worker": "pending-no-worker"}
+            state["room"] = room
+            _g.emit(state, "render.updated", {"room": room["id"]})
+            _g.save_session(c, sid, owner, s["stage"], state)
+    return jsonify({"ok": True, "room": room["id"], "session_id": sid,
+                    "owner": owner, "rev": state.get("revision", 0),
+                    "worker": room.get("worker"),
+                    "capability": "session-owner-scoped: model tools act for "
+                                  "this session's owner only",
+                    "shelf_modes": "ramble listens (no speech); dialogue speaks"})
+
+
+@app.get("/api/guide/feed")
+def guide_feed():
+    """Structured UI events since a revision (reconnect-safe polling)."""
+    from backend import guide as _g
+    owner = (request.args.get("owner") or "").strip()[:80]
+    sid = (request.args.get("session_id") or "").strip()
+    try:
+        since = int(request.args.get("since_rev") or 0)
+    except (ValueError, TypeError):
+        since = 0
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        s = _g.get_session(c, sid, owner)
+        if not s:
+            return _err("no such session", 404)
+        evs = [e for e in s["state"].get("feed", []) if e.get("rev", 0) > since]
+    return jsonify({"ok": True, "session_id": sid, "rev": s["state"].get("revision", 0),
+                    "events": evs})
+
+
+@app.get("/api/guide/snapshot")
+def guide_snapshot():
+    """Full session snapshot for reconnect: state, packs, shelf, bundles."""
+    from backend import guide as _g
+    owner = (request.args.get("owner") or "").strip()[:80]
+    sid = (request.args.get("session_id") or "").strip()
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        s = _g.get_session(c, sid, owner)
+        if not s:
+            return _err("no such session", 404)
+        state = s["state"]
+        shelf = _guide_shelf(state)
+        bundles = _guide_bundles(state, shelf)
+    return jsonify({"ok": True, "session_id": sid, "stage": s["stage"],
+                    "rev": state.get("revision", 0), "state": state,
+                    "shelf": shelf, "bundles": bundles,
+                    "prompt": _g.next_prompt(state, record=False)})
+
+
 @app.get("/api/videos/<vid>")
 def get_video(vid: str):
     with db.connect() as c:
@@ -3005,13 +3213,29 @@ def quick_map():
                 "5. POST /api/products/order {fulfil:true} → Shopify draft",
             ],
         })
-    top = max(m["score"] for m in scored)
+    def _evidence(hay_text: str) -> int:
+        """Query tokens actually found in this line: ranking strength, not
+        understanding certainty. 'blahblah gift' ~= 1 hit, never 97%."""
+        n = 0
+        for tok in q.split():
+            if not tok:
+                continue
+            if tok in hay_text or any(p.startswith(tok) for p in hay_text.split()):
+                n += 1
+        return n
+
     for m in scored:
-        # relative confidence vs best hit, clamped
-        conf = 0.25 + 0.72 * (m["score"] / top)
+        spec = config.STUDIO_LINES.get(m["id"], {})
+        hay = " ".join([m["id"], spec.get("label", ""), spec.get("blurb", ""),
+                        spec.get("theme", "")]).lower()
+        hits = _evidence(hay)
+        conf = min(0.97, 0.20 + 0.10 * hits)
+        if m["id"] in boosts:
+            conf = min(0.97, conf + 0.15)  # customer-pointed counts as evidence
         if m["status"] != "live":
             conf = min(conf, 0.4)
-        m["confidence"] = round(min(0.97, conf), 2)
+        m["confidence"] = round(conf, 2)
+        m["evidence_hits"] = hits
     scored.sort(key=lambda m: (-m["confidence"], -m["score"], m["label"]))
     best = scored[0]
     return jsonify({

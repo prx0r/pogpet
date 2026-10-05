@@ -224,22 +224,29 @@ async def figg_rooms(owner: str = "") -> str:
     return _j(await _call("GET", "/api/videos/rooms?owner=" + owner))
 
 
+def _owner_or_env(owner: str) -> str:
+    """Voice/room callers act for one shopper: explicit owner wins, otherwise
+    the configured single-shopper identity. Never silently empty."""
+    return owner or os.environ.get("FIGG_OWNER", "")
+
+
 async def figg_guide_open(owner: str = "") -> str:
     """Open a personal-shopper session: ramble-first gifting, no search bar."""
-    return _j(await _call("POST", "/api/guide/open", {"owner": owner}))
+    return _j(await _call("POST", "/api/guide/open", {"owner": _owner_or_env(owner)}))
 
 
 async def figg_guide_turn(session_id: str, text: str, owner: str = "") -> str:
     """One shopper message: builds profile, refines packs, answers next step."""
     return _j(await _call("POST", "/api/guide/turn",
-                         {"session_id": session_id, "text": text, "owner": owner}))
+                         {"session_id": session_id, "text": text,
+                          "owner": _owner_or_env(owner)}))
 
 
 async def figg_guide_packs(session_id: str, owner: str = "") -> str:
     """Curated gift packs for the session: budget-filtered, motif-picked."""
     import urllib.parse
     q = urllib.parse.quote
-    return _j(await _call("GET", f"/api/guide/packs?owner={q(owner)}&session_id={q(session_id)}"))
+    return _j(await _call("GET", f"/api/guide/packs?owner={q(_owner_or_env(owner))}&session_id={q(session_id)}"))
 
 
 async def figg_credits(owner: str = "") -> str:

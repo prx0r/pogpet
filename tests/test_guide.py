@@ -66,6 +66,72 @@ class TestRamble(unittest.TestCase):
         self.assertTrue(any(e["kind"] == "christmas" for e in evs))
 
 
+class TestCorrections(unittest.TestCase):
+    def test_negation_moves_to_dislikes(self):
+        st = guide.blank_state()
+        guide.apply_turn(st, "Dad loves golf")
+        self.assertIn("golf", st["recipient"]["interests"])
+        guide.apply_turn(st, "actually he hates golf")
+        self.assertNotIn("golf", st["recipient"]["interests"])
+        self.assertIn("golf", st["recipient"]["dislikes"])
+
+    def test_recipient_switch_retires_facts(self):
+        st = guide.blank_state()
+        guide.apply_turn(st, "Shopping for Dad, he likes golf")
+        guide.apply_turn(st, "now shopping for Mum")
+        rec = st["recipient"]
+        self.assertEqual(rec["name"], "Mum")
+        self.assertEqual(rec["interests"], [])
+        self.assertEqual(rec["dislikes"], [])
+
+    def test_delivery_deadline_and_destination(self):
+        st = guide.blank_state()
+        guide.apply_turn(st, "need it by 2026-11-14, ship to Leeds")
+        self.assertEqual(st["delivery"]["deadline"], "2026-11-14")
+        self.assertEqual(st["delivery"]["destination"], "Leeds")
+        kinds = [e["kind"] for e in st["events"]]
+        self.assertIn("delivery", kinds)
+        self.assertNotIn("birthday", [e["kind"] for e in st["events"]
+                                      if e.get("destination") == "unknown"
+                                      and st["recipient"]["birthday"] == ""])
+
+    def test_iso_date_is_not_birthday(self):
+        st = guide.blank_state()
+        guide.apply_turn(st, "need it by 2026-11-14")
+        self.assertEqual(st["recipient"]["birthday"], "")
+        st2 = guide.blank_state()
+        guide.apply_turn(st2, "her birthday is 11-14")
+        self.assertEqual(st2["recipient"]["birthday"], "11-14")
+
+
+class TestPrompts(unittest.TestCase):
+    def test_one_at_a_time_with_cooldown(self):
+        st = guide.blank_state()
+        st["recipient"]["name"] = "Dad"
+        p1 = guide.next_prompt(st, now_ts=1000.0)
+        self.assertEqual(p1["key"], "occasion")
+        self.assertIn("Birthday", p1["taps"])
+        # same key cools down: next call moves on, never repeats occasion
+        keys = {p1["key"]}
+        for t in (1001.0, 1002.0, 1003.0):
+            p = guide.next_prompt(st, now_ts=t)
+            if p:
+                self.assertNotIn(p["key"], keys)
+                keys.add(p["key"])
+                guide.answer_prompt(st, p["key"])
+        guide.answer_prompt(st, "occasion")
+        st["occasion"] = "birthday"
+        p3 = guide.next_prompt(st, now_ts=2000.0)
+        self.assertEqual(p3["key"], "budget")
+
+    def test_revision_and_feed(self):
+        st = guide.blank_state()
+        r0 = st["revision"]
+        guide.apply_turn(st, "Shopping for Dad")
+        self.assertGreater(st["revision"], r0)
+        self.assertTrue(any(e["type"] == "profile.updated" for e in st["feed"]))
+
+
 class TestStore(unittest.TestCase):
     def test_round_trip(self):
         from backend import db

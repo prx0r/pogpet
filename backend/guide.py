@@ -46,10 +46,36 @@ def new_id() -> str:
 
 def blank_state() -> dict:
     return {"occasion": "", "occasion_date": "", "budget_cents": 0,
-            "recipient": {"name": "", "interests": [], "birthday": "", "mesh_id": ""},
+            "budget_scope": "per_gift",
+            "recipient": {"name": "", "interests": [], "dislikes": [],
+                          "birthday": "", "mesh_id": "", "anecdotes": []},
+            "delivery": {"deadline": "", "destination": ""},
             "photo_ids": [], "mesh_id": "", "mesh_status": "",
             "prefs": {"motif": "", "exclude": []}, "packs": [],
-            "events": [], "log": []}
+            "events": [], "log": [], "feed": [], "revision": 0,
+            "last_seq": 0, "prompts": {}, "mode": "ramble"}
+
+
+def _normalize_state(state: dict) -> dict:
+    """Upgrade older sessions in place: every key the engine reads exists."""
+    base = blank_state()
+    for k, v in base.items():
+        if k not in state:
+            state[k] = v
+    rec = state.get("recipient") or {}
+    for k, v in base["recipient"].items():
+        rec.setdefault(k, v)
+    state["recipient"] = rec
+    state.setdefault("delivery", {"deadline": "", "destination": ""})
+    state["delivery"].setdefault("deadline", "")
+    state["delivery"].setdefault("destination", "")
+    state.setdefault("budget_scope", "per_gift")
+    state.setdefault("feed", [])
+    state.setdefault("revision", 0)
+    state.setdefault("last_seq", 0)
+    state.setdefault("prompts", {})
+    state.setdefault("mode", "ramble")
+    return state
 
 
 def get_session(c, sid: str, owner: str) -> dict | None:
@@ -59,10 +85,23 @@ def get_session(c, sid: str, owner: str) -> dict | None:
         return None
     d = dict(row)
     try:
-        d["state"] = json.loads(d.get("state") or "{}")
+        d["state"] = _normalize_state(json.loads(d.get("state") or "{}"))
     except ValueError:
         d["state"] = blank_state()
     return d
+
+
+def emit(state: dict, etype: str, data: dict | None = None) -> dict:
+    """Structured UI event: profile.updated, picks.updated, prompt.shown,
+    pack.quoted, render.updated. Always carries session revision."""
+    state["revision"] = int(state.get("revision", 0)) + 1
+    ev = {"id": f"ev_{state['revision']:06d}", "type": etype,
+          "rev": state["revision"], "ts": datetime.now(timezone.utc).timestamp(),
+          "data": data or {}}
+    feed = state.setdefault("feed", [])
+    feed.append(ev)
+    del feed[:-50]
+    return ev
 
 
 def save_session(c, sid: str, owner: str, stage: str, state: dict) -> None:
@@ -124,6 +163,109 @@ def _extract_date(text: str) -> str:
     return ""
 
 
+NEG_RE = re.compile(
+    r"(?:hates?|hating|dislikes?|doesn'?t like|don'?t like|not into|"
+    r"isn'?t into|can'?t stand|boring|stupid)\s+([a-z][a-z \-]{2,24}?)(?=[,.\n]| and | but |$)",
+    re.IGNORECASE)
+SWITCH_RE = re.compile(
+    r"(?:now |actually |instead )?(?:shopping for|buying for|gift for|it'?s for|"
+    r"looking for something for)\s+([A-Z][a-z]{1,19})")
+BY_RE = re.compile(
+    r"(?:need(?: it|s)? by|arriv(?:e|es|ing)(?: before| by)?|deliver(?:ed|y)?(?: by)?|"
+    r"in time for|before)\s+(.+?)(?=[,.\n]|$)", re.IGNORECASE)
+SHIP_RE = re.compile(
+    r"(?:ship|send|deliver)(?: it)? to ([A-Z][a-z]+(?: [A-Z][a-z]+)?)")
+ANEC_RE = re.compile(r"[^.!?]*\b(always|never|obsessed|tells everyone|famous for|"
+                      r"can'?t stop|collects)\b[^.!?]*[.!?]", re.IGNORECASE)
+
+
+def _extract_dislikes(text: str) -> list[str]:
+    return [m.group(1).strip().lower() for m in NEG_RE.finditer(text)]
+
+
+def apply_turn(state: dict, text: str) -> list[str]:
+    """Structured, validated update. Corrections override; returns change keys.
+
+    Additions, removals and recipient switches are explicit — 'he hates golf'
+    never lands in interests, and 'now shopping for Mum' retires Dad.
+    """
+    state = _normalize_state(state)
+    rec = state["recipient"]
+    changed = []
+
+    # recipient switch first: new person retires old recipient-scoped facts
+    m = SWITCH_RE.search(text)
+    if m and m.group(1) != rec.get("name"):
+        rec.update({"name": m.group(1), "interests": [], "dislikes": [],
+                    "birthday": "", "mesh_id": "", "anecdotes": []})
+        changed.append("recipient.switch")
+
+    name = _extract_name(text)
+    if name and not rec.get("name"):
+        rec["name"] = name
+        changed.append("recipient.name")
+    occ = _extract_occasion(text)
+    if occ and not state.get("occasion"):
+        state["occasion"] = occ
+        changed.append("occasion")
+        iso = _extract_date(text)
+        if iso:
+            state["occasion_date"] = iso
+    budget = _extract_budget(text)
+    if budget and not state.get("budget_cents"):
+        state["budget_cents"] = budget
+        changed.append("budget")
+    if re.search(r"\b(total|altogether|all in)\b", text.lower()):
+        if state.get("budget_scope") != "total":
+            state["budget_scope"] = "total"
+            changed.append("budget.scope")
+
+    for d in _extract_dislikes(text):
+        hit = next((k for k in config.INTEREST_MOTIFS if k in d or d in k), d)
+        if hit in rec.get("interests", []):
+            rec["interests"].remove(hit)
+        if hit not in rec.get("dislikes", []):
+            rec.setdefault("dislikes", []).append(hit)
+            changed.append(f"dislike.{hit}")
+    for i in _extract_interests(text):
+        if i in rec.get("dislikes", []):
+            continue  # a stated dislike beats a passing mention
+        if i not in rec.get("interests", []):
+            rec.setdefault("interests", []).append(i)
+            changed.append(f"interest.{i}")
+
+    by = BY_RE.search(text)
+    if by:
+        iso = _extract_date(by.group(1)) or _extract_date(text)
+        if not iso and "christmas" in by.group(1).lower():
+            iso = f"{date.today().year}-12-25"
+        if iso and state["delivery"]["deadline"] != iso:
+            state["delivery"]["deadline"] = iso
+            changed.append("delivery.deadline")
+    sh = SHIP_RE.search(text)
+    if sh and state["delivery"]["destination"] != sh.group(1):
+        state["delivery"]["destination"] = sh.group(1)
+        changed.append("delivery.destination")
+
+    bday = re.search(r"(?<!\d-)(\b(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\b)(?!-\d)", text)
+    if bday and not rec.get("birthday"):
+        rec["birthday"] = bday.group(1)
+        changed.append("recipient.birthday")
+    for m in ANEC_RE.finditer(text):
+        s = m.group(0).strip()[:200]
+        if s and s not in rec.get("anecdotes", []) and len(rec.get("anecdotes", [])) < 5:
+            rec.setdefault("anecdotes", []).append(s)
+            changed.append("recipient.anecdote")
+
+    state["events"] = compute_events(state)
+    state.setdefault("log", []).append({"turn": text[:500]})
+    if changed:
+        emit(state, "profile.updated", {"changed": changed,
+                                        "recipient": {k: rec.get(k) for k in
+                                                      ("name", "interests", "dislikes")}})
+    return changed
+
+
 def compute_events(state: dict) -> list[dict]:
     """Birthdays/weddings/occasions as countdowns. Pure function of state."""
     today = date.today()
@@ -156,49 +298,92 @@ def compute_events(state: dict) -> list[dict]:
             xmas = date(today.year + 1, 12, 25)
         events.append({"kind": "christmas", "who": rec.get("name") or "them",
                        "date": xmas.isoformat(), "days_left": (xmas - today).days})
+    dl = (state.get("delivery") or {}).get("deadline", "")
+    if dl:
+        try:
+            dt = date.fromisoformat(dl)
+            if dt >= today:
+                dest = (state.get("delivery") or {}).get("destination", "")
+                events.append({"kind": "delivery", "who": rec.get("name") or "them",
+                               "date": dt.isoformat(), "days_left": (dt - today).days,
+                               "destination": dest or "unknown"})
+        except ValueError:
+            pass
     for e in events:
         e["urgent"] = e["days_left"] <= 14
     return sorted(events, key=lambda e: e["days_left"])
 
 
-def ramble_turn(state: dict, text: str) -> tuple[dict, str]:
-    """Fold one ramble message into state. Returns (state, next_prompt)."""
-    rec = state.setdefault("recipient", {"name": "", "interests": [], "birthday": "", "mesh_id": ""})
-    name, occ, budget = _extract_name(text), _extract_occasion(text), _extract_budget(text)
-    if name and not rec.get("name"):
-        rec["name"] = name
-    if occ and not state.get("occasion"):
-        state["occasion"] = occ
-        iso = _extract_date(text)
-        if iso:
-            state["occasion_date"] = iso
-    if budget and not state.get("budget_cents"):
-        state["budget_cents"] = budget
-    for i in _extract_interests(text):
-        if i not in rec.get("interests", []):
-            rec.setdefault("interests", []).append(i)
-    bday = re.search(r"\b(0[1-9]|1[0-2])-([0-2][0-9]|3[01])\b", text)
-    if bday and not rec.get("birthday"):
-        rec["birthday"] = bday.group(0)
-    state["events"] = compute_events(state)
-    state.setdefault("log", []).append({"turn": text[:500]})
+PROMPT_DEFS = [
+    {"key": "who", "q": "Who are we shopping for?",
+     "taps": [], "when": lambda s: not s["recipient"].get("name")},
+    {"key": "occasion", "q": "What's the occasion — birthday, wedding, Christmas?",
+     "taps": ["Birthday", "Wedding", "Christmas", "Just because"],
+     "when": lambda s: bool(s["recipient"].get("name")) and not s.get("occasion")},
+    {"key": "budget", "q": "And roughly what per gift?",
+     "taps": ["Under £10", "Under £25", "Under £50"],
+     "when": lambda s: bool(s.get("occasion")) and not s.get("budget_cents")},
+    {"key": "deadline", "q": "When do you need it by?",
+     "taps": [], "when": lambda s: bool(s.get("budget_cents"))
+     and not (s.get("delivery") or {}).get("deadline")},
+    {"key": "destination", "q": "Where's it going?",
+     "taps": [], "when": lambda s: bool((s.get("delivery") or {}).get("deadline"))
+     and not (s.get("delivery") or {}).get("destination")},
+    {"key": "interests", "q": "What makes them laugh — golf? darts? dogs?",
+     "taps": ["Golf", "Darts", "Dogs", "Reading"],
+     "when": lambda s: len(s["recipient"].get("interests", [])) < 2},
+    {"key": "photos", "q": "Send up to 10 photos and I'll sculpt them — then gift packs, no scrolling.",
+     "taps": [], "when": lambda s: bool(s.get("budget_cents")) and not s.get("photo_ids")},
+]
 
+PROMPT_COOLDOWN = 90.0
+
+
+def next_prompt(state: dict, now_ts: float | None = None,
+                record: bool = True) -> dict | None:
+    """One gentle prompt at a time. Answered prompts vanish; unanswered ones
+    cool down before reappearing. Tap answers ride along where offered.
+    record=False peeks without emitting (read-only snapshots)."""
+    now_ts = now_ts if now_ts is not None else datetime.now(timezone.utc).timestamp()
+    shown = state.setdefault("prompts", {})
+    for p in PROMPT_DEFS:
+        try:
+            applies = bool(p["when"](state))
+        except (KeyError, TypeError, AttributeError):
+            applies = False
+        if not applies or shown.get(p["key"], {}).get("answered"):
+            continue
+        last = shown.get(p["key"], {}).get("ts", 0)
+        if now_ts - last < PROMPT_COOLDOWN:
+            continue
+        if record:
+            shown[p["key"]] = {"ts": now_ts, "answered": False}
+            emit(state, "prompt.shown", {"key": p["key"]})
+        return {"key": p["key"], "q": p["q"], "taps": p["taps"]}
+    return None
+
+
+def answer_prompt(state: dict, key: str) -> None:
+    state.setdefault("prompts", {}).setdefault(key, {})["answered"] = True
+
+
+def ramble_turn(state: dict, text: str) -> tuple[dict, str]:
+    """Fold one ramble message into state. Returns (state, next_prompt).
+
+    Corrections override through apply_turn; the reply is the next gentle
+    prompt (or the packs handoff when the basics are complete).
+    """
+    state = _normalize_state(state)
+    apply_turn(state, text)
+    rec = state["recipient"]
     who = rec.get("name") or "them"
-    missing = []
-    if not rec.get("name"):
-        missing.append("who")
-    if not state.get("occasion"):
-        missing.append("occasion")
-    if not state.get("budget_cents"):
-        missing.append("budget")
-    if not missing:
-        return state, (f"Got it — {who}, {state['occasion'].replace('_', ' ')}, "
-                       f"under {state['budget_cents'] // 100}. "
-                       f"Send me up to {MAX_PHOTOS} photos and I'll sculpt them, "
-                       f"then show you gift packs. Nothing to scroll.")
-    prompts = {
-        "who": "Who are we shopping for?",
-        "occasion": f"What's the occasion for {who} — birthday, wedding, Christmas?",
-        "budget": f"And roughly what per gift — under what price?",
-    }
-    return state, prompts[missing[0]]
+    if not (rec.get("name") and state.get("occasion") and state.get("budget_cents")):
+        if not rec.get("name"):
+            return state, "Who are we shopping for?"
+        if not state.get("occasion"):
+            return state, f"What's the occasion for {who} — birthday, wedding, Christmas?"
+        return state, "And roughly what per gift?"
+    return state, (f"Got it — {who}, {state['occasion'].replace('_', ' ')}, "
+                   f"under {state['budget_cents'] // 100}. "
+                   f"Send me up to {MAX_PHOTOS} photos and I'll sculpt them, "
+                   f"then show you gift packs. Nothing to scroll.")

@@ -140,6 +140,18 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at     REAL NOT NULL
 );
 
+-- Friends: profile per subject mesh (name, interests, birthday).
+-- Owner-scoped like everything else; a subject without a row is just unnamed.
+CREATE TABLE IF NOT EXISTS subject_profiles (
+  owner      TEXT NOT NULL,
+  mesh_id    TEXT NOT NULL,
+  name       TEXT NOT NULL DEFAULT '',
+  interests  TEXT NOT NULL DEFAULT '[]',
+  birthday   TEXT NOT NULL DEFAULT '',
+  updated_at REAL NOT NULL,
+  PRIMARY KEY (owner, mesh_id)
+);
+
 CREATE TABLE IF NOT EXISTS upload_ledger (
   owner     TEXT NOT NULL,
   day       TEXT NOT NULL,
@@ -464,6 +476,46 @@ def set_active(c: sqlite3.Connection, owner: str, mesh_id: str) -> None:
         " updated_at=excluded.updated_at",
         (owner, mesh_id, now()),
     )
+
+
+def get_subject_profile(c: sqlite3.Connection, owner: str, mesh_id: str) -> dict:
+    """Friend profile for one subject mesh — {} when unnamed."""
+    row = c.execute(
+        "SELECT * FROM subject_profiles WHERE owner=? AND mesh_id=?",
+        (owner, mesh_id)).fetchone()
+    if not row:
+        return {}
+    d = dict(row)
+    try:
+        d["interests"] = json.loads(d.get("interests") or "[]")
+    except (ValueError, TypeError):
+        d["interests"] = []
+    return d
+
+
+def set_subject_profile(c: sqlite3.Connection, owner: str, mesh_id: str,
+                        name: str = "", interests: list | None = None,
+                        birthday: str = "") -> dict:
+    """Upsert a friend profile. Interests are free tags; known ones map to
+    motifs via config.INTEREST_MOTIFS, unknown ones ride along untouched."""
+    cur = get_subject_profile(c, owner, mesh_id)
+    keep = cur.get("interests", []) if interests is None else [str(i)[:40] for i in interests][:12]
+    row = {
+        "owner": owner, "mesh_id": mesh_id,
+        "name": (name or cur.get("name", ""))[:60],
+        "interests": json.dumps(keep),
+        "birthday": (birthday if birthday != "" else cur.get("birthday", ""))[:10],
+        "updated_at": now(),
+    }
+    c.execute(
+        "INSERT INTO subject_profiles (owner,mesh_id,name,interests,birthday,updated_at)"
+        " VALUES (?,?,?,?,?,?) ON CONFLICT(owner,mesh_id) DO UPDATE SET"
+        " name=excluded.name, interests=excluded.interests,"
+        " birthday=excluded.birthday, updated_at=excluded.updated_at",
+        (row["owner"], row["mesh_id"], row["name"], row["interests"],
+         row["birthday"], row["updated_at"]),
+    )
+    return get_subject_profile(c, owner, mesh_id)
 
 
 def pogs_for(c: sqlite3.Connection, owner: str) -> list[dict]:

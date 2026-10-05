@@ -2789,7 +2789,8 @@
           || stv.calling;
         out.push({
           mesh_id: m.mesh_id,
-          label: m.label || (m.kind === "brick" ? "brick figure" : "dog"),
+          label: (m.profile && m.profile.name) || m.label || (m.kind === "brick" ? "brick figure" : "dog"),
+          profile: m.profile || null,
           glb_url: m.glb_url || configStudioGlb(),
           demo: !!m.demo,
           installed: !m.demo,

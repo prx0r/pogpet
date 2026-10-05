@@ -582,6 +582,28 @@ CARD_CUSTOMIZATION_SCHEMA = {
     "levels": ["L1", "L2", "L3"],
 }
 
+# ── friends: interest → motif picks ─────────────────────────────────
+# The engine personalises by profile, not just face: golf-Dad's clog charm
+# is a golf ball, not a portrait. First interest with motifs wins; lines
+# take the suggestion through suggested_motif (advisory, checkout omits it
+# until the customer confirms — the profile proposes, the human disposes).
+INTEREST_MOTIFS = {
+    "golf": ["golf_ball", "tee", "flag", "club"],
+    "darts": ["dartboard", "dart", "180"],
+    "football": ["ball", "boot", "scarf"],
+    "liverpool": ["liver_bird", "red_star", "ynwa"],
+    "fishing": ["fish", "hook", "fly"],
+    "reading": ["book", "glasses", "bookmark"],
+    "gaming": ["controller", "keycap", "d20"],
+    "cycling": ["bike", "wheel", "helmet"],
+    "gardening": ["flower", "leaf", "trowel"],
+    "music": ["note", "guitar", "vinyl"],
+    "dogs": ["paw", "bone", "face"],
+    "cats": ["paw", "fish", "face"],
+    "mahjong": ["tile", "wind", "flower"],
+    "christmas": ["tree", "star", "bauble"],
+}
+
 # Coat = material grade + optional pattern on the existing texture (previews).
 # Production multi-colour is a live farm quote — never pretend a grade is a print SKU.
 STUDIO_COATS: list[dict] = [

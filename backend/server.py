@@ -283,10 +283,12 @@ def me():
             if ok:
                 active = ok["id"]
                 db.set_active(c, owner, active)
+        profiles = {p["id"]: db.get_subject_profile(c, owner, p["id"]) for p in pogs}
         roster = [{
             "mesh_id": p["id"], "status": p["status"], "stub": bool(p["stub"]),
             "print_ready": bool(p["print_ready"]), "photo_key": p.get("photo_key", ""),
             "active": p["id"] == active, "created_at": p["created_at"],
+            "profile": profiles.get(p["id"]) or None,
         } for p in pogs]
     return jsonify({"ok": True, "owner": owner, "active_mesh_id": active,
                     "pogs": roster, "count": len(roster)})
@@ -313,6 +315,68 @@ def set_active():
             return _err("that mesh belongs to someone else", 403)
         db.set_active(c, owner, mesh_id)
     return jsonify({"ok": True, "owner": owner, "active_mesh_id": mesh_id})
+
+
+def _suggest_motif(interests: list) -> dict | None:
+    """First motif of the first interest the engine knows. Advisory only —
+    checkout never assumes it; the customer confirms."""
+    for raw in interests or []:
+        key = str(raw).strip().lower()
+        motifs = config.INTEREST_MOTIFS.get(key)
+        if motifs:
+            return {"interest": key, "motif": motifs[0], "motifs": motifs}
+    return None
+
+
+@app.get("/api/subjects/profiles")
+def subject_profiles():
+    """Friends list: every profiled subject for this owner."""
+    owner = (request.args.get("owner") or "").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        rows = c.execute(
+            "SELECT * FROM subject_profiles WHERE owner=? ORDER BY updated_at DESC",
+            (owner,)).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d["interests"] = json.loads(d.get("interests") or "[]")
+            except (ValueError, TypeError):
+                d["interests"] = []
+            d["suggestion"] = _suggest_motif(d["interests"])
+            out.append(d)
+    return jsonify({"ok": True, "owner": owner, "profiles": out})
+
+
+@app.post("/api/subjects/profile")
+def set_subject_profile():
+    """Name a friend: {owner, mesh_id, name?, interests[]?, birthday?}."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    mesh_id = (body.get("mesh_id") or "").strip()
+    if not owner or not mesh_id:
+        return _err("owner and mesh_id are required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        if not db.get_mesh(c, mesh_id):
+            return _err("no such mesh", 404)
+        row = c.execute(
+            "SELECT 1 FROM meshes m JOIN photos p ON p.id=m.photo_id"
+            " WHERE m.id=? AND p.owner=?", (mesh_id, owner)).fetchone()
+        if not row:
+            return _err("that mesh belongs to someone else", 403)
+        prof = db.set_subject_profile(
+            c, owner, mesh_id,
+            name=str(body.get("name") or ""),
+            interests=body.get("interests") if isinstance(body.get("interests"), list) else None,
+            birthday=str(body.get("birthday") or ""))
+    return jsonify({"ok": True, "owner": owner, "profile": prof,
+                    "suggestion": _suggest_motif(prof.get("interests", []))})
 
 
 def _ensure_mockup(owner, short, pid, spec, src_path, concept, subject, have):
@@ -2336,6 +2400,7 @@ def studio_state():
                 "active": p["id"] == active,
                 "stub": bool(p["stub"]),
                 "kind": kind,
+                "profile": db.get_subject_profile(c, owner, p["id"]) or None,
             })
     demo = {
         "mesh_id": "canonical",
@@ -3144,6 +3209,8 @@ def products_studio():
     with db.connect() as c:
         prof = db.get_profile(c, owner)
         active = prof.get("active_mesh_id") or ""
+        subject = db.get_subject_profile(c, owner, active) if active else {}
+    suggestion = _suggest_motif(subject.get("interests", [])) if subject else None
     items = []
     for lid, spec in config.STUDIO_LINES.items():
         assets = spec.get("assets") or {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]}
@@ -3195,11 +3262,14 @@ def products_studio():
             "sample": spec.get("sample"),
             "personalization": spec.get("personalization"),
             "occasion": spec.get("occasion"),
+            "suggested_motif": suggestion,
         })
     return jsonify({
         "ok": True,
         "owner": owner,
         "active_mesh_id": active,
+        "subject": subject or None,
+        "suggestion": suggestion,
         "items": items,
         "custom_policy": config.STUDIO_CUSTOM_POLICY,
         "card_sizes": config.CARD_SIZES,

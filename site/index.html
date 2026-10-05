@@ -1403,6 +1403,19 @@
       <div class="qk-live" id="qk-live" hidden>
         <div class="qk-live__top">
           <svg class="oddy-avatar oddy-avatar--sm" id="oddy-live" viewBox="0 0 512 512" role="img" aria-label="Oddy listening"><use href="#oddy-listening"/></svg>
+          <svg class="oddy-avatar oddy-avatar--sm" id="oddy-live-morph" viewBox="0 0 512 512" role="img" aria-label="Oddy speaking" style="display:none">
+            <g id="oddy-head">
+              <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
+                <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
+                <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+                <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+              </g>
+              <circle cx="220" cy="255" r="7" fill="#111"/>
+              <circle cx="292" cy="255" r="7" fill="#111"/>
+              <ellipse id="oddy-mouth" cx="256" cy="368" rx="14" ry="4" fill="#111"/>
+            </g>
+          </svg>
           <div class="qk-live__state" id="qk-live-state">Oddy’s listening — take your time</div>
           <div class="qk-live__timer" id="qk-live-timer"></div>
         </div>
@@ -4185,6 +4198,9 @@
         if (window.Oddy) {
           window.Oddy.mount(document.getElementById("oddy-idle"));
           window.Oddy.mount(document.getElementById("oddy-live"));
+          // continuous-morph view: wakes when a real audio tap binds
+          // (LiveKit track). Until then the swap states carry speaking.
+          window.Oddy.mountLive("oddy-live-morph", "oddy-mouth", "oddy-head");
         }
       } catch (e) {}
     })();

@@ -40,19 +40,27 @@ backoff; a failed line keeps its fallback still, never a blank tile.
 
 ## 4. Viewer strategy (never 30 GLBs on a page)
 
-Thirty live `model-viewer` instances *will* break the page: browsers cap
-concurrent WebGL contexts around 8–16, each instance holds GPU memory and a
-render loop, and mobile falls over first. So:
+Thirty live `model-viewer` instances will still feel bad, but for a better
+reason than context limits: model-viewer uses a **single shared Renderer**
+(one WebGL context for all instances, models cached by URL with LRU
+eviction), and non-visible instances stop working via IntersectionObserver.
+The real costs are per-instance render+copy overhead, texture GPU upload
+jank, and iOS Safari's memory ceiling (crashes seen with just a few models).
+Google's own guidance: max ~3–5 visible instances. So:
 
 - Grid tiles are **stills only**. Always. No exceptions.
-- At most **2 live viewers**: the spotlight hero + the open detail card.
-- Viewers mount/unmount via IntersectionObserver; unmounted viewers keep their
-  `poster` (the hero still), so the tile never flashes empty.
-- `reveal="interaction"`, no auto-rotate offscreen; pause the render loop when
-  the detail card closes.
-- Viewer GLBs are decimated/display-grade; manufacture uses the full master.
-  One shared texture per subject — no per-product texture duplicates.
-- Preload the detail GLB on tile hover (link preload), so open feels instant.
+- At most **3 live viewers**: spotlight hero + open detail card + one
+  hover-prefetch slot. Recycle elements carousel-style (swap `src`) rather
+  than mounting new ones.
+- `reveal="interaction"` everywhere below the fold; custom slotted posters
+  (WebP, matching the initial camera angle) so tiles read instantly.
+- Keep GLBs light: glTF material factors instead of solid-colour textures
+  (uncompressed pixels are the upload jank), one shared texture per subject,
+  display-grade decimation; manufacture uses the full master.
+- Hover on a tile prefetches its GLB (`loading="eager"` + cache hit); the
+  detail viewer then opens from cache.
+- `minimumRenderScale` left at auto (dynamic scaling throttles gracefully);
+  no auto-rotate offscreen.
 
 ## 5. Re-roll (snappy by construction)
 
@@ -114,11 +122,23 @@ taste_events (id, owner, variant_id, kind: keep|discard|checkout, created_at)
 
 Profiles and global goodness are views over these two tables, not new state.
 
-## 9. Budgets
+## 9. Budgets (researched settings)
 
-- Render: ~60s per 2×900px Cycles frames (CPU). Seed-0 + angles per line ≈
-  3–4 min; full 23-line cold fan-out ≈ 60–90 min background. Never on the
-  request path.
+- Render one Blender session per (mesh, line, seed) and shoot **all angles in
+  it**: `Persistent Data` keeps BVH resident between frames, so angles 2–5
+  cost little after the first. One process per angle would rebuild everything.
+- Adaptive sampling is the quality knob: noise threshold ~0.02 + min samples
+  ~10–20% of max for tiles/previews, 0.01 for hero/listing finals. Max samples
+  is a ceiling, not a target. Bounces down to 4–8 total (diffuse/glossy 2–3)
+  saves ~20–30% with no visible loss on product scenes.
+- Rough budget: seed-0 + angles per line ≈ 2–3 min CPU; full 23-line cold
+  fan-out ≈ 45–75 min background. Never on the request path.
+- Experiment queue (not plan): EEVEE for instant tile previews (~10× faster
+  on simple scenes; our headless EGL issue may be environment-specific), and
+  cheap GPU farm overflow (consumer-GPUSpot-style) for batch stills. CPU box
+  stays the default path.
+- Worker pattern: headless subprocess per job, file-based JSON status, queue
+  with retries — one bad mesh must never take down the batch.
 - Storage: hero + 4 angles + viewer GLB per seed; GC unpinned seeds older than
   N days. R2 mirrors local (existing `rclone r2:` remote).
 - Meshy spend: zero. Re-roll never touches Meshy — only the original subject

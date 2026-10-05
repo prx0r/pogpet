@@ -13,6 +13,9 @@ import { Type } from "typebox";
 const BASE = (process.env.FIGG_API_BASE ?? "http://127.0.0.1:8798").replace(/\/$/, "");
 const TOKEN = process.env.FIGG_API_TOKEN ?? "";
 const FIGG_TOKEN = process.env.FIGG_TOKEN ?? "";
+const ACTOR = process.env.FIGG_OWNER ?? "";
+const OWNER_SIG = process.env.FIGG_OWNER_SIG ?? "";
+const USER_KEY = process.env.FIGG_API_KEY ?? "";
 
 function url(path: string): string {
 	const sep = path.includes("?") ? "&" : "?";
@@ -27,6 +30,12 @@ async function call(
 ): Promise<{ status: number; json: any }> {
 	const headers: Record<string, string> = {};
 	if (FIGG_TOKEN) headers["X-Session-Token"] = FIGG_TOKEN;
+	const claimed = (body && typeof body === "object" && "owner" in body)
+		? String((body as {owner?: unknown}).owner ?? "")
+		: form?.get("owner")?.toString() ?? new URL(path,BASE).searchParams.get("owner") ?? "";
+	if (ACTOR && claimed && claimed !== ACTOR) throw new Error("This tool can only act for the current session owner.");
+	if (USER_KEY) headers["X-API-Key"] = USER_KEY;
+	if (OWNER_SIG) headers["X-Owner-Sig"] = OWNER_SIG;
 	let payload: BodyInit | undefined;
 	if (form) {
 		payload = form;
@@ -111,7 +120,7 @@ export default function (pi: ExtensionAPI) {
 					new Blob([bytes], { type: "image/jpeg" }),
 					real.split("/").pop() ?? "photo.jpg",
 				);
-				form.append("owner", params.owner ?? "agent");
+				form.append("owner", params.owner || ACTOR || "agent");
 				const { status, json } = await call("POST", "/api/photos", undefined, form);
 				if (status !== 200 || !json.ok) return fail(json.error ?? "upload failed", status);
 				return ok({
@@ -228,7 +237,8 @@ export default function (pi: ExtensionAPI) {
 		}),
 		execute: async (_id, params) => {
 			try {
-				const q = params.owner ? `?owner=${encodeURIComponent(params.owner)}` : "";
+				const owner = params.owner || ACTOR;
+				const q = owner ? `?owner=${encodeURIComponent(owner)}` : "";
 				const { status, json } = await call("GET", `/api/studio${q}`);
 				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "studio failed", status);
 			} catch (e) {
@@ -257,7 +267,7 @@ export default function (pi: ExtensionAPI) {
 					line: params.line ?? "ornament",
 					coat: params.coat ?? "none",
 					hat: params.hat ?? "none",
-					owner: params.owner ?? "",
+					owner: params.owner || ACTOR || "",
 					mesh_id: params.mesh_id ?? "",
 				});
 				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "customise failed", status);
@@ -292,7 +302,7 @@ export default function (pi: ExtensionAPI) {
 					coat: params.coat ?? "none",
 					hat: params.hat ?? "none",
 					pattern: params.pattern ?? "solid",
-					owner: params.owner ?? "",
+					owner: params.owner || ACTOR || "",
 					mesh_id: params.mesh_id ?? "",
 					texture: params.note ?? "",
 					texture_note: params.note ?? "",
@@ -345,7 +355,7 @@ export default function (pi: ExtensionAPI) {
 					coat: params.coat ?? "none",
 					hat: params.hat ?? "none",
 					qty: params.qty ?? 1,
-					owner: params.owner ?? "",
+					owner: params.owner || ACTOR || "",
 					mesh_id: params.mesh_id ?? "",
 					note: params.note ?? "",
 				});
@@ -370,7 +380,8 @@ export default function (pi: ExtensionAPI) {
 		}),
 		execute: async (_id, params) => {
 			try {
-				const q = params.owner ? `?owner=${encodeURIComponent(params.owner)}` : "";
+				const owner = params.owner || ACTOR;
+				const q = owner ? `?owner=${encodeURIComponent(owner)}` : "";
 				const { status, json } = await call("GET", `/api/products/studio${q}`);
 				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "products failed", status);
 			} catch (e) {
@@ -402,7 +413,7 @@ export default function (pi: ExtensionAPI) {
 					coat: params.coat ?? "none",
 					hat: params.hat ?? "none",
 					texture: params.texture ?? "",
-					owner: params.owner ?? "",
+					owner: params.owner || ACTOR || "",
 					mesh_id: params.mesh_id ?? "",
 				});
 				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "personalise failed", status);
@@ -444,7 +455,7 @@ export default function (pi: ExtensionAPI) {
 					amount_cents: params.amount_cents,
 					fulfil: params.fulfil ?? false,
 					email: params.email ?? "",
-					owner: params.owner ?? "",
+					owner: params.owner || ACTOR || "",
 					mesh_id: params.mesh_id ?? "",
 					note: params.note ?? "",
 				});
@@ -470,7 +481,8 @@ export default function (pi: ExtensionAPI) {
 		}),
 		execute: async (_id, params) => {
 			try {
-				const q = params.owner ? `?owner=${encodeURIComponent(params.owner)}` : "";
+				const owner = params.owner || ACTOR;
+				const q = owner ? `?owner=${encodeURIComponent(owner)}` : "";
 				const { status, json } = await call(
 					"GET",
 					`/api/meshes/${encodeURIComponent(params.mesh_id)}/manifest${q}`,
@@ -524,7 +536,7 @@ export default function (pi: ExtensionAPI) {
 		}),
 		execute: async (_id, params) => {
 			try {
-				const owner = params.owner ?? "";
+				const owner = params.owner || ACTOR || "";
 				const mesh = params.mesh_id ?? "";
 				const pers = await call("POST", "/api/products/personalise", {
 					line: params.line,
@@ -602,7 +614,8 @@ export default function (pi: ExtensionAPI) {
 		}),
 		execute: async (_id, params) => {
 			try {
-				const q = params.owner ? `?owner=${encodeURIComponent(params.owner)}` : "";
+				const owner = params.owner || ACTOR;
+				const q = owner ? `?owner=${encodeURIComponent(owner)}` : "";
 				const { status, json } = await call("GET", `/api/bricks/status${q}`);
 				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "bricks failed", status);
 			} catch (e) {
@@ -629,4 +642,31 @@ export default function (pi: ExtensionAPI) {
 			}
 		},
 	});
+	// Same owner-scoped card API as the browser and Python MCP server.
+	const ownerField = Type.Optional(Type.String({description:"Current session owner; never another customer's handle"}));
+	function cardTool(name: string, description: string, parameters: any,
+		request: (args: any, owner: string) => Promise<{status: number; json: any}>) {
+		pi.registerTool({name,label:name.replaceAll("_"," "),description,parameters,
+			execute:async (_id, args) => {
+				try {
+					const owner=args.owner || ACTOR || "anon";
+					const result=await request(args,owner);
+					return result.status===200 && result.json.ok ? ok(result.json) : fail(result.json.error ?? "Card request failed",result.status);
+				} catch(e) { return fail(String(e)); }
+			}});
+	}
+	const query=(owner:string)=>"owner="+encodeURIComponent(owner);
+	const id=(value:string)=>encodeURIComponent(value);
+	cardTool("figg_card_library","List your uploaded photos, scene templates and saved greeting cards. No mesh is needed.",Type.Object({owner:ownerField}),async (_a,o)=>{
+		const results=await Promise.all([call("GET","/api/cards/photos?"+query(o)),call("GET","/api/cards/templates?"+query(o)),call("GET","/api/cards/designs?"+query(o))]);
+		const failed=results.find(r=>r.status!==200||!r.json.ok);
+		return failed || {status:200,json:{ok:true,photos:results[0].json,scenes:results[1].json,designs:results[2].json}};
+	});
+	cardTool("figg_card_save","Save a card spec with template/format/photos/headline/recipient/sender/inside_message. Updates require expected_revision.",Type.Object({owner:ownerField,spec:Type.Any(),design_id:Type.Optional(Type.String()),expected_revision:Type.Optional(Type.Integer())}),async(a,o)=>call("POST","/api/cards/designs",{owner:o,spec:a.spec,...(a.design_id?{id:a.design_id,expected_revision:a.expected_revision}:{})}));
+	cardTool("figg_card_scene","Read one shared card/video scene and its output status.",Type.Object({owner:ownerField,design_id:Type.String(),revision:Type.Optional(Type.Integer())}),async(a,o)=>call("GET","/api/cards/"+id(a.design_id)+"/scene?"+query(o)+(a.revision?"&revision="+a.revision:"")));
+	cardTool("figg_card_render","Render preview, export PDF or motion MP4 from a saved revision; returns an asynchronous job.",Type.Object({owner:ownerField,design_id:Type.String(),revision:Type.Integer(),kind:Type.Union([Type.Literal("preview"),Type.Literal("export"),Type.Literal("motion")])}),async(a,o)=>call("POST","/api/cards/"+id(a.design_id)+"/render",{owner:o,revision:a.revision,kind:a.kind}));
+	cardTool("figg_card_job","Check a card render job; ready outputs have private download URLs.",Type.Object({owner:ownerField,job_id:Type.String()}),async(a,o)=>call("GET","/api/cards/jobs/"+id(a.job_id)+"?"+query(o)));
+	cardTool("figg_card_cutout","Remove a selected subject's background after an explicit crop. Uses the configured transformation service; no mesh generation.",Type.Object({owner:ownerField,photo_id:Type.String(),crop:Type.Array(Type.Number(),{minItems:4,maxItems:4})}),async(a,o)=>call("POST","/api/cards/cutouts",{owner:o,photo_id:a.photo_id,crop:a.crop}));
+	cardTool("figg_card_reserve","Reserve a card with a ready PDF. Show the estimate first. No payment or supplier dispatch.",Type.Object({owner:ownerField,design_id:Type.String(),revision:Type.Integer(),idempotency_key:Type.String(),qty:Type.Optional(Type.Integer())}),async(a,o)=>call("POST","/api/cards/"+id(a.design_id)+"/order",{owner:o,revision:a.revision,idempotency_key:a.idempotency_key,qty:a.qty??1}));
+
 }

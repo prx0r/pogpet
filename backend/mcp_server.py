@@ -73,6 +73,9 @@ async def _call(method: str, path: str, body: dict | None = None) -> dict:
         claimed = ""
         if body and isinstance(body, dict):
             claimed = str(body.get("owner") or "").strip()
+        if not claimed:
+            from urllib.parse import urlsplit,parse_qs
+            claimed=str(parse_qs(urlsplit(path).query).get("owner",[""])[0]).strip()
         if figg_owner and claimed == figg_owner:
             from backend import config as _cfg
             req.add_header("X-Owner-Sig", _cfg.sign_owner(figg_owner))

@@ -1602,12 +1602,19 @@ def create_account():
     if password and len(password) < 8:
         return _err("password needs at least 8 characters", 400)
     ip = (request.remote_addr or "anon").strip()[:64]
-    if not _auth_rate("signup", ip):
-        return _err("too many account attempts — try again later", 429)
     claim = (b.get("claim_owner") or "").strip()
+    if claim:
+        denied=_owner_denied(claim)
+        if denied is not None:
+            return denied
 
     try:
-        with db.connect() as c:
+        with card_api.ownership_lock, db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            if claim and c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND status IN ('queued','running') LIMIT 1",(claim,)).fetchone():
+                return _err("Your card is still rendering. Finish the render, then sign up again.",409)
+            if not _auth_rate("signup", ip):
+                return _err("too many account attempts — try again later",429)
             user = db.create_user(c, handle, password,
                                   email=str(b.get("email") or ""),
                                   display_name=str(b.get("display_name") or ""))
@@ -1626,7 +1633,7 @@ def create_account():
 
     if claim:
         try:
-            storage.claim_owner(claim, user["handle"])
+            storage.claim_owner(claim, user["handle"], preserve_photos=bool(claimed.get("card_designs") or claimed.get("card_cutouts")))
         except Exception:
             pass   # rows keep their old keys, which still resolve
 
@@ -2465,6 +2472,10 @@ def run_queue():
 def artifact(key: str):
     if ".." in key or key.startswith("/") or "//" in key or not key.strip("/"):
         return _err("bad key", 400)
+    # Card namespaces survive account claiming. Serve these only through the
+    # card routes, which check the current database owner rather than the key.
+    if "cards" in key.split("/"):
+        return _err("use the authenticated card download route", 403)
     import hashlib
     # Stable per-process name so repeat requests hit the local cache.
     # (str.__hash__ is salted, so hash(key) would miss every time.)

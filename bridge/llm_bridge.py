@@ -67,7 +67,25 @@ def _prompt_from_messages(messages: list) -> str:
     return "\n\n".join(lines)
 
 
-def run_pi(messages: list, max_tokens: int, temperature: float) -> str:
+def verified_actor(owner: str, owner_sig: str = "", api_key: str = "") -> dict:
+    """Forward only a backend-verified browser identity to the isolated Pi call."""
+    from urllib.parse import urlencode
+    owner=(owner or "anon").strip()[:80]
+    query=urlencode({"owner":owner,"token":os.environ.get("API_TOKEN","")})
+    target=f"http://127.0.0.1:{os.environ.get('BACKEND_PORT',8798)}/api/cards/templates?{query}"
+    headers={}
+    if owner_sig:headers["X-Owner-Sig"]=owner_sig
+    if api_key:headers["X-API-Key"]=api_key
+    try:
+        with urllib.request.urlopen(urllib.request.Request(target,headers=headers),timeout=15) as r:
+            result=json.loads(r.read())
+        if not result.get("ok"):raise PermissionError("Your session could not be verified. Reload and try again.")
+    except urllib.error.HTTPError:
+        raise PermissionError("Your session could not be verified. Reload and try again.") from None
+    return {"FIGG_OWNER":owner,"FIGG_OWNER_SIG":owner_sig,"FIGG_API_KEY":api_key}
+
+
+def run_pi(messages: list, max_tokens: int, temperature: float, actor_env: dict | None = None) -> str:
     if not PI_CLI.exists():
         raise RuntimeError(f"pi CLI not built at {PI_CLI} (run `npm run build` in pi/)")
 
@@ -80,6 +98,9 @@ def run_pi(messages: list, max_tokens: int, temperature: float) -> str:
             if line and not line.startswith("#") and "=" in line:
                 k, _, v = line.partition("=")
                 env.setdefault(k.strip(), v.strip())
+
+    if actor_env is not None:
+        env.update(actor_env)
 
     api_key = env.get("OPENCODE_API_KEY", "")
     if not api_key:
@@ -362,8 +383,12 @@ class Handler(BaseHTTPRequestHandler):
                 "var n=u+j+'token='+encodeURIComponent(T);"
                 "var sig='';try{sig=localStorage.getItem('pogpet.ownersig')||'';}catch(e){}"
                 "var hdrs=(o&&o.headers)||{};"
+                "try{var actor=localStorage.getItem('pogpet.owner')||'anon';var key=localStorage.getItem('pogpet.apikey')||'';"
+                "if(typeof Headers==='function'&&hdrs instanceof Headers){hdrs.set('X-Figg-Owner',actor);if(key)hdrs.set('X-API-Key',key);}"
+                "else{hdrs=Object.assign({},hdrs,{'X-Figg-Owner':actor});if(key)hdrs['X-API-Key']=key;}}catch(e){}"
                 "if(sig){try{if(typeof Headers==='function'&&hdrs instanceof Headers){if(!hdrs.has('X-Owner-Sig'))hdrs.set('X-Owner-Sig',sig);}else{hdrs=Object.assign({},hdrs);hdrs['X-Owner-Sig']=sig;}}catch(e){}}"
-                "i=(typeof i==='string')?n:new Request(n, o?Object.assign({},o,{headers:hdrs}):{headers:hdrs});}return f(i,o);};})();"
+                "o=Object.assign({},o||{},{headers:hdrs});"
+                "i=(typeof i==='string')?n:new Request(n,i);}return f(i,o);};})();"
                 "</script>"
             ).encode()
             marker = b"</body>"
@@ -430,7 +455,15 @@ class Handler(BaseHTTPRequestHandler):
                 messages,
                 int(body.get("max_tokens", 200)),
                 float(body.get("temperature", 0.8)),
+                actor_env=verified_actor(
+                    str(body.get("owner") or self.headers.get("X-Figg-Owner") or "anon"),
+                    self.headers.get("X-Owner-Sig", ""),
+                    self.headers.get("X-API-Key", ""),
+                ),
             )
+        except PermissionError as e:
+            self._json({"success":False,"error":str(e)},403)
+            return
         except subprocess.TimeoutExpired:
             self._json({"success": False, "error": "model timeout"}, 504)
             return

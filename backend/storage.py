@@ -89,12 +89,13 @@ def _slug(owner: str) -> str:
     return s.strip("-._") or "anon"
 
 
-def claim_owner(old: str, new: str) -> None:
-    """Move an anonymous owner's whole R2 subtree onto their real handle.
+def claim_owner(old: str, new: str, *, preserve_photos: bool = False) -> None:
+    """Transfer the legacy photos/meshes/products prefixes to a real handle.
 
     Storage keys are derived from the owner, so without this the rows would
     point at a path nobody lists under. Best-effort: a missing old prefix is
-    not an error (there may have been nothing stored yet).
+    not an error (there may have been nothing stored yet). Card namespaces
+    stay in place; preserve_photos copies sources needed by immutable cards.
     """
     a, b = _slug(old), _slug(new)
     if a == b:
@@ -102,7 +103,7 @@ def claim_owner(old: str, new: str) -> None:
     for sub in ("photos", "meshes", "products"):
         src = f"{config.R2_REMOTE}owners/{a}/{sub}"
         dst = f"{config.R2_REMOTE}owners/{b}/{sub}"
-        subprocess.run([config.RCLONE, "movetree", src, dst],
+        subprocess.run([config.RCLONE, "copy" if sub == "photos" and preserve_photos else "movetree", src, dst],
                        capture_output=True, text=True, timeout=180)
 
 

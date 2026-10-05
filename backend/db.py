@@ -407,6 +407,12 @@ def claim_assets(c: sqlite3.Connection, from_owner: str, to_handle: str) -> dict
     cur = c.execute("UPDATE videos SET owner=? WHERE owner=? AND owner<>?",
                     (to_handle, from_owner, to_handle))
     out["videos"] = cur.rowcount
+    # Keep immutable artifact keys/namespace and revision specifications intact.
+    tables={r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    for table in ("card_designs","card_jobs","card_cutouts","card_orders"):
+        if table in tables:
+            cur=c.execute(f"UPDATE {table} SET owner=? WHERE owner=? AND owner<>?",(to_handle,from_owner,to_handle))
+            out[table]=cur.rowcount
     return out
 
 

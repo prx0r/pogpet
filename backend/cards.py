@@ -24,7 +24,8 @@ from . import card_scenes as scenes, config, db, storage
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS card_designs (
  id TEXT PRIMARY KEY, owner TEXT NOT NULL, latest INTEGER NOT NULL,
- created_at REAL NOT NULL, updated_at REAL NOT NULL);
+ created_at REAL NOT NULL, updated_at REAL NOT NULL,
+ storage_owner TEXT NOT NULL DEFAULT '');
 CREATE INDEX IF NOT EXISTS card_design_owner ON card_designs(owner,updated_at);
 CREATE TABLE IF NOT EXISTS card_revisions (
  design_id TEXT NOT NULL REFERENCES card_designs(id), revision INTEGER NOT NULL,
@@ -45,7 +46,7 @@ CREATE TABLE IF NOT EXISTS card_orders (
 """
 _pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="card-render")
 _slots = threading.BoundedSemaphore(6)
-_lock = threading.Lock()
+ownership_lock = threading.RLock()
 
 
 class CardError(Exception):
@@ -56,6 +57,9 @@ class CardError(Exception):
 def init():
     with db.connect() as c:
         c.executescript(SCHEMA)
+        if "storage_owner" not in {r[1] for r in c.execute("PRAGMA table_info(card_designs)")}:
+            c.execute("ALTER TABLE card_designs ADD COLUMN storage_owner TEXT NOT NULL DEFAULT ''")
+        c.execute("UPDATE card_designs SET storage_owner=owner WHERE storage_owner=''")
         c.execute("UPDATE card_jobs SET status='failed',error='Render interrupted. Retry this revision.' WHERE status IN ('queued','running')")
         c.commit()
 
@@ -155,7 +159,11 @@ def record(owner,did,revision=None):
 
 def key(owner,did,rev,kind):
     names={"preview":"front.png","inside":"inside.png","export":"print.pdf","motion":"scene.mp4"}
-    return f"owners/{storage._slug(owner)}/cards/{did}/r{rev}/{names[kind]}"
+    with db.connect() as c:
+        row=c.execute("SELECT storage_owner FROM card_designs WHERE id=?",(did,)).fetchone()
+    if row is None:
+        raise CardError("Card not found",404)
+    return f"owners/{storage._slug(row[0])}/cards/{did}/r{rev}/{names[kind]}"
 
 
 def cached(k):
@@ -219,8 +227,8 @@ def render_job(jid):
 def enqueue(owner,did,rev,kind):
     if not isinstance(kind,str) or kind not in ("preview","export","motion"):
         raise CardError("Unknown render kind")
-    record(owner,did,rev)
-    with _lock,db.connect() as c:
+    with ownership_lock,db.connect() as c:
+        record(owner,did,rev)
         old=c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind=? AND status IN ('queued','running','ready') ORDER BY created_at DESC LIMIT 1",(owner,did,rev,kind)).fetchone()
         if old:
             return dict(old)
@@ -305,10 +313,12 @@ def register(app,owner_denied):
             raise CardError("Background removal is unavailable. Your original photo is safe; retry or use it as a photo.",502) from None
         if not out.ok:
             raise CardError("Cutout did not pass quality checks. Tighten the subject crop or use another photo.",422)
-        k=f"owners/{storage._slug(owner)}/cards/cutouts/{cid}.png"
-        dest=cached(k);dest.write_bytes(out.data);storage.put(dest,k)
-        with db.connect() as c:
-            c.execute("INSERT OR IGNORE INTO card_cutouts VALUES (?,?,?,?,?,?)",(cid,owner,pid,json_dump(box),k,time.time()));c.commit()
+        with ownership_lock:
+            photo(owner,pid)  # Reject a cutout whose source was claimed while segmentation ran.
+            k=f"owners/{storage._slug(owner)}/cards/cutouts/{cid}.png"
+            dest=cached(k);dest.write_bytes(out.data);storage.put(dest,k)
+            with db.connect() as c:
+                c.execute("INSERT OR IGNORE INTO card_cutouts VALUES (?,?,?,?,?,?)",(cid,owner,pid,json_dump(box),k,time.time()));c.commit()
         return jsonify(ok=True,cutout_id=cid,url=f"/api/cards/cutouts/{cid}/image")
 
     @bp.get("/api/cards/cutouts/<cid>/image")
@@ -327,10 +337,11 @@ def register(app,owner_denied):
             with db.connect() as c:
                 rows=c.execute("SELECT id,latest FROM card_designs WHERE owner=? ORDER BY updated_at DESC LIMIT 100",(owner,)).fetchall()
             return jsonify(ok=True,designs=[record(owner,r["id"],r["latest"]) for r in rows])
-        b=request.get_json() or {};spec=validate(owner,b.get("spec",{}))
+        b=request.get_json() or {}
         did=str(b.get("id") or "card_"+uuid.uuid4().hex)
         with db.connect() as c:
             c.execute("BEGIN IMMEDIATE")
+            spec=validate(owner,b.get("spec",{}))
             old=c.execute("SELECT * FROM card_designs WHERE id=?",(did,)).fetchone()
             if old:
                 if old["owner"]!=owner:
@@ -348,7 +359,7 @@ def register(app,owner_denied):
                 if b.get("id"):
                     raise CardError("Card not found",404)
                 rev=1;t=time.time()
-                c.execute("INSERT INTO card_designs VALUES (?,?,?,?,?)",(did,owner,rev,t,t))
+                c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner) VALUES (?,?,?,?,?,?)",(did,owner,rev,t,t,owner))
                 c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",(did,rev,json_dump(spec),t))
             c.commit()
         warnings=[]

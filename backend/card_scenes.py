@@ -38,10 +38,15 @@ def font(size, bold=False):
     return ImageFont.load_default()
 
 
+class TextOverflow(ValueError):
+    pass
+
+
 def text_block(draw, text, box, colour, size, *, bold=False, align="center"):
     """Wrap and shrink to fit the entire text; never silently clip a headline."""
     x, y, w, h = box
-    for fs in range(int(size), 7, -1):
+    fitted=False
+    for fs in range(max(8,int(size)), 7, -1):
         f = font(fs, bold)
         lines = []
         for paragraph in str(text).split("\n"):
@@ -65,8 +70,11 @@ def text_block(draw, text, box, colour, size, *, bold=False, align="center"):
                         line = candidate
             lines.append(line)
         lh = fs * 1.35
-        if lh * len(lines) <= h:
+        if lh * len(lines) <= h and all(draw.textlength(line,font=f)<=w for line in lines):
+            fitted=True
             break
+    if not fitted:
+        raise TextOverflow("Text does not fit this card. Shorten it or remove some line breaks.")
     for n, line in enumerate(lines):
         dx = x if align == "left" else x + (w - draw.textlength(line, font=f)) / 2
         draw.text((dx, y + n * lh), line, fill=colour, font=f)

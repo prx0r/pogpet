@@ -122,10 +122,11 @@ The worker is a per-process thread pool for this single-process Flask
 deployment. Before moving to multiple WSGI processes, use a shared job worker
 and lease/claim protocol: startup recovery is not a multi-process scheduler.
 No automatic retention policy is introduced; monitor derived-artwork storage.
-Anonymous-to-account claiming currently transfers existing photos/videos only;
-new card designs, cutouts and reservations need a dedicated ownership migration
-before signup can promise to carry these across. Use the same owner for this
-verified flow.
+Anonymous-to-account claiming transfers card designs, jobs, cutouts and
+reservations with existing photos/videos. Artwork namespaces remain stable;
+source photos are copied during claiming when cards reference them. Card
+downloads check the current database owner, and the generic artifact gateway
+rejects card keys. Finish any active card render before signing up, then retry.
 
 ## Printing and checkout boundaries
 

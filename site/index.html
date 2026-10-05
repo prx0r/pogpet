@@ -786,6 +786,7 @@
     @media (prefers-reduced-motion: reduce){.pogboot__words{transition:none}}
   </style>
   <link rel="stylesheet" href="/css/cards-studio.css">
+  <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/cards-studio.js"></script>
 </head>
 <body>
@@ -3452,6 +3453,7 @@
           " · " + it.label + " ×" + body.qty +
           " · " + money(d.price_cents) +
           " · mesh " + (body.mesh_id || "canonical") + sh, "ok");
+        try { if (window.ohPressSeal) window.ohPressSeal(); } catch (e) {}
       }).catch(function (e) {
         if (btn) btn.disabled = false;
         stat("pr-status", "");
@@ -3474,6 +3476,36 @@
         img._spinI = (img._spinI + (dx < 0 ? 1 : img._spin.length - 1)) % img._spin.length;
         img.src = img._spin[img._spinI];
       });
+    })();
+
+    // wax press overlay: order success seals it (canonical glyph, moment-press)
+    (function () {
+      if ($("press-overlay")) return;
+      var ov = document.createElement("div");
+      ov.id = "press-overlay";
+      ov.style.cssText = "position:fixed;inset:0;z-index:200;display:none;align-items:center;" +
+        "justify-content:center;background:rgba(250,248,244,.82);backdrop-filter:blur(2px)";
+      ov.innerHTML =
+        '<svg width="220" height="220" viewBox="0 0 1000 1000" role="img" aria-label="Order sealed">' +
+        '<ellipse class="press-wax" cx="500" cy="520" rx="330" ry="310" fill="#e8dcc8"/>' +
+        '<g class="press-glyph" clip-path="url(#oddhobb-boundary)" fill="none" stroke="#3d2b1f" ' +
+        'stroke-width="30" stroke-linecap="round" stroke-linejoin="round">' +
+        '<defs><clipPath id="oddhobb-boundary"><circle cx="500" cy="500" r="350"/></clipPath></defs>' +
+        "<path d='M360 150C360 285 370 410 410 500C430 472 458 462 476 476C497 492 498 528 477 548" +
+        "C458 566 430 560 410 500C388 542 366 590 360 640C355 712 363 785 378 850'/>" +
+        "<path d='M640 150C640 285 630 410 590 500C570 472 542 462 524 476C503 492 502 528 523 548" +
+        "C542 566 570 560 590 500C612 542 634 590 640 640C645 712 637 785 622 850'/>" +
+        "</g><circle cx='500' cy='500' r='350' fill='none' stroke='#3d2b1f' stroke-width='30'/>" +
+        "</svg>";
+      document.body.appendChild(ov);
+      window.ohPressSeal = function () {
+        ov.style.display = "flex";
+        ov.classList.remove("moment-press");
+        void ov.offsetWidth;
+        ov.classList.add("moment-press");
+        try { if (navigator.vibrate) navigator.vibrate(30); } catch (e) {}
+        setTimeout(function () { ov.style.display = "none"; }, 1900);
+      };
     })();
 
     var prOrder = $("pr-order");

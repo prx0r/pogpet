@@ -3179,6 +3179,16 @@ def products_studio():
             "glb_url": config.STUDIO_BRICK_GLB if lid == "brick" else "",
             "customization_schema": _custom_schema(lid, spec),
             "personalization_levels": _custom_schema(lid, spec)["levels"],
+            "material": spec.get("material"),
+            "colors_max": spec.get("colors_max"),
+            "dims_mm": spec.get("dims_mm"),
+            "weight_g": spec.get("weight_g"),
+            "weight_basis": spec.get("weight_basis"),
+            "fits": spec.get("fits"),
+            "supplier": spec.get("supplier"),
+            "sample": spec.get("sample"),
+            "personalization": spec.get("personalization"),
+            "occasion": spec.get("occasion"),
         })
     return jsonify({
         "ok": True,

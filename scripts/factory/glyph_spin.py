@@ -17,9 +17,14 @@ import sys
 from pathlib import Path
 
 
+CANONICAL_SVG = str(Path(__file__).resolve().parent.parent.parent /
+                     "assets" / "logo" / "oddhobb-canonical.svg")
+
+
 def parse_args(argv):
     p = argparse.ArgumentParser()
-    p.add_argument("--svg", required=True)
+    p.add_argument("--svg", default=CANONICAL_SVG,
+                   help="defaults to the canonical mark (assets/logo/)")
     p.add_argument("--out", required=True)
     p.add_argument("--frames", type=int, default=12)
     p.add_argument("--size", type=int, default=384)

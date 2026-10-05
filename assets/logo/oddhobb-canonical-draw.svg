@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="OddHobb canonical glyph v4">
+  <defs>
+    <clipPath id="oddhobb-boundary">
+      <circle cx="500" cy="500" r="350"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#oddhobb-boundary)"
+     fill="none" stroke="#000" stroke-width="26"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M378 850C363 785 355 712 360 640C366 590 388 542 410 500C430 560 458 566 477 548C498 528 497 492 476 476C458 462 430 472 410 500C370 410 360 285 360 150"/>
+    <path d="M622 850C637 785 645 712 640 640C634 590 612 542 590 500C570 560 542 566 523 548C502 528 503 492 524 476C542 462 570 472 590 500C630 410 640 285 640 150"/>
+  </g>
+  <circle cx="500" cy="500" r="350"
+          fill="none" stroke="#000" stroke-width="26"/>
+</svg>

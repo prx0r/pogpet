@@ -357,6 +357,30 @@ def export_stl(glb: Path | str, out: Path | str, height_mm: float | None = None)
             "scale": round(k, 6), "bytes": Path(out).stat().st_size}
 
 
+def export_print_bundle(glb: Path | str, outdir: Path | str,
+                        height_mm: float | None = None) -> dict:
+    """The physical body: OBJ + STL + manifest from one GLB.
+
+    Split happens upstream (performance vs print variants); this is the
+    print half only. Watertight repair runs before this (Meshy repair API),
+    never after — a mesh that will not slice fails at the slicer, not here.
+    """
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    stem = Path(glb).stem
+    obj = export_obj(glb, outdir / f"{stem}.obj", height_mm)
+    stl = export_stl(glb, outdir / f"{stem}.stl", height_mm)
+    manifest = {
+        "source": str(glb), "height_mm": height_mm,
+        "triangles": obj["triangles"], "scale": obj["scale"],
+        "files": {"obj": obj["obj"], "stl": stl["stl"]},
+        "print_ready": True,
+    }
+    (outdir / f"{stem}.print.json").write_text(json.dumps(manifest, indent=2))
+    manifest["manifest"] = str(outdir / f"{stem}.print.json")
+    return manifest
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("glb")

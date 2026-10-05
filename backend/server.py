@@ -194,10 +194,11 @@ def upload_photo():
             return _err(f"couldn't store the photo: {e}", 502)
 
         try:
+            src = (request.form.get("source") or request.args.get("source") or "photo")
             pid = db.insert_photo(
                 c, owner=owner, sha256=accepted.sha256, r2_key=key, mime=accepted.mime,
                 width=accepted.width, height=accepted.height, bytes=accepted.nbytes,
-                orig_name=accepted.orig_name)
+                orig_name=accepted.orig_name, source=src)
         except Exception:
             # Lost a race with a concurrent identical upload — reuse theirs.
             again = db.find_photo_by_hash(c, accepted.sha256, owner)

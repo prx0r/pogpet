@@ -91,6 +91,57 @@ def get_task(task_id: str) -> dict:
     return _req("GET", f"/tasks/{task_id}")
 
 
+# ── companion path: screenshot -> multiview -> multi-image 3D ──────────
+# Companion avatars (Dot/Muse grabs) arrive as screenshots. One view is
+# good, several are better — but we never ask customers for turnarounds.
+# Instead: image-to-image synthesizes the missing views, multi-image builds
+# the mesh. All ask-first; without a key everything below refuses.
+
+def create_multiview(image_path: Path, *, prompt: str = "") -> str:
+    """Screenshot -> consistent multi-view set. Returns a task id."""
+    if not config.MESHY_API_KEY:
+        raise MeshyAuthError("MESHY_API_KEY not set")
+    res = _req("POST", "/image-to-image", {
+        "image_url": _data_uri(image_path),
+        "prompt": prompt or ("preserve character exactly, neutral pose, "
+                             "clean studio background, generate multiview"),
+        "generate_multi_view": True,
+    })
+    tid = res.get("result") or res.get("task_id")
+    if not tid:
+        raise MeshyError(f"no task id in response: {json.dumps(res)[:300]}")
+    return str(tid)
+
+
+def create_multi_image_build(image_urls: list[str]) -> str:
+    """1-4 views of the same subject -> textured mesh. First view is front."""
+    if not config.MESHY_API_KEY:
+        raise MeshyAuthError("MESHY_API_KEY not set")
+    if not (1 <= len(image_urls) <= 4):
+        raise MeshyError("multi-image build needs 1-4 view URLs")
+    res = _req("POST", "/multi-image-to-3D", {
+        "image_urls": image_urls,
+        "should_texture": True,
+        "target_formats": ["glb"],
+    })
+    tid = res.get("result") or res.get("task_id")
+    if not tid:
+        raise MeshyError(f"no task id in response: {json.dumps(res)[:300]}")
+    return str(tid)
+
+
+def repair_printability(model_url: str) -> str:
+    """Watertight repair for the physical body (holes, non-manifold,
+    degeneracies). The print path runs through here, never around it."""
+    if not config.MESHY_API_KEY:
+        raise MeshyAuthError("MESHY_API_KEY not set")
+    res = _req("POST", "/repair-printability", {"model_url": model_url})
+    tid = res.get("result") or res.get("task_id")
+    if not tid:
+        raise MeshyError(f"no task id in response: {json.dumps(res)[:300]}")
+    return str(tid)
+
+
 # ── status mapping ────────────────────────────────────────────────────
 
 def normalise_status(raw: dict) -> tuple[str, str]:

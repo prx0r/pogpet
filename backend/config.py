@@ -118,7 +118,7 @@ def watermark_domain() -> str:
     if WATERMARK_BRAND:
         b = BRANDS.get(WATERMARK_BRAND) or {}
         return b.get("domain", DEFAULT_BRAND_HOST)
-    return BRANDS[DEFAULT_BRAND_HOST]["domain"]
+    return BRANDS[DEFAULT_BRAND_HOST].get("domain", DEFAULT_BRAND_HOST)
 
 # Product fan-out — every mesh becomes active in these automatically.
 # price in cents. "source" says which fulfilment path renders it.

@@ -262,6 +262,7 @@ def init() -> None:
     with connect() as c:
         c.executescript(SCHEMA)
         _migrate_photos_unique(c)
+        _migrate_photos_source(c)
         _migrate_videos_talent(c)
         _migrate_photos_person(c)
         _migrate_users_email_unique(c)
@@ -273,6 +274,14 @@ def _migrate_users_email_unique(c: sqlite3.Connection) -> None:
         """CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique
            ON users(lower(email)) WHERE email <> ''"""
     )
+
+
+def _migrate_photos_source(c: sqlite3.Connection) -> None:
+    """photos.source — photo|screenshot|upload. Screenshots (Dot/Muse grabs)
+    route to the companion multi-view path; plain photos keep the pet path."""
+    cols = [r[1] for r in c.execute("PRAGMA table_info(photos)")]
+    if "source" not in cols:
+        c.execute("ALTER TABLE photos ADD COLUMN source TEXT NOT NULL DEFAULT 'photo'")
 
 
 def _migrate_photos_person(c: sqlite3.Connection) -> None:
@@ -553,14 +562,29 @@ def pogs_for(c: sqlite3.Connection, owner: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+PHOTO_SOURCES = ("photo", "screenshot", "upload")
+
+
 def insert_photo(c: sqlite3.Connection, **kw: Any) -> str:
     pid = new_id("pho")
-    c.execute(
-        "INSERT INTO photos (id,owner,sha256,r2_key,mime,width,height,bytes,orig_name,created_at)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?)",
-        (pid, kw["owner"], kw["sha256"], kw["r2_key"], kw["mime"],
-         kw["width"], kw["height"], kw["bytes"], kw["orig_name"], now()),
-    )
+    src = str(kw.get("source") or "photo")
+    if src not in PHOTO_SOURCES:
+        src = "photo"
+    try:
+        c.execute(
+            "INSERT INTO photos (id,owner,sha256,r2_key,mime,width,height,bytes,orig_name,created_at,source)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (pid, kw["owner"], kw["sha256"], kw["r2_key"], kw["mime"],
+             kw["width"], kw["height"], kw["bytes"], kw["orig_name"], now(), src),
+        )
+    except sqlite3.Error:
+        # pre-migration table without the source column
+        c.execute(
+            "INSERT INTO photos (id,owner,sha256,r2_key,mime,width,height,bytes,orig_name,created_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (pid, kw["owner"], kw["sha256"], kw["r2_key"], kw["mime"],
+             kw["width"], kw["height"], kw["bytes"], kw["orig_name"], now()),
+        )
     return pid
 
 

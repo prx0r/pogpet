@@ -70,6 +70,11 @@ TALENT_BRIEF = {
     "comedy": "a tight 30-second stand-up routine",
     "dance":  "a spoken intro to a dance number that then counts the beat in",
     "singing": "a short spoken intro that leads into one sung line",
+    # Dot-standup: the companion's own set. Same render path, same shareable
+    # feed output — the shareable IS the product surface for companions.
+    "dot_standup": "a tight 30-second stand-up set performed by the viewer's "
+                   "AI companion, in-character, ending on a closer that begs "
+                   "to be shared",
 }
 
 SYSTEM = (
@@ -88,13 +93,17 @@ def write_set(topic: str, pet_name: str = "your pet", persona: str = "",
         raise VideoError("OPENCODE_API_KEY not set — no script model", 500)
 
     brief = TALENT_BRIEF.get(talent, TALENT_BRIEF["comedy"])
+    companion = talent == "dot_standup"
     sys_prompt = (
-        f"You write very short performance pieces for a pet: {brief}. "
+        f"You write very short performance pieces for "
+        f"{'an AI companion doing stand-up' if companion else 'a pet'}: {brief}. "
         "Return ONLY a JSON array of 3-5 punchy lines, each under 90 characters. "
         "No stage directions, no quotes, no emoji, no preamble. "
         "Warm, clean, specific to the detail given. The last line is the closer."
     )
-    prompt = f"Pet name: {pet_name}. Funny detail: {topic}. "
+    prompt = (f"Companion name: {pet_name}. Funny detail: {topic}. "
+              if companion else
+              f"Pet name: {pet_name}. Funny detail: {topic}. ")
     if persona:
         prompt += f"Persona: {persona}. "
     prompt += "Write the set."

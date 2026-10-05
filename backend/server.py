@@ -2000,6 +2000,87 @@ def make_video():
                     "cost": 0})
 
 
+@app.get("/api/videos/rooms")
+def video_rooms():
+    """Greeting room registry + which backdrops exist on disk."""
+    return jsonify({"ok": True, "rooms": [
+        {"id": rid, "label": r["label"], "blurb": r.get("blurb", ""),
+         "backdrop": bool(video.room_backdrop(rid))}
+        for rid, r in config.ROOMS.items()]})
+
+
+@app.post("/api/videos/greeting")
+def make_greeting_video():
+    """Avatar greeting: verbatim message in a room. Same video quota."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    mesh_id = body.get("mesh_id") or ""
+    message = (body.get("message") or "").strip()
+    if not message:
+        return _err("Give me the message — I speak exactly what you write.", 400)
+    if not mesh_id:
+        return _err("mesh_id is required — pick whose avatar speaks.", 400)
+
+    day = datetime.now(timezone.utc).date().isoformat()
+    with db.connect() as c:
+        mesh = db.get_mesh(c, mesh_id)
+        if mesh is None:
+            return _err("no such mesh", 404)
+        photo = db.get_photo(c, mesh["photo_id"])
+        mesh_owner = (photo["owner"] if photo else "") or "anon"
+        if mesh_owner != owner:
+            return _err("that mesh belongs to someone else", 403)
+        ok, used = db.spend_credit(c, owner, day, "video", config.FREE_DAILY["video"])
+        if not ok:
+            return _err(
+                f"That's {config.FREE_DAILY['video']} free videos today — "
+                "back tomorrow for more.", 429)
+        photo_path = pipeline._local_photo(dict(photo)) if photo else None
+        subject = db.get_subject_profile(c, owner, mesh_id)
+
+    speaker = str(body.get("speaker_name")
+                    or (subject.get("name") if subject else "")
+                    or "Someone you love")[:40]
+    try:
+        rec = video.make_greeting(
+            message=message,
+            speaker_name=speaker,
+            voice=str(body.get("voice") or "ryan"),
+            room=str(body.get("room") or "void"),
+            photo=photo_path,
+            watermark=bool(body.get("watermark", config.WATERMARK_FREE)),
+        )
+    except video.VideoError as e:
+        with db.connect() as c:
+            db.refund_credit(c, owner, day, "video")
+        return _err(str(e), e.code)
+    except Exception as e:
+        with db.connect() as c:
+            db.refund_credit(c, owner, day, "video")
+        return _err(f"render failed: {str(e)[:200]}", 500)
+
+    vid = rec["video_id"]
+    with db.connect() as c:
+        c.execute(
+            "INSERT INTO videos (id,owner,mesh_id,scene,talent,voice,pet_name,topic,"
+            "script,lines,watermarked,duration,bytes,path,created_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (vid, owner, mesh_id, rec["scene"], "greeting", rec["voice"],
+             speaker, message,
+             rec["script"], json.dumps(rec["lines"]), 1 if rec["watermarked"] else 0,
+             rec["duration"], rec["bytes"], rec["file"], db.now()),
+        )
+        left = config.FREE_DAILY["video"] - db.credit_used(c, owner, day, "video")
+
+    return jsonify({"ok": True, "video": {**rec, "id": vid, "file": None},
+                    "download": f"/api/videos/{vid}/file",
+                    "credits_remaining": left,
+                    "cost": 0})
+
+
 @app.get("/api/videos/<vid>")
 def get_video(vid: str):
     with db.connect() as c:

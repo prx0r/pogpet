@@ -334,3 +334,123 @@ def make(*, topic: str, pet_name: str, scene: str, voice: str,
         "duration": duration_of(mp4),
         "cost": 0,
     }
+
+
+# ── avatar greetings ──────────────────────────────────────────────────
+# A greeting speaks the customer's message verbatim in a room. Same $0
+# stack as comedy (edge-TTS + PIL + ffmpeg); rooms are one-off backdrops.
+
+def room_backdrop(room: str) -> Path | None:
+    """Backdrop PNG for a room, or None for the white void fallback."""
+    spec = config.ROOMS.get(room or "void") or config.ROOMS["void"]
+    rel = (spec.get("backdrop") or "").strip()
+    if not rel:
+        return None
+    p = config.ROOT / rel
+    return p if p.is_file() else None
+
+
+def compose_greeting_frame(photo: Path | None, speaker: str, caption: str,
+                           room: str, watermark: bool) -> Path:
+    """Room backdrop + speaker circle + name + caption. Portrait 1080x1920."""
+    config.ensure_dirs()
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    label = (config.ROOMS.get(room) or config.ROOMS["void"])["label"]
+
+    bg = room_backdrop(room)
+    # dark room backdrop -> white text + veil; light void -> ink text, no veil
+    dark = False
+    if bg:
+        try:
+            img = Image.open(bg).convert("RGB")
+            img = img.resize((VW, VH), Image.LANCZOS)
+            dark = True
+        except Exception:
+            img = Image.new("RGB", (VW, VH), FIGG_PAPER)
+    else:
+        img = Image.new("RGB", (VW, VH), FIGG_PAPER)
+    if dark:
+        veil = Image.new("RGBA", (VW, VH), (0, 0, 0, 0))
+        ImageDraw.Draw(veil).rectangle([0, VH // 2 - 260, VW, VH // 2 + 420], fill=(0, 0, 0, 90))
+        img = Image.alpha_composite(img.convert("RGBA"), veil).convert("RGB")
+    fg = (255, 255, 255) if dark else FIGG_INK
+    sub = (240, 240, 240) if dark else (90, 90, 90)
+    ring = (255, 255, 255) if dark else FIGG_VIOLET
+
+    d = ImageDraw.Draw(img, "RGBA")
+    cx, cy, r = VW // 2, VH // 2 - 40, 300
+    if photo and photo.is_file():
+        try:
+            src = Image.open(photo).convert("RGB")
+            side = min(src.size)
+            src = src.crop(((src.width - side) // 2, (src.height - side) // 2,
+                            (src.width + side) // 2, (src.height + side) // 2))
+            src = src.resize((r * 2, r * 2), Image.LANCZOS)
+            mask = Image.new("L", (r * 2, r * 2), 0)
+            ImageDraw.Draw(mask).ellipse([0, 0, r * 2, r * 2], fill=255)
+            img.paste(src, (cx - r, cy - r), mask)
+            d = ImageDraw.Draw(img, "RGBA")
+            d.ellipse([cx - r - 8, cy - r - 8, cx + r + 8, cy + r + 8],
+                      outline=ring, width=8)
+        except Exception:
+            pass
+    else:
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=FIGG_LILAC,
+                  outline=ring, width=8)
+
+    d.text((cx, cy + r + 80), speaker, font=_font(72), fill=fg, anchor="mm")
+    d.text((cx, cy + r + 160), caption[:80], font=_font(34), fill=sub, anchor="mm")
+    d.text((VW // 2, 120), label.upper(), font=_font(40), fill=fg, anchor="mm")
+
+    if watermark:
+        d.text((VW // 2, VH - 150), "free preview — oddhobb.",
+               font=_font(40), fill=fg, anchor="mm")
+
+    out = OUT_DIR / f"greet_{uuid.uuid4().hex[:12]}.png"
+    img.save(out, "PNG")
+    return out
+
+
+def make_greeting(*, message: str, speaker_name: str, voice: str, room: str,
+                  photo: Path | None, watermark: bool | None = None) -> dict:
+    """Verbatim-message avatar greeting. Returns record for the DB/API."""
+    if watermark is None:
+        watermark = config.WATERMARK_FREE
+    message = message.strip()
+    if not message:
+        raise VideoError("Give me the message — I speak exactly what you write.", 400)
+    if len(message) > 600:
+        raise VideoError("Keep it under 600 characters — greetings are short.", 400)
+    if room not in config.ROOMS:
+        raise VideoError(f"unknown room — pick one of: {', '.join(config.ROOMS)}", 400)
+
+    token = uuid.uuid4().hex[:12]
+    mp3 = OUT_DIR / f"greet_{token}.mp3"
+    mp4 = OUT_DIR / f"greet_{token}.mp4"
+    frame = None
+    try:
+        tts(message, voice, mp3)
+        frame = compose_greeting_frame(
+            photo, speaker_name or "Someone you love",
+            message[:80], room, watermark)
+        mux(frame, mp3, mp4)
+    finally:
+        if frame and frame.exists():
+            frame.unlink(missing_ok=True)
+
+    return {
+        "video_id": f"vid_{token}",
+        "lines": [message],
+        "script": message,
+        "scene": room,
+        "scene_label": config.ROOMS[room]["label"],
+        "talent": "greeting",
+        "voice": voice,
+        "voice_id": voice_id(voice),
+        "watermarked": bool(watermark),
+        "file": str(mp4),
+        "audio": str(mp3),
+        "bytes": mp4.stat().st_size if mp4.exists() else 0,
+        "duration": duration_of(mp4),
+        "cost": 0,
+    }

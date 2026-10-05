@@ -25,6 +25,27 @@ R2_REMOTE = os.environ.get("R2_REMOTE") or f"{RCLONE_REMOTE}:{R2_BUCKET}/"
 MESHY_API_KEY = os.environ.get("MESHY_API_KEY", "")
 MESHY_BASE = os.environ.get("MESHY_BASE", "https://api.meshy.ai/openapi/v1")
 
+# Marble rooms are infrastructure (one generation, infinite sets), so the key
+# follows the same rules as Meshy: env only, ask-first, ledgered. Empty = the
+# rooms system runs on local backdrops for $0 (see ROOMS below).
+MARBLE_API_KEY = os.environ.get("MARBLE_API_KEY", "")
+
+# ── greeting rooms ───────────────────────────────────────────────────
+# One backdrop PNG per venue, generated once, reused forever. Files live
+# gitignored under data/rooms/; a missing file falls back to the white void,
+# never an error. Portrait 1080x1920, empty (no people, no text).
+ROOMS: dict[str, dict] = {
+    "void":  {"label": "White void", "blurb": "Clean control background.", "backdrop": ""},
+    "club":  {"label": "Comedy club", "blurb": "Brick wall, spotlight, mic. Roasts live here.",
+              "backdrop": "data/rooms/club.png"},
+    "podium": {"label": "Podium", "blurb": "Curtain, flags, grave announcements. Parody-safe.",
+               "backdrop": "data/rooms/podium.png"},
+    "press": {"label": "Press room", "blurb": "Sponsor wall. Transfer news and victory speeches.",
+              "backdrop": "data/rooms/press.png"},
+    "xmas":  {"label": "Christmas living room", "blurb": "Fire, tree, armchair. Eve messages.",
+              "backdrop": "data/rooms/xmas.png"},
+}
+
 # Upload constraints (from the build prompt: single photo, JPEG/PNG, max 10MB)
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 10 * 1024 * 1024))
 ALLOWED_MIME = {"image/jpeg", "image/png"}

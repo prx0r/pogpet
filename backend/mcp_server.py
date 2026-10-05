@@ -204,6 +204,23 @@ async def figg_perform(talent: str, topic: str, mesh_id: str,
                            "owner": os.environ.get("FIGG_OWNER", "")}))
 
 
+async def figg_greeting(mesh_id: str, message: str, room: str = "void",
+                        speaker_name: str = "", voice: str = "ryan",
+                        owner: str = "") -> str:
+    """Avatar greeting: the subject speaks your message verbatim in a room
+    (void|club|podium|press|xmas). The video card — same quota as videos, $0.
+    Returns the MP4 download. Keep messages under 600 chars."""
+    return _j(await _call("POST", "/api/videos/greeting",
+                         {"mesh_id": mesh_id, "message": message, "room": room,
+                          "speaker_name": speaker_name, "voice": voice,
+                          "owner": owner or os.environ.get("FIGG_OWNER", "")}))
+
+
+async def figg_rooms(owner: str = "") -> str:
+    """Greeting room registry: venues + which backdrops exist on disk."""
+    return _j(await _call("GET", "/api/videos/rooms?owner=" + owner))
+
+
 async def figg_credits(owner: str = "") -> str:
     """Today's free allowance: sculpts and videos remaining."""
     return _j(await _call("GET", f"/api/credits?owner={owner}"))
@@ -429,7 +446,7 @@ TOOL_AREAS: dict[str, list] = {
                   figg_product_personalise, figg_checkout,
                   figg_fullchain_personalise_order],
     "style":     [figg_styles, figg_install_style],
-    "stage":     [figg_acts, figg_perform],
+    "stage":     [figg_acts, figg_perform, figg_greeting, figg_rooms],
     "company":   [figg_companygraph],
 }
 

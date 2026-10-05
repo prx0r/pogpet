@@ -601,6 +601,20 @@
     .cs__active{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
       color:#8a6a2f;background:rgba(196,137,26,.12);border:1px solid rgba(196,137,26,.28);
       border-radius:999px;padding:3px 10px;margin-top:6px}
+    /* friends conveyor: iPhone-tactile swipe strip */
+    .friends{display:flex;gap:14px;overflow-x:auto;padding:14px 6px 16px;
+      scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+      scrollbar-width:none;justify-content:flex-start}
+    .friends::-webkit-scrollbar{display:none}
+    .friend{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:6px;
+      background:none;border:none;cursor:pointer;padding:2px;scroll-snap-align:center}
+    .friend img{width:68px;height:68px;border-radius:50%;object-fit:cover;background:#faf8f4;
+      border:3px solid #ece5d8;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+    .friend:active img{transform:scale(.93)}
+    .friend.on img{border-color:#c4891a;box-shadow:0 0 0 3px rgba(196,137,26,.25);transform:scale(1.06)}
+    .friend .nm{font-size:12px;font-weight:600;color:#333;max-width:84px;text-align:center;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .friend.on .nm{color:#8a6a2f}
     .roster{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:8px 0 4px}
     .roster__item{display:flex;flex-direction:column;align-items:center;gap:4px;
       border:1px solid #ebe6dc;background:#fff;border-radius:12px;padding:8px 10px;
@@ -1097,9 +1111,12 @@
   <section class="panel white" data-panel="studio" id="panel-studio" aria-label="Studio">
     <div class="panel__inner wide">
       <div class="store-head" style="margin:0 0 10px">
-        <h2 style="font-size:22px;margin:0">Your meshes</h2>
-        <p style="margin:4px 0 0;color:#777;font-size:13px">Pick one — it becomes the active star and appears on Products.</p>
+        <h2 style="font-size:22px;margin:0">Your friends</h2>
+        <p style="margin:4px 0 0;color:#777;font-size:13px">Swipe through your people &amp; pets — everything below follows them.</p>
       </div>
+
+      <!-- friends conveyor: tactile swipe strip, drives the whole page -->
+      <div class="friends" id="friends" role="listbox" aria-label="Friends"></div>
 
       <div class="stv" id="stv">
         <div class="cs" id="cs">
@@ -2823,6 +2840,31 @@
           '<div class="nm">' + s.label + '</div>' +
           '<div class="tag">' + tag + '</div>';
         b.addEventListener("click", function () { setStudioMesh(i); });
+        host.appendChild(b);
+      });
+      paintFriends();
+    }
+
+    function paintFriends() {
+      // Top conveyor: installed friends only (demos stay in the carousel below).
+      // Tapping one makes them the active star — products, cards, videos follow.
+      var host = $("friends");
+      if (!host || !stv.slots) return;
+      host.innerHTML = "";
+      stv.slots.forEach(function (s, i) {
+        if (!s || s.demo) return;
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "friend" + (i === stv.idx ? " on" : "");
+        b.setAttribute("role", "option");
+        b.setAttribute("aria-selected", i === stv.idx ? "true" : "false");
+        b.innerHTML =
+          '<img src="' + s.portrait + '" alt="' + s.label + '" loading="lazy">' +
+          '<div class="nm">' + s.label + "</div>";
+        b.addEventListener("click", function () {
+          setStudioMesh(i);
+          b.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        });
         host.appendChild(b);
       });
     }

@@ -80,6 +80,16 @@
 /* keep-selected pop (pairs with navigator.vibrate on snap) */
 .moment-pop { animation: oh-haptic-pop .25s ease; }
 
+/* orbit waiter: job waits (sculpt, render top-up). Pure CSS, no asset. */
+@keyframes oh-orbit { to { transform: rotate(360deg); } }
+.moment-orbit{width:44px;height:44px;position:relative}
+.moment-orbit i{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;
+  border-radius:50%;background:#c4891a}
+.moment-orbit i:nth-child(1){transform:rotate(0deg) translateX(18px)}
+.moment-orbit i:nth-child(2){transform:rotate(120deg) translateX(18px);opacity:.55}
+.moment-orbit i:nth-child(3){transform:rotate(240deg) translateX(18px);opacity:.3}
+.moment-orbit{animation:oh-orbit 1.2s linear infinite}
+
 @media (prefers-reduced-motion: reduce) {
   .moment-flood path, .moment-flood circle, .moment-press .press-glyph,
   .moment-press .press-wax, .moment-ribbon path, .moment-coin .coin,

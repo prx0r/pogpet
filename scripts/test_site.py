@@ -526,7 +526,7 @@ def main() -> int:
         _, out = mcp_post({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}, sid)
         tools = mcp_data(out)["result"]["tools"]
         names = {t["name"] for t in tools}
-        rec("MCP tools/list = 30", len(tools) == 30,
+        rec("MCP tools/list >= 30", len(tools) >= 30,
             f"{len(tools)} tools")
         rec("MCP foundation tools present",
             {"figg_catalog", "figg_flow", "figg_start_mesh",

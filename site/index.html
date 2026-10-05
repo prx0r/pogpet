@@ -2441,9 +2441,9 @@
           if (searchTimer) clearTimeout(searchTimer);
           // stream relevance matches under the bar as they type
           searchTimer = setTimeout(function () { runSearchDrop(state.q); }, 80);
-          var shop = document.querySelector('.panel[data-panel="shop"]');
-          if (state.q && shop && !shop.classList.contains("open")) showTab("shop");
-          else applySection();
+          // stay where you are: the drop shows matches, no tab teleport
+          // (the old showTab("shop") jump flashed the dark panel = "broken")
+          if (!state.q) applySection();
         });
         q.addEventListener("keydown", function (e) {
           if (e.key === "Escape") {

@@ -418,6 +418,12 @@
     .qk-mic.rec .qk-mic__ring{border-color:rgba(255,122,26,.45);animation-duration:2.4s}
     @keyframes qkPulse{0%{transform:scale(1);opacity:.8}70%{transform:scale(1.25);opacity:0}100%{opacity:0}}
     .qk-mic-label{font-size:14px;color:#8a6a2f;font-weight:600;margin-top:6px}
+    .oddy-avatar{width:112px;height:112px;display:block;margin:0 auto 4px}
+    .oddy-avatar--sm{width:56px;height:56px;margin:0}
+    .qk-live__top{display:flex;align-items:center;gap:10px;justify-content:center}
+    @keyframes oddy-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+    .oddy-avatar{animation:oddy-breathe 4s ease-in-out infinite}
+    @media (prefers-reduced-motion: reduce){.oddy-avatar{animation:none}}
     .qk-timer{font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;color:#e5341b;margin-top:8px}
     .qk-live{padding-top:8px}
     .qk-live__top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
@@ -783,6 +789,7 @@
   <link rel="stylesheet" href="/css/cards-studio.css">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/cards-studio.js"></script>
+  <script src="/js/oddy.js"></script>
 </head>
 <body>
   <!-- boot screen: mark draws, thickens to coin, spins, tours products, lifts -->
@@ -1211,6 +1218,157 @@
     <div class="search-drop__empty" id="search-empty" hidden></div>
   </div>
 
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="oddy-confused" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <path d="M202 248 Q220 242 238 248" fill="none" stroke="#111" stroke-width="9" stroke-linecap="round"/><circle cx="220" cy="263" r="5" fill="#111"/>
+<circle cx="292" cy="255" r="7" fill="#111"/><path d="M224 370 C236 356 250 382 264 366 C274 354 286 374 292 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(338 38)">
+      <path d="M10 16 C10 5 20 2 28 5 C37 8 39 18 32 24 C28 27 24 30 24 36" fill="none" stroke="#5a6cff" stroke-width="8" stroke-linecap="round"/>
+      <circle cx="24" cy="48" r="4" fill="#5a6cff"/>
+    </g>
+    
+</symbol>
+<symbol id="oddy-delighted" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <path d="M202 254 Q220 239 238 254" fill="none" stroke="#111" stroke-width="11" stroke-linecap="round"/>
+<path d="M274 254 Q292 239 310 254" fill="none" stroke="#111" stroke-width="11" stroke-linecap="round"/><path d="M220 364 Q256 400 292 364" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/><circle cx="196" cy="360" r="10" fill="#ff9d91"/><circle cx="316" cy="360" r="10" fill="#ff9d91"/>
+</symbol>
+<symbol id="oddy-happy" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <circle cx="220" cy="255" r="7" fill="#111"/>
+<circle cx="292" cy="255" r="7" fill="#111"/><path d="M221 366 Q256 388 291 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/><circle cx="196" cy="360" r="10" fill="#ff9d91"/><circle cx="316" cy="360" r="10" fill="#ff9d91"/>
+</symbol>
+<symbol id="oddy-idea" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <circle cx="220" cy="247" r="7" fill="#111"/>
+<circle cx="292" cy="247" r="7" fill="#111"/><path d="M221 366 Q256 388 291 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/>
+    <g transform="translate(338 30)">
+      <circle cx="28" cy="34" r="21" fill="#ffd35a" stroke="#111" stroke-width="8"/>
+      <rect x="20" y="51" width="16" height="12" rx="4" fill="#ffb21f" stroke="#111" stroke-width="6"/>
+      <path d="M28 14 L28 4 M10 20 L2 14 M46 20 L54 14" stroke="#ffb21f" stroke-width="8" stroke-linecap="round"/>
+    </g>
+    
+</symbol>
+<symbol id="oddy-listening" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <circle cx="220" cy="255" r="7" fill="#111"/>
+<circle cx="292" cy="255" r="7" fill="#111"/><path d="M228 366 L284 366" stroke="#111" stroke-width="12" stroke-linecap="round"/>
+</symbol>
+<symbol id="oddy-neutral" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <circle cx="220" cy="255" r="7" fill="#111"/>
+<circle cx="292" cy="255" r="7" fill="#111"/><path d="M221 366 Q256 388 291 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/>
+</symbol>
+<symbol id="oddy-sleepy" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <path d="M202 254 Q220 239 238 254" fill="none" stroke="#111" stroke-width="11" stroke-linecap="round"/>
+<path d="M274 254 Q292 239 310 254" fill="none" stroke="#111" stroke-width="11" stroke-linecap="round"/><path d="M221 366 Q256 388 291 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/>
+</symbol>
+<symbol id="oddy-speaking-small" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <circle cx="220" cy="255" r="7" fill="#111"/>
+<circle cx="292" cy="255" r="7" fill="#111"/><circle cx="256" cy="368" r="12" fill="#111"/>
+</symbol>
+<symbol id="oddy-speaking-wide" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <circle cx="220" cy="255" r="7" fill="#111"/>
+<circle cx="292" cy="255" r="7" fill="#111"/><ellipse cx="256" cy="368" rx="18" ry="22" fill="#111"/>
+</symbol>
+<symbol id="oddy-surprised" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <circle cx="220" cy="258" r="5" fill="#111"/>
+<circle cx="292" cy="258" r="5" fill="#111"/><ellipse cx="256" cy="368" rx="18" ry="22" fill="#111"/>
+</symbol>
+<symbol id="oddy-thinking" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <path d="M202 248 Q220 242 238 248" fill="none" stroke="#111" stroke-width="9" stroke-linecap="round"/><circle cx="220" cy="263" r="5" fill="#111"/>
+<path d="M274 248 Q292 242 310 248" fill="none" stroke="#111" stroke-width="9" stroke-linecap="round"/><circle cx="292" cy="263" r="5" fill="#111"/><path d="M228 366 L284 366" stroke="#111" stroke-width="12" stroke-linecap="round"/>
+</symbol>
+<symbol id="oddy-wink" viewBox="0 0 512 512">
+  
+  <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M134 90 C134 150 146 198 177 233 C155 260 143 296 143 345"/>
+    <path d="M378 90 C378 150 366 198 335 233 C357 260 369 296 369 345"/>
+    <path d="M181 228 C194 212 226 206 247 224 C259 239 259 272 241 292 C221 312 191 307 178 283 C170 266 171 244 181 228"/>
+    <path d="M331 228 C318 212 286 206 265 224 C253 239 253 272 271 292 C291 312 321 307 334 283 C342 266 341 244 331 228"/>
+  </g>
+  <path d="M202 258 Q220 241 238 258" fill="none" stroke="#111" stroke-width="11" stroke-linecap="round"/>
+<circle cx="292" cy="255" r="7" fill="#111"/><path d="M221 366 Q256 388 291 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/>
+    <g stroke="#ffb21f" stroke-width="8" stroke-linecap="round">
+      <path d="M92 88 L92 64"/><path d="M80 76 L104 76"/>
+      <path d="M406 98 L406 78"/><path d="M396 88 L416 88"/>
+    </g>
+    
+</symbol>
+</defs></svg>
+
   <!-- ══ TAB: quick — immersive ramble (mic-first, store theme) ══ -->
   <section class="panel white" data-panel="quick" id="panel-quick" aria-label="Quick">
     <div class="qk-stage" id="qk-stage">
@@ -1218,8 +1376,9 @@
       <div class="qk-idle" id="qk-idle">
         <div class="qk-eyebrow">oddhobb · quick</div>
         <div class="pr-banner__mesh" id="qk-mesh-chip" style="display:inline-block;margin-bottom:12px">mesh —</div>
-        <h1 class="qk-hero">Ready to ramble?</h1>
-        <p class="qk-sub">Tell us about the person, pet, or occasion. We’ll find the odd thing that fits.</p>
+        <svg class="oddy-avatar" id="oddy-idle" viewBox="0 0 512 512" role="img" aria-label="Oddy"><use href="#oddy-neutral"/></svg>
+        <h1 class="qk-hero">Infodump to Oddy</h1>
+        <p class="qk-sub">Ramble about the person, pet, or occasion. Oddy listens, thinks, and finds the odd thing that fits.</p>
         <div class="qk-how" id="qk-how" data-collapsed="1">
           <div class="qk-how__title">How it works</div>
           <ol style="display:none">
@@ -1243,7 +1402,8 @@
       <!-- RECORDING: gentle floating prompts (no race) -->
       <div class="qk-live" id="qk-live" hidden>
         <div class="qk-live__top">
-          <div class="qk-live__state" id="qk-live-state">Listening — take your time</div>
+          <svg class="oddy-avatar oddy-avatar--sm" id="oddy-live" viewBox="0 0 512 512" role="img" aria-label="Oddy listening"><use href="#oddy-listening"/></svg>
+          <div class="qk-live__state" id="qk-live-state">Oddy’s listening — take your time</div>
           <div class="qk-live__timer" id="qk-live-timer"></div>
         </div>
         <div class="qk-flash" id="qk-flash" aria-live="polite">
@@ -1575,8 +1735,15 @@
         }
         if (!en) for (var i = 0; i < v.length; i++) { if (v[i].lang.startsWith('en')) { en = v[i]; break; } }
         if (en) u.voice = en;
-        u.onstart = function() { setPose('talking'); };
-        u.onend = function() { setPose('neutral'); resolve(); };
+        u.onstart = function() {
+          setPose('talking');
+          try { if (window.Oddy) window.Oddy.speakingStart(); } catch (e) {}
+        };
+        u.onend = function() {
+          setPose('neutral');
+          try { if (window.Oddy) window.Oddy.speakingStop(); } catch (e) {}
+          resolve();
+        };
         u.onerror = function() { resolve(); };
         window.speechSynthesis.speak(u);
       });
@@ -4003,7 +4170,24 @@
       if (idle) idle.hidden = phase !== "idle";
       if (live) live.hidden = phase !== "live";
       if (res) res.hidden = phase !== "results";
+      // Oddy follows the session: idle breathes, live listens, results delights
+      try {
+        if (window.Oddy) {
+          if (phase === "live") window.Oddy.set("listening");
+          else if (phase === "results") window.Oddy.flash("delighted");
+          else window.Oddy.set("neutral");
+        }
+      } catch (e) {}
     }
+    // mount Oddy avatars once the quick tab exists
+    (function () {
+      try {
+        if (window.Oddy) {
+          window.Oddy.mount(document.getElementById("oddy-idle"));
+          window.Oddy.mount(document.getElementById("oddy-live"));
+        }
+      } catch (e) {}
+    })();
 
     function qkFmtClock(sec) {
       var s = Math.max(0, sec | 0);
@@ -4194,7 +4378,17 @@
           }
         }
         qk.matches = d.matches || [];
+        var prevTop = qk.top && qk.top.id;
         qk.top = d.recommended || qk.matches[0] || null;
+        // Oddy reads the room: confused at low confidence, idea on a new lead
+        try {
+          if (window.Oddy) {
+            if (qk.phase === "live") window.Oddy.set("listening");
+            var unc = (typeof qkUncertainty === "function") ? qkUncertainty() : 0.5;
+            if (unc > 0.6) window.Oddy.flash("confused");
+            else if (qk.top && qk.top.id !== prevTop) window.Oddy.flash("idea");
+          }
+        } catch (e) {}
         if (qk.phase === "live") qkPaintLean(qk.matches);
         if (qk.top) {
           setPendingOrder({
@@ -4217,6 +4411,7 @@
 
     function qkScheduleMap() {
       if (qk.mapTimer) clearTimeout(qk.mapTimer);
+      try { if (window.Oddy && qk.phase === "live") window.Oddy.set("thinking"); } catch (e) {}
       qk.mapTimer = setTimeout(function () {
         qkMapLive();
         qkMaybePrompt();

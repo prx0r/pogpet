@@ -30,6 +30,14 @@ MESHY_BASE = os.environ.get("MESHY_BASE", "https://api.meshy.ai/openapi/v1")
 # rooms system runs on local backdrops for $0 (see ROOMS below).
 MARBLE_API_KEY = os.environ.get("MARBLE_API_KEY", "")
 
+# ── conversational voice brain ───────────────────────────────────────
+# Server-side only. The provider/model are env-swappable so the latest best
+# voice model slots in with no code change. Empty key = stub sessions.
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
+GEMINI_VOICE_PROVIDER = os.environ.get("GEMINI_VOICE_PROVIDER", "")
+GEMINI_VOICE_MODEL = os.environ.get(
+    "GEMINI_VOICE_MODEL", "gemini-live-2.5-flash-native-audio")
+
 # ── greeting rooms ───────────────────────────────────────────────────
 # One backdrop PNG per venue, generated once, reused forever. Files live
 # gitignored under data/rooms/; a missing file falls back to the white void,

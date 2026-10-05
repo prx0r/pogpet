@@ -2297,6 +2297,40 @@ def make_greeting_video():
                     "cost": 0})
 
 
+@app.get("/api/voice/models")
+def voice_models():
+    """Swappable voice brains: active provider + model ids. No secrets."""
+    from backend import voice_chat as _vc
+    prov = _vc.active_provider()
+    return jsonify({"ok": True, "provider": prov.name,
+                    "configured": prov.is_configured(),
+                    "models": prov.list_models(),
+                    "override": "GEMINI_VOICE_PROVIDER / GEMINI_VOICE_MODEL"})
+
+
+@app.post("/api/voice/session")
+def voice_session():
+    """Open a voice-shopper session. Live provider mints an ephemeral browser
+    token (single-use, 30 min); stub returns typed-turn sessions offline."""
+    from backend import voice_chat as _vc
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    if not owner:
+        return _err("owner is required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    try:
+        sess = _vc.active_provider().create_session(
+            owner, body.get("tools") or None)
+    except _vc.VoiceError as e:
+        return _err(str(e), 503)
+    # The token goes to the authenticated owner in-band (that IS the design);
+    # it is never written to logs, disk, or error messages.
+    return jsonify({**sess,
+                    "connect": "wss with ephemeral_token as the API key"})
+
+
 @app.get("/api/videos/<vid>")
 def get_video(vid: str):
     with db.connect() as c:

@@ -767,34 +767,37 @@
     .card__note{font-size:9px;color:var(--muted);opacity:.72;margin-top:7px;line-height:1.35;
       min-height:2.3em}
 
-    /* ── Boot / jumbled-words loading screen (pure black · inverse of white store) ── */
-    .pogboot{position:fixed;inset:0;z-index:300;background:#000000;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+    /* ── Boot: white mark-theatre, seamless into the store ── */
+    .pogboot{position:fixed;inset:0;z-index:300;background:#faf8f4;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
       transition:opacity .7s ease,visibility .7s ease}
     .pogboot.hidden{opacity:0;visibility:hidden;pointer-events:none}
-    .pogboot__mark{font-family:'Playfair Display',serif;font-size:clamp(40px,10vw,76px);
-      letter-spacing:-.02em;color:#F5F0E8}
-    .pogboot__mark i{color:var(--pumpkin);font-style:normal}
-    .pogboot__words{font-family:'JetBrains Mono',monospace;
-      font-size:clamp(11px,3vw,15px);letter-spacing:.08em;color:#8B8577;
-      min-height:1.7em;text-align:center;padding:0 16px}
-    .pogboot__words u{text-decoration:none;color:#FF7A1A}
-    .pogboot__bar{width:min(260px,62vw);height:2px;background:rgba(245,240,232,.12);
-      border-radius:2px;overflow:hidden}
-    .pogboot__bar i{display:block;height:100%;width:0;
-      background:#FF7A1A;transition:width .3s ease}
-    @media (prefers-reduced-motion: reduce){.pogboot__words{transition:none}}
+    .pogboot__stage{position:relative;width:min(220px,52vw);height:min(220px,52vw)}
+    .pogboot__stage svg,.pogboot__stage img{position:absolute;inset:0;width:100%;height:100%}
+    .pogboot__stage img{object-fit:contain;opacity:0;transition:opacity .25s ease}
+    .pogboot__stage img.show{opacity:1}
+    .pogboot__cap{font-family:'JetBrains Mono',monospace;font-size:12px;
+      letter-spacing:.14em;text-transform:uppercase;color:#a08c5b;min-height:1.5em}
+    @media (prefers-reduced-motion: reduce){.pogboot__stage *{transition:none;animation:none}}
   </style>
   <link rel="stylesheet" href="/css/cards-studio.css">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/cards-studio.js"></script>
 </head>
 <body>
-  <!-- boot screen: jumbled words resolve into status lines, then it lifts -->
+  <!-- boot screen: mark draws, thickens to coin, spins, tours products, lifts -->
   <div class="pogboot" id="pogboot" aria-hidden="true">
-    <div class="pogboot__mark">oddhobb<i>.</i></div>
-    <div class="pogboot__words" id="pogboot-words"></div>
-    <div class="pogboot__bar"><i id="pogboot-fill"></i></div>
+    <div class="pogboot__stage">
+      <svg id="pogboot-mark" viewBox="0 0 1000 1000" role="img" aria-label="OddHobb">
+        <g fill="none" stroke="#3d2b1f" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+          <path id="pboot-l" d="M378 850 C363 783 356 711 360 640 C364 590 385 543 410 500 C403 518 406 542 420 559 C436 578 460 575 475 553 C490 531 491 501 474 485 C456 469 430 474 410 500 C374 405 360 290 360 150"/>
+          <path id="pboot-r" d="M622 850 C637 783 644 711 640 640 C636 590 615 543 590 500 C597 518 594 542 580 559 C564 578 540 575 525 553 C510 531 509 501 526 485 C544 469 570 474 590 500 C626 405 640 290 640 150"/>
+        </g>
+        <circle id="pboot-c" cx="500" cy="500" r="350" fill="none" stroke="#3d2b1f" stroke-width="30"/>
+      </svg>
+      <img id="pogboot-frame" alt="">
+    </div>
+    <div class="pogboot__cap" id="pogboot-cap">making your odd things…</div>
   </div>
 
   <!-- greeting page: the first thing a visitor sees -->
@@ -957,68 +960,99 @@
       return core.concat(neuro, pack);
     }
 
-    var PHRASES = pickBootPhrases();
-    var GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#%&$@!?/\\|<>[]{}*+=~^";
-    var words = document.getElementById("pogboot-words");
     var boot  = document.getElementById("pogboot");
-    var fill  = document.getElementById("pogboot-fill");
-    if (!words || !boot) return;
+    var mark  = document.getElementById("pogboot-mark");
+    var frame = document.getElementById("pogboot-frame");
+    var cap   = document.getElementById("pogboot-cap");
+    if (!boot) return;
 
     var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var idx = 0, timer = null;
-
-    function render(scrambled, settled) {
-      // settled part shown for real, unsettled part still jumbled
-      var out = "";
-      for (var i = 0; i < scrambled.length; i++) {
-        out += i < settled ? scrambled[i] : scrambled[i];
-      }
-      words.innerHTML = "<u>" + out.slice(0, settled) + "</u>" + out.slice(settled);
-    }
-
-    function play(phrase, onDone) {
-      var target = phrase.split("");
-      var live = target.map(function (c) {
-        return c === " " ? " " : GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-      });
-      var settled = 0, frame = 0;
-      clearInterval(timer);
-      timer = setInterval(function () {
-        frame++;
-        // keep the unsettled tail flickering
-        for (var i = settled; i < live.length; i++) {
-          if (target[i] !== " ") live[i] = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-        }
-        if (frame % 2 === 0) settled += 2;
-        words.innerHTML = "<u>" + target.slice(0, settled).join("") + "</u>" +
-                          live.slice(settled).join("");
-        if (settled > live.length) {
-          clearInterval(timer);
-          words.innerHTML = "<u>" + phrase + "</u>";
-          if (onDone) onDone();
-        }
-      }, 22);
-    }
-
-    function next() {
-      fill.style.width = Math.round(((idx + 1) / PHRASES.length) * 100) + "%";
-      if (idx >= PHRASES.length) { finish(); return; }
-      play(PHRASES[idx++], function () { setTimeout(next, 180); });
-    }
-
+    var done = false;
     function finish() {
-      clearInterval(timer);
+      if (done) return;
+      done = true;
       boot.classList.add("hidden");
       document.dispatchEvent(new CustomEvent("pogboot:done"));
     }
+    boot.addEventListener("click", finish);
+
+    function tok() {
+      try {
+        if (window.__FIGG_TOKEN) return window.__FIGG_TOKEN;
+        var m = location.search.match(/[?&]token=([^&]+)/);
+        return m ? decodeURIComponent(m[1]) : "";
+      } catch (e) { return ""; }
+    }
+    function url(p) {
+      var t = tok();
+      return p + (t ? ((p.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(t)) : "");
+    }
+
+    // mark draws bottom-to-top (paths already run that way), circle closes
+    function drawMark(dur, delay) {
+      if (!mark) return;
+      var els = [document.getElementById("pboot-l"),
+                 document.getElementById("pboot-r"),
+                 document.getElementById("pboot-c")];
+      els.forEach(function (el, i) {
+        if (!el || !el.getTotalLength) return;
+        var L = el.getTotalLength();
+        el.style.strokeDasharray = L;
+        el.style.strokeDashoffset = L;
+        el.style.transition = "none";
+        void el.getBoundingClientRect();
+        el.style.transition = "stroke-dashoffset " + dur + "ms ease " + (delay + i * dur * 0.35) + "ms";
+        el.style.strokeDashoffset = "0";
+      });
+    }
+
+    // coin spin: 12 baked frames, then 3 product heroes. Missing frames skip.
+    var COIN = [], HEROS = [];
+    for (var i = 0; i < 12; i++) COIN.push("/img/prod/coin-" + (i < 10 ? "0" + i : i) + ".png");
+    ["golf_marker", "keycap", "book_holder"].forEach(function (l) {
+      HEROS.push("/img/prod/" + l + "-hero.png");
+    });
+    function preload(list, cb) {
+      var ok = [], n = 0;
+      if (!list.length) { cb(ok); return; }
+      list.forEach(function (p) {
+        var im = new Image();
+        im.onload = function () { ok.push(p); if (++n === list.length) cb(ok); };
+        im.onerror = function () { if (++n === list.length) cb(ok); };
+        im.src = url(p);
+      });
+    }
+    function spin(list, step, cb) {
+      var i = 0;
+      if (!list.length || !frame) { cb(); return; }
+      frame.classList.add("show");
+      var timer = setInterval(function () {
+        if (done) { clearInterval(timer); return; }
+        frame.src = url(list[i % list.length]);
+        if (++i >= list.length) { clearInterval(timer); cb(); }
+      }, step);
+    }
 
     if (reduced) {
-      words.innerHTML = "<u>" + PHRASES[0] + "</u>";
-      fill.style.width = "100%";
+      if (mark) mark.style.opacity = "1";
       setTimeout(finish, 700);
-      return;
+    } else {
+      drawMark(900, 0);
+      if (cap) cap.textContent = "making your odd things…";
+      preload(COIN, function (coins) {
+        if (done) return;
+        if (mark) {
+          mark.style.transition = "opacity .25s ease";
+          mark.style.opacity = "0";
+        }
+        spin(coins.length ? coins : [], 85, function () {
+          if (done) return;
+          preload(HEROS, function (heros) {
+            spin(heros, 340, finish);
+          });
+        });
+      });
     }
-    next();
     // never trap the user behind the curtain
     setTimeout(finish, 6000);
   })();

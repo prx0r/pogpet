@@ -1,3 +1,35 @@
+# HANDOVER — next session: brand split live, shelf + plugin + viral loop
+
+> **Status:** OddHobb owns identity, Pogtown owns world (`vision/brand-split.md`).
+> Handoff wired, plugin pushed, honesty pass done. Detail below.
+
+## Where we are
+
+- **Vision frozen:** `vision/validatedvision.md` (founder word-for-word + 9
+  distilled decisions), `vision/brand-split.md` (identity vs world, one
+  graph, one plugin, graduation, human-agent games). 17-file `vision/`
+  folder holds the archive.
+- **Shelf honest:** 13 live / 10 soon, contracts on all 23 lines + 7 card
+  templates, makr3d + printie normalized, 9 own masters watertight.
+- **Money real:** Shopify drafts with invoice URLs (token auto-refresh),
+  gift packs by budget, Nibble demo friend, friend-derived gifts on shelf.
+- **Viral loop:** perform renders + cuts + share (?ref= starters), pogtown
+  joke MCP writing through ours, video widget for ChatGPT.
+- **Plugin:** 57 MCP tools, openapi.json, chatgpt-plugin bundle, GPT
+  instructions, buyer test script, skill. Custom GPTs retire Dec 11 —
+  migration path ready.
+- **Perform handoff:** stage success says "alive now, send to Pogtown".
+
+## Next
+
+1. Cut buttons on feed UI; funnel numbers.
+2. Samples + fit checks for the 7 nearly-there lines; clog adapter.
+3. Splat backdrop (Marble key), Qwen voices (HF token).
+4. Pog.town doorway when pull justifies it; auth stays Continue with OddHobb.
+5. Matcher shelf-wide (asset-filters part 3).
+
+---
+
 # HANDOVER — next session: viral video loop (cuts UI + funnel numbers)
 
 > **Status:** freaktown patterns integrated, Qwen realtime 3.8 wired with

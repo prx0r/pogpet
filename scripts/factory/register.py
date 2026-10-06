@@ -112,7 +112,7 @@ LINES = [
          supplier="makr3d", fulfilment="print_farm",
          recipes={"render": "live", "production_3mf": "todo"},
          base="brick-figure.glb", provenance=dict(OWN, ref_dir="mesh pipeline"),
-         lifecycle="sampled", status="soon",
+         lifecycle="sampled", status="live",
          theme="stocking", occasion="christmas", sample="have"),
     dict(id="ornament", label="Custom 3D Christmas Ornament",
          blurb="Tree hanger. Loop is part of the print, never metal.",

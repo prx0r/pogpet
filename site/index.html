@@ -561,7 +561,10 @@
     .feed__scene{display:inline-block;margin-top:8px;font-size:10px;letter-spacing:.1em;
       text-transform:uppercase;color:#8a6a2f;border:1px solid rgba(196,137,26,.45);
       border-radius:999px;padding:3px 8px}
-    .feed__tap{position:absolute;inset:0;pointer-events:auto;cursor:pointer;background:transparent;border:0}
+    .feed__tap{position:absolute;inset:0;pointer-events:auto;cursor:pointer;background:transparent;border:0;touch-action:pan-y}
+    .feed__slide{touch-action:pan-y}
+    .feed__share{pointer-events:auto;position:relative;z-index:3}
+    .feed__sharemsg{pointer-events:none}
     .feed__mute{position:absolute;top:12px;right:12px;pointer-events:auto;z-index:2;
       width:42px;height:42px;border-radius:50%;border:1px solid rgba(0,0,0,.12);
       background:rgba(255,255,255,.85);color:#222;font-size:16px;cursor:pointer}
@@ -2643,6 +2646,7 @@
       if(peopleStudio) return peopleStudio.refresh();
       get(API + "/me?owner=" + encodeURIComponent(state.owner))
         .then(function (d) {
+          if (myGen !== vf.gen) return;
           if (!d.ok) return;
           state.meshId = d.active_mesh_id || null;
           try { if (state.meshId) localStorage.setItem("pogpet.mesh", state.meshId); } catch (e) {}
@@ -2756,17 +2760,20 @@
     }
     function paintWho() {
       var el = $("g-who");
-      if (!el) return;
-      if (!state.apiKey) { el.hidden = true; return; }
-      el.hidden = false;
-      el.innerHTML = "signed in as <b>@" + state.owner + "</b> " +
-        '<button type="button" id="g-signout">sign out</button>';
-      var b = $("g-signout");
-      if (b) b.addEventListener("click", function () {
-        try { localStorage.removeItem("pogpet.apikey"); } catch (e) {}
-        state.apiKey = "";
-        paintWho();
-      });
+      var an = $("acct-name");
+      if (!state.apiKey) { if (el) el.hidden = true; if (an) an.textContent = "sign in"; return; }
+      if (el) {
+        el.hidden = false;
+        el.innerHTML = "signed in as <b>@" + state.owner + "</b> " +
+          '<button type="button" id="g-signout">sign out</button>';
+        var b = $("g-signout");
+        if (b) b.addEventListener("click", function () {
+          try { localStorage.removeItem("pogpet.apikey"); } catch (e) {}
+          state.apiKey = "";
+          paintWho();
+        });
+      }
+      if (an) an.textContent = "@" + state.owner;
     }
 
     // ── 360° turntable on the spotlight ─────────────────────
@@ -3272,7 +3279,7 @@
             var rb = $("pack-reserve");
             if (rb && p.physical) rb.addEventListener("click", function () {
               post(API + "/products/order", { owner: state.owner, line: p.physical.line, mesh_id: p.mesh_id || state.meshId || "", qty: 1 })
-                .then(function (o) { msg("pack-msg", o.ok ? "Reserved · " + ((o.order || {}).id || "") + ". Card + video next in Cards." : (o.error || "Failed"), o.ok ? "ok" : "err"); })
+                .then(function (o) { msg("pack-msg", o.ok ? "Reserved · " + ((o.order || {}).id || "") + ". Card + video next in Cards." : (o.error || "Failed"), o.ok ? "ok" : "err"); try { if (o.ok && typeof siteShell !== "undefined" && siteShell.refreshBadge) siteShell.refreshBadge(); } catch (e) {} })
                 .catch(function (e) { msg("pack-msg", e.message || String(e), "err"); });
             });
           })
@@ -3358,6 +3365,8 @@
         .then(function (d) {
           if (!d.ok) { stat("pr-status", ""); msg("pr-msg", d.error || "Products unavailable.", "err"); return; }
           pr.items = d.items || [];
+          pr.gifts = (d && d.gifts) || [];
+          pr.giftWho = (d && d.subject && d.subject.name) || "";
           if (d.active_mesh_id) {
             pr.activeMesh = d.active_mesh_id;
             if (!state.meshId) {
@@ -3423,7 +3432,17 @@
       var grid = $("pr-grid"); if (!grid) return;
       grid.innerHTML = "";
       var meshShort = (pr.activeMesh || state.meshId || "").replace("msh_", "").slice(0, 8);
-      pr.items.forEach(function (it) {
+      var giftMap = {};
+      (pr.gifts || []).forEach(function (g, idx) { if (g && g.line && !giftMap[g.line]) giftMap[g.line] = { gift: g, rank: idx }; });
+      var items = pr.items.slice();
+      items.sort(function (a, b) {
+        var ga = giftMap[a.id] ? 1 : 0, gb = giftMap[b.id] ? 1 : 0;
+        if (ga !== gb) return gb - ga;
+        if (ga && gb) return giftMap[a.id].rank - giftMap[b.id].rank;
+        var la = a.status === "live" ? 0 : 1, lb = b.status === "live" ? 0 : 1;
+        return la - lb;
+      });
+      items.forEach(function (it) {
         var live = it.status === "live";
         var tile = document.createElement("button");
         tile.type = "button";
@@ -3448,20 +3467,27 @@
         var badges = '<div class="etsy__badges">';
         if (live) badges += '<span class="etsy__badge gold">Personalised</span>';
         else badges += '<span class="etsy__badge soon">Soon</span>';
+        var gm = giftMap[it.id];
+        if (live && gm && gm.gift) {
+          var who = pr.giftWho ? "For " + pr.giftWho : "For your star";
+          badges += '<span class="etsy__badge gold">' + who + '</span>';
+        }
         if (live && it.fulfilment !== "digital" && meshShort) {
           badges += '<span class="etsy__badge mesh">Your star · ' + meshShort + '</span>';
         }
         if (live && it.fulfilment === "digital") badges += '<span class="etsy__badge">Digital</span>';
         badges += "</div>";
         var ship = it.fulfilment === "digital" ? "Instant" : "UK print farm";
+        var meta = (it.scale_mm ? it.scale_mm + " mm · " : "") +
+          ((it.sizes && it.sizes[0] && it.sizes[0].mm) ? it.sizes[0].mm + " · " : "") +
+          (it.theme || "product") + (it.hardware ? " · " + it.hardware : "");
+        if (live && gm && gm.gift && gm.gift.reason) meta = gm.gift.reason;
         tile.innerHTML =
           badges +
           '<img class="etsy__img" src="' + img + '" alt="' + it.label + '" loading="lazy">' +
           '<div class="etsy__body">' +
             '<div class="etsy__name">' + it.label + '</div>' +
-            '<div class="etsy__meta">' + (it.scale_mm ? it.scale_mm + " mm · " : "") +
-              ((it.sizes && it.sizes[0] && it.sizes[0].mm) ? it.sizes[0].mm + " · " : "") +
-              (it.theme || "product") + (it.hardware ? " · " + it.hardware : "") + '</div>' +
+            '<div class="etsy__meta">' + meta + '</div>' +
             '<div class="etsy__price">' + (live ? money(it.price_cents) : "Soon") + '</div>' +
             '<div class="etsy__foot">' +
               '<span class="etsy__ship">' + ship + '</span>' +
@@ -3700,6 +3726,7 @@
           " · " + money(d.price_cents) +
           " · mesh " + (body.mesh_id || "canonical") + sh, "ok");
         try { if (window.ohPressSeal) window.ohPressSeal(); } catch (e) {}
+        try { if (typeof siteShell !== "undefined" && siteShell.refreshBadge) siteShell.refreshBadge(); } catch (e) {}
       }).catch(function (e) {
         if (btn) btn.disabled = false;
         stat("pr-status", "");
@@ -4751,7 +4778,7 @@
     };
 
     // ── videos: vertical swipe feed (scroll-snap + IO) ────
-    var vf = { items: [], obs: null, muted: true, active: 0 };
+    var vf = { items: [], obs: null, muted: true, active: 0, gen: 0 };
 
     function feedSrc(src) {
       if (!src) return "";
@@ -4762,14 +4789,15 @@
     function loadVideoFeed() {
       var host = $("vid-feed"); if (!host) return;
       msg("vid-msg", "", "");
-      get(API + "/videos/feed")
+      var myGen = ++vf.gen;
+      get(API + "/videos/feed?limit=12")
         .then(function (d) {
           if (!d.ok) { msg("vid-msg", d.error || "Feed unavailable.", "err"); return; }
           vf.items = d.items || [];
           paintFeed();
           msg("vid-msg", vf.items.length + " clips · swipe or ↑↓ · tap for sound", "");
         })
-        .catch(function () { msg("vid-msg", "Backend unreachable.", "err"); });
+        .catch(function () { if (myGen === vf.gen) msg("vid-msg", "Backend unreachable.", "err"); });
     }
 
     function paintFeed() {
@@ -4785,9 +4813,13 @@
         slide.className = "feed__slide paused";
         slide.dataset.i = String(i);
         var src = feedSrc(item.src);
+        var poster = item.poster ? feedSrc(item.poster) : "";
+        var vidTag = i < 2
+          ? '<video playsinline loop muted preload="metadata" poster="' + poster + '" src="' + src + '" data-src="' + src + '"></video>'
+          : '<video playsinline loop muted preload="none" poster="' + poster + '" data-src="' + src + '"></video>';
         slide.innerHTML =
           '<div class="feed__stage">' +
-            '<video playsinline loop muted preload="none" poster="" src="' + src + '"></video>' +
+            vidTag +
             '<button class="feed__tap" type="button" aria-label="Play/pause"></button>' +
             '<button class="feed__mute" type="button" aria-label="Unmute">🔇</button>' +
             '<div class="feed__play"><span>▶</span></div>' +
@@ -4811,10 +4843,15 @@
           host.querySelectorAll("video").forEach(function (v) { v.muted = vf.muted; });
           if (!vf.muted && video.paused) video.play().catch(function () {});
         });
-        if (tap) tap.addEventListener("click", function () {
-          if (video.paused) video.play().catch(function () {});
-          else video.pause();
-        });
+        var tapY = 0;
+        if (tap) {
+          tap.addEventListener("touchstart", function (e) { try { tapY = e.touches[0].clientY; } catch (err) {} }, { passive: true });
+          tap.addEventListener("click", function (e) {
+            if (Math.abs((e.clientY || 0) - 0) === 0 && tapY) return;
+            if (video.paused) video.play().catch(function () {});
+            else video.pause();
+          });
+        }
       });
 
       // dots
@@ -4831,7 +4868,15 @@
         });
         dots.appendChild(b);
       });
-      host.appendChild(dots);
+      try {
+        var panel = host.parentNode;
+        if (panel) {
+          if (panel.style) panel.style.position = "relative";
+          var oldDots = panel.querySelector(":scope > .feed__dots");
+          if (oldDots) oldDots.remove();
+          panel.appendChild(dots);
+        } else { host.appendChild(dots); }
+      } catch (e) { host.appendChild(dots); }
 
       // IntersectionObserver — play only the visible slide (RAM-light)
       vf.obs = new IntersectionObserver(function (entries) {
@@ -4850,7 +4895,9 @@
               var v = s.querySelector("video");
               if (!v) return;
               if (Math.abs(si - vf.active) <= 1) {
-                if (!v.getAttribute("src")) v.setAttribute("src", feedSrc(vf.items[si].src));
+                var want = feedSrc(vf.items[si].src);
+                if (!v.getAttribute("src")) v.setAttribute("src", v.getAttribute("data-src") || want);
+                else if (v.getAttribute("src") !== want && !v.getAttribute("src")) v.setAttribute("src", want);
                 v.preload = "metadata";
               } else {
                 v.pause();
@@ -5349,11 +5396,14 @@
         var drop=$('search-drop');if(drop)drop.classList.remove('open');
         if(route.tab==='search'){if($('qsearch'))$('qsearch').value=route.q;siteShell.search(route.q);}
         if(route.tab==='cart')siteShell.cart();
+        if(route.tab==='account')siteShell.account(state.owner);
         if(route.tab==='notfound'){$('panel-notfound').querySelector('.panel__inner').textContent='Page not found. Use the navigation to return to Studio or browse products.';}
         if(route.tab==='cards'&&route.id){cardStudio.openDesign(route.id).then(function(){var t=document.querySelector('#panel-cards details.oc-tinkerer');if(t)t.open=true;}).catch(function(){});}
         if(route.tab==='videos'&&route.id){loadVideoFeed();}
       });
       cardReady().then(function(){return peopleStudio.refresh();}).catch(function(e){msg('stv-msg',e.message,'err');});
+      try{if(siteShell&&siteShell.refreshBadge)siteShell.refreshBadge();}catch(e){}
+      try{if(siteShell&&siteShell.paintAcctName&&state.apiKey&&state.owner&&!/^pog_/.test(state.owner))siteShell.paintAcctName('@'+state.owner);}catch(e){}
     });
 
     // First paint: resolve who we are and which pog is active, so every tab

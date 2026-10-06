@@ -16,8 +16,8 @@ from backend import suppliers as sup  # noqa: E402
 
 
 class TestRegistry(unittest.TestCase):
-    def test_seven_suppliers(self):
-        self.assertEqual(len(sup.SUPPLIERS), 8)
+    def test_thirteen_suppliers(self):
+        self.assertEqual(len(sup.SUPPLIERS), 13)
         for sid, s in sup.SUPPLIERS.items():
             for k in ("label", "ships", "materials", "order", "est"):
                 self.assertIn(k, s, sid)
@@ -52,23 +52,38 @@ class TestEstimate(unittest.TestCase):
         self.assertFalse(r["feasible"])
 
     def test_quote_suppliers(self):
-        for sid in ("treatstock", "craftcloud", "dapi3d", "sculpteo", "yorkshire3d"):
+        for sid in ("treatstock", "craftcloud", "dapi3d", "sculpteo", "yorkshire3d",
+                    "slant3d", "shapeways", "xometry", "gelato", "mixam"):
             r = sup.estimate(sid, material="PLA", weight_g=5)
-            self.assertTrue(r["feasible"])
-            self.assertIsNone(r["est_cents"])  # live quote, never faked
+            if sup.SUPPLIERS[sid]["est"]["kind"] == "quote" or "PLA" not in sup.SUPPLIERS[sid]["materials"]:
+                # paper lanes are correctly infeasible for filament; quote lanes never fake numbers
+                if "PLA" not in sup.SUPPLIERS[sid]["materials"]:
+                    self.assertFalse(r["feasible"])
+                else:
+                    self.assertTrue(r["feasible"])
+                    self.assertIsNone(r["est_cents"])  # live quote, never faked
+            else:
+                self.assertTrue(r["feasible"])
 
     def test_options_ranking(self):
         opts = sup.options_for(material="PLA", weight_g=1.6, region="UK")
         self.assertTrue(opts[0]["feasible"])
-        infeasible = [o for o in opts if not o["feasible"]]
-        self.assertEqual(infeasible, [])  # everything ships UK/worldwide
+        by_id = {o["supplier"]: o for o in opts}
+        # paper lanes are correctly infeasible for filament lines
+        self.assertFalse(by_id["gelato"]["feasible"])
+        self.assertFalse(by_id["mixam"]["feasible"])
+        # every filament lane that ships UK/worldwide stays feasible
+        for sid, s in sup.SUPPLIERS.items():
+            if "PLA" in s["materials"]:
+                self.assertTrue(by_id[sid]["feasible"], sid)
 
 
 if __name__ == "__main__":
     unittest.main()
 
 
-FARM_IDS = {"makr3d", "yorkshire3d", "3dfarm", "treatstock", "craftcloud", "dapi3d", "sculpteo"}
+FARM_IDS = {"makr3d", "yorkshire3d", "3dfarm", "treatstock", "craftcloud", "dapi3d", "sculpteo",
+            "slant3d", "shapeways", "xometry", "gelato", "mixam", "printie", "fdfarm"}
 
 
 class TestStorefrontAnonymity(unittest.TestCase):

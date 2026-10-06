@@ -1,10 +1,13 @@
-# OddHobb — the 10 (Round 13 · 2026-10-05)
+# OddHobb — the 10 (Round 13 · 2026-10-05, worked 2026-10-06)
 
 > **Focus:** full audit integrated — P0s fixed, shelf honest.
 > **Fixed:** mesh_manifest + limit + dims + gift-card 500s → 400s; gallery
 > Reserve builds export first (was 409); pi-cards harness runs;
-> 10 unproven lines live→soon. Suites: 95 pytest, router, pi-cards,
+> 10 unproven lines live→soon. Suites: 100 pytest, router, pi-cards,
 > 77/77 site. **Brand:** oddhobb only.
+> **Round 13 rework (2026-10-06, uncommitted):** gifts rank the grid,
+> account/cart real, videos feed decompressed, factory validated locally.
+> Physical samples + 3MF + commercial provenance still block live flips.
 
 ## The 10
 
@@ -14,12 +17,12 @@
 | **13-2** | **Gallery Reserve works** | **done** | export-first then idempotent order |
 | **13-3** | **Shelf honest: 13 live / 10 soon** | **done** | unproven lines 409; Nibble proof visible but correctly unorderable |
 | **13-4** | **Test harness runs** | **done** | python3 + NODE_PATH documented |
-| **13-5** | **Serve the 7 nearly-there lines** | open | keycap/book_holder/golf/straw/line_reader/card_rack/tcg + brick_keychain: sample + fit + 3MF, re-run register |
-| **13-6** | **Clog adapter → real NIBBLE emboss** | open | manufacture executes; then flip clog back live |
-| **13-7** | **Gift derivations on shelf UI** | open | API serves gifts; panel never renders them |
-| **13-8** | **Account/cart finish** | open | static account, stale badge, dead Open-card link |
-| **13-9** | **Videos feed mobile + perf** | open | scroll swallow, dots, N+1 burst |
-| **13-10** | **Commit batch when owner says push** | open | audit + fixes + honesty flips in tree |
+| **13-5** | **Serve the 7 nearly-there lines** | **partial** | render live (4-angle stills verified) for keycap/book_holder/golf/straw/line_reader/card_rack/tcg; golf+clog Blender PASS; NIBBLE/DAD emboss executes to /tmp; brick_keychain register drift fixed; still blocked: MAKR3D sample + fit + production 3MF + commercial-use for golf/clog |
+| **13-6** | **Clog adapter → real NIBBLE emboss** | **partial** | adapter exists + validates PASS + `personalize --text NIBBLE` executes (16KB STL in /tmp); validate_masters merged (23 files); clog stays soon until sample + 3MF + commercial-use verified, then flip live |
+| **13-7** | **Gift derivations on shelf UI** | **done** | pr.gifts stored; grid sorts gifted first with For-who badge + reason as meta; #pr-gifts strip unchanged; shop panel still hidden by design |
+| **13-8** | **Account/cart finish** | **done** | account loader calls /accounts/me + basket + orders; #acct-name syncs; badge sums qty + refreshes on boot/reserve; orders.design_id column + backfill + design_order persists; cart totals use price correctly; Open-card works for card + design orders |
+| **13-9** | **Videos feed mobile + perf** | **done** | tap touch-action pan-y + tap/scroll split; dots moved to panel parent; lazy src (first 2 eager) + data-src + poster field; gen guard vs dual-loader race; feed ?limit=12; file serves inline + Range 206 + Accept-Ranges; share button pointer-events fixed |
+| **13-10** | **Commit batch when owner says push** | open | Round 13 rework in tree, unpushed: backend/config+db+server, register, site/index+shell+cards JS, tests/test_round13.py; needs Flask restart to go live; do NOT push without owner go |
 
 ---
 

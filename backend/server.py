@@ -2741,8 +2741,28 @@ def video_file(vid: str):
     p = Path(row["path"])
     if not p.is_file():
         return _err("render missing", 404)
+    size = p.stat().st_size
+    rng = (request.headers.get("Range") or "").strip()
+    if rng.startswith("bytes="):
+        try:
+            spec = rng[6:].split("-", 1)
+            start = int(spec[0] or 0)
+            end = int(spec[1]) if len(spec) > 1 and spec[1] else size - 1
+            start = max(0, min(start, size - 1))
+            end = max(start, min(end, size - 1))
+            with p.open("rb") as f:
+                f.seek(start)
+                chunk = f.read(end - start + 1)
+            return Response(chunk, status=206, content_type="video/mp4",
+                            headers={"Content-Range": f"bytes {start}-{end}/{size}",
+                                     "Accept-Ranges": "bytes",
+                                     "Content-Length": str(end - start + 1),
+                                     "Cache-Control": "private, max-age=3600"})
+        except (ValueError, OSError):
+            pass
     return Response(p.read_bytes(), content_type="video/mp4",
-                    headers={"Content-Disposition": f'attachment; filename="{vid}.mp4"',
+                    headers={"Content-Disposition": f'inline; filename="{vid}.mp4"',
+                             "Accept-Ranges": "bytes",
                              "Cache-Control": "private, max-age=3600"})
 
 
@@ -2768,17 +2788,22 @@ def videos_feed():
     Lightweight swipe feed (Videos tab): one mp4 per slide, src = artifact
     route. No secrets in the payload.
     """
+    try:
+        limit = max(1, min(40, int(request.args.get("limit") or 12)))
+    except (TypeError, ValueError):
+        limit = 12
     with db.connect() as c:
         rows = c.execute(
             """SELECT id,owner,scene,talent,voice,pet_name,topic,watermarked,
                       duration,bytes,created_at
                FROM videos
                WHERE path IS NOT NULL AND path != ''
-               ORDER BY created_at DESC LIMIT 40""").fetchall()
+               ORDER BY created_at DESC LIMIT ?""", (limit,)).fetchall()
     items = []
     for r in rows:
         d = db.dump(r)
         d["src"] = f"/api/videos/{d['id']}/file"
+        d["poster"] = ""
         d["title"] = (d.get("pet_name") or "your star") + " · " + (d.get("topic") or d.get("scene") or "")
         items.append(d)
     return jsonify({"ok": True, "items": items, "count": len(items)})
@@ -3914,6 +3939,7 @@ def design_order():
             c, owner=owner, line=d["line"], mesh_id=str(body.get("mesh_id") or ""),
             coat="none", hat="none", qty=qty, price_cents=price,
             note=f"design {did} ({draft.get('material')}/{draft.get('text') or 'no text'})"[:200],
+            design_id=did,
         )
     shopify: dict = {"attempted": False}
     if fulfil:

@@ -300,7 +300,7 @@ STUDIO_LINES: dict[str, dict] = {
         "fits": "Cherry-MX stems",
         "personalization": {"method": "relief", "zone": "cap_top", "max_chars": 6},
         "supplier": "makr3d",
-        "recipes": {"render": "todo", "production_3mf": "todo"},
+        "recipes": {"render": "live", "production_3mf": "todo"},
         "occasion": "christmas", "sample": "needed",
     },
     "shoelace_charm": {
@@ -340,7 +340,7 @@ STUDIO_LINES: dict[str, dict] = {
         "fits": "thumb ID 26mm",
         "personalization": {"method": "emboss", "zone": "paddle_face", "max_chars": 12},
         "supplier": "makr3d",
-        "recipes": {"render": "todo", "production_3mf": "todo"},
+        "recipes": {"render": "live", "production_3mf": "todo"},
         "occasion": "christmas", "sample": "needed",
     },
     "golf_marker": {
@@ -360,7 +360,7 @@ STUDIO_LINES: dict[str, dict] = {
         "fits": "hat-clip / pocket",
         "personalization": {"method": "relief", "zone": "top_face", "max_chars": 10},
         "supplier": "makr3d",
-        "recipes": {"render": "todo", "production_3mf": "todo"},
+        "recipes": {"render": "live", "production_3mf": "todo"},
         "occasion": "christmas", "sample": "needed",
     },
     "straw_charm": {
@@ -380,7 +380,7 @@ STUDIO_LINES: dict[str, dict] = {
         "fits": "~10mm straws (ring ID 10.5)",
         "personalization": {"method": "relief", "zone": "topper_pad", "max_chars": 8},
         "supplier": "makr3d",
-        "recipes": {"render": "todo", "production_3mf": "todo"},
+        "recipes": {"render": "live", "production_3mf": "todo"},
         "occasion": "christmas", "sample": "needed",
     },
     "controller_stand": {
@@ -460,7 +460,7 @@ STUDIO_LINES: dict[str, dict] = {
         "fits": "standard mahjong tiles (verify channel)",
         "personalization": {"method": "emboss", "zone": "plate_face", "max_chars": 12},
         "supplier": "makr3d",
-        "recipes": {"render": "todo", "production_3mf": "todo"},
+        "recipes": {"render": "live", "production_3mf": "todo"},
         "occasion": "christmas", "sample": "needed",
     },
     "wind_indicator": {
@@ -520,7 +520,7 @@ STUDIO_LINES: dict[str, dict] = {
         "fits": "poker 63.5x88.9 / bridge 57x88.8 (verify groove)",
         "personalization": {"method": "emboss", "zone": "front_fascia", "max_chars": 12},
         "supplier": "makr3d",
-        "recipes": {"render": "todo", "production_3mf": "todo"},
+        "recipes": {"render": "live", "production_3mf": "todo"},
         "occasion": "christmas", "sample": "needed",
     },
     "tcg_stand": {
@@ -540,7 +540,7 @@ STUDIO_LINES: dict[str, dict] = {
         "fits": "PSA/toploader slabs (9mm groove, <=7mm + sleeve)",
         "personalization": {"method": "emboss", "zone": "base_front", "max_chars": 14},
         "supplier": "makr3d",
-        "recipes": {"render": "todo", "production_3mf": "todo"},
+        "recipes": {"render": "live", "production_3mf": "todo"},
         "occasion": "christmas", "sample": "needed",
     },
     "cribbage_pegs": {

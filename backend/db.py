@@ -258,6 +258,26 @@ def _migrate_videos_talent(c: sqlite3.Connection) -> None:
         c.execute("ALTER TABLE videos ADD COLUMN talent TEXT NOT NULL DEFAULT 'comedy'")
 
 
+def _migrate_orders_design(c: sqlite3.Connection) -> None:
+    """orders.design_id — links a studio order back to its card/design.
+    Guarded because ADD COLUMN errors if the column already exists."""
+    try:
+        cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
+    except sqlite3.Error:
+        return
+    if cols and "design_id" not in cols:
+        c.execute("ALTER TABLE orders ADD COLUMN design_id TEXT NOT NULL DEFAULT ''")
+        # backfill from free-text note "design <id> (...)" written by design_order
+        try:
+            for r in c.execute("SELECT id, note FROM orders WHERE note LIKE 'design %'").fetchall():
+                note = (r["note"] or "")
+                did = note.split(None, 2)[1].strip("()") if len(note.split()) > 1 else ""
+                if did:
+                    c.execute("UPDATE orders SET design_id=? WHERE id=?", (did[:80], r["id"]))
+        except sqlite3.Error:
+            pass
+
+
 def init() -> None:
     with connect() as c:
         c.executescript(SCHEMA)
@@ -266,6 +286,7 @@ def init() -> None:
         _migrate_videos_talent(c)
         _migrate_photos_person(c)
         _migrate_users_email_unique(c)
+        _migrate_orders_design(c)
 
 
 def _migrate_users_email_unique(c: sqlite3.Connection) -> None:
@@ -301,14 +322,26 @@ def new_id(prefix: str) -> str:
 
 def create_order(c: sqlite3.Connection, *, owner: str, line: str, mesh_id: str,
                  coat: str, hat: str, qty: int, price_cents: int,
-                 note: str = "") -> dict:
+                 note: str = "", design_id: str = "") -> dict:
     oid = new_id("ord")
-    c.execute(
-        """INSERT INTO orders (id,owner,line,mesh_id,coat,hat,qty,price_cents,status,note,created_at)
-           VALUES (?,?,?,?,?,?,?,?, 'pending_checkout', ?, ?)""",
-        (oid, owner, line, mesh_id, coat, hat, max(1, int(qty)), int(price_cents),
-         note[:200], now()),
-    )
+    try:
+        cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
+    except sqlite3.Error:
+        cols = []
+    if "design_id" in cols:
+        c.execute(
+            """INSERT INTO orders (id,owner,line,mesh_id,coat,hat,qty,price_cents,status,note,design_id,created_at)
+               VALUES (?,?,?,?,?,?,?,?, 'pending_checkout', ?, ?, ?)""",
+            (oid, owner, line, mesh_id, coat, hat, max(1, int(qty)), int(price_cents),
+             note[:200], (design_id or "")[:80], now()),
+        )
+    else:
+        c.execute(
+            """INSERT INTO orders (id,owner,line,mesh_id,coat,hat,qty,price_cents,status,note,created_at)
+               VALUES (?,?,?,?,?,?,?,?, 'pending_checkout', ?, ?)""",
+            (oid, owner, line, mesh_id, coat, hat, max(1, int(qty)), int(price_cents),
+             note[:200], now()),
+        )
     c.commit()
     row = c.execute("SELECT * FROM orders WHERE id=?", (oid,)).fetchone()
     return dict(row) if row else {}

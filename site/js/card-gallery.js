@@ -105,6 +105,7 @@
             })
             .then(function (d) {
               msg.textContent = "Reserved" + (d.order && d.order.id ? " · " + d.order.id : "") + ". No charge — supplier checkout connects next.";
+              try { var b = document.getElementById('cart-n'); if (b) b.textContent = String((parseInt(b.textContent || '0', 10) || 0) + 1); } catch (e) {}
             })
             .catch(function (e) { msg.textContent = e.message || String(e); });
         };

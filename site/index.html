@@ -5236,6 +5236,7 @@
         if (!d.ok) { msg("pf-msg", d.error || "Render failed.", "err"); stat("pf-status", ""); return; }
         stat("pf-status", "");
         msg("pf-msg", "On stage — free, watermarked.", "ok");
+        msg("pf-room", "They're alive now. Send them to Pogtown — share the clip and the room keeps them.", "");
         perfHistoryLoaded = false; loadPerfHistory(true);
         var v = $("pf-video");
         v.src = art(d.download);

@@ -464,10 +464,78 @@ async def figg_card_reserve(design_id: str, revision: int, idempotency_key: str,
                          {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}))
 
 
+async def figg_blueprints(owner: str = "") -> str:
+    """Every product line with its design contract: locked interfaces, working
+    envelope, material, colour cap, rough cost targets. The design space — a
+    model designing for a line must keep every locked interface and stay
+    inside the envelope. Designers add ?design=1 detail via figg_design_validate."""
+    return _j(await _call("GET", "/api/products/studio?owner=" + (owner or "anon") + "&design=1"))
+
+
+async def figg_design_validate(line: str, dims_mm: list[float] | None = None,
+                               material: str = "", colors: int = 1,
+                               text: str = "", volume_cm3: float | None = None) -> str:
+    """Check a candidate design against a line's contract: envelope fit,
+    material/colours, text length vs the zone, rough makr3d + printie cost.
+    Geometry truth (manifold, interface dims) is verified at sample."""
+    return _j(await _call("POST", "/api/design/validate", {
+        "line": line, "dims_mm": dims_mm, "material": material,
+        "colors": colors, "text": text, "volume_cm3": volume_cm3}))
+
+
+async def figg_design_base(line: str) -> str:
+    """The 3D base version to play with: master STL (reference lines) or the
+    canonical dog GLB (mesh lines). Locked interfaces included as modelled."""
+    return _j(await _call("GET", f"/api/design/base/{line}"))
+
+
+async def figg_design_save(line: str, owner: str = "",
+                           dims_mm: list[float] | None = None,
+                           material: str = "", colors: int = 1,
+                           text: str = "", volume_cm3: float | None = None) -> str:
+    """Play with the base, save the design: validated spec stored as a draft.
+    Returns design_id for figg_design_order. Invalid designs 400 with gaps."""
+    return _j(await _call("POST", "/api/design/save", {
+        "owner": owner, "line": line, "dims_mm": dims_mm, "material": material,
+        "colors": colors, "text": text, "volume_cm3": volume_cm3}))
+
+
+async def figg_design_order(design_id: str, owner: str = "", qty: int = 1,
+                            fulfil: bool = False) -> str:
+    """Order a saved design: re-validates, reserves, optional Shopify draft.
+    Show price first. No card charge from this endpoint."""
+    return _j(await _call("POST", "/api/design/order", {
+        "design_id": design_id, "owner": owner, "qty": qty, "fulfil": fulfil}))
+
+
+async def figg_blender_make(line: str, text: str, owner: str = "") -> str:
+    """Use Blender on our farm box: emboss text onto the line's master via
+    its adapter, get back a watertight STL URL. For remote agents (ChatGPT)
+    with no local Blender — same contracts, headless, ~1-2 min."""
+    return _j(await _call("POST", "/api/design/make",
+                         {"owner": owner, "line": line, "text": text}))
+
+
+async def figg_card_templates(owner: str = "") -> str:
+    """Card templates with their paper design contracts: locked print truths
+    (bleed, DPI, photo counts), envelope trims, stock, rough print costs."""
+    return _j(await _call("GET", "/api/cards/templates?owner=" + (owner or "anon")))
+
+
+async def figg_video_share(video_id: str) -> str:
+    """One-click share link for a clip (?ref=). Prompt + script already live
+    on the row, so shared sets replay. Signup with the ref installs free
+    starter meshes — the viral funnel."""
+    return _j(await _call("POST", f"/api/videos/{video_id}/share", {}))
+
+
 # ── the manifest: adding a tool = adding it to an area. One place. ───────────
 TOOL_AREAS: dict[str, list] = {
     "cards":     [figg_card_library, figg_card_save, figg_card_render,
-                  figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve],
+                  figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve,
+                  figg_card_templates],
+    "design":    [figg_blueprints, figg_design_validate, figg_design_base,
+                  figg_design_save, figg_design_order, figg_blender_make],
     "flow":      [figg_flow, figg_upload_photo, figg_start_mesh, figg_playbook, figg_quick_map,
                   figg_guide_open, figg_guide_turn, figg_guide_packs],
     "identity":  [figg_me, figg_create_account, figg_login, figg_credits],
@@ -478,7 +546,8 @@ TOOL_AREAS: dict[str, list] = {
                   figg_product_personalise, figg_checkout,
                   figg_fullchain_personalise_order],
     "style":     [figg_styles, figg_install_style],
-    "stage":     [figg_acts, figg_perform, figg_greeting, figg_rooms],
+    "stage":     [figg_acts, figg_perform, figg_greeting, figg_rooms,
+                  figg_video_share],
     "company":   [figg_companygraph],
 }
 

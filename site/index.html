@@ -108,10 +108,11 @@
     .tabrail__brand{font-family:'Playfair Display',serif;font-size:22px;color:var(--ivory);
       margin-bottom:10px;user-select:none}
     .tabrail__brand i{color:var(--pumpkin);font-style:normal}
-    .tab{width:58px;padding:10px 3px;border-radius:12px;background:transparent;
-      border:1px solid transparent;color:var(--muted);font-family:inherit;font-size:9px;
-      letter-spacing:.07em;text-transform:uppercase;cursor:pointer;
-      display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .2s}
+    .tab{width:58px;max-width:58px;padding:10px 2px;border-radius:12px;background:transparent;
+      border:1px solid transparent;color:var(--muted);font-family:inherit;font-size:8px;
+      letter-spacing:.02em;text-transform:uppercase;cursor:pointer;text-decoration:none;text-align:center;
+      display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .2s;
+      overflow:hidden;white-space:normal;word-break:break-word;line-height:1.3}
     .tab__icon{font-size:19px;line-height:1}
     .tab:hover{color:var(--ivory);background:rgba(255,122,26,.09)}
     .tab.active{color:var(--pumpkin);background:rgba(255,122,26,.15);
@@ -782,26 +783,44 @@
     .pogboot__stage svg,.pogboot__stage img{position:absolute;inset:0;width:100%;height:100%}
     .pogboot__stage img{object-fit:contain;opacity:0;transition:opacity .25s ease}
     .pogboot__stage img.show{opacity:1}
+    /* fluid etch loop (from assets/logo/oddhobb-etch-loader.svg) */
+    #pogboot-mark .etch{fill:none;stroke-dasharray:1;stroke-dashoffset:1;animation:pogetch 3s cubic-bezier(.62,0,.38,1) infinite}
+    #pogboot-mark .etch-r{animation-delay:.12s}
+    #pogboot-mark .etch-c{animation-delay:.3s}
+    @keyframes pogetch{0%{stroke-dashoffset:1;opacity:1}50%{stroke-dashoffset:0;opacity:1}72%{stroke-dashoffset:0;opacity:1}96%{stroke-dashoffset:-1;opacity:1}100%{stroke-dashoffset:-1;opacity:0}}
     .pogboot__cap{font-family:'JetBrains Mono',monospace;font-size:12px;
       letter-spacing:.14em;text-transform:uppercase;color:#a08c5b;min-height:1.5em}
     @media (prefers-reduced-motion: reduce){.pogboot__stage *{transition:none;animation:none}}
   </style>
   <link rel="stylesheet" href="/css/cards-studio.css">
   <link rel="stylesheet" href="/css/moments.css">
-  <script src="/js/cards-studio.js"></script>
-  <script src="/js/card-gallery.js"></script>
+  <script src="/js/api-client.js?v=studio-2"></script>
+  <script src="/js/cards-studio.js?v=studio-2"></script>
+  <script src="/js/card-gallery.js?v=studio-2"></script>
+
   <script src="/js/oddy.js"></script>
+  <link rel="stylesheet" href="/vendor/swiper/swiper-bundle.min.css">
+  <link rel="stylesheet" href="/css/site-shell.css?v=studio-2">
+  <script src="/vendor/swiper/swiper-bundle.min.js"></script>
+  <script src="/js/site-router.js?v=studio-2"></script>
+  <script src="/js/studio-people.js?v=studio-2"></script>
+  <script src="/js/site-shell.js?v=studio-2"></script>
 </head>
-<body>
+<body class="studio-chrome">
   <!-- boot screen: mark draws, thickens to coin, spins, tours products, lifts -->
   <div class="pogboot" id="pogboot" aria-hidden="true">
     <div class="pogboot__stage">
       <svg id="pogboot-mark" viewBox="0 0 1000 1000" role="img" aria-label="OddHobb">
-        <g fill="none" stroke="#3d2b1f" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
-          <path id="pboot-l" d="M378 850C363 785 355 712 360 640C366 590 388 542 410 500C430 560 458 566 477 548C498 528 497 492 476 476C458 462 430 472 410 500C370 410 360 285 360 150"/>
-          <path id="pboot-r" d="M622 850C637 785 645 712 640 640C634 590 612 542 590 500C570 560 542 566 523 548C502 528 503 492 524 476C542 462 570 472 590 500C630 410 640 285 640 150"/>
+        <defs>
+          <clipPath id="pogboot-boundary">
+            <circle cx="500" cy="500" r="350"/>
+          </clipPath>
+        </defs>
+        <g clip-path="url(#pogboot-boundary)" fill="none" stroke="#000" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+          <path id="pboot-l" pathLength="1" d="M378 850C363 785 355 712 360 640C366 590 388 542 410 500C430 560 458 566 477 548C498 528 497 492 476 476C458 462 430 472 410 500C370 410 360 285 360 150"/>
+          <path id="pboot-r" pathLength="1" d="M622 850C637 785 645 712 640 640C634 590 612 542 590 500C570 560 542 566 523 548C502 528 503 492 524 476C542 462 570 472 590 500C630 410 640 285 640 150"/>
         </g>
-        <circle id="pboot-c" cx="500" cy="500" r="350" fill="none" stroke="#3d2b1f" stroke-width="30"/>
+        <circle id="pboot-c" pathLength="1" cx="500" cy="500" r="350" fill="none" stroke="#000" stroke-width="26"/>
       </svg>
       <img id="pogboot-frame" alt="">
     </div>
@@ -841,28 +860,26 @@
       <div class="switcher__hd">oddhobb</div>
       <a href="/" class="here" role="menuitem"><span>oddhobb.com</span><small>you are here</small></a>
     </div>
-    <button class="tab active" type="button" data-tab="quick">
+    <a class="tab active" href="/" data-route data-tab="quick">
       <span class="tab__icon">💬</span>quick
-    </button>
+    </a>
     <div class="tabrail__sep"></div>
-    <button class="tab" type="button" data-tab="studio">
+    <a class="tab" href="/studio" data-route data-tab="studio">
       <span class="tab__icon">⭐</span>studio
-    </button>
-    <button class="tab" type="button" data-tab="products">
+    </a>
+    <a class="tab" href="/products" data-route data-tab="products">
       <span class="tab__icon">🛍️</span>products
-    </button>
-    <button class="tab" type="button" data-tab="cards">
+    </a>
+    <a class="tab" href="/cards" data-route data-tab="cards">
       <span class="tab__icon">💌</span>cards
-    </button>
-    <button class="tab" type="button" data-tab="videos">
+    </a>
+    <a class="tab" href="/videos" data-route data-tab="videos">
       <span class="tab__icon">🎬</span>videos
-    </button>
-    <button class="tab" type="button" data-tab="upload">
-      <span class="tab__icon">🐾</span>upload
-    </button>
-    <button class="tab" type="button" data-tab="perform">
+    </a>
+
+    <a class="tab" href="/perform" data-route data-tab="perform">
       <span class="tab__icon">🎤</span>perform
-    </button>
+    </a>
   </nav>
 
   <!-- topbar: search + account. Categories live in #catstrip below (registry = GET /api/sections) -->
@@ -1045,21 +1062,22 @@
       if (mark) mark.style.opacity = "1";
       setTimeout(finish, 700);
     } else {
+      // fluid etch: one draw-in, then loop the etch while loading
       drawMark(900, 0);
       if (cap) cap.textContent = "making your odd things…";
-      preload(COIN, function (coins) {
+      setTimeout(function () {
         if (done) return;
-        if (mark) {
-          mark.style.transition = "opacity .25s ease";
-          mark.style.opacity = "0";
-        }
-        spin(coins.length ? coins : [], 85, function () {
-          if (done) return;
-          preload(HEROS, function (heros) {
-            spin(heros, 340, finish);
-          });
+        ["pboot-l", "pboot-r", "pboot-c"].forEach(function (id, i) {
+          var el = document.getElementById(id);
+          if (!el) return;
+          el.style.transition = "none";
+          el.style.strokeDasharray = "1";
+          el.style.strokeDashoffset = "1";
+          el.classList.add("etch");
+          if (i === 1) el.classList.add("etch-r");
+          if (i === 2) el.classList.add("etch-c");
         });
-      });
+      }, 2200);
     }
     // never trap the user behind the curtain
     setTimeout(finish, 6000);
@@ -1079,28 +1097,9 @@
       });
     }
 
-    // ── left tab rail ─────────────────────────────────────
-    var rail = document.getElementById("tabrail");
-    if (rail) {
-      rail.addEventListener("click", function (e) {
-        var btn = e.target.closest ? e.target.closest(".tab") : null;
-        if (!btn || btn.disabled) return;
-        var all = rail.querySelectorAll(".tab");
-        for (var i = 0; i < all.length; i++) all[i].classList.remove("active");
-        btn.classList.add("active");
-        var tabName = btn.getAttribute("data-tab");
-        var tabPath = (tabName === "products") ? "/products" : "/";
-        if (location.pathname !== tabPath) {
-          try { history.pushState({tab: tabName}, "", tabPath); } catch (e) {}
-        }
-        document.dispatchEvent(new CustomEvent("pog:tab", {
-          detail: { tab: btn.getAttribute("data-tab") }
-        }));
-      });
-    }
   })();
   </script>
-  
+
   <!-- ══ TAB: upload ══ -->
   <section class="panel" data-panel="upload" id="panel-upload" aria-label="Your people">
     <div class="panel__inner">
@@ -1154,14 +1153,15 @@
   <section class="panel white" data-panel="studio" id="panel-studio" aria-label="Studio">
     <div class="panel__inner wide">
       <div class="store-head" style="margin:0 0 10px">
-        <h2 style="font-size:22px;margin:0">Your friends</h2>
+        <div class="studio-heading"><h2 style="font-size:22px;margin:0">Your friends</h2><button class="oc-button" id="studio-add-friend" type="button">Add friend</button></div>
         <p style="margin:4px 0 0;color:#777;font-size:13px">Swipe through your people &amp; pets — everything below follows them.</p>
       </div>
 
       <!-- friends conveyor: tactile swipe strip, drives the whole page -->
       <div class="friends" id="friends" role="listbox" aria-label="Friends"></div>
 
-      <div class="stv" id="stv">
+      <h2 id="studio-mesh-title">Meshes</h2><p id="studio-mesh-empty" class="studio-empty" hidden>No meshes for this friend yet. Choose one of their photos to create a character.</p><div id="studio-unassigned-meshes"></div>
+      <div class="stv" id="stv" hidden>
         <div class="cs" id="cs">
           <button class="cs__arrow" id="stv-prev" type="button" aria-label="Previous">&#8592;</button>
           <div class="cs__row" id="cs-row">
@@ -1169,7 +1169,6 @@
             <div class="cs__live" id="cs-live">
               <model-viewer
                 id="stv-viewer"
-                src="/img/prod/chibi-figure-hook.glb"
                 alt="Active character mesh"
                 camera-controls
                 touch-action="pan-y"
@@ -1193,18 +1192,18 @@
       <div class="roster" id="stv-roster" role="listbox" aria-label="Mesh roster"></div>
 
       <div class="stv__order" style="justify-content:center;gap:10px">
-        <button class="btn ghost" id="stv-brick" type="button">Add brick 1</button>
-        <button class="btn ghost" id="stv-brick2" type="button">Add brick 2</button>
+        <button class="btn ghost" id="stv-brick" type="button" hidden>Add brick 1</button>
+        <button class="btn ghost" id="stv-brick2" type="button" hidden>Add brick 2</button>
       </div>
       <div class="panel__msg" id="stv-msg" role="status" aria-live="polite"></div>
 
       <div class="store-head" style="margin-top:28px">
-        <h2 style="font-size:20px">Photos</h2>
-        <p style="margin:4px 0 0;color:#777;font-size:13px">Your uploads — later we’ll do cool stuff with these.</p>
+        <h2 id="studio-photo-title" style="font-size:20px">Photos</h2>
+        <p style="margin:4px 0 0;color:#777;font-size:13px">Original photos, ready to reuse in cards, videos and personalised products.</p>
       </div>
-      <div class="panel__status" id="as-status"></div>
+      <div class="panel__status" id="as-status" role="status" aria-live="polite"></div>
       <div class="panel__msg" id="as-msg" role="status" aria-live="polite"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px">
+      <div id="studio-photo-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px">
         <button class="btn ghost" id="as-ai" type="button" style="width:auto;margin:0">AI tag people</button>
         <button class="btn ghost" id="as-refresh" type="button" style="width:auto;margin:0">Refresh</button>
       </div>
@@ -1221,7 +1220,7 @@
 
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <symbol id="oddy-confused" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1234,10 +1233,10 @@
       <path d="M10 16 C10 5 20 2 28 5 C37 8 39 18 32 24 C28 27 24 30 24 36" fill="none" stroke="#5a6cff" stroke-width="8" stroke-linecap="round"/>
       <circle cx="24" cy="48" r="4" fill="#5a6cff"/>
     </g>
-    
+
 </symbol>
 <symbol id="oddy-delighted" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1248,7 +1247,7 @@
 <path d="M274 254 Q292 239 310 254" fill="none" stroke="#111" stroke-width="11" stroke-linecap="round"/><path d="M220 364 Q256 400 292 364" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/><circle cx="196" cy="360" r="10" fill="#ff9d91"/><circle cx="316" cy="360" r="10" fill="#ff9d91"/>
 </symbol>
 <symbol id="oddy-happy" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1259,7 +1258,7 @@
 <circle cx="292" cy="255" r="7" fill="#111"/><path d="M221 366 Q256 388 291 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/><circle cx="196" cy="360" r="10" fill="#ff9d91"/><circle cx="316" cy="360" r="10" fill="#ff9d91"/>
 </symbol>
 <symbol id="oddy-idea" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1273,10 +1272,10 @@
       <rect x="20" y="51" width="16" height="12" rx="4" fill="#ffb21f" stroke="#111" stroke-width="6"/>
       <path d="M28 14 L28 4 M10 20 L2 14 M46 20 L54 14" stroke="#ffb21f" stroke-width="8" stroke-linecap="round"/>
     </g>
-    
+
 </symbol>
 <symbol id="oddy-listening" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1287,7 +1286,7 @@
 <circle cx="292" cy="255" r="7" fill="#111"/><path d="M228 366 L284 366" stroke="#111" stroke-width="12" stroke-linecap="round"/>
 </symbol>
 <symbol id="oddy-neutral" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1298,7 +1297,7 @@
 <circle cx="292" cy="255" r="7" fill="#111"/><path d="M221 366 Q256 388 291 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/>
 </symbol>
 <symbol id="oddy-sleepy" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1309,7 +1308,7 @@
 <path d="M274 254 Q292 239 310 254" fill="none" stroke="#111" stroke-width="11" stroke-linecap="round"/><path d="M221 366 Q256 388 291 366" fill="none" stroke="#111" stroke-width="12" stroke-linecap="round"/>
 </symbol>
 <symbol id="oddy-speaking-small" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1320,7 +1319,7 @@
 <circle cx="292" cy="255" r="7" fill="#111"/><circle cx="256" cy="368" r="12" fill="#111"/>
 </symbol>
 <symbol id="oddy-speaking-wide" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1331,7 +1330,7 @@
 <circle cx="292" cy="255" r="7" fill="#111"/><ellipse cx="256" cy="368" rx="18" ry="22" fill="#111"/>
 </symbol>
 <symbol id="oddy-surprised" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1342,7 +1341,7 @@
 <circle cx="292" cy="258" r="5" fill="#111"/><ellipse cx="256" cy="368" rx="18" ry="22" fill="#111"/>
 </symbol>
 <symbol id="oddy-thinking" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1353,7 +1352,7 @@
 <path d="M274 248 Q292 242 310 248" fill="none" stroke="#111" stroke-width="9" stroke-linecap="round"/><circle cx="292" cy="263" r="5" fill="#111"/><path d="M228 366 L284 366" stroke="#111" stroke-width="12" stroke-linecap="round"/>
 </symbol>
 <symbol id="oddy-wink" viewBox="0 0 512 512">
-  
+
   <g fill="none" stroke="#111" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
     <path d="M170 168 C170 184 175 203 181 228 C162 255 150 293 148 345"/>
     <path d="M342 168 C342 184 337 203 331 228 C350 255 362 293 364 345"/>
@@ -1366,7 +1365,7 @@
       <path d="M92 88 L92 64"/><path d="M80 76 L104 76"/>
       <path d="M406 98 L406 78"/><path d="M396 88 L416 88"/>
     </g>
-    
+
 </symbol>
 </defs></svg>
 
@@ -1483,6 +1482,16 @@
       </div>
 
       <div class="qk-label" style="margin-top:0">Studio 3D · one-click Shopify</div>
+      <div class="packbox" style="border:1px solid #e8e4dc;border-radius:14px;padding:12px;margin-bottom:10px">
+        <div class="qk-label" style="margin-top:0">Gift pack — Oddy's game: best gift inside your budget</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="text" id="pack-budget" placeholder="Budget £ e.g. 30" maxlength="8" style="max-width:150px">
+          <button class="btn" id="pack-go" type="button">Build my pack</button>
+        </div>
+        <div id="pack-out" style="margin-top:8px"></div>
+        <div class="panel__msg" id="pack-msg" role="status" aria-live="polite"></div>
+      </div>
+      <div class="etsy" id="pr-gifts"></div>
       <div class="etsy" id="pr-grid"></div>
       <div class="detail-card" id="pr-detail" hidden>
         <h3 id="pr-d-name">—</h3>
@@ -1548,7 +1557,7 @@
     <div class="panel__inner wide">
       <div class="store-head">
         <h2>Videos</h2>
-        <p>Your saved scenes and character performances</p>
+        <p>Your meshes performing — stage clips only. Card scenes live under Cards.</p>
       </div>
       <div style="margin:0 0 10px">
         <a class="btn ghost" href="/stage.html" style="width:auto;display:inline-flex;margin:0">Open live stage (jawOpen lipsync)</a>
@@ -1593,6 +1602,10 @@
     </div>
   </section>
 
+<section class="panel white" data-panel="search" id="panel-search"><div class="panel__inner"></div></section>
+<section class="panel white" data-panel="cart" id="panel-cart"><div class="panel__inner"></div></section>
+<section class="panel white" data-panel="account" id="panel-account"><div class="panel__inner"></div></section>
+<section class="panel white" data-panel="notfound" id="panel-notfound"><div class="panel__inner"></div></section>
   <section class="panel" data-panel="shop" id="panel-shop" aria-label="Shop">
     <div class="panel__inner">
       <h2 class="panel__h">3. Shop</h2>
@@ -1645,7 +1658,7 @@
 
   <script>
     console.log('oddhobb loading...');
-    
+
     // ═══════════════════════════════════════════════════════════
     // CONFIG
     // ═══════════════════════════════════════════════════════════
@@ -1716,7 +1729,7 @@
     } catch(e) { session.bee = BOBDOD; }
     function loadCompanyGraph() {
       return fetch("/backend/api/companygraph?token=" + encodeURIComponent(window.__FIGG_TOKEN || ""))
-        .then(function (r) { return r.json(); }).then(function (d) {
+        .then(function (r) { return window.OddHobbAPI.readJSON(r); }).then(function (d) {
         if (d && d.ok) window.__COMPANY__ = d;
       }).catch(function () {});
     }
@@ -2172,13 +2185,11 @@
       return h;
     }
     function get(u) {
-      return fetch(withTok(u), { headers: authHeaders() })
-        .then(function (r) { return r.json(); });
+      return window.OddHobbAPI.request(withTok(u), { headers: authHeaders() });
     }
     function post(u, b) {
       var h = authHeaders({ "Content-Type": "application/json" });
-      return fetch(withTok(u), { method: "POST", headers: h, body: JSON.stringify(b) })
-        .then(function (r) { return r.json(); });
+      return window.OddHobbAPI.request(withTok(u), { method: "POST", headers: h, body: JSON.stringify(b) });
     }
     function mintSession() {
       var owner = state.owner || "";
@@ -2203,6 +2214,8 @@
     // ── google sign-in round trip ───────────────────────────
     try {
       var qs = new URLSearchParams(location.search);
+      // viral funnel: shared clip ?ref= sticks for signup attribution
+      try { if (qs.get("ref")) localStorage.setItem("pogpet.ref", qs.get("ref")); } catch (e) {}
       var authKey = qs.get("auth");
       if (authKey) {
         if (qs.get("handle")) state.owner = qs.get("handle");
@@ -2226,7 +2239,8 @@
     var gbtn = $("g-signin");
     if (gbtn) gbtn.addEventListener("click", function () {
       gbtn.disabled = true;
-      var t = window.__FIGG_TOKEN ? "?token=" + encodeURIComponent(window.__FIGG_TOKEN) : "";
+      var t = '?return_to='+encodeURIComponent(location.pathname+location.search)+(window.__FIGG_TOKEN?'&token='+encodeURIComponent(window.__FIGG_TOKEN):'');
+      if(!state.apiKey){try{t+='&claim_owner='+encodeURIComponent(state.owner)+'&owner_sig='+encodeURIComponent(localStorage.getItem('pogpet.ownersig')||'');}catch(e){}}
       // probe first so an unconfigured backend explains itself instead of
       // dumping JSON at the user
       fetch("/api/auth/google/start" + t, { redirect: "manual" })
@@ -2235,7 +2249,7 @@
             return r.json().then(function (d) {
               gbtn.disabled = false;
               var w = $("g-who");
-              if (w) { w.hidden = false; w.textContent = d.fix || d.error || "sign-in unavailable"; }
+              if (w) { w.hidden = false; w.textContent = "Sign-in is temporarily unavailable. Your current work is still here."; }
             });
           }
           location.href = "/api/auth/google/start" + t;
@@ -2245,7 +2259,8 @@
 
     // ── tab routing ─────────────────────────────────────────
     var panels = document.querySelectorAll(".panel");
-    function showTab(name) {
+    function showTab(name) { window.OddHobbRouter.navigate(window.OddHobbRouter.pathFor(name)); }
+    function renderTab(name) {
       var g = document.getElementById("greet");
       if (g && !g.classList.contains("hidden")) g.classList.add("hidden");
       if (name === "chat") name = "quick";
@@ -2253,13 +2268,12 @@
       for (var i = 0; i < panels.length; i++) {
         panels[i].classList.toggle("open", panels[i].getAttribute("data-panel") === name);
       }
-      var white = (name === "studio" || name === "products" || name === "cards" || name === "videos" || name === "quick");
-      document.body.classList.toggle("studio-chrome", white);
+      document.body.classList.add("studio-chrome");
       if (name === "shop") loadShop();
-      if (name === "studio") { loadStudio(); loadStudioMeta(); loadAssets(); if (cardStudio) cardStudio.refresh(); }
+      if (name === "studio") { loadStudioMeta(); if (peopleStudio) peopleStudio.open((window.OddHobbRouter.current||{}).subjectId).catch(function(){}); }
       if (name === "products") loadProducts();
       if (name === "cards") { if (cardStudio) cardStudio.open(); }
-      if (name === "videos") { loadVideoFeed(); if (cardStudio) cardStudio.videos(); }
+      if (name === "videos") { loadVideoFeed(); }
       if (name === "upload") loadMe();
       if (name === "quick") initQuickTab();
       if (name === "perform") { loadPerf(); loadPerfHistory(true); }
@@ -2313,16 +2327,10 @@
           ? "Everything below is already active against your mesh — same model, one sculpt, many products."
           : ((s0.blurb || sectionLabel(id)) + " — every card here already features your star.");
       }
-      if (!fromHash) { try { history.replaceState(null, "", "#/s/" + id); } catch (e) {} }
-      var s = SECTIONS.filter(function (x) { return x.id === id; })[0] || SECTIONS[0];
-      if (s.panel === "shop") {
-        var shop = document.querySelector('.panel[data-panel="shop"]');
-        if (shop && shop.classList.contains("open")) applySection();
-        else showTab("shop");
-      } else {
-        showTab(s.panel);
-      }
+      var target=id==='cards'?'/cards':id==='my'?'/studio':'/products'+(id==='all'?'':'?section='+encodeURIComponent(id));
+      if(!fromHash) window.OddHobbRouter.navigate(target);
     }
+
     function applySection() {
       if (!shopLoaded) return;
       var grid = $("shop-grid"); if (!grid) return;
@@ -2369,52 +2377,18 @@
           SECTIONS = d.sections; SECTION_OF = d.section_of || {}; HOST_SECTION = d.host_section || {};
         }
         paintSectionUI();
-        // hash first, then host (a deep link beats the domain default)
-        var m = (location.hash || "").match(/^#\/s\/([a-z-]+)$/);
-        if (m) { setSection(m[1], true); }
-        else {
-          var byHost = HOST_SECTION[location.hostname];
-          if (byHost && !hostRouted) { hostRouted = true; setSection(byHost); }
-        }
+        // Explicit page routes always win over domain/category defaults.
+        var section=(window.OddHobbRouter.current||{}).section;
+        if(section){state.section=section;markSectionUI();}
+
       }).catch(function () { paintSectionUI(); });
     }
-    window.addEventListener("hashchange", function () {
-      var m = (location.hash || "").match(/^#\/s\/([a-z-]+)$/);
-      if (m) setSection(m[1], true);
-      if (location.hash === "#studio") showTab("studio");
-      if (location.hash === "#products") showTab("products");
-      if (location.hash === "#cards") showTab("cards");
-      if (location.hash === "#videos") showTab("videos");
-      if (location.hash === "#quick" || location.hash === "#chat") showTab("quick");
-    });
     window.addEventListener("load", initSections);
     window.addEventListener("load", wireTopbar);
     window.addEventListener("load", initBrand);
     window.addEventListener("load", function () { mintSession(); });
     window.addEventListener("load", function () { loadCompanyGraph(); });
-    window.addEventListener("popstate", function () {
-      var p = location.pathname || "/";
-      if (p === "/products" || p.indexOf("/products/") === 0) showTab("products");
-      else if (p === "/" || p === "/index.html") showTab("quick");
-    });
     var pendingProductLine = null;
-    window.addEventListener("load", function () {
-      var h = location.hash || "";
-      var path = location.pathname || "";
-      var mProd = path.match(/^\/products\/([a-z0-9_]+)/i);
-      if (path === "/products" || mProd) {
-        if (mProd) pendingProductLine = mProd[1];
-        showTab("products");
-        return;
-      }
-      if (h === "#studio") showTab("studio");
-      if (h === "#products") showTab("products");
-      if (h === "#cards") showTab("cards");
-      if (h === "#videos") showTab("videos");
-      if (h === "#quick" || h === "#chat") showTab("quick");
-      else if (!h || h === "#" || h === "#/") showTab("quick");
-    });
-
     // ── multi-brand: same app, many storefronts ──────────────────────────
     // Brand strings live on the server (GET /api/brand answers per request
     // Host). The page ships painted as oddhobb (the fallback) and repaints
@@ -2424,7 +2398,7 @@
     function applyBrand(b) {
       if (!b || !b.brand) return;
       window.__BRAND__ = b;
-      document.title = b.brand + " — Upload your pet, get free videos";
+      // Page title is owned by the router.
       var marks = document.querySelectorAll(".pogboot__mark, .greet__mark, .topbar__brand");
       for (var i = 0; i < marks.length; i++) marks[i].innerHTML = b.brand + "<i>.</i>";
       var here = document.querySelector(".switcher a.here span");
@@ -2460,6 +2434,7 @@
           if (!state.q) applySection();
         });
         q.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { e.preventDefault(); var query=q.value.trim(); window.OddHobbRouter.navigate('/search?q='+encodeURIComponent(query)); runSearchDrop(''); }
           if (e.key === "Escape") {
             q.value = ""; state.q = "";
             runSearchDrop("");
@@ -2468,14 +2443,10 @@
         });
       }
       var ab = $("acct-btn");
-      if (ab) ab.onclick = function () {
-        var g = document.getElementById("greet");
-        if (g) g.classList.remove("hidden");
-      };
+      if (ab) ab.onclick = function () { siteShell.openAccount(); };
       var cb = $("cart-btn");
       if (cb) cb.onclick = function () {
-        showTab("shop");
-        msg("shop-msg", "Cart isn't wired up yet — that's Stripe, which still needs keys.", "");
+        showTab("cart");
       };
       var hq = $("hero-q"), hg = $("hero-go");
       if (hq && hg) hg.onclick = function () {
@@ -2565,7 +2536,7 @@
           });
         });
       });
-      if (row.live) score += 0.5;
+      if (score > 0 && row.live) score += 0.5;
       return score;
     }
 
@@ -2599,8 +2570,7 @@
         '</div>';
       tile.addEventListener("click", function () {
         if (r.kind === "card") {
-          showTab("cards");
-          selectCard(r.id);
+          window.OddHobbRouter.navigate("/cards/" + encodeURIComponent(r.id));
         } else if (r.kind === "print") {
           showTab("products");
           prPrintSel = r.id;
@@ -2667,6 +2637,7 @@
       return abs + (abs.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(tok);
     }
     function loadMe() {
+      if(peopleStudio) return peopleStudio.refresh();
       get(API + "/me?owner=" + encodeURIComponent(state.owner))
         .then(function (d) {
           if (!d.ok) return;
@@ -2914,7 +2885,7 @@
       fd.append("photo", file, file.name);
       fd.append("owner", state.owner);
       fetch(API + "/photos", { method: "POST", body: fd })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { return window.OddHobbAPI.readJSON(r); })
         .then(function (d) {
           if (!d.ok) { msg("up-msg", d.error || "Upload failed.", "err"); stat("up-status", ""); return; }
           state.photoId = d.photo.id;
@@ -3067,35 +3038,7 @@
       return "/img/prod/chibi-figure-hook.glb";
     }
 
-    function loadStudio() {
-      get(API + "/flow?owner=" + encodeURIComponent(state.owner))
-        .then(function (f) {
-          if (!f.ok) { msg("stv-msg", f.error || "Studio unavailable.", "err"); return; }
-          // roster = demos (dog + bricks) + owner installed meshes
-          return get(API + "/studio?owner=" + encodeURIComponent(state.owner))
-            .then(function (d) {
-              if (!d.ok) { msg("stv-msg", d.error || "Studio unavailable.", "err"); return; }
-              stv.meshes = d.meshes || [];
-              stv.calling = d.calling_card || stv.calling;
-              stv.flow = f;
-              stv.slots = studioSlots();
-              stv.idx = 0;
-              var activeId = d.active_mesh_id || f.active_mesh_id || "";
-              if (activeId) {
-                for (var i = 0; i < stv.slots.length; i++) {
-                  if (stv.slots[i].mesh_id === activeId) { stv.idx = i; break; }
-                }
-              }
-              paintCarousel();
-              paintRoster();
-              mountViewer(stv.slots[stv.idx]);
-              paintActiveTag();
-              stv.ready = true;
-              paintPhotos(f);
-            });
-        })
-        .catch(function () { msg("stv-msg", "Backend unreachable.", "err"); });
-    }
+    function loadStudio() { if(peopleStudio) return peopleStudio.refresh(); }
 
     function paintRoster() {
       var host = $("stv-roster"); if (!host) return;
@@ -3118,29 +3061,7 @@
       paintFriends();
     }
 
-    function paintFriends() {
-      // Top conveyor: installed friends only (demos stay in the carousel below).
-      // Tapping one makes them the active star — products, cards, videos follow.
-      var host = $("friends");
-      if (!host || !stv.slots) return;
-      host.innerHTML = "";
-      stv.slots.forEach(function (s, i) {
-        if (!s || s.demo) return;
-        var b = document.createElement("button");
-        b.type = "button";
-        b.className = "friend" + (i === stv.idx ? " on" : "");
-        b.setAttribute("role", "option");
-        b.setAttribute("aria-selected", i === stv.idx ? "true" : "false");
-        b.innerHTML =
-          '<img src="' + s.portrait + '" alt="' + s.label + '" loading="lazy">' +
-          '<div class="nm">' + s.label + "</div>";
-        b.addEventListener("click", function () {
-          setStudioMesh(i);
-          b.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-        });
-        host.appendChild(b);
-      });
-    }
+    function paintFriends() {}
 
     function paintActiveTag() {
       var el = $("stv-active-tag");
@@ -3160,7 +3081,8 @@
       if (!left || !right) return;
       left.innerHTML = "";
       right.innerHTML = "";
-      var n = stv.slots.length || 1;
+      if(!stv.slots.length) return;
+      var n = stv.slots.length;
       var prev = (stv.idx - 1 + n) % n;
       var next = (stv.idx + 1) % n;
       function slotBtn(i, host) {
@@ -3185,9 +3107,11 @@
 
     function mountViewer(slot) {
       var v = $("stv-viewer");
-      if (!v || !slot || !slot.glb_url) return;
+      if(!v)return;
+      if(!slot||!slot.glb_url){v.removeAttribute('src');return;}
       var src = slot.glb_url;
-      if (src.charAt(0) === "/" && src.indexOf("/img/") !== 0) src = art(src);
+      if (src.indexOf("/backend/") === 0) {}
+      else if (src.charAt(0) === "/" && src.indexOf("/img/") !== 0) src = art(src);
       else if (src.charAt(0) === "/") src = withTok(src);
       if (v.getAttribute("src") !== src) v.setAttribute("src", src);
     }
@@ -3197,6 +3121,7 @@
       if (!stv.slots.length) return;
       stv.idx = (i + stv.slots.length) % stv.slots.length;
       var s = stv.slots[stv.idx];
+      if(peopleStudio) peopleStudio.rememberMesh(s.mesh_id);
       mountViewer(s);
       paintCarousel();
       // Looking at a real mesh = it IS the active star for Products.
@@ -3204,19 +3129,8 @@
       if (!s.demo && s.mesh_id) {
         state.meshId = s.mesh_id;
         try { localStorage.setItem("pogpet.mesh", s.mesh_id); } catch (e) {}
-        post(API + "/me/active", { owner: state.owner, mesh_id: s.mesh_id })
-          .then(function (d) {
-            if (d && d.ok) {
-              state.meshId = d.active_mesh_id;
-              s.active = true;
-              msg("stv-msg", s.label + " is now your active star.", "ok");
-              // refresh products when user leaves studio
-              if ($("panel-products") && $("panel-products").classList.contains("open")) loadProducts && loadProducts();
-            } else if (d && d.error) {
-              msg("stv-msg", d.error, "err");
-            }
-          })
-          .catch(function () {});
+        s.active=true;
+        paintActiveTag();
       } else if (s.demo) {
         msg("stv-msg", s.label + " — preview. Use Add brick to install it.", "");
       }
@@ -3327,9 +3241,117 @@
       if (dm) dm.textContent = "✓ " + label + " · studio active mesh";
     }
 
+    var packWired = false;
+    function wirePack() {
+      if (packWired) return; packWired = true;
+      var go = $("pack-go");
+      if (!go) return;
+      go.addEventListener("click", function () {
+        var raw = ($("pack-budget") || {}).value || "";
+        var pounds = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
+        if (!(pounds > 0)) { msg("pack-msg", "Tell Oddy the budget first — e.g. 30.", "err"); return; }
+        msg("pack-msg", "Oddy is building your pack…", "");
+        post(API + "/gift-packs", { owner: state.owner, budget_cents: Math.round(pounds * 100), mesh_id: state.meshId || "" })
+          .then(function (d) {
+            if (!d.ok) { msg("pack-msg", d.error || "No pack fits that budget.", "err"); return; }
+            var p = d.pack, out = $("pack-out");
+            function row(label, price) {
+              return '<div style="font-size:13px;padding:4px 0">' + label + ' · <strong>' + money(price) + '</strong></div>';
+            }
+            var html = "";
+            if (p.physical) html += row("📦 " + (p.physical.label || p.physical.line), p.physical.price_cents);
+            if (p.card) html += row("💌 Card (" + p.card.format + ")", p.card.price_cents);
+            if (p.video) html += row("🎬 " + p.video.label + " (free)", 0);
+            html += '<div style="font-size:13px;color:#8a6a2f">Total ' + money(p.total_cents) + ' · ' + money(p.remaining_cents) + ' left over</div>';
+            html += '<button class="btn" id="pack-reserve" type="button" style="margin-top:8px">Reserve the physical part</button>';
+            out.innerHTML = html;
+            msg("pack-msg", "", "");
+            var rb = $("pack-reserve");
+            if (rb && p.physical) rb.addEventListener("click", function () {
+              post(API + "/products/order", { owner: state.owner, line: p.physical.line, mesh_id: p.mesh_id || state.meshId || "", qty: 1 })
+                .then(function (o) { msg("pack-msg", o.ok ? "Reserved · " + ((o.order || {}).id || "") + ". Card + video next in Cards." : (o.error || "Failed"), o.ok ? "ok" : "err"); })
+                .catch(function (e) { msg("pack-msg", e.message || String(e), "err"); });
+            });
+          })
+          .catch(function (e) { msg("pack-msg", e.message || String(e), "err"); });
+      });
+    }
+    function paintDemoGifts(demo) {
+      var grid = $("pr-gifts");
+      if (!grid || !demo) return;
+      grid.innerHTML = "";
+      var head = document.createElement("div");
+      head.className = "qk-label";
+      head.style.marginTop = "0";
+      head.textContent = "Meet " + demo.name + " — try the shelf with our demo friend";
+      grid.appendChild(head);
+      if (demo.photo && demo.photo.url) {
+        var im = document.createElement("img");
+        im.src = art(demo.photo.url);
+        im.alt = demo.name + " original photo";
+        im.loading = "lazy";
+        im.style.cssText = "width:96px;height:96px;object-fit:cover;border-radius:50%;display:block;margin:4px 0 8px";
+        grid.appendChild(im);
+      }
+      (demo.gifts || []).slice(0, 6).forEach(function (g) {
+        var it = itemById(g.line);
+        var tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "etsy__tile";
+        var img = (it && it.stills && (it.stills.hero || it.stills.front)) || "";
+        tile.innerHTML =
+          '<div class="etsy__badges"><span class="etsy__badge gold">Demo · ' + demo.name + '</span></div>' +
+          (img ? '<img class="etsy__img" src="' + img + '" alt="" loading="lazy">' : '') +
+          '<div class="etsy__body">' +
+            '<div class="etsy__name">' + g.label + '</div>' +
+            '<div class="etsy__meta">' + g.reason + '</div>' +
+          '</div>';
+        tile.addEventListener("click", function () {
+          if (itemById(g.line)) selectProduct(g.line);
+        });
+        grid.appendChild(tile);
+      });
+    }
+    function paintGifts(d) {      var grid = $("pr-gifts");
+      if (!grid) return;
+      grid.innerHTML = "";
+      var gifts = (d && d.gifts) || [];
+      var who = (d && d.subject && d.subject.name) || "";
+      if (!gifts.length) {
+        // new visitor, no friend yet: meet Nibble, the demo friend
+        get(API + "/studio/demo").then(function (dd) {
+          if (dd && dd.ok && dd.demo) paintDemoGifts(dd.demo);
+        }).catch(function () {});
+        return;
+      }
+      var head = document.createElement("div");
+      head.className = "qk-label";
+      head.style.marginTop = "0";
+      head.textContent = who ? "For " + who + " — derived from your friend" : "For your star";
+      grid.appendChild(head);
+      gifts.slice(0, 6).forEach(function (g) {
+        var it = itemById(g.line);
+        var tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = "etsy__tile";
+        var img = (it && it.stills && (it.stills.hero || it.stills.front)) || "";
+        tile.innerHTML =
+          '<div class="etsy__badges"><span class="etsy__badge gold">For ' + who + '</span></div>' +
+          (img ? '<img class="etsy__img" src="' + img + '" alt="" loading="lazy">' : '') +
+          '<div class="etsy__body">' +
+            '<div class="etsy__name">' + g.label + '</div>' +
+            '<div class="etsy__meta">' + g.reason + '</div>' +
+          '</div>';
+        tile.addEventListener("click", function () {
+          if (itemById(g.line)) selectProduct(g.line);
+          if (g.method === "name" && g.text) msg("pr-msg", g.reason + " — text: " + g.text, "");
+        });
+        grid.appendChild(tile);
+      });
+    }
     function loadProducts() {
       stat("pr-status", "loading products…");
-      get(API + "/products/studio?owner=" + encodeURIComponent(state.owner))
+      return get(API + "/products/studio?owner=" + encodeURIComponent(state.owner))
         .then(function (d) {
           if (!d.ok) { stat("pr-status", ""); msg("pr-msg", d.error || "Products unavailable.", "err"); return; }
           pr.items = d.items || [];
@@ -3358,6 +3380,8 @@
           }
           paintMeshChip();
           paintProductGrid();
+          paintGifts(d);
+          wirePack();
           if (typeof loadPrints === "function") loadPrints();
           selectProduct(pr.sel, { silent: true });
           stat("pr-status", pr.items.length + " lines · " + (pr.activeMesh || state.meshId || "canonical mesh"));
@@ -3538,6 +3562,8 @@
       }
       cb.innerHTML = "";
       var coats = it.assets.coats || [];
+      // lines with no real coat options (jibbits and the like) get no row at all
+      cb.style.display = coats.filter(function (c) { return c.id !== "none"; }).length ? "" : "none";
       if (coats.length > 1) {
         var lab = document.createElement("div");
         lab.style.cssText = "width:100%;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a6a2f;margin:8px 0 4px";
@@ -3559,6 +3585,7 @@
       var hb = $("pr-hats"); if (!hb) return;
       hb.innerHTML = "";
       var hats = it.assets.hats || [];
+      hb.style.display = hats.filter(function (h) { return h.id !== "none"; }).length ? "" : "none";
       if (hats.length > 1) {
         var hlab = document.createElement("div");
         hlab.style.cssText = "width:100%;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a6a2f;margin:8px 0 4px";
@@ -3584,6 +3611,7 @@
     function productMeshUrl(it) {
       if (!it) return "";
       if (it.id === "brick") return "/img/prod/brick-figure.glb";
+      if (it.id === "clog_charm") return it.glb_url || "/img/prod/nibble-jibbit.glb";
       if (it.id !== "ornament" && it.id !== "keychain" && it.id !== "croc_tag") return "";
       var hat = (pr.hat && pr.hat !== "none") ? pr.hat : "";
       var coat = (pr.coat && pr.coat !== "none") ? pr.coat : "";
@@ -4765,6 +4793,7 @@
               '<div class="feed__topic">' + (item.topic || item.scene || "") + '</div>' +
               '<div class="feed__scene">' + (item.scene || "video") +
                 (item.duration ? " · " + Math.round(item.duration) + "s" : "") + '</div>' +
+              (item.id ? '<button class="feed__share" type="button" data-share="' + item.id + '">Share →</button><span class="feed__sharemsg" aria-live="polite"></span>' : '') +
             '</div></div>' +
           '</div>';
         host.appendChild(slide);
@@ -4837,6 +4866,22 @@
           }
         });
       }, { threshold: [0, 0.55, 0.75, 1], root: host });
+      host.querySelectorAll("[data-share]").forEach(function (b) {
+        b.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var vid = b.getAttribute("data-share");
+          var note = b.parentNode.querySelector(".feed__sharemsg");
+          post(API + "/videos/" + encodeURIComponent(vid) + "/share", {})
+            .then(function (d) {
+              var url = location.origin + (d.share_url || ("/videos/" + vid));
+              function done(t) { if (note) note.textContent = t; }
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(function () { done("Link copied — send it, signup installs starter meshes."); }, function () { done(url); });
+              } else { done(url); }
+            })
+            .catch(function (err) { if (note) note.textContent = err.message || String(err); });
+        });
+      });
       host.querySelectorAll(".feed__slide").forEach(function (s) { vf.obs.observe(s); });
 
       // keyboard
@@ -4871,95 +4916,8 @@
     }
 
     // ── studio photos gallery (uploads + mesh portraits) ──
-    function loadAssets() {
-      var grid = $("as-grid"); if (!grid) return;
-      stat("as-status", "loading photos…");
-      get(API + "/flow?owner=" + encodeURIComponent(state.owner))
-        .then(function (f) {
-          if (!f.ok) { stat("as-status", ""); return; }
-          stv.flow = f;
-          paintPhotos(f);
-        })
-        .catch(function () {
-          get(API + "/me?owner=" + encodeURIComponent(state.owner))
-            .then(function (d) {
-              if (!d.ok) { stat("as-status", ""); return; }
-              paintAssets(d);
-              stat("as-status", (d.pogs || []).length + " meshes");
-            })
-            .catch(function () { stat("as-status", ""); });
-        });
-    }
+    function loadAssets() { if(peopleStudio) return peopleStudio.refresh(); }
 
-    function paintAssets(d) {
-      // fallback when /flow is unavailable — mesh thumbs only
-      var grid = $("as-grid"); if (!grid) return;
-      grid.innerHTML = "";
-      var pogs = d.pogs || [];
-      if (!pogs.length) {
-        grid.innerHTML = '<div class="photo-empty">No meshes yet — sculpt in Upload.</div>';
-        return;
-      }
-      var html = "";
-      pogs.forEach(function (p) {
-        var src = p.photo_key ? art("/api/artifacts/" + p.photo_key) : stv.calling;
-        var label = shortName(p.mesh_id);
-        if (p.active) label = "★ " + label;
-        html += '<figure class="photo">' +
-          '<img src="' + src + '" alt="" loading="lazy">' +
-          '<figcaption class="meta"><b>' + label + '</b>' + p.status + '</figcaption></figure>';
-      });
-      grid.innerHTML = html;
-    }
-
-    var asAi = $("as-ai");
-    if (asAi) asAi.addEventListener("click", function () {
-      stat("as-status", "asking the model to tag people…");
-      get(API + "/me?owner=" + encodeURIComponent(state.owner))
-        .then(function (d) {
-          var pogs = (d && d.pogs) || [];
-          var names = [];
-          try { names = Object.values(JSON.parse(localStorage.getItem("pogpet.names") || "{}")); } catch (e) {}
-          var promptTxt = "Given these pet/character labels already in use: " +
-            (names.join(", ") || "(none)") +
-            ". Suggest short pet/person names for new uploads. Reply JSON array of {mesh_id, name} using mesh ids: " +
-            pogs.map(function (p) { return p.mesh_id; }).join(", ");
-          return fetch('/api/ai/cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              messages: [
-                { role: "system", content: "Reply ONLY a JSON array." },
-                { role: "user", content: promptTxt }
-              ],
-              max_tokens: 200, temperature: 0.4
-            })
-          }).then(function (r) { return r.json(); });
-        })
-        .then(function (res) {
-          if (!(res && res.success && res.result)) throw new Error("no model");
-          var raw = res.result.response || "";
-          var m = raw.match(/\[[\s\S]*\]/);
-          var arr = m ? JSON.parse(m[0]) : [];
-          var map = {};
-          try { map = JSON.parse(localStorage.getItem("pogpet.names") || "{}"); } catch (e) {}
-          arr.forEach(function (row) {
-            if (row && row.mesh_id && row.name) map[row.mesh_id] = String(row.name).slice(0, 40);
-          });
-          localStorage.setItem("pogpet.names", JSON.stringify(map));
-          stat("as-status", "");
-          msg("as-msg", "Tagged " + Object.keys(map).length + " characters", "ok");
-          loadAssets();
-        })
-        .catch(function () {
-          stat("as-status", "");
-          msg("as-msg", "Model unavailable — name them manually.", "");
-        });
-    });
-    var asRefresh = $("as-refresh");
-    if (asRefresh) asRefresh.addEventListener("click", loadAssets);
-
-    // ── studio tab (video, secondary) ─────────────────────
     var metaLoaded = false;
     function loadStudioMeta() {
       if (metaLoaded) return; metaLoaded = true;
@@ -5293,11 +5251,7 @@
       return cardSession;
     }
     var cardStudio = window.OddHobbCards({
-      tab: function (name) {
-        var button = document.querySelector('.tab[data-tab="' + name + '"]');
-        if (button) button.click();
-        location.hash = name;
-      },
+      tab: function (name) { showTab(name); },
       ready: cardReady,
       get: function (path) {
         return get(API + path + (path.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner))
@@ -5318,42 +5272,60 @@
         return cardReady().then(function () {
           var fd = new FormData(); fd.append("photo", file, file.name); fd.append("owner", state.owner);
           return fetch(withTok(API + "/photos"), {method:"POST",headers:authHeaders(),body:fd})
-            .then(function (r) { return r.json(); })
+            .then(function (r) { return window.OddHobbAPI.readJSON(r); })
             .then(function (d) { if (!d.ok) throw new Error(d.error || "Upload failed"); return d; });
         });
       }
     });
-    window.addEventListener("load", function () { cardReady().then(function () {
-      try {
-        var panel = document.querySelector('#panel-cards .panel__inner');
-        if (panel && window.OddHobbGallery) {
-          window.OddHobbGallery.mount(panel, {
-            get: function (path) {
-              return get(API + path + (path.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner))
-                .then(function (d) { if (!d.ok) throw new Error(d.error || "Request failed"); return d; });
-            },
-            post: function (path, body) {
-              body.owner = state.owner;
-              return post(API + path, body).then(function (d) { if (!d.ok) throw new Error(d.error || "Request failed"); return d; });
-            },
-            asset: function (path) {
-              var u = path.indexOf("/api/") === 0 ? "/backend" + path : API + path;
-              u += (u.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner);
-              try { u += "&owner_sig=" + encodeURIComponent(localStorage.getItem("pogpet.ownersig") || ""); } catch (e) {}
-              if (state.apiKey) u += "&api_key=" + encodeURIComponent(state.apiKey);
-              return withTok(u);
-            }
-          });
-        }
-      } catch (e) {}
-      cardStudio.refresh(); if (location.hash === "#cards") cardStudio.open();
-    }).catch(function () {}); });
+    function studioAsset(path){var u=path.indexOf('/api/')===0?'/backend'+path:API+path;u+=(u.indexOf('?')>=0?'&':'?')+'owner='+encodeURIComponent(state.owner);try{u+='&owner_sig='+encodeURIComponent(localStorage.getItem('pogpet.ownersig')||'');}catch(e){}if(state.apiKey)u+='&api_key='+encodeURIComponent(state.apiKey);return withTok(u);}
+    var studioReadiness=null;
+    function studioReady(){
+      if(!studioReadiness)studioReadiness=get(API+'/studio/status').then(function(d){
+        if(!d.ok||d.contract!=='oddhobb.studio.v2'){var e=Error('The photo library is temporarily unavailable. Please try again shortly.');e.code='studio_version_mismatch';throw e;}
+      }).catch(function(e){studioReadiness=null;throw e;});
+      return studioReadiness.then(cardReady);
+    }
+    var peopleStudio = window.OddHobbPeople({
+      ready:studioReady,
+      get:function(path){return get(API+path+(path.indexOf('?')>=0?'&':'?')+'owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
+      post:function(path,body){body.owner=state.owner;return post(API+path,body).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
+      asset:studioAsset,
+      upload:function(file){return cardReady().then(function(){var fd=new FormData();fd.append('photo',file,file.name);fd.append('owner',state.owner);return fetch(withTok(API+'/photos'),{method:'POST',headers:authHeaders(),body:fd}).then(function(r){return window.OddHobbAPI.readJSON(r);}).then(function(d){if(!d.ok)throw Error(d.error||'Upload failed');return d;});});},
+      meshId:function(){return state.meshId||'';},
+      clearMesh:function(){state.meshId='';pr.activeMesh='';try{localStorage.removeItem('pogpet.mesh');}catch(e){}},
+      renderMeshes:function(meshes,preferred){
+        var meta=meshes.filter(function(m){return m.status==='succeeded';});
+        stv.slots=meta.map(function(m,i){var keys=JSON.parse(m.thumb_keys||'[]');return {mesh_id:m.id,label:shortName(m.id),glb_url:m.glb_key?studioAsset('/api/artifacts/'+m.glb_key):'',portrait:keys[0]?studioAsset('/api/artifacts/'+keys[0]):studioAsset('/api/studio/photos/'+m.photo_id+'/image?size=480'),demo:false,n:i+1};});
+        stv.idx=Math.max(0,stv.slots.findIndex(function(m){return m.mesh_id===preferred;}));
+        $('stv').hidden=!stv.slots.length;$('stv-roster').hidden=!stv.slots.length;
+        $('studio-mesh-empty').hidden=!!stv.slots.length;
+        $('studio-mesh-empty').textContent=meshes.length?'Your character is '+(meshes[0].status||'processing')+'. Refresh to check its progress.':'No meshes for this friend yet. Choose one of their photos to create a character.';
+        ['stv-brick','stv-brick2'].forEach(function(id){if($(id))$(id).hidden=true;});
+        if(stv.slots.length){state.meshId=stv.slots[stv.idx].mesh_id;pr.activeMesh=state.meshId;paintCarousel();mountViewer(stv.slots[stv.idx]);}
+        else{$('stv-viewer').removeAttribute('src');$('stv-roster').replaceChildren();}
+      }
+    });
+    var siteShell = window.OddHobbShell({ready:studioReady,
+      get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
+      loadProducts:loadProducts,search:rankSearch,searchTile:paintSearchTile});
+    window.addEventListener('load',function(){
+      window.OddHobbRouter.start(function(route){
+        if(route.tab==='products')pendingProductLine=route.id||null;
+        renderTab(route.tab);
+        var drop=$('search-drop');if(drop)drop.classList.remove('open');
+        if(route.tab==='search'){if($('qsearch'))$('qsearch').value=route.q;siteShell.search(route.q);}
+        if(route.tab==='cart')siteShell.cart();
+        if(route.tab==='notfound'){$('panel-notfound').querySelector('.panel__inner').textContent='Page not found. Use the navigation to return to Studio or browse products.';}
+        if(route.tab==='cards'&&route.id){cardStudio.openDesign(route.id).then(function(){var t=document.querySelector('#panel-cards details.oc-tinkerer');if(t)t.open=true;}).catch(function(){});}
+        if(route.tab==='videos'&&route.id){loadVideoFeed();}
+      });
+      cardReady().then(function(){return peopleStudio.refresh();}).catch(function(e){msg('stv-msg',e.message,'err');});
+    });
 
     // First paint: resolve who we are and which pog is active, so every tab
     // (studio, shop, perform) has a mesh to work with without visiting the
     // spotlight first. state.meshId from localStorage is only a hint.
-    if (document.readyState === "complete") loadMe();
-    else window.addEventListener("load", function () { loadMe(); });
+    // Studio library restores subject and mesh context once the session is ready.
     if (state.meshId) stat("up-status", "previous sculpt remembered");
   })();
   </script>

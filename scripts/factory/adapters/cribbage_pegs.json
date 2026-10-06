@@ -1,0 +1,25 @@
+{
+  "line": "cribbage_pegs",
+  "base": "masters/cribbage_peg.stl",
+  "surface": {
+    "origin_mm": [
+      0,
+      0,
+      20
+    ],
+    "normal": [
+      0,
+      0,
+      1
+    ],
+    "width_mm": 8,
+    "height_mm": 8,
+    "embed_mm": 0.4
+  },
+  "text": {
+    "size_mm": 0,
+    "depth_mm": 0.0,
+    "max_chars": 0,
+    "auto_fit": true
+  }
+}

@@ -67,6 +67,25 @@ def _err(message: str, code: int):
     return jsonify({"ok": False, "error": message}), code
 
 
+from werkzeug.exceptions import HTTPException
+
+
+@app.errorhandler(HTTPException)
+def api_http_error(error):
+    if not request.path.startswith('/api/'):
+        return error
+    return _err('API route unavailable' if error.code == 404 else error.name,
+                error.code or 500)
+
+
+@app.errorhandler(Exception)
+def api_unexpected_error(error):
+    if not request.path.startswith('/api/'):
+        raise error
+    app.logger.exception('API request failed')
+    return _err('Service temporarily unavailable', 500)
+
+
 # ── owner signatures (audit H1) ──────────────────────────────────────
 # Browser visitors used to be able to POST owner=<anyone> and burn that
 # owner's free sculpt/video credits. Writes now need either a real user
@@ -253,7 +272,10 @@ def list_meshes():
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
-    limit = min(int(request.args.get("limit", "10") or 10), 50)
+    try:
+        limit = min(int(request.args.get("limit", "10") or 10), 50)
+    except (TypeError, ValueError):
+        return _err("limit must be a number", 400)
     with db.connect() as c:
         rows = c.execute(
             "SELECT m.* FROM meshes m JOIN photos p ON p.id=m.photo_id"
@@ -328,6 +350,76 @@ def _suggest_motif(interests: list) -> dict | None:
         if motifs:
             return {"interest": key, "motif": motifs[0], "motifs": motifs}
     return None
+
+
+# Friend archetypes -> product derivations. The friend is the input,
+# products are outputs: pets become minis, people get their name on things.
+# Advisory ordering only — checkout never assumes; the customer confirms.
+_PET_LINES = ["croc_tag", "clog_charm", "ornament", "keychain", "brick", "brick_keychain"]
+_PERSON_LINES = ["golf_marker", "book_holder", "dart_stand", "line_reader",
+                 "card_rack", "tcg_stand", "rummy_rack", "domino_racks"]
+
+
+def _derive_gifts(subject: dict, mesh_id: str) -> list[dict]:
+    """Rank product lines for one friend. Pets -> mini figure lines (their
+    mesh is the gift); people -> name-emboss lines + cards. Birthday soon
+    pulls cards and gift card to the top. Nibble/Dad/Mum are just friends —
+    kind + name + interests do the work, no hardcoded people."""
+    name = (subject.get("name") or "").strip()
+    interests = subject.get("interests", []) or []
+    birthday = (subject.get("birthday") or "").strip()
+    gifts: list[dict] = []
+    # Anyone with a mesh can be a mini — pets and people alike. Nibble the
+    # dog and Dad the human take the same path; the mesh is the gift.
+    if mesh_id:
+        who = name or "your star"
+        for lid in _PET_LINES:
+            spec = config.STUDIO_LINES.get(lid) or {}
+            if spec.get("status") != "live":
+                continue
+            gifts.append({"line": lid, "label": spec.get("label", lid),
+                          "method": "mini",
+                          "reason": f"mini {who} — their mesh is the gift",
+                          "mesh_id": mesh_id})
+    # Anyone with a name can have it put on things — golf balls for Dad,
+    # book holders for Mum, same engine.
+    if name:
+        for lid in _PERSON_LINES:
+            spec = config.STUDIO_LINES.get(lid) or {}
+            if spec.get("status") != "live":
+                continue
+            zone_max = ((spec.get("personalization") or {}).get("max_chars")) or 0
+            # never truncate silently: Oddy asks when the name won't fit
+            fits = not zone_max or len(name) <= zone_max
+            gifts.append({"line": lid, "label": spec.get("label", lid),
+                          "method": "name",
+                          "reason": f"for {name} — their name on it",
+                          "text": name if fits else "",
+                          "fits": fits,
+                          "needs_shorten": not fits})
+        gifts.append({"line": "gift_card", "label": "Gift card",
+                      "method": "credit",
+                      "reason": f"for {name} — credit toward anything",
+                      "text": ""})
+    try:
+        import datetime as _dt
+        if birthday and len(birthday) >= 5:
+            today = _dt.date.today()
+            nxt = _dt.date(today.year, int(birthday[:2]), int(birthday[3:5]))
+            if nxt < today:
+                nxt = _dt.date(today.year + 1, int(birthday[:2]), int(birthday[3:5]))
+            if 0 <= (nxt - today).days <= 45:
+                gifts.insert(0, {"line": "gift_card", "label": "Gift card",
+                                 "method": "credit",
+                                 "reason": f"{name}'s birthday is soon",
+                                 "text": ""})
+    except (ValueError, IndexError):
+        pass
+    motif = _suggest_motif(interests)
+    if motif:
+        for g in gifts:
+            g["motif"] = motif["motif"]
+    return gifts
 
 
 @app.get("/api/subjects/profiles")
@@ -1552,90 +1644,21 @@ def _dhash(img) -> int:
 
 @app.post("/api/photos/autosort")
 def photos_autosort():
-    """Group an owner's uploads into *people* by perceptual similarity.
-
-    v1 = difference-hash clustering (free, local, PIL-only): near-identical
-    photos of the same subject land in the same group and get an auto label
-    ("Person 1"…). Groups come back `needs_name` so the UI can ask
-    "who's this?" — the answer goes to POST /api/people/rename and sticks to
-    the profile (custom gifting seed).
-    """
-    owner = (request.args.get("owner") or request.form.get("owner")
-             or "anon").strip()[:80]
-    denied = _owner_denied(owner)
-    if denied is not None:
-        return denied
+    """Legacy view of explicit labels only. Image hashes cannot identify people."""
+    owner=(request.args.get("owner") or request.form.get("owner") or "anon").strip()[:80]
+    denied=_owner_denied(owner)
+    if denied is not None: return denied
     with db.connect() as c:
-        rows = [dict(r) for r in c.execute(
-            "SELECT id,sha256,r2_key,person,mime FROM photos WHERE owner=?"
-            " ORDER BY created_at", (owner,))]
-    if not rows:
-        return jsonify({"ok": True, "owner": owner, "groups": [], "count": 0})
-
-    def pixel_hash(r):
-        path = config.LOCAL_TMP / f"ph_{r['sha256'][:40]}.img"
-        if not path.exists():
-            try:
-                storage.get(r["r2_key"], path)
-            except storage.StorageError:
-                return None
-        try:
-            return _dhash(Image.open(path))
-        except Exception:  # noqa: BLE001
-            return None
-
-    hs = [pixel_hash(r) for r in rows]
-    # union-find with hamming <= 12 (same subject, different crops/lighting)
-    parent = list(range(len(rows)))
-
-    def find(i):
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
-
-    for i in range(len(rows)):
-        for j in range(i + 1, len(rows)):
-            if hs[i] is None or hs[j] is None:
-                continue
-            if (hs[i] ^ hs[j]).bit_count() <= 12:
-                ri, rj = find(i), find(j)
-                if ri != rj:
-                    parent[ri] = rj
-
-    clusters: dict[int, list[int]] = {}
-    for i in range(len(rows)):
-        clusters.setdefault(find(i), []).append(i)
-
-    # label: keep existing person labels; auto-label the rest
-    auto_n = 0
-    groups = []
-    with db.connect() as c:
-        mesh_by_photo = {r["photo_id"]: r["id"] for r in c.execute(
-            "SELECT id, photo_id FROM meshes WHERE photo_id IS NOT NULL")}
-        for members in clusters.values():
-            persons = {rows[i]["person"] for i in members if rows[i]["person"]}
-            if persons:
-                label = sorted(persons)[0]
-                needs_name = False
-            else:
-                auto_n += 1
-                label = f"Person {auto_n}"
-                needs_name = True
-                for i in members:
-                    c.execute("UPDATE photos SET person=? WHERE id=?",
-                              (label, rows[i]["id"]))
-            groups.append({
-                "person": label, "needs_name": needs_name,
-                "photos": [{"id": rows[i]["id"], "mime": rows[i]["mime"],
-                            "r2_key": rows[i]["r2_key"],
-                            "has_mesh": rows[i]["id"] in mesh_by_photo,
-                            "mesh_id": mesh_by_photo.get(rows[i]["id"])}
-                           for i in members],
-            })
-    groups.sort(key=lambda g: g["person"])
-    return jsonify({"ok": True, "owner": owner, "groups": groups,
-                    "count": len(rows)})
+        rows=[dict(r) for r in c.execute("SELECT id,r2_key,person,mime FROM photos WHERE owner=? ORDER BY created_at",(owner,))]
+        meshes={r["photo_id"]:r["id"] for r in c.execute("SELECT m.id,m.photo_id FROM meshes m JOIN photos p ON p.id=m.photo_id WHERE p.owner=?",(owner,))}
+    groups={}
+    for row in rows:
+        name=row["person"] or ""
+        if re.fullmatch(r"Person\s+\d+",name,re.I): name=""
+        key=name or row["id"]
+        g=groups.setdefault(key,{"person":name or "Unassigned","needs_name":not bool(name),"photos":[]})
+        g["photos"].append({"id":row["id"],"mime":row["mime"],"r2_key":row["r2_key"],"has_mesh":row["id"] in meshes,"mesh_id":meshes.get(row["id"])})
+    return jsonify(ok=True,owner=owner,groups=list(groups.values()),count=len(rows),strategy="explicit_labels_only")
 
 
 @app.post("/api/people/rename")
@@ -1756,12 +1779,27 @@ def create_account():
             storage.claim_owner(claim, user["handle"], preserve_photos=bool(claimed.get("card_designs") or claimed.get("card_cutouts")))
         except Exception:
             pass   # rows keep their old keys, which still resolve
+    starters = []
+    ref = (b.get("ref") or "").strip()[:80]
+    if ref:
+        # viral funnel: shared clip -> signup -> starter meshes to modify
+        # cheaply -> first upload -> own sets. Prompt+script already live
+        # on the video row; starters are free styles, 0 credits.
+        from backend import styles as _styles
+        for sid in ("buster", "badger-classic"):
+            try:
+                m = _styles.install_style(user["handle"], sid)
+                starters.append({"style": sid, "mesh_id": (m.get("mesh") or {}).get("id", "")})
+            except Exception:
+                pass
 
     return jsonify({"ok": True, "handle": user["handle"],
                     "api_key": user["api_key"],        # shown once
                     "password_set": bool(password),
                     "claimed_from": claim or None,
                     "claimed": claimed,
+                    "referred_by_video": ref or None,
+                    "starter_meshes": starters,
                     "note": "api_key is shown once — store it now"})
 
 
@@ -1955,6 +1993,8 @@ def _agent_out(a: dict, with_key: bool = True) -> dict:
 
 # ── google sign-in ──────────────────────────────────────────────────
 
+_OAUTH_CLAIM: dict[str, str] = {}
+_OAUTH_RETURN: dict[str, str] = {}
 _OAUTH_STATE: dict[str, float] = {}   # state -> created_at, single process
 
 
@@ -1990,12 +2030,25 @@ def google_start():
         return jsonify({"ok": False, "error": "Google sign-in not configured",
                         "fix": "set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env",
                         "redirect_uri": gauth.redirect_uri()}), 501
+    claim = request.args.get('claim_owner','')
+    if claim:
+        denied=_owner_denied(claim)
+        if denied is not None: return denied
+        with db.connect() as c:
+            if c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND status IN ('queued','running')",(claim,)).fetchone(): return _err('Finish the current card render before signing in.',409)
+            if db.get_user_by_handle(c,claim) or c.execute('SELECT 1 FROM agents WHERE agent_handle=?',(claim,)).fetchone(): claim=''
     st = gauth.make_state()
+    _OAUTH_CLAIM[st]=claim
     _OAUTH_STATE[st] = time.time()
+    dest=request.args.get("return_to", "/")
+    if not re.fullmatch(r"/(?:studio(?:/people/[\w-]+)?|products(?:/[\w-]+)?|cards(?:/[\w-]+)?|videos(?:/[\w-]+)?|perform|search|cart|account)?(?:\?[^#\r\n]*)?",dest): dest="/"
+    _OAUTH_RETURN[st]=dest
     # keep the dict from growing forever
     for k, t in list(_OAUTH_STATE.items()):
         if time.time() - t > 600:
             _OAUTH_STATE.pop(k, None)
+            _OAUTH_RETURN.pop(k, None)
+            _OAUTH_CLAIM.pop(k, None)
     return redirect(gauth.authorize_url(st), code=302)
 
 
@@ -2007,6 +2060,8 @@ def google_callback():
         return _err(f"google returned no code: {request.args.get('error', '')}", 400)
     if not _OAUTH_STATE.pop(st, None):
         return _err("bad or expired sign-in state — try again", 400)
+    return_to = _OAUTH_RETURN.pop(st, "/")
+    claim = _OAUTH_CLAIM.pop(st, "")
     try:
         profile = gauth.exchange(code)
     except Exception as e:
@@ -2015,10 +2070,23 @@ def google_callback():
         return _err("google did not return an email address", 403)
     try:
         user = _ensure_google_user(profile)
+        if claim and claim != user['handle']:
+            with card_api.ownership_lock, db.connect() as c:
+                c.execute('BEGIN IMMEDIATE')
+                db.claim_assets(c,claim,user['handle'])
+                prof=db.get_profile(c,claim)
+                if prof.get('active_mesh_id'): db.set_active(c,user['handle'],prof['active_mesh_id'])
+                c.commit()
+            # Photo keys remain immutable, as do pinned card revisions.
+            try:
+                storage.claim_owner(claim,user['handle'],preserve_photos=True)
+            except Exception:
+                pass  # DB-owned immutable keys still resolve without a copy.
     except Exception as e:
         return _err(f"could not open an account: {str(e)[:250]}", 500)
     # hand the key back to the SPA, which stores it and strips it from the URL
-    dest = f"{config.PUBLIC_BASE.rstrip('/')}/?auth={urllib.parse.quote(user['api_key'])}" \
+    sep = "&" if "?" in return_to else "?"
+    dest = f"{config.PUBLIC_BASE.rstrip('/')}{return_to}{sep}auth={urllib.parse.quote(user['api_key'])}" \
            f"&handle={urllib.parse.quote(user['handle'])}"
     return redirect(dest, code=302)
 
@@ -2558,6 +2626,20 @@ def get_video(vid: str):
     d["download"] = f"/api/videos/{vid}/file"
     d["file"] = None
     return jsonify({"ok": True, "video": d})
+
+
+@app.post("/api/videos/<vid>/share")
+def video_share(vid: str):
+    """One-click share: link to the clip tab carrying ?ref=. The prompt and
+    script already live on the video row, so shared sets are replayable.
+    Signup with the ref installs free starter meshes."""
+    with db.connect() as c:
+        row = c.execute("SELECT id,topic,talent,mesh_id FROM videos WHERE id=?", (vid,)).fetchone()
+    if row is None:
+        return _err("no such video", 404)
+    return jsonify({"ok": True, "share_url": f"/videos/{vid}?ref={vid}",
+                    "topic": row["topic"], "talent": row["talent"],
+                    "hint": "Send the link. Signup with ?ref= installs starter meshes."})
 
 
 @app.get("/api/videos/<vid>/file")
@@ -3407,7 +3489,7 @@ def mesh_manifest(mid: str):
         photo = db.get_photo(c, mesh.get("photo_id") or "")
         products = []
         rows = c.execute(
-            """SELECT product,status,price_cents,source FROM product_bindings
+            """SELECT product,status,price_cents FROM product_bindings
                WHERE mesh_id=?""", (mid,)).fetchall()
         for r in rows:
             products.append(db.dump(r))
@@ -3498,6 +3580,270 @@ def products_personalise():
     })
 
 
+@app.post("/api/design/validate")
+def design_validate():
+    """Validate a candidate design against a line's design contract.
+
+    Body: {line, dims_mm:[x,y,z], material, colors, text, volume_cm3}.
+    Checks envelope fit, locked material/colours, text length vs the
+    personalisation zone, and rough cost at makr3d + printie.
+    Geometry truth (manifold, interface dims) is verified at sample, not here.
+    """
+    from backend import suppliers as _sup
+    body = request.get_json(silent=True) or {}
+    line = (body.get("line") or "").strip()
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    spec = config.STUDIO_LINES[line]
+    contract = spec.get("design_contract") or {}
+    gaps = []
+    dims = body.get("dims_mm")
+    envelope = contract.get("envelope_mm") or []
+    if dims is not None:
+        if (not isinstance(dims, (list, tuple)) or len(dims) != 3
+                or any(isinstance(x, bool) for x in dims)):
+            return _err("dims_mm must be [x, y, z] numbers", 400)
+        try:
+            dims = [float(x) for x in dims]
+            if any(v < 0 for v in dims):
+                return _err("dims_mm must be [x, y, z] numbers", 400)
+        except (TypeError, ValueError):
+            return _err("dims_mm must be [x, y, z] numbers", 400)
+        if envelope:
+            for got, maxv, ax in zip(dims, envelope, "XYZ"):
+                if got > maxv:
+                    gaps.append(f"{ax} {got}mm exceeds envelope {maxv}mm")
+    material = (body.get("material") or contract.get("material") or "PLA").strip()
+    if not isinstance(material, str):
+        return _err("material must be a string", 400)
+    material = material.upper() if material.upper() in ("PLA", "PETG", "TPU", "ASA") else material
+    try:
+        colors = int(body.get("colors") or 1)
+    except (TypeError, ValueError):
+        return _err("colors must be a number", 400)
+    if isinstance(body.get("colors"), bool):
+        return _err("colors must be a number", 400)
+    cmax = contract.get("colors_max")
+    if cmax and colors > int(cmax):
+        gaps.append(f"{colors} colours > max {cmax}")
+    text = str(body.get("text") or "")
+    zone_max = ((spec.get("personalization") or {}).get("max_chars")) if isinstance(spec.get("personalization"), dict) else 0
+    if zone_max and len(text) > zone_max:
+        gaps.append(f"text {len(text)} chars > zone max {zone_max}")
+    volume = body.get("volume_cm3")
+    try:
+        volume = float(volume) if volume is not None else contract.get("volume_cm3_est")
+    except (TypeError, ValueError):
+        volume = contract.get("volume_cm3_est")
+    options = [o for o in _sup.options_for(
+        material=material, colors=colors,
+        dims_mm=(list(dims) if dims else envelope) or None,
+        volume_cm3=volume, weight_g=spec.get("weight_g"))
+        if o["supplier"] in ("makr3d", "printie")]
+    feasible = not gaps and any(o["feasible"] for o in options)
+    return jsonify({
+        "ok": True,
+        "line": line,
+        "feasible": feasible,
+        "gaps": gaps,
+        "locked": contract.get("locked", []),
+        "verify": contract.get("verify", []),
+        "options": options,
+        "note": "Dims/material/text check only. Interface dims + manifold verified at sample.",
+    })
+
+
+def _design_base(line: str) -> Path | None:
+    """3D base version of a line: own master STL for reference lines,
+    canonical dog GLB for mesh lines. The thing a model plays with."""
+    spec = config.STUDIO_LINES.get(line) or {}
+    method = ((spec.get("personalization") or {}).get("method")
+              if isinstance(spec.get("personalization"), dict) else "")
+    if method in ("emboss", "relief"):
+        for cand in (Path("scripts/factory/adapters") / f"{line}.json",):
+            try:
+                ad = json.loads(cand.read_text())
+                base = Path("data/3dprint") / ad["base"]
+                if base.is_file():
+                    return base
+            except (OSError, ValueError, KeyError):
+                pass
+        return None
+    if method == "face_swap":
+        dog = Path("data/uploads/chibi-figure-hook.glb")
+        return dog if dog.is_file() else None
+    return None
+
+
+@app.get("/api/design/base/<line>")
+def design_base(line: str):
+    """Download the 3D base version: master STL (reference lines) or the
+    canonical dog GLB (mesh lines). Locked interfaces included as modelled."""
+    base = _design_base(line)
+    if base is None or not base.is_file():
+        return _err("no base modelled for this line yet", 404)
+    ctype = {"stl": "model/stl", "glb": "model/gltf-binary"}.get(
+        base.suffix.lstrip("."), "application/octet-stream")
+    data = base.read_bytes()
+    resp = Response(data)
+    resp.headers["Content-Type"] = ctype
+    resp.headers["Content-Length"] = str(len(data))
+    resp.headers["Content-Disposition"] = f"attachment; filename=oddhobb-{line}-base{base.suffix}"
+    return resp
+
+
+def _design_tables():
+    with db.connect() as c:
+        c.execute("""CREATE TABLE IF NOT EXISTS design_drafts (
+            id TEXT PRIMARY KEY, owner TEXT NOT NULL, line TEXT NOT NULL,
+            spec TEXT NOT NULL DEFAULT '{}', created_at REAL NOT NULL)""")
+        c.commit()
+
+
+@app.post("/api/design/save")
+def design_save():
+    """A model plays with the base, saves the design: validated spec stored
+    as a draft. Returns design_id for figg_design_order."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    line = (body.get("line") or "").strip()
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    spec = config.STUDIO_LINES[line]
+    contract = spec.get("design_contract") or {}
+    dims = body.get("dims_mm") or contract.get("envelope_mm") or []
+    material = (body.get("material") or contract.get("material") or "PLA")
+    colors = body.get("colors", 1)
+    text = str(body.get("text") or "")
+    volume = body.get("volume_cm3", contract.get("volume_cm3_est"))
+    # reuse the validator by direct call shape
+    with app.test_request_context(json={"line": line, "dims_mm": dims, "material": material,
+                                        "colors": colors, "text": text, "volume_cm3": volume}):
+        resp = design_validate()
+    out = resp.get_json()
+    if not out.get("ok") or not out.get("feasible"):
+        return jsonify({"ok": False, "feasible": False,
+                        "gaps": out.get("gaps", ["invalid"]),
+                        "hint": "Fix the gaps against the contract, then save again."}), 400
+    _design_tables()
+    did = "dsn_" + uuid.uuid4().hex[:12]
+    with db.connect() as c:
+        c.execute("INSERT INTO design_drafts VALUES (?,?,?,?,?)",
+                  (did, owner, line, json.dumps({"dims_mm": dims, "material": material,
+                                                 "colors": colors, "text": text,
+                                                 "volume_cm3": volume}), time.time()))
+        c.commit()
+    return jsonify({"ok": True, "design_id": did, "line": line,
+                    "options": out.get("options", []),
+                    "hint": "Saved. Order it with POST /api/design/order."})
+
+
+@app.post("/api/design/make")
+def design_make():
+    """Run Blender headless on our farm box: emboss text onto the line's
+    master via its adapter, return the STL + manifold verdict. This is how
+    a remote agent (ChatGPT) uses Blender through us — no local install,
+    no viewport, same contracts. Sync; takes ~1-2 min."""
+    import subprocess
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    line = (body.get("line") or "").strip()
+    text = str(body.get("text") or "")
+    if line not in config.STUDIO_LINES:
+        return _err("unknown line", 400)
+    adapter = Path("scripts/factory/adapters") / f"{line}.json"
+    if not adapter.is_file():
+        # legacy names predate the convention
+        legacy = {"card_rack": "card_hand_rack.json", "tcg_stand": "slab_stand.json",
+                  "straw_charm": "straw_ring.json"}.get(line)
+        adapter = Path("scripts/factory/adapters") / (legacy or "")
+    if not adapter.is_file():
+        return _err("no emboss adapter for this line yet", 400)
+    outdir = Path("data/designs")
+    outdir.mkdir(parents=True, exist_ok=True)
+    job = f"{line}-{uuid.uuid4().hex[:8]}.stl"
+    try:
+        proc = subprocess.run(
+            [str(Path.home() / "blender" / "blender"), "--background",
+             "--python", "scripts/factory/personalize.py", "--",
+             "--adapter", str(adapter), "--text", text,
+             "--out", str(outdir / job)],
+            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired:
+        return _err("Blender timed out — try a shorter text", 504)
+    if proc.returncode != 0 or not (outdir / job).is_file():
+        tail = (proc.stderr or proc.stdout or "")[-300:]
+        return _err(f"Blender failed: {tail}", 500)
+    return jsonify({"ok": True, "line": line, "text": text,
+                    "stl_url": f"/api/design/file/{job}",
+                    "log": (proc.stdout or "")[-500:],
+                    "hint": "Watertight STL from the line master. Validate dims via /api/design/validate."})
+
+
+@app.get("/api/design/file/<name>")
+def design_file(name: str):
+    """Fetch a made STL."""
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+\.stl", name or ""):
+        return _err("bad name", 400)
+    target = (Path("data/designs") / name).resolve()
+    if not str(target).startswith(str((Path("data/designs")).resolve())) or not target.is_file():
+        return _err("not found", 404)
+    data = target.read_bytes()
+    resp = Response(data)
+    resp.headers["Content-Type"] = "model/stl"
+    resp.headers["Content-Length"] = str(len(data))
+    return resp
+
+
+@app.post("/api/design/order")
+def design_order():
+    """Order a saved design: re-validates, reserves, optional Shopify draft.
+    No card charge from this endpoint."""
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    did = (body.get("design_id") or "").strip()
+    try:
+        qty = max(1, min(20, int(body.get("qty") or 1)))
+    except (TypeError, ValueError):
+        return _err("qty must be 1-20", 400)
+    fulfil = bool(body.get("fulfil") or body.get("shopify"))
+    _design_tables()
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM design_drafts WHERE id=?", (did,)).fetchone()
+    if row is None:
+        return _err("no such design", 404)
+    d = dict(row)
+    if d["owner"] != owner:
+        return _err("not your design", 403)
+    draft = json.loads(d["spec"])
+    spec = config.STUDIO_LINES.get(d["line"]) or {}
+    price = int(spec.get("price_cents") or 0) * qty
+    with db.connect() as c:
+        order = db.create_order(
+            c, owner=owner, line=d["line"], mesh_id=str(body.get("mesh_id") or ""),
+            coat="none", hat="none", qty=qty, price_cents=price,
+            note=f"design {did} ({draft.get('material')}/{draft.get('text') or 'no text'})"[:200],
+        )
+    shopify: dict = {"attempted": False}
+    if fulfil:
+        shopify["attempted"] = True
+        try:
+            from backend import shopify_fulfil as sf
+            if not sf.configured():
+                shopify = {"attempted": True, "ok": False, "error": "Shopify not configured"}
+            else:
+                res = sf.create_draft_order(f"{spec.get('label', d['line'])} (design {did})",
+                                            price // max(1, qty), qty,
+                                            note=f"design {did}", email="")
+                shopify.update(res)
+        except Exception as e:  # noqa: BLE001
+            shopify = {"attempted": True, "ok": False, "error": str(e)[:300]}
+    return jsonify({"ok": True, "order": order, "design_id": did,
+                    "status": "pending_checkout", "shopify": shopify,
+                    "hint": "Reserved. Shopify draft only if fulfil=true."})
+
+
 @app.post("/api/products/order")
 def products_order():
     """One-click order for controlled custom / gift card. Optional Shopify draft."""
@@ -3508,7 +3854,10 @@ def products_order():
     hat = (body.get("hat") or "none").strip().lower()
     pattern = (body.get("pattern") or "solid").strip().lower()
     mesh_id = (body.get("mesh_id") or "").strip()
-    qty = max(1, min(20, int(body.get("qty") or 1)))
+    try:
+        qty = max(1, min(20, int(body.get("qty") or 1)))
+    except (TypeError, ValueError):
+        return _err("qty must be 1-20", 400)
     note = (body.get("note") or "")[:200]
     email = (body.get("email") or "").strip()[:120]
     amount_cents = body.get("amount_cents")
@@ -3522,7 +3871,10 @@ def products_order():
         amounts = spec.get("amounts_cents") or [spec.get("price_cents", 2500)]
         if amount_cents is None:
             amount_cents = amounts[0]
-        amount_cents = int(amount_cents)
+        try:
+            amount_cents = int(amount_cents)
+        except (TypeError, ValueError):
+            return _err(f"amount_cents must be one of {amounts}", 400)
         if amount_cents not in amounts:
             return _err(f"amount_cents must be one of {amounts}", 400)
         price = amount_cents * qty
@@ -3735,7 +4087,10 @@ def studio_order():
     coat = (body.get("coat") or "none").strip().lower()
     hat = (body.get("hat") or "none").strip().lower()
     mesh_id = (body.get("mesh_id") or "").strip()
-    qty = max(1, min(20, int(body.get("qty") or 1)))
+    try:
+        qty = max(1, min(20, int(body.get("qty") or 1)))
+    except (TypeError, ValueError):
+        return _err("qty must be 1-20", 400)
     note = (body.get("note") or "")[:200]
     if line not in config.STUDIO_LINES:
         return _err("unknown line", 400)
@@ -3788,8 +4143,11 @@ def _supplier_options(spec: dict) -> list[dict]:
     mat = spec.get("material") or "PLA"
     weight = spec.get("weight_g")
     vol = round(weight / 1.24, 2) if isinstance(weight, (int, float)) else None
+    if vol is None:
+        vol = (spec.get("design_contract") or {}).get("volume_cm3_est")
+    dims = spec.get("dims_mm") or (spec.get("design_contract") or {}).get("envelope_mm")
     return _sup.options_for(material=mat, colors=1,
-                            dims_mm=spec.get("dims_mm"), volume_cm3=vol,
+                            dims_mm=dims, volume_cm3=vol,
                             weight_g=weight)
 
 
@@ -3836,7 +4194,28 @@ def products_studio():
         prof = db.get_profile(c, owner)
         active = prof.get("active_mesh_id") or ""
         subject = db.get_subject_profile(c, owner, active) if active else {}
+        if not subject:
+            # fall back to the Studio library: selected friend, else first
+            # named friend, paired with the active mesh. Nibble resolves here.
+            try:
+                sel = c.execute(
+                    "SELECT * FROM studio_selection WHERE owner=?", (owner,)).fetchone()
+                sid = (dict(sel).get("subject_id") if sel else "") or ""
+                if not sid:
+                    row = c.execute(
+                        "SELECT * FROM studio_subjects WHERE owner=? ORDER BY created_at LIMIT 1",
+                        (owner,)).fetchone()
+                    sid = row["id"] if row else ""
+                if sid:
+                    srow = c.execute(
+                        "SELECT * FROM studio_subjects WHERE id=?", (sid,)).fetchone()
+                    if srow:
+                        subject = {"name": srow["name"], "interests": [],
+                                   "birthday": "", "kind": srow["kind"] if "kind" in srow.keys() else ""}
+            except Exception:
+                pass
     suggestion = _suggest_motif(subject.get("interests", [])) if subject else None
+    gifts = _derive_gifts(subject, active) if subject else []
     items = []
     for lid, spec in config.STUDIO_LINES.items():
         assets = spec.get("assets") or {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]}
@@ -3854,6 +4233,10 @@ def products_studio():
         if lid == "croc_tag":
             stills = {"hero": "/img/prod/croc-tag-hero.png",
                       "front": "/img/prod/croc-tag-hero.png"}
+        if lid == "clog_charm":
+            # Nibble proof: first real personalised product photo on the line
+            stills = {"hero": config.STUDIO_NIBBLE_JIBBIT_PORTRAIT,
+                      "front": config.STUDIO_NIBBLE_JIBBIT_PORTRAIT}
         if lid == "brick":
             stills = _studio_stills_for("brick", "none", "none")
             if not stills.get("hero"):
@@ -3875,7 +4258,8 @@ def products_studio():
             "amounts_cents": spec.get("amounts_cents"),
             "assets": {"hats": hats, "coats": coats, "patterns": patterns},
             "stills": stills,
-            "glb_url": config.STUDIO_BRICK_GLB if lid == "brick" else "",
+            "glb_url": (config.STUDIO_BRICK_GLB if lid == "brick"
+                        else config.STUDIO_NIBBLE_JIBBIT_GLB if lid in ("clog_charm", "croc_tag") else ""),
             "customization_schema": _custom_schema(lid, spec),
             "personalization_levels": _custom_schema(lid, spec)["levels"],
             "material": spec.get("material"),
@@ -3890,6 +4274,9 @@ def products_studio():
             "occasion": spec.get("occasion"),
             "suggested_motif": suggestion,
             "fulfilment_options": _fulfilment_options(spec),
+            "design_contract": spec.get("design_contract"),
+            "supplier_options": (_supplier_options(spec)
+                                 if (request.args.get("design") == "1") else None),
         })
     return jsonify({
         "ok": True,
@@ -3897,6 +4284,7 @@ def products_studio():
         "active_mesh_id": active,
         "subject": subject or None,
         "suggestion": suggestion,
+        "gifts": gifts,
         "items": items,
         "custom_policy": config.STUDIO_CUSTOM_POLICY,
         "card_sizes": config.CARD_SIZES,
@@ -3929,9 +4317,102 @@ def _line_sizes(lid: str, spec: dict) -> list[dict]:
         ]
     return []
 
+@app.post("/api/gift-packs")
+def gift_pack():
+    """Oddy's game: best gift for the cheapest price inside a budget.
+
+    Body: {owner, budget_cents, line? (exact thing), mesh_id?, recipient?}.
+    A pack is usually physical + card + free video addon. Exact requests are
+    honoured with cheap addons while they fit; otherwise Oddy picks the best
+    physical that leaves room for a card, video always free.
+    """
+    from backend import card_scenes as _scenes
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80]
+    try:
+        budget = int(body.get("budget_cents") or 0)
+    except (TypeError, ValueError):
+        return _err("budget_cents must be a number", 400)
+    if budget <= 0:
+        return _err("tell Oddy the budget first", 400)
+    want = (body.get("line") or "").strip()
+    mesh_id = (body.get("mesh_id") or "").strip()
+    recipient = (body.get("recipient") or "").strip()[:60]
+    card_floor = min(v["price_cents"] for v in _scenes.FORMATS.values())
+    card_format = min(_scenes.FORMATS.items(), key=lambda kv: kv[1]["price_cents"])[0]
+    live = [(lid, s) for lid, s in config.STUDIO_LINES.items()
+            if s.get("status") == "live" and (s.get("fulfilment") or "") == "print_farm"]
+    pack: dict = {"video": {"kind": "motion", "label": "Matching video",
+                            "price_cents": 0,
+                            "note": "rendered from the card scene, free"}}
+    if want:
+        if want not in config.STUDIO_LINES:
+            return _err("unknown line", 400)
+        spec = config.STUDIO_LINES[want]
+        price = int(spec.get("price_cents") or 0)
+        if price > budget:
+            return _err(f"{want} alone is over budget", 400)
+        pack["physical"] = {"line": want, "label": spec.get("label", want),
+                            "price_cents": price}
+        rest = budget - price
+        if rest >= card_floor:
+            pack["card"] = {"template": "portrait", "format": card_format,
+                            "price_cents": card_floor,
+                            "note": "cheap add-on inside the budget"}
+    else:
+        room = budget - card_floor
+        cands = sorted(((int(s.get("price_cents") or 0), lid)
+                        for lid, s in live), reverse=True)
+        pick = next(((p, lid) for p, lid in cands if p <= room), None)
+        if not pick:
+            cheapest = min(cands) if cands else None
+            if not cheapest:
+                return _err("nothing orderable yet", 400)
+            pack["physical"] = {"line": cheapest[1], "price_cents": cheapest[0],
+                                "note": "over budget alone — card dropped"}
+        else:
+            price, lid = pick
+            spec = config.STUDIO_LINES[lid]
+            pack["physical"] = {"line": lid, "label": spec.get("label", lid),
+                                "price_cents": price}
+            pack["card"] = {"template": "portrait", "format": card_format,
+                            "price_cents": card_floor}
+    total = sum(v.get("price_cents", 0) for v in pack.values())
+    pack["total_cents"] = total
+    pack["remaining_cents"] = budget - total
+    pack["recipient"] = recipient
+    pack["mesh_id"] = mesh_id
+    return jsonify({"ok": True, "pack": pack,
+                    "hint": "Reserve each part (products/order, cards/order); video renders free from the card."})
+
+
+@app.get("/api/studio/demo")
+def studio_demo():
+    """Nibble: the demo friend every new visitor meets. Her original photo,
+    her mesh, and her derived gifts — try the shelf before uploading."""
+    with db.connect() as c:
+        rows = [dict(r) for r in c.execute(
+            "SELECT id,r2_key,person,mime FROM photos WHERE owner='anon' AND person='Nibble' ORDER BY created_at LIMIT 1")]
+        if not rows:
+            return jsonify({"ok": True, "demo": None})
+        ph = rows[0]
+        m = c.execute("SELECT id FROM meshes WHERE photo_id=? ORDER BY created_at DESC LIMIT 1",
+                      (ph["id"],)).fetchone()
+        mesh_id = m["id"] if m else ""
+    subject = {"name": "Nibble", "interests": [], "birthday": ""}
+    return jsonify({"ok": True, "demo": {
+        "name": "Nibble",
+        "photo": {"id": ph["id"], "url": "/api/artifacts/" + ph["r2_key"]},
+        "mesh_id": mesh_id,
+        "gifts": _derive_gifts(subject, mesh_id),
+    }})
+
+
 @app.get("/api/studio/orders")
 def studio_orders():
     owner = (request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None: return denied
     with db.connect() as c:
         rows = db.orders_for(c, owner)
     return jsonify({"ok": True, "owner": owner, "orders": rows, "count": len(rows)})
@@ -3945,6 +4426,8 @@ def short_mesh_label(mesh_id: str) -> str:
 
 from backend import cards as card_api
 card_api.register(app, _owner_denied)
+from backend import studio_library
+studio_library.register(app, _owner_denied)
 
 
 # ── worker ────────────────────────────────────────────────────────────

@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const {resolve}=require('../site/js/site-router.js');
+for(const tab of ['studio','products','cards','videos','perform','search','cart','account'])assert.equal(resolve('/'+tab).tab,tab);
+assert.deepEqual(resolve('/studio/people/person_dad'),{tab:'studio',subjectId:'person_dad',path:'/studio/people/person_dad'});
+assert.equal(resolve('/#studio').path,'/studio');assert.equal(resolve('/#upload').path,'/studio');
+assert.equal(resolve('/#/s/cards').path,'/cards');assert.equal(resolve('/#/s/my').path,'/studio');
+assert.equal(resolve('/cards/card_1').id,'card_1');assert.equal(resolve('/videos/card_1').id,'card_1');
+assert.equal(resolve('/search?q=birthday%20dad').q,'birthday dad');
+assert.equal(resolve('/not-a-page').tab,'notfound');
+assert.equal(resolve('/studio/people/x/other').tab,'notfound');
+assert.equal(resolve('/products#cards').tab,'products');
+console.log('Route resolution and legacy link checks passed.');

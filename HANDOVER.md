@@ -1,3 +1,138 @@
+# HANDOVER — next session: companion launch + Dot standup shareables
+
+> **Status:** companion ingestion shipped (`9cdc3ea`). Screenshot sources,
+> multiview clients, print split, rig spec, dot_standup preset all live.
+> Watermark-domain bug fixed (was 500ing every video).
+
+## Next steps
+
+1. **"Bring your AI to life" onboarding** — screenshot upload UI copy +
+   flow (upload → meet in 3D → Pogtown vs physical choice). Backend ready.
+2. **First companion mesh** — needs Meshy spend approval: multiview
+   prototype (6cr) → multi-image build (30cr) on a real Dot/Muse screenshot.
+3. **Dot-standup distribution** — share links + watermarked feed clips;
+   pogtown performer binding per `docs/character-rig.md`.
+4. **Print side** — repair API call before `export_print_bundle`; first
+   jibbit/keyring from a companion mesh; MAKR3D sample per thesis rule.
+5. **Still open from before** — first splat (comedy night) needs
+   `MARBLE_API_KEY`; wind indicator geometry; HF_TOKEN for Qwen voices.
+
+---
+
+# HANDOVER — next session: first splat (comedy night)
+
+> **Goal:** generate the first Marble room (comedy night) and wire it as the
+> greeting/episode venue. Then, in order: presidential speech, sports press
+> interview, red carpet, talkshow.
+
+## Prereqs (nothing stored yet)
+
+- `MARBLE_API_KEY` (platform.worldlabs.ai, NOT the Marble app). $5 min pack.
+  Ask-first + `data/marble_credits.jsonl` ledger per `backend/marble.py`.
+- Client: `backend/marble.py` already speaks generate/poll/export/balance.
+- Docs mirrored: `~/marble-docs/` (pricing, generate/get/export, SPZ scale
+  formula, Blender import via KIRI/Reshot).
+
+## Room queue (one $1.20 gen each, plain marble-1.1, text prompt)
+
+1. **comedy night** — brick wall, spotlight cone, mic stand, empty stool.
+2. **presidential speech** — curtain, generic flags, wooden podium (parody-safe).
+3. **sports press interview** — sponsor wall (ODDHOBB/MAKR3D/PET FC), table edge.
+4. **red carpet** — step-and-repeat wall, rope barrier, flash glow.
+5. **talkshow** — desk, two chairs, warm practicals, skyline backdrop.
+
+Draft ($0.15) first for composition, full build once, reuse forever.
+Metric scale metadata → seat meshes at true size (formula in marble-docs).
+
+## Wire-up after generation
+
+- Backdrop PNG into `data/rooms/<id>.png` (rooms endpoint reports live).
+- Splat via KIRI/Reshot into Blender for mesh-inside lighting tests.
+- Greetings/episodes take `room=` already — no API changes needed.
+
+---
+
+# HANDOVER — session 2026-10-04 (wearables engine · masters hunt)
+
+> **Status: CURRENT** — wearables v2 engine installed + proven; masters are
+> the blocker. Prior session below (2026-10-02) is background.
+> **Focus going forward:** premium santa/jacket masters → v2 product proofs.
+
+## Wearables engine (installed from R2, additive only)
+
+- Source: `r2:blog-video-assets/uploads/oddhobb-wearables-engine.zip` (28 KB,
+  reviewed module-by-module: clean, no network/secrets in runtime path).
+- Installed at repo root: `wearables/` (target/headwear/garment/prop/
+  hardware/QC/compiler/runner), `scripts/wearables_{cli,register,seed_demo}.py`,
+  `tests/test_manifest.py`, `docs/wearables-engine.md`, `INTEGRATION_SNIPPET.py`.
+  Its pytest passes; brick + demo-candle + cake-spikes smoke compose works.
+- Two engine bugs fixed in-tree: garment solver pushed shells 5–30 mm INSIDE
+  (hull winding + added normal-free clearance guarantee in
+  `wearables/garments.py`); engine's own head socket sat on the forehead, so
+  `data/anchors/chibi-figure-hook.wearables.json` carries our proven seat
+  (ring z≈0.196, rest +7.3 mm).
+- Proven end-to-end (`/tmp/opencode/oddhobb-xmas-v2.glb`): hat PASS (rest
+  +8.6 mm, sunk 0.4%, 0 poke), jacket PASS (0.15% inside). Renders confirm.
+
+## Masters hunt — hat: yes (flawed) · jacket: nothing free found
+
+- **Santa hat: OpenGameArt CC0** (Lucian Pavel) downloaded direct, cleaned,
+  registered at `data/assets/wearables/santa_hat/master.glb` (procedural
+  master backed up to `/tmp`). Verdict: wrong proportions for the dog
+  (tall floppy cone towers) + imperfect texture — usable placeholder, NOT
+  premium. Meshy gallery (Santa Hat 67 etc.) is auth-walled; Poly Pizza is
+  bot-walled.
+- **Jacket: no free isolated dog garment exists** after searching Meshy,
+  Poly Pizza, OpenGameArt, CGTrader (paid), Gumroad (email checkout),
+  Sketchfab (account), itch.io, Tripo (AI-gated). Realistic routes only:
+  (a) owner browser-downloads a Meshy CC0 hat/garment, or (b) approve Meshy
+  API generation spend (box key present, balance last seen 942, untouched).
+- **Key hygiene:** a Meshy key + R2 credentials appeared in chat. Neither was
+  stored (verified: no history file, no /tmp strays, nothing in git). One
+  stale Oct-3 `/tmp` key backup from a prior session was found and deleted.
+  Data masters + overrides live under gitignored `data/`. Rotate any
+  chat-pasted credentials in their dashboards.
+
+## Still live from before
+
+- Fit editor (`site/fit.html` + `/api/fit/placement`) and all 16 fixed
+  cream-era product GLBs from the rollout remain live; suite 77/77.
+- Stale product stills PNGs + same-URL browser cache items from
+  `docs/fit-problems.md` are unchanged.
+
+## Next
+
+1. Land premium santa + jacket masters in `data/assets/wearables/`.
+2. Re-run engine compose → verifier → renders.
+3. Then: re-render stale stills, `?v=` cache-bust, retire procedural masters.
+
+## Update 2026-10-04 (OGA santa master fitted)
+
+- OGA CC0 hat cleaned (correct `UVMap` layer + texture), registered as
+  `santa_hat/master.glb`, `fit.ease` solved to 0.70 for uniform 0.35 scale,
+  socket z 0.187 in the chibi override. Engine composes it cleanly.
+- Product `/tmp/opencode/oddhobb-xmas-v4.glb` is CORRECT in 4 rendered
+  angles (hero/side/back/top): floppy cone, brim on crown, pompom attached.
+- Caveat: verifier hat-mode FAILs it (ring-band heuristics assume a torus
+  brim; floppy geometry breaks them). Poke-through count is 0 and all
+  angles are clean — metric needs a floppy-hat update, product is good.
+- Jacket master still open (procedural shell passes; no free premium
+  garment found — Meshy gen or owner download).
+- **Cribbage pegs (BOARDGAME-PIECES-SET): full mesh hunt exhausted.**
+  Thingiverse/Printables/Cults/Sketchfab need logins, yeggi/3dgo/3dsearch
+  bot-wall, CGTrader is paid, Gumroad needs email checkout, OGA has nothing.
+  Verdict: pegs are lathe-profile hardware — generated 3 exact-spec masters
+  in Blender instead (shaft O3.0–3.2 mm sliding fit for 1/8 in holes, all
+  manifold, print-ready): `peg_classic` (taper+collar+ball),
+  `peg_ball` (oversized ball), `peg_topper_mount` (10 mm cup for a mini pet
+  bust = the personalisation slot). Registered as wearables `hardware` via a
+  new generic `static_master` generator (`wearables/hardware.py`), proven in
+  a dog+santa+peg compose. No free isolated dog jacket exists anywhere
+  reachable — jacket master still needs Meshy gen (spend approval) or an
+  owner browser download.
+
+---
+
 # HANDOVER — session 2026-10-02 (products · studio · P0 standup)
 
 > **Status: CURRENT** — write-up of everything touched this session.

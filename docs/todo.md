@@ -1,4 +1,111 @@
-# OddHobb — the 10 (Round 9 · 2026-10-03)
+# OddHobb — the 10 (Round 13 · 2026-10-05)
+
+> **Focus:** full audit integrated — P0s fixed, shelf honest.
+> **Fixed:** mesh_manifest + limit + dims + gift-card 500s → 400s; gallery
+> Reserve builds export first (was 409); pi-cards harness runs;
+> 10 unproven lines live→soon. Suites: 95 pytest, router, pi-cards,
+> 77/77 site. **Brand:** oddhobb only.
+
+## The 10
+
+| # | To-do | Status | Notes |
+|---|---|---|---|
+| **13-1** | **P0 500s → 400s** | **done** | manifest source col, limit, dims type/len, gift colors; verified live |
+| **13-2** | **Gallery Reserve works** | **done** | export-first then idempotent order |
+| **13-3** | **Shelf honest: 13 live / 10 soon** | **done** | unproven lines 409; Nibble proof visible but correctly unorderable |
+| **13-4** | **Test harness runs** | **done** | python3 + NODE_PATH documented |
+| **13-5** | **Serve the 7 nearly-there lines** | open | keycap/book_holder/golf/straw/line_reader/card_rack/tcg + brick_keychain: sample + fit + 3MF, re-run register |
+| **13-6** | **Clog adapter → real NIBBLE emboss** | open | manufacture executes; then flip clog back live |
+| **13-7** | **Gift derivations on shelf UI** | open | API serves gifts; panel never renders them |
+| **13-8** | **Account/cart finish** | open | static account, stale badge, dead Open-card link |
+| **13-9** | **Videos feed mobile + perf** | open | scroll swallow, dots, N+1 burst |
+| **13-10** | **Commit batch when owner says push** | open | audit + fixes + honesty flips in tree |
+
+---
+
+# OddHobb — the 10 (Round 12 · 2026-10-05)
+
+> **Focus:** jibbit legit — Nibble proof visible, no nonsense options.
+> **Fixed:** clog/croc chip rows hidden when none-only; croc coats trimmed;
+> viewer serves Nibble GLB; clog hero is her photo. **Brand:** oddhobb only.
+
+## The 10
+
+| # | To-do | Status | Notes |
+|---|---|---|---|
+| **12-1** | **Nibble jibbit visible on products** | **done** | hero + GLB wired, verified in API |
+| **12-2** | **No jacket/hat noise on jibbits** | **done** | none-only rows hidden; croc coats trimmed |
+| **12-3** | **Clog emboss adapter (real manufacture)** | open | like golf_marker: surface + text zone on the pin base; then NIBBLE emboss executes |
+| **12-4** | **Croc stills set (front/side/back)** | open | hero only; needs the multi-angle set |
+| **12-5** | **Gift derivations on the shelf UI** | open | API serves `gifts` for Nibble; products panel doesn't render them yet |
+| **12-6** | **Sample + pin-fit check** | open | print one, try a real Croc hole, per thesis rule |
+| **12-7** | **Etsy clog listing pack** | open | copy/images/tags once sample passes |
+| **12-8** | **Dad + Mum archetype check** | open | name-path gifts need a real person profile to prove it |
+| **12-9** | **Splat + talking mesh (keys)** | blocked | Marble key; HF_TOKEN/LiveKit |
+| **12-10** | **Commit batch when owner says push** | open | tree keeps growing |
+
+---
+
+# OddHobb — the 10 (Round 11 · 2026-10-05)
+
+> **Focus:** pack-integration fallout + route-by-route bugs, verified live.
+> **Fixed this round:** card-search `selectCard` crash → deep link; wasm/mp4/glb
+> MIME; `get_json` 500s → 400s; qty/amount 500s → 400s. Suites: 93 pytest,
+> router tests, 77/77 site. **Paused:** splat (`MARBLE_API_KEY`) · talking
+> mesh (`HF_TOKEN`/LiveKit). **Brand:** oddhobb only.
+
+## The 10
+
+| # | To-do | Status | Notes |
+|---|---|---|---|
+| **11-1** | **Videos: separate scenes from feed** | open | card scenes list unrendered cards; feed is cross-owner while scenes are scoped — one panel, two trust levels; split sections + scope label |
+| **11-2** | **Account panel real content** | open | static text, never calls `/api/accounts/me`, no orders; `#acct-name` never updates; sign-out only in moved `#g-who` |
+| **11-3** | **Cart: count sync + fix dead Open-card link** | open | `#cart-n` only updates on `/cart`; `design_id` never on rows so link is dead; no qty edit/remove |
+| **11-4** | **Products: dead size chips + missing pattern UI + amount_cents** | open | sizes dead except gift_card; `pr.pattern` hard-reset solid, no UI; gift orders always bill £5 (UI never sends amount) |
+| **11-5** | **Cards editor upload path** | open | toolbar `replaceChildren` kills Upload/Make/Refresh buttons; `file` input orphaned; only Studio upload works |
+| **11-6** | **Videos feed mobile + perf** | open | full-slide button swallows scroll; dots scroll away; no poster on fast swipe; dual loaders race, N+1 scenes burst |
+| **11-7** | **Quick dead funnel DOM + 5-vs-25-line belief** | open | `quick-pick`/`qp-*`/`funnel-steps` missing; local belief 5 lines, server 25; product preload silent on fail |
+| **11-8** | **Shelf honesty + Etsy P0 (carried)** | open | brick 2000px + pack zip; 17 lines live with `sample:needed`; gift tiers; checkout URL; price drift — see Round 10 |
+| **11-9** | **Splat + talking mesh (keys)** | blocked | Marble $5 pack; HF_TOKEN/LiveKit; see Round 10 10-8/10-9 |
+| **11-10** | **Commit batch when owner says push** | open | tree now includes pack + fixes + Round 11 |
+
+## Done this round (verified live)
+
+- Card search no longer throws: `/cards/:id` deep link via `openDesign`.
+- Static MIME: wasm/mp4/glb served correctly; duplicate jpg key gone.
+- Backend 500s (`get_json`, qty, amount_cents) now clean 400s, verified over tunnel.
+- All routes 200 incl. `/quick`; pytest 93, router tests, 77/77 site suite.
+
+---
+
+
+
+> **Focus:** ramble infodump cleanup + Etsy P0 unblocked · 20-line shelf honest.
+> **Paused:** splat rooms (needs `MARBLE_API_KEY`) · talking mesh (needs `HF_TOKEN`/LiveKit).
+> **Brand:** oddhobb only.
+
+## The 10
+
+| # | To-do | Status | Notes |
+|---|---|---|---|
+| **10-1** | **Brick 2000px stills + Etsy pack zip live** | open | `render_product.py --shots exact --exact --scale-mm 75` → `data/marketing/brick/` → `etsy_pack.py` → `/img/etsy/` + zip; unblocks P0 |
+| **10-2** | **Ramble dead-DOM purge + 25-line belief** | open | `quick-text/go/mic/hits`, `qp-*`, `funnel-steps` are no-ops; frontend tracks 5 lines, server scores ~25; unify on live `qk-*` path |
+| **10-3** | **Quick calls personalise + server Whisper fallback** | open | Quick never calls `POST /api/products/personalise`; no server STT on quick path (`!SR` = error only); wire both |
+| **10-4** | **Gift-card tiers + amount_cents end-to-end** | open | studio £5/10/15/20 vs Etsy £10/25/50; UI never sends `amount_cents` so orders bill £5; align + surface Shopify `invoice_url` (10-5) |
+| **10-5** | **Customer checkout URL surfaced** | open | drafts work, link missing; `create_draft_order` returns `invoice_url`, UI renders name only; cart-checkout is text |
+| **10-6** | **Shelf honesty: gate unbuilt lines** | open | 17 lines `sample:needed` + `production_3mf:todo` yet `live`/orderable; `wind_indicator` has no geometry at all; gate `personalise`/`order` on sample/recipes or flip status |
+| **10-7** | **Croc multi-angle stills + price drift** | open | only hyphen `croc-tag-hero.png`; ornament £15 vs £12.99, croc £10 vs £8.99, brick £20 vs £19.99 — pick one truth |
+| **10-8** | **First companion mesh (spend approval)** | blocked | multiview 6cr → multi-image 30cr on a real Dot/Muse screenshot; repair before `export_print_bundle`; then jibbit/keyring + MAKR3D sample |
+| **10-9** | **Comedy-night splat (spend approval)** | blocked | `MARBLE_API_KEY` $5 pack → draft $0.15 → full $1.20; `data/rooms/` + `marble_credits.jsonl` don't exist yet |
+| **10-10** | **Commit batch when owner says push** | open | figgsite working tree only (nav router, boot clip+etch, canonical pack zip, this file) |
+
+## Why this order
+
+Ramble is the front door and it's half dead — dead DOM targets, 5-line local belief vs 25-line server truth, no personalise call, no STT fallback. Fix the funnel before driving traffic. Etsy P0 is one brick render away from a real pack zip. Splat and talking mesh are correctly parked behind keys.
+
+---
+
+
 
 > **Focus:** Etsy P0 listings online · pack downloads · brick line shelf.
 > **Paused:** golf props (`docs/props-workbench-golf.md`) · stage/lipsync (pogtown).

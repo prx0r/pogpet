@@ -19,7 +19,33 @@
 8. figg_checkout                 — reserve order; fulfil:true → Shopify draft
    OR figg_fullchain_personalise_order  — personalise + order in one call
 9. figg_etsy_listing             — Etsy title/tags/sizes for a line
+
+## Design loop (models play, save, order — ChatGPT plugin path)
+
 ```
+1. figg_blueprints                — every line + design contract (locked,
+                                    envelope, material, cost targets)
+2. figg_design_base               — download the 3D base (master STL or dog GLB)
+3. figg_design_validate           — check dims/material/text vs the contract
+4. figg_design_save               — validated spec stored → design_id
+5. figg_blender_make              — Blender on our farm box embosses the text
+   onto the line master → watertight STL URL (for agents with no Blender,
+   e.g. ChatGPT: same contracts, headless, ~1-2 min)
+6. figg_design_order              — reserve/order it; fulfil:true → Shopify draft
+   + figg_card_templates          — paper contracts for the 7 card templates
+```
+
+Connect ChatGPT (or Claude/Muse) to
+`https://mcp.oddhobb.com/mcp?token=<bridge-token>` as an MCP server and the
+whole loop is available as tools: pull a contract, fetch the base, design
+inside the envelope, validate, save, order. Show price before ordering;
+Meshy still ask-first; orders never charge from the API.
+
+ChatGPT + Blender at once: ChatGPT can't reach localhost, so two honest
+setups. Either run both our MCP and a BlenderMCP server where the agent
+lives (Claude Code/Cursor locally — see `docs/blender-mcp.md`), or let
+ChatGPT use Blender through us: `figg_blender_make` runs headless Blender
+on our box and hands back the STL. Same contracts either way.
 
 ## Money rules for agents
 

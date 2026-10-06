@@ -375,6 +375,111 @@ def register(app,owner_denied):
                 warnings.append(f"Photo {p['orig_name']} is approximately {dpi} dpi in this layout; it may print soft. Use a larger photo or a wider crop.")
         return jsonify(ok=True,design=record(owner,did,rev),warnings=warnings)
 
+    @bp.get("/api/cards/gallery")
+    def gallery():
+        """Ready-made cards from your uploaded images — no forms.
+
+        Latest photos × flagship 1-photo templates, auto-composed with
+        profile-aware headlines. Designs are created once and reused;
+        previews render lazily (bounded per call). Tapping a card previews,
+        motion-plays, or reserves it — the editor below stays for tinkerers.
+        """
+        import datetime as _dt
+        owner = request.card_owner
+        with db.connect() as c:
+            photos = [dict(r) for r in c.execute(
+                "SELECT * FROM photos WHERE owner=? ORDER BY created_at DESC LIMIT 4",
+                (owner,)).fetchall()]
+        if not photos:
+            return jsonify(ok=True, items=[], empty=True)
+        with db.connect() as c:
+            known = {}
+            for r in c.execute("SELECT id,latest FROM card_designs WHERE owner=?", (owner,)).fetchall():
+                try:
+                    rec = record(owner, r["id"], r["latest"])
+                    sp = rec["spec"]
+                    key = (sp.get("template"), tuple(s["photo_id"] for s in sp.get("photos", [])))
+                    known[key] = (r["id"], r["latest"])
+                except CardError:
+                    pass
+        # recipient per photo: mesh -> subject profile name
+        who = {}
+        bdays = {}
+        with db.connect() as c:
+            for p in photos:
+                m = c.execute("SELECT id FROM meshes WHERE photo_id=? ORDER BY created_at DESC LIMIT 1",
+                              (p["id"],)).fetchone()
+                if m:
+                    prof = db.get_subject_profile(c, owner, m["id"])
+                    if prof.get("name"):
+                        who[p["id"]] = prof["name"]
+                    if prof.get("birthday"):
+                        bdays[p["id"]] = prof["birthday"]
+
+        def birthday_soon(mmdd: str, days: int = 45) -> bool:
+            try:
+                today = _dt.date.today()
+                nxt = _dt.date(today.year, int(mmdd[:2]), int(mmdd[3:5]))
+                if nxt < today:
+                    nxt = _dt.date(today.year + 1, int(mmdd[:2]), int(mmdd[3:5]))
+                return 0 <= (nxt - today).days <= days
+            except (ValueError, IndexError):
+                return False
+
+        items, enqueued = [], 0
+        for p in photos:
+            name = who.get(p["id"], "")
+            for tid in ("portrait", "breaking_news", "christmas"):
+                tpl = scenes.TEMPLATES[tid]
+                headline = tpl["headline"]
+                if name and tid == "portrait" and bdays.get(p["id"]) \
+                        and birthday_soon(bdays[p["id"]]):
+                    headline = f"Happy Birthday, {name}!"
+                key = (tid, (p["id"],))
+                if key in known:
+                    did, rev = known[key]
+                else:
+                    spec = validate(owner, {
+                        "template": tid, "format": "5x7",
+                        "headline": headline, "recipient": name,
+                        "sender": "", "inside_message": "",
+                        "photos": [{"photo_id": p["id"], "crop": [0, 0, 1, 1],
+                                    "focus": [0.5, 0.5], "cutout": ""}]})
+                    did, rev = "card_" + uuid.uuid4().hex, 1
+                    t = time.time()
+                    with db.connect() as c:
+                        c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner) VALUES (?,?,?,?,?,?)",
+                                  (did, owner, rev, t, t, owner))
+                        c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
+                                  (did, rev, json_dump(spec), t))
+                        c.commit()
+                    known[key] = (did, rev)
+                with db.connect() as c:
+                    job = c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='preview' AND status IN ('queued','running','ready') ORDER BY created_at DESC LIMIT 1",
+                                    (owner, did, rev)).fetchone()
+                url, status = "", "missing"
+                if job:
+                    status = job["status"]
+                    if status == "ready":
+                        url = f"/api/cards/{did}/r{rev}/preview"
+                elif enqueued < 6:
+                    try:
+                        enqueue(owner, did, rev, "preview")
+                        enqueued += 1
+                        status = "queued"
+                    except CardError:
+                        pass
+                items.append({
+                    "design_id": did, "revision": rev, "template": tid,
+                    "template_label": tpl["label"], "headline": headline,
+                    "recipient": name, "format": "5x7",
+                    "price_cents": scenes.FORMATS["5x7"]["price_cents"],
+                    "photo": {"id": p["id"], "orig_name": p.get("orig_name") or "Photo",
+                              "url": f"/api/cards/photos/{p['id']}/image"},
+                    "preview_url": url, "preview_status": status,
+                })
+        return jsonify(ok=True, items=items)
+
     @bp.get("/api/cards/designs/<did>")
     def get_design(did):
         return jsonify(ok=True,design=record(request.card_owner,did))

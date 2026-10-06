@@ -1,0 +1,7 @@
+{
+  "line": "tcg_stand",
+  "base": "masters/slab_stand.stl",
+  "surface": {"origin_mm": [0, 22.5, 2.5], "normal": [0, 1, 0],
+              "width_mm": 80, "height_mm": 4, "embed_mm": 0.4},
+  "text": {"size_mm": 4, "depth_mm": 1.0, "max_chars": 14, "auto_fit": true}
+}

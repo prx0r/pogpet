@@ -1,0 +1,25 @@
+{
+  "line": "train_station",
+  "base": "masters/train_station.stl",
+  "surface": {
+    "origin_mm": [
+      0,
+      0,
+      0.5
+    ],
+    "normal": [
+      0,
+      0,
+      1
+    ],
+    "width_mm": 40,
+    "height_mm": 20,
+    "embed_mm": 0.4
+  },
+  "text": {
+    "size_mm": 8,
+    "depth_mm": 1.0,
+    "max_chars": 18,
+    "auto_fit": true
+  }
+}

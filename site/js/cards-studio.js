@@ -32,12 +32,14 @@
     var toolbar=el('div',undefined,'oc-toolbar');
     toolbar.append(button('Upload photos',function(){file.click();}),button('Make a greeting card',function(){host.tab('cards');open();}),button('Refresh',refresh));
     library.append(el('h3','Your photo library'),el('p','Upload Dad, Mum, the kids or your pets. Select photos to use in your card.'),toolbar,file,uploads,selectedLine,grid);
-    if(studio) studio.prepend(library);
+    // Studio owns uploads. This library is a photo picker inside the card editor.
+    toolbar.replaceChildren();
+    library.replaceChildren(el('h3','Photos for this card'),selectedLine,grid);
     // Replace the two disconnected legacy card forms and their ornament order buttons.
     if(panel) panel.replaceChildren();
     var header=el('div',undefined,'store-head');header.append(el('h2','Greeting cards'),el('p','Give them a starring moment. Save the card, then bring it to life.'));
     var cardsLibrary=el('div',undefined,'oc-library');
-    cardsLibrary.append(button('Choose photos in Studio',function(){host.tab('studio');refresh();}),button('Upload photos here',function(){file.click();}));
+    cardsLibrary.append(button('Manage photos in Studio',function(){host.tab('studio');}));
     var choices=el('div',undefined,'oc-templates');var sceneNote=el('p','','oc-status');var quality=el('p','','oc-status');
     var saved=el('select');saved.setAttribute('aria-label','Saved greeting cards');
     saved.append(new Option('New card',''));
@@ -67,8 +69,12 @@
     var exportBtn=button('Download print PDF',function(){produce('export').catch(error);});
     var motionBtn=button('Bring this card to life',function(){produce('motion').catch(error);});
     var orderBtn=button('Reserve this card',reserve);
-    var actions=el('div',undefined,'oc-toolbar');actions.append(save,exportBtn,motionBtn,button('View linked video',async function(){try{var x=await savePreview();host.tab('videos');await videos(x.id);}catch(e){error(e);}}),orderBtn,button('New card',newCard));
-    if(panel) panel.append(header,cardsLibrary,choices,sceneNote,form,crop,previews,quality,status,actions,video,downloads,el('p','Prices are estimates. Reservation does not charge you. Print supplier checkout is not connected.','panel__fine'));
+    var actions=el('div',undefined,'oc-toolbar');actions.append(save,exportBtn,motionBtn,button('View matching video',async function(){try{var x=await savePreview();await videos(x.id);var item=sceneGrid.querySelector('[data-scene-id="'+x.id+'"]');if(item&&item.scrollIntoView)item.scrollIntoView({block:'start'});}catch(e){error(e);}}),orderBtn,button('New card',newCard));
+    // Editor is tinkerer tools: collapsed by default, gallery + scenes lead.
+    var tinkerer=el('details',undefined,'oc-tinkerer');
+    var tinkererSummary=el('summary','Tinkerer tools (forms)');
+    tinkerer.append(tinkererSummary,header,cardsLibrary,library,choices,sceneNote,form,crop,previews,quality,status,actions,video,downloads,el('p','Prices are estimates. Reservation does not charge you. Print supplier checkout is not connected.','panel__fine'));
+    if(panel) panel.append(tinkerer);
     var timer,image,canvasRect,drag;
     function error(e){status.textContent=e.message||String(e);}
     function slot(pid){return state.slots[pid]||(state.slots[pid]={photo_id:pid,crop:[0,0,1,1],focus:[.5,.5],cutout:''});}
@@ -77,7 +83,7 @@
     function spec(){var s={template:state.template,format:state.format,photos:chosen().map(function(pid){return JSON.parse(JSON.stringify(slot(pid)));})};Object.keys(inputs).forEach(function(k){s[k]=inputs[k].value;});return s;}
     function paintChoices(){sceneNote.textContent=tpl()?'Matching clip: '+tpl().motion+'.':'';choices.replaceChildren();state.templates.forEach(function(t){choices.append(button(t.label,function(){state.template=t.id;headline.value=t.headline;paintChoices();paintCropChoices();changed();},'oc-button'+(t.id===state.template?' selected':'')));});}
     function refresh(){return host.ready().then(function(){return host.get('/cards/photos');}).then(function(d){state.photos=d.photos;paintPhotos();paintCropChoices();}).catch(error);}
-    function paintPhotos(){grid.replaceChildren();state.photos.forEach(function(p){var b=button('',function(){var i=state.selected.indexOf(p.id);if(i>=0)state.selected.splice(i,1);else if(state.selected.length<5)state.selected.push(p.id);else{status.textContent='Select up to five photos.';return;}paintPhotos();paintCropChoices();changed();},'oc-photo'+(state.selected.includes(p.id)?' selected':''));b.setAttribute('aria-pressed',String(state.selected.includes(p.id)));var im=el('img');im.src=host.asset(p.url);im.alt=p.orig_name||'Uploaded photo';im.loading='lazy';b.append(im,el('span',p.person||p.orig_name||'Photo'));grid.append(b);});selectedLine.textContent=state.selected.length+' photos selected. The first selected photo is the star in single-photo scenes.';}
+    function paintPhotos(){grid.replaceChildren();state.photos.filter(function(p){var ctx=window.OddHobbStudioContext;return state.id||!ctx||!ctx.subject||ctx.photos.some(function(x){return x.id===p.id;});}).forEach(function(p){var b=button('',function(){var i=state.selected.indexOf(p.id);if(i>=0)state.selected.splice(i,1);else if(state.selected.length<5)state.selected.push(p.id);else{status.textContent='Select up to five photos.';return;}paintPhotos();paintCropChoices();changed();},'oc-photo'+(state.selected.includes(p.id)?' selected':''));b.setAttribute('aria-pressed',String(state.selected.includes(p.id)));var im=el('img');im.src=host.asset(p.url);im.alt=p.orig_name||'Uploaded photo';im.loading='lazy';b.append(im,el('span',p.person||p.orig_name||'Photo'));grid.append(b);});selectedLine.textContent=state.selected.length+' photos selected. The first selected photo is the star in single-photo scenes.';}
     function paintCropChoices(){photoSelect.replaceChildren();chosen().forEach(function(pid){var p=state.photos.find(function(x){return x.id===pid;});photoSelect.append(new Option(p?p.orig_name:pid,pid));});crop.hidden=!chosen().length;state.cropTarget=chosen().includes(state.cropTarget)?state.cropTarget:chosen()[0]||'';photoSelect.value=state.cropTarget;drawCrop();}
     photoSelect.addEventListener('change',function(){state.cropTarget=photoSelect.value;drawCrop();});
     function drawCrop(){var pid=state.cropTarget,p=state.photos.find(function(x){return x.id===pid;});if(!p)return;var s=slot(pid);cropInputs.forEach(function(n,i){n.value=s.crop[i];});fx.value=s.focus[0];fy.value=s.focus[1];cropResult.hidden=!s.cutout;if(s.cutout)cropResult.src=host.asset('/cards/cutouts/'+s.cutout+'/image');image=new Image();image.onload=function(){if(state.cropTarget!==pid)return;var ratio=Math.min(canvas.width/image.width,canvas.height/image.height);canvasRect={x:(canvas.width-image.width*ratio)/2,y:(canvas.height-image.height*ratio)/2,w:image.width*ratio,h:image.height*ratio};paintCanvas();};image.onerror=function(){status.textContent='Could not load that photo. Refresh and try again.';};image.src=host.asset(p.url);}
@@ -104,22 +110,36 @@
     var idem='';
     async function reserve(){orderBtn.disabled=true;try{var sc=await produce('export');idem=sc.id+'-r'+sc.revision+'-qty1';var d=await host.post('/cards/'+sc.id+'/order',{revision:sc.revision,qty:1,idempotency_key:idem});status.textContent='Card reserved · '+money(d.order.price_cents)+' estimate · no payment taken. '+d.order.id;}catch(e){error(e);}finally{orderBtn.disabled=false;}}
     async function savedList(){var d=await host.get('/cards/designs');saved.replaceChildren(new Option('New card',''));d.designs.forEach(function(x){saved.append(new Option(x.spec.headline+' · r'+x.revision,x.id));});saved.value=state.id;}
-    async function loadSaved(selectedId){clearTimeout(timer);await state.chain.catch(function(){});if(!selectedId){newCard();return;}try{var d=await host.get('/cards/designs/'+selectedId),x=d.design;state.id=x.id;state.revision=x.revision;state.template=x.spec.template;state.format=x.spec.format;state.selected=x.spec.photos.map(function(p){state.slots[p.photo_id]=p;return p.photo_id;});Object.keys(inputs).forEach(function(k){inputs[k].value=x.spec[k];});format.value=state.format;paintChoices();paintPhotos();paintCropChoices();changed();}catch(e){error(e);}}
+    async function loadSaved(selectedId){clearTimeout(timer);await state.chain.catch(function(){});if(!selectedId){newCard();return;}try{var d=await host.get('/cards/designs/'+selectedId),x=d.design;state.id=x.id;state.revision=x.revision;state.template=x.spec.template;state.format=x.spec.format;state.selected=x.spec.photos.map(function(p){state.slots[p.photo_id]=p;return p.photo_id;});Object.keys(inputs).forEach(function(k){inputs[k].value=x.spec[k];});format.value=state.format;paintChoices();paintPhotos();paintCropChoices();state.dirty++;downloads.replaceChildren();video.pause();video.hidden=true;video.removeAttribute('src');preview.hidden=true;insidePreview.hidden=true;price.textContent='Estimated '+money((state.formats[state.format]||{}).price_cents||0)+' per card';status.textContent='Opened saved revision '+state.revision+'.';empty.textContent='Saved revision '+state.revision;var scene=(await host.get('/cards/'+state.id+'/scene?revision='+state.revision)).scene;if(scene.poster.url){preview.src=host.asset(scene.poster.url);preview.hidden=false;insidePreview.src=host.asset('/cards/'+state.id+'/r'+state.revision+'/inside');insidePreview.hidden=false;}if(scene.outputs.motion.status==='ready'){video.src=host.asset(scene.outputs.motion.url);video.hidden=false;}}catch(e){error(e);}}
     saved.addEventListener('change',function(){loadSaved(saved.value);});
-    function newCard(){clearTimeout(timer);state.chain.catch(function(){}).then(function(){state.id='';state.revision=0;state.dirty++;saved.value='';video.hidden=true;downloads.replaceChildren();status.textContent='New card. Choose a scene and edit your message.';});}
+    function newCard(){clearTimeout(timer);state.chain.catch(function(){}).then(function(){state.id='';state.revision=0;state.dirty++;saved.value='';video.hidden=true;downloads.replaceChildren();status.textContent='New card. Choose a scene and edit your message.';var ctx=window.OddHobbStudioContext;if(ctx)document.dispatchEvent(new CustomEvent('oddhobb:subject',{detail:ctx}));});}
     function open(){if(!state.ready)state.ready=host.ready().then(async function(){var d=await host.get('/cards/templates');state.templates=d.templates;state.formats=d.formats;format.replaceChildren();Object.keys(d.formats).forEach(function(k){format.append(new Option(d.formats[k].label,k));});format.value=state.format;headline.value=tpl().headline;motionBtn.disabled=!d.motion_available;paintChoices();await refresh();await savedList();price.textContent='Estimated '+money(d.formats[state.format].price_cents)+' per card';}).catch(function(e){state.ready=null;error(e);});return state.ready;}
-    var videoHost=document.querySelector('#panel-videos .panel__inner');
+    var videoHost=document.querySelector('#panel-cards .panel__inner');
     var sceneLibrary=el('section',undefined,'oc-scene-library');
     var sceneGrid=el('div',undefined,'oc-scenes');
     var videoStatus=el('p','','oc-status');videoStatus.setAttribute('role','status');videoStatus.setAttribute('aria-live','polite');
     var videoRefresh=button('Refresh saved scenes',function(){videos();});
-    sceneLibrary.append(el('h3','Your card scenes'),el('p','The same saved scene makes your card and matching video. Open a card to change the photos or message.'),videoRefresh,sceneGrid,videoStatus);
-    if(videoHost)videoHost.insertBefore(sceneLibrary,videoHost.children[1]||null);
+    sceneLibrary.append(el('h3','Your card scenes'),el('p','The same saved scene makes your card and matching video. Render the video from its card.'),videoRefresh,sceneGrid,videoStatus);
+    if(videoHost){
+      // Gallery (ready-made, no forms) + scenes are the Cards tab.
+      // The editor below stays for tinkerers; backend flows untouched.
+      var galHost={get:host.get,post:host.post,asset:host.asset};
+      if(window.OddHobbGallery&&!videoHost.querySelector('.oc-gallery')){
+        try{window.OddHobbGallery.mount(videoHost,galHost);}catch(e){}
+      }
+      videoHost.insertBefore(sceneLibrary,videoHost.children[1]||null);
+    }
     var videoGeneration=0;
     async function videos(focusId){var generation=++videoGeneration;videoStatus.textContent='Loading your saved scenes…';try{await host.ready();var d=await host.get('/cards/designs');var scenes=await Promise.all(d.designs.map(function(x){return host.get('/cards/'+x.id+'/scene?revision='+x.revision).then(function(r){return r.scene;});}));if(generation!==videoGeneration)return;sceneGrid.replaceChildren();scenes.forEach(function(scene){var item=el('article',undefined,'oc-scene');item.dataset.sceneId=scene.id;item.append(el('h4',scene.spec.headline),el('p','Saved revision '+scene.revision));if(scene.poster.url){var poster=el('img');poster.src=host.asset(scene.poster.url);poster.alt=scene.spec.headline;poster.loading='lazy';item.append(poster);}var clip=el('video');clip.controls=true;clip.playsInline=true;clip.preload='none';clip.hidden=true;var message=el('p','','oc-status');message.setAttribute('role','status');
       function showClip(url){clip.src=host.asset(url);clip.hidden=false;var a=el('a','Download MP4','oc-button');a.href=clip.src;a.download='oddhobb-scene.mp4';links.append(a);}
       var links=el('div',undefined,'oc-toolbar');var render=button('Render matching video',async function(){render.disabled=true;message.textContent='Rendering this saved revision…';try{var r=await host.post('/cards/'+scene.id+'/render',{revision:scene.revision,kind:'motion'});var job=await poll(r.job);showClip(job.url);render.hidden=true;message.textContent='Video ready · revision '+scene.revision;}catch(e){message.textContent=e.message;}finally{render.disabled=false;}});
       links.append(button('Open linked card',async function(){try{await open();await refresh();await loadSaved(scene.id);host.tab('cards');}catch(e){message.textContent=e.message;}}),render);item.append(clip,links,message);var motion=scene.outputs.motion;if(motion.status==='ready'){showClip(motion.url);render.hidden=true;}else{render.disabled=!scene.capabilities.video;message.textContent=motion.status==='failed'?motion.error:motion.status==='queued'||motion.status==='running'?'Video is rendering. Click to check the existing job.':'Create the matching video from this card.';}sceneGrid.append(item);});videoStatus.textContent=scenes.length?'Each video stays linked to its saved card revision.':'No saved scenes yet. Make your first card in Studio.';if(focusId){var focused=Array.from(sceneGrid.children).find(function(n){return n.dataset.sceneId===focusId;});if(focused)focused.scrollIntoView({block:'start'});}}catch(e){if(generation===videoGeneration)videoStatus.textContent=e.message;}}
-    return {open:open,refresh:refresh,videos:videos};
+    document.addEventListener('oddhobb:subject',function(e){
+      var ctx=e.detail;if(state.id){status.textContent='This saved card keeps its original photos. Choose New card to make one for '+(ctx.subject?ctx.subject.name:'another friend')+'.';return;}
+      state.selected=ctx.photos.slice(0,5).map(function(p){var link=p.subjects.find(function(l){return l.subject_id===ctx.subject.id&&l.confirmed&&l.face_id;});var face=link&&p.faces.find(function(f){return f.id===link.face_id;});if(face){var s=slot(p.id);s.focus=[face.box[0]+face.box[2]/2,face.box[1]+face.box[3]/2];}return p.id;});
+      recipient.value=ctx.subject?ctx.subject.name:'';paintPhotos();paintCropChoices();
+    });
+    async function openDesign(id){await open();await refresh();await loadSaved(id);}
+    return {open:open,refresh:refresh,videos:videos,openDesign:openDesign};
   };
 })();

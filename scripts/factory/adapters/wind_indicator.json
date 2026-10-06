@@ -1,0 +1,25 @@
+{
+  "line": "wind_indicator",
+  "base": "masters/wind_base.stl",
+  "surface": {
+    "origin_mm": [
+      0,
+      0,
+      0.5
+    ],
+    "normal": [
+      0,
+      0,
+      1
+    ],
+    "width_mm": 30,
+    "height_mm": 12,
+    "embed_mm": 0.4
+  },
+  "text": {
+    "size_mm": 6,
+    "depth_mm": 0.8,
+    "max_chars": 8,
+    "auto_fit": true
+  }
+}

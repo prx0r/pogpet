@@ -27,6 +27,80 @@ TEMPLATES = {
     "typography": {"label": "Say it properly", "headline": "You're one of a kind.", "max_photos": 0, "min_photos": 0, "motion": "title reveal", "bg": "#f4d651", "ink": "#22221d", "accent": "#22221d"},
 }
 
+# ── design contracts (same reusable format as STUDIO_LINES) ─────────────
+# domain "paper": locked = print truths a designer must not move; envelope =
+# largest trim; material = stock; cost = rough print cost per format ex-VAT
+# (live Prodigi quote wins). Photo counts mirror min/max above — the filter
+# a model designs against.
+CARD_DESIGN_CONTRACTS = {
+    "portrait": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "folded formats: artwork keeps clear of the spine 6mm",
+                   "1 photo exactly (face crop with focus point)"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["A6", "5x7", "A5"],
+        "cost_target_cents": {"A6": 120, "5x7": 200, "A5": 280},
+        "verify": [],
+    },
+    "family": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1–5 photos in 2-col grid, order preserved",
+                   "folded formats: spine clearance 6mm"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["A6", "5x7", "A5"],
+        "cost_target_cents": {"A6": 120, "5x7": 200, "A5": 280},
+        "verify": [],
+    },
+    "breaking_news": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1 photo exactly",
+                   "ticker zone reserved at foot on folded formats"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["A6", "5x7", "A5"],
+        "cost_target_cents": {"A6": 120, "5x7": 200, "A5": 280},
+        "verify": [],
+    },
+    "game_winner": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1 photo exactly",
+                   "confetti zone keeps clear of the face crop"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["A6", "5x7", "A5"],
+        "cost_target_cents": {"A6": 120, "5x7": 200, "A5": 280},
+        "verify": [],
+    },
+    "awards": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1 photo exactly"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["A6", "5x7", "A5"],
+        "cost_target_cents": {"A6": 120, "5x7": 200, "A5": 280},
+        "verify": [],
+    },
+    "christmas": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1–5 photos in 2-col grid",
+                   "snowfall zone keeps clear of faces"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["A6", "5x7", "A5"],
+        "cost_target_cents": {"A6": 120, "5x7": 200, "A5": 280},
+        "verify": [],
+    },
+    "typography": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "0 photos — type only", "headline wraps, never clips"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["A6", "5x7", "A5"],
+        "cost_target_cents": {"A6": 120, "5x7": 200, "A5": 280},
+        "verify": [],
+    },
+}
+
+for _tid, _contract in CARD_DESIGN_CONTRACTS.items():
+    if _tid in TEMPLATES:
+        TEMPLATES[_tid]["design_contract"] = _contract
+del _tid, _contract
+
 
 def font(size, bold=False):
     suffix = "-Bold" if bold else ""

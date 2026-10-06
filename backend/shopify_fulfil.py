@@ -34,6 +34,10 @@ def _token() -> str:
     tok = _env("SHOPIFY_ACCESS_TOKEN") or _env("SHOPIFY_ADMIN_TOKEN")
     if tok:
         return tok
+    return _exchange()
+
+
+def _exchange() -> str:
     cid, sec = _env("SHOPIFY_API_KEY"), _env("SHOPIFY_API_SECRET")
     if not (cid and sec):
         raise RuntimeError("Shopify credentials missing")
@@ -60,20 +64,30 @@ def gql(query: str, variables: dict | None = None) -> dict[str, Any]:
     if not configured():
         raise RuntimeError("Shopify not configured")
     body = json.dumps({"query": query, "variables": variables or {}}).encode()
-    req = urllib.request.Request(
-        f"https://{store()}/admin/api/{API_VERSION}/graphql.json",
-        data=body,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "X-Shopify-Access-Token": _token(),
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=45) as r:
-            return json.loads(r.read().decode() or "{}")
-    except urllib.error.HTTPError as e:
-        return {"errors": e.read().decode("utf-8", "replace")[:400]}
+
+    def _post(tok: str) -> dict[str, Any]:
+        req = urllib.request.Request(
+            f"https://{store()}/admin/api/{API_VERSION}/graphql.json",
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": "application/json",
+                "X-Shopify-Access-Token": tok,
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read().decode() or "{}")
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                return {"errors": "[API] Invalid API key or access token"}
+            raise
+
+    data = _post(_token())
+    if isinstance(data, dict) and "Invalid API key" in str(data.get("errors") or ""):
+        # stored token went stale (~24h) — fresh exchange, one retry
+        data = _post(_exchange())
+    return data
 
 
 def shop_name() -> str | None:
@@ -95,7 +109,7 @@ def create_draft_order(line_label: str, price_cents: int, qty: int,
     lines = [{
         "title": line_label,
         "quantity": max(1, int(qty)),
-        "price": f"{amount:.2f}",
+        "originalUnitPrice": f"{amount:.2f}",
     }]
     draft_input: dict = {
         "note": note[:200] or f"OddHobb studio order · {line_label}",

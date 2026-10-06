@@ -424,10 +424,15 @@ def claim_assets(c: sqlite3.Connection, from_owner: str, to_handle: str) -> dict
             out[table]=cur.rowcount
     # Guided sessions and friend profiles move with the shopper — otherwise
     # claiming an account 404s the session they were just using.
-    for table in ("guide_sessions","subject_profiles"):
+    for table in ("guide_sessions","subject_profiles","studio_subjects","orders"):
         if table in tables:
             cur=c.execute(f"UPDATE {table} SET owner=? WHERE owner=? AND owner<>?",(to_handle,from_owner,to_handle))
             out[table]=cur.rowcount
+    if "studio_selection" in tables:
+        old=c.execute("SELECT subject_id,mesh_id FROM studio_selection WHERE owner=?",(from_owner,)).fetchone()
+        if old:
+            c.execute("INSERT OR IGNORE INTO studio_selection VALUES (?,?,?)",(to_handle,old['subject_id'],old['mesh_id']))
+            c.execute("DELETE FROM studio_selection WHERE owner=?",(from_owner,))
     return out
 
 

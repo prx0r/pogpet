@@ -115,7 +115,7 @@ def main() -> int:
     base.select_set(True)
     bpy.context.view_layer.objects.active = base
     try:
-        bpy.ops.wm.stl_export(filepath=str(out), export_selected=True)
+        bpy.ops.wm.stl_export(filepath=str(out), export_selected_objects=True)
     except (AttributeError, TypeError):
         bpy.ops.export_mesh.stl(filepath=str(out), use_selection=True)
     me = base.data

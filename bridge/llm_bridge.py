@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -290,6 +291,18 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self._json({"success": False, "error": f"backend unreachable: {e}"}, 502)
             return
+        # Old Flask processes and proxy error pages return HTML. API callers
+        # must receive JSON with the original failure status, never that HTML.
+        if sub.startswith('/api/') and status >= 400:
+            try:
+                parsed = json.loads(payload)
+                valid_json = isinstance(parsed, dict)
+            except (ValueError, UnicodeError):
+                valid_json = False
+            if not valid_json:
+                self._json({'ok': False, 'error': 'API route unavailable' if status == 404
+                            else 'Service temporarily unavailable'}, status)
+                return
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(payload)))
@@ -334,7 +347,7 @@ class Handler(BaseHTTPRequestHandler):
         if raw.startswith("/api/"):
             self._json({"success": False, "error": "GET not supported"}, 405)
             return
-        if raw == "/products" or raw.startswith("/products/"):
+        if re.fullmatch(r"/(?:studio(?:/people/[\w-]+)?|products(?:/[\w-]+)?|cards(?:/[\w-]+)?|videos(?:/[\w-]+)?|perform|search|cart|account|upload|shop|quick)/?", raw):
             # Products tab + per-line pages live in the SPA (site/index.html);
             # boot opens the products panel from the pathname. /products.html
             # (Etsy photo gallery file) does not match and still serves below.
@@ -357,6 +370,9 @@ class Handler(BaseHTTPRequestHandler):
         ctype = {
             ".html": "text/html; charset=utf-8",
             ".js": "text/javascript; charset=utf-8",
+            ".mjs": "text/javascript; charset=utf-8",
+            ".wasm": "application/wasm",
+            ".tflite": "application/octet-stream",
             ".css": "text/css; charset=utf-8",
             ".json": "application/json",
             ".png": "image/png",
@@ -364,7 +380,11 @@ class Handler(BaseHTTPRequestHandler):
             ".svg": "image/svg+xml",
             ".jpg": "image/jpeg",
             ".zip": "application/zip",
-            ".jpg": "image/jpeg",
+            ".mp4": "video/mp4",
+            ".m4v": "video/mp4",
+            ".webm": "video/webm",
+            ".glb": "model/gltf-binary",
+            ".gltf": "model/gltf+json",
             ".txt": "text/plain; charset=utf-8",
             ".ico": "image/x-icon",
         }.get(target.suffix, "application/octet-stream")
@@ -391,7 +411,8 @@ class Handler(BaseHTTPRequestHandler):
                 "i=(typeof i==='string')?n:new Request(n,i);}return f(i,o);};})();"
                 "</script>"
             ).encode()
-            marker = b"</body>"
+            # Install API auth before the page's inline scripts make requests.
+            marker = b"</head>"
             data = (data.replace(marker, inject + marker, 1)
                     if marker in data else data + inject)
         self.send_response(200)

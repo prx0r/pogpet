@@ -1,0 +1,7 @@
+{
+  "line": "golf_marker",
+  "base": "masters/golf_marker.stl",
+  "surface": {"origin_mm": [0, 0, 0.4], "normal": [0, 0, 1],
+              "width_mm": 20, "height_mm": 20, "embed_mm": 0.4},
+  "text": {"size_mm": 6, "depth_mm": 0.8, "max_chars": 10, "auto_fit": true}
+}

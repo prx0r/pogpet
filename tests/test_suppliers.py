@@ -17,7 +17,7 @@ from backend import suppliers as sup  # noqa: E402
 
 class TestRegistry(unittest.TestCase):
     def test_seven_suppliers(self):
-        self.assertEqual(len(sup.SUPPLIERS), 7)
+        self.assertEqual(len(sup.SUPPLIERS), 8)
         for sid, s in sup.SUPPLIERS.items():
             for k in ("label", "ships", "materials", "order", "est"):
                 self.assertIn(k, s, sid)

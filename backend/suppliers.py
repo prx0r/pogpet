@@ -20,7 +20,24 @@ SUPPLIERS: dict[str, dict] = {
         "notes": "Home farm. Instant file quotes (£1.29 benchy / £2.50 fidget / "
                  "£7.60 articulated ex-VAT), £1 min per order. Human QA per order.",
         "est": {"kind": "band", "bands": [[10, 129], [40, 250]],
-                "default_cents": None, "ccy": "GBP"},
+                "default_cents": None, "ccy": "GBP",
+                # rough per-size normalisation (solid-equivalent cm3, ex-VAT,
+                # from benchy £1.29 / fidget £2.50 file quotes — VERIFY on
+                # first live quote, farm pricing moves):
+                "per_cm3": {"PLA": 12, "PETG": 16}},
+    },
+    "printie": {
+        "label": "Printie (UK print farm, qty-1 friendly)",
+        "home": "UK", "ships": ["UK", "worldwide"],
+        "materials": ["PLA", "PETG"], "colors_max": 4,
+        "build_mm": [256, 256, 256],
+        "order": "manual", "api": "browser quote tool (no public API)",
+        "min_qty": 1, "account": "none needed",
+        "commitment": "none — pay per order",
+        "dispatch_days": [2, 5],
+        "notes": "Second UK lane next to MAKR3D. Rough per-size rates only — "
+                 "VERIFY on first live quote.",
+        "est": {"kind": "per_cm3", "PLA": 14, "PETG": 18, "ccy": "GBP"},
     },
     "yorkshire3d": {
         "label": "Yorkshire3D custom manufacturing (UK B2B)",
@@ -128,6 +145,16 @@ def estimate(supplier_id: str, *, material: str = "PLA", colors: int = 1,
                 est = cents
                 break
         est = max(100, est)
+        # cross-check against rough per-size rate when volume is known
+        per = (model.get("per_cm3") or {}).get(material)
+        if per and volume_cm3 is not None:
+            vest = round(volume_cm3 * per)
+            if vest > est:
+                est, basis = vest, f"~{per}p/cm³ {material} rough (ex-VAT, verify)"
+    elif model["kind"] == "band" and volume_cm3 is not None:
+        per = (model.get("per_cm3") or {}).get(material)
+        if per:
+            est, basis = round(volume_cm3 * per), f"~{per}p/cm³ {material} rough (ex-VAT, verify)"
     elif model["kind"] == "per_cm3" and volume_cm3 is not None:
         rate = model.get(material)
         if rate:

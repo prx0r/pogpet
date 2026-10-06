@@ -198,6 +198,7 @@ def apply_turn(state: dict, text: str) -> list[str]:
     if m and m.group(1) != rec.get("name"):
         rec.update({"name": m.group(1), "interests": [], "dislikes": [],
                     "birthday": "", "mesh_id": "", "anecdotes": []})
+        state.update({"photo_ids": [], "mesh_id": "", "mesh_status": ""})
         changed.append("recipient.switch")
 
     name = _extract_name(text)

@@ -1,10 +1,11 @@
 /* Offline functional checks of the real TypeScript extension, no LLM calls.
-   NODE_PATH must provide typescript and typebox (or install them locally). */
+   Run: NODE_PATH=pi/node_modules node tests/test_pi_cards.cjs
+   (typescript + typebox resolve from the vendored pi workspace.) */
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{pathToFileURL}=require('node:url');
 (async()=>{
  // Execute the actual injected shim: URL-string calls must carry identity
  // headers with both a plain header object and a Headers instance.
- const shim=require('node:child_process').execFileSync('python',['-c',
+ const shim=require('node:child_process').execFileSync('python3',['-c',
   "import ast,json; from pathlib import Path; tree=ast.parse(Path('bridge/llm_bridge.py').read_text()); node=next(n for n in ast.walk(tree) if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='inject' for t in n.targets)); print(eval(compile(ast.Expression(node.value),'shim','eval'),{'json':json,'TOKEN':'test-bridge-token'}).decode())"
  ],{cwd:path.join(__dirname,'..'),encoding:'utf8'}).trim().replace(/^<script>|<\/script>$/g,'');
  let outgoing=[];const window={fetch:async(i,o)=>{outgoing.push({i,o});return {};}};

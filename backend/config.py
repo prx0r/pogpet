@@ -184,8 +184,8 @@ STUDIO_LINES: dict[str, dict] = {
         "price_cents": 1000,
         "assets": {
             "hats": ["none"],
-            "coats": ["none", "cream", "golden", "chocolate", "black", "fawn", "grey"],
-            "patterns": ["solid", "spots", "stripes"],
+            "coats": ["none"],
+            "patterns": ["solid"],
         },
         "theme": "everyday",
         "fulfilment": "print_farm",
@@ -229,7 +229,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 16,
         "hardware": "printed pin stem (Jibbitz-style)",
         "blurb": "Name/pet/face/hobby on a Jibbitz-style post. Tiny, instant gift.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -249,7 +249,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 16,
         "hardware": "printed loop + split-ring seat",
         "blurb": "Pet/person/motif charm for bags and zips.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 1000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -309,7 +309,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 30,
         "hardware": "lace-loop interface",
         "blurb": "Clog-charm engine reused for trainers. Pet/name/initial/hobby.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 1000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -389,7 +389,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 125,
         "hardware": "none",
         "blurb": "Gamertag embossed. Broad gamer gift, obvious on a desk.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "gamer",
@@ -409,7 +409,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 111,
         "hardware": "none",
         "blurb": "Family name + functional hub. Niche gift differentiator.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -429,14 +429,14 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 150,
         "hardware": "none",
         "blurb": "MUM / DAD / TOM / SARAH. Family set, upsell to the station.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
         "fulfilment": "print_farm",
         "material": "PLA", "colors_max": 4,
-        "dims_mm": None, "weight_g": None,
-        "weight_basis": "derive from tile dims at master time",
+        "dims_mm": [200.0, 40.0, 25.0], "weight_g": 274.9,
+        "weight_basis": "measured masters/domino_rack.stl at 100%",
         "fits": "double-9/12 dominoes (verify tile size)",
         "personalization": {"method": "emboss", "zone": "rack_fascia", "max_chars": 10},
         "supplier": "makr3d",
@@ -469,7 +469,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 80,
         "hardware": "snap-fit wheel (2 parts)",
         "blurb": "Tiny quirky add-on. Geometry still to author.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -489,7 +489,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 200,
         "hardware": "none",
         "blurb": "Simple stepped geometry, big name fascia. Family packs later.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -549,7 +549,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 32,
         "hardware": "none",
         "blurb": "Own peg master, 3.0-3.2mm shaft for 1/8in holes. Sculptural topper.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -569,7 +569,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 40,
         "hardware": "none",
         "blurb": "DAD'S DARTS, 180 CLUB. Obvious family gift, one-shot print.",
-        "status": "live",
+        "status": "soon",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -584,6 +584,192 @@ STUDIO_LINES: dict[str, dict] = {
         "occasion": "christmas", "sample": "needed",
     },
 }
+
+# ── design contracts (the design space for models) ────────────────────
+# Per line: what is LOCKED (functional interfaces a designer must not move),
+# the working envelope, material, and rough cost targets at makr3d + printie
+# (ex-VAT estimates — live quotes win). Anything marked "verify" needs its
+# MAKR3D sample before the number is trusted. A model designing for a line
+# must keep every locked interface and stay inside the envelope; everything
+# else is free.
+DESIGN_CONTRACTS: dict[str, dict] = {
+    "ornament": {
+        "origin": "mesh",
+        "locked": ["printed loop: hole dia 5.0mm, wire 2.4mm", "hang axis through CoM column"],
+        "envelope_mm": [90, 90, 100], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 28.0, "cost_target_cents": {"makr3d": 250, "printie": 390},
+        "verify": [],
+    },
+    "keychain": {
+        "origin": "mesh",
+        "locked": ["printed loop + ring: ring hole dia 4.0mm", "no metal anywhere"],
+        "envelope_mm": [70, 70, 90], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 14.0, "cost_target_cents": {"makr3d": 170, "printie": 200},
+        "verify": [],
+    },
+    "croc_tag": {
+        "origin": "mesh",
+        "locked": ["pin stem dia 4.2mm (fits ~5mm Croc holes)", "stopper disc dia >= 6mm",
+                   "face dia <= 32mm so it clears neighbouring holes"],
+        "envelope_mm": [32, 32, 18], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 2.5, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": ["pin fit on a real Croc hole"],
+    },
+    "gift_card": {
+        "origin": "digital",
+        "locked": [], "envelope_mm": [0, 0, 0], "material": "digital", "colors_max": 0,
+        "volume_cm3_est": 0.0, "cost_target_cents": {"makr3d": 0, "printie": 0},
+        "verify": [],
+    },
+    "brick": {
+        "origin": "mesh",
+        "locked": ["minifig scale: overall 75mm", "footprint fits 6x6 stud grid (48mm pitch 8.0mm)"],
+        "envelope_mm": [60, 60, 80], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 22.0, "cost_target_cents": {"makr3d": 250, "printie": 310},
+        "verify": [],
+    },
+    "clog_charm": {
+        "origin": "reference",
+        "locked": ["pin stem dia 5.0mm (Jibbitz post)", "retention head dia >= 12mm",
+                   "face <= 30mm"],
+        "envelope_mm": [30, 30, 18], "material": "PETG", "colors_max": 4,
+        "volume_cm3_est": 1.6, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": ["pin fit on a real Croc hole"],
+    },
+    "bag_charm": {
+        "origin": "reference",
+        "locked": ["split-ring seat hole dia >= 5.0mm", "strap slot width 8mm if present"],
+        "envelope_mm": [40, 40, 20], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 3.0, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": [],
+    },
+    "brick_keychain": {
+        "origin": "mesh",
+        "locked": ["printed loop + ring: ring hole dia 4.0mm", "minifig scale 60mm", "no metal"],
+        "envelope_mm": [50, 50, 70], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 12.0, "cost_target_cents": {"makr3d": 150, "printie": 170},
+        "verify": [],
+    },
+    "keycap": {
+        "origin": "reference",
+        "locked": ["Cherry MX stem: cross 4.0x4.0mm outer, wall 1.2mm, mount depth 4.5mm",
+                   "cap top zone 12x12mm for relief"],
+        "envelope_mm": [18, 18, 14], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 1.8, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": ["stem fit on a real MX switch"],
+    },
+    "shoelace_charm": {
+        "origin": "reference",
+        "locked": ["lace channel 8x3mm clear", "wall >= 1.6mm around channel"],
+        "envelope_mm": [30, 20, 12], "material": "PETG", "colors_max": 4,
+        "volume_cm3_est": 1.5, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": ["channel fit on a real lace"],
+    },
+    "book_holder": {
+        "origin": "reference",
+        "locked": ["thumb pad >= 18mm wide", "page slot 2.5mm (holds ~40 pages)"],
+        "envelope_mm": [60, 40, 25], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 6.0, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": [],
+    },
+    "golf_marker": {
+        "origin": "reference",
+        "locked": ["dia 24mm (measured marker-template)", "thickness 2.0mm", "flat top ±0.2mm"],
+        "envelope_mm": [24, 24, 4], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 1.2, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": [],
+    },
+    "straw_charm": {
+        "origin": "reference",
+        "locked": ["ring inner dia 7.0mm (grips 6mm straws)", "wall >= 1.6mm"],
+        "envelope_mm": [30, 30, 16], "material": "PETG", "colors_max": 4,
+        "volume_cm3_est": 1.5, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": ["ring grip on a real straw"],
+    },
+    "controller_stand": {
+        "origin": "reference",
+        "locked": ["cradle width >= 165mm (standard pad)", "support arms reach 60mm deep",
+                   "base footprint stable at 200x140mm"],
+        "envelope_mm": [220, 160, 140], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 90.0, "cost_target_cents": {"makr3d": 1080, "printie": 1260},
+        "verify": ["fit on a real controller", "weight/cost — 287g flagged"],
+    },
+    "train_station": {
+        "origin": "reference",
+        "locked": ["8 hub slots, each >= 50x26mm face for double-12 dominoes",
+                   "slot depth >= 13mm"],
+        "envelope_mm": [160, 160, 40], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 40.0, "cost_target_cents": {"makr3d": 480, "printie": 560},
+        "verify": ["slot fit on real double-12 dominoes"],
+    },
+    "domino_racks": {
+        "origin": "reference",
+        "locked": ["rack groove width >= 25mm, depth >= 13mm (double-12)",
+                   "4-player set geometry"],
+        "envelope_mm": [220, 60, 40], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 25.0, "cost_target_cents": {"makr3d": 300, "printie": 350},
+        "verify": ["groove fit on real dominoes"],
+    },
+    "line_reader": {
+        "origin": "reference",
+        "locked": ["tile channel inner width >= 23mm, height >= 15mm (slides over a mahjong face)"],
+        "envelope_mm": [120, 40, 25], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 8.0, "cost_target_cents": {"makr3d": 100, "printie": 115},
+        "verify": ["channel fit on real mahjong tiles"],
+    },
+    "wind_indicator": {
+        "origin": "reference",
+        "locked": ["base ring seats a rotating wheel: axle dia 6mm, wheel dia <= 60mm",
+                   "numbers legible at 8mm cap height"],
+        "envelope_mm": [80, 80, 25], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 10.0, "cost_target_cents": {"makr3d": 120, "printie": 140},
+        "verify": ["geometry not yet authored — wheel + base to be designed"],
+    },
+    "rummy_rack": {
+        "origin": "reference",
+        "locked": ["4-tier grooves: pitch 6mm, depth >= 5mm, tile lean 70deg",
+                   "holds 40+ tiles per rack"],
+        "envelope_mm": [260, 60, 60], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 30.0, "cost_target_cents": {"makr3d": 360, "printie": 420},
+        "verify": ["groove fit on real rummy tiles"],
+    },
+    "card_rack": {
+        "origin": "reference",
+        "locked": ["grooves 2.5mm wide (sleeved cards)", "rack length >= 200mm for a full hand"],
+        "envelope_mm": [220, 60, 50], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 20.0, "cost_target_cents": {"makr3d": 240, "printie": 280},
+        "verify": [],
+    },
+    "tcg_stand": {
+        "origin": "reference",
+        "locked": ["slab cradle inner >= 56mm wide, 90mm tall (PSA slab 85x54x7)",
+                   "lean angle 75deg"],
+        "envelope_mm": [100, 80, 120], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 15.0, "cost_target_cents": {"makr3d": 180, "printie": 210},
+        "verify": ["cradle fit on a real slab"],
+    },
+    "cribbage_pegs": {
+        "origin": "reference",
+        "locked": ["shaft dia 3.0–3.2mm (sliding fit for 1/8in=3.175mm holes)",
+                   "all parts manifold, print-ready"],
+        "envelope_mm": [12, 12, 40], "material": "PETG", "colors_max": 4,
+        "volume_cm3_est": 1.0, "cost_target_cents": {"makr3d": 100, "printie": 100},
+        "verify": [],
+    },
+    "dart_stand": {
+        "origin": "reference",
+        "locked": ["3 bores dia 12mm, depth 40mm (barrel + flight clearance)",
+                   "base stable at 120x80mm"],
+        "envelope_mm": [130, 90, 60], "material": "PLA", "colors_max": 4,
+        "volume_cm3_est": 35.0, "cost_target_cents": {"makr3d": 420, "printie": 490},
+        "verify": ["bore fit on real darts"],
+    },
+}
+
+for _lid, _contract in DESIGN_CONTRACTS.items():
+    if _lid in STUDIO_LINES:
+        STUDIO_LINES[_lid]["design_contract"] = _contract
+del _lid, _contract
 
 # ── personalisation levels (agent-visible contract) ─────────────────
 # L0 name/initials (instant, no Meshy) · L1 photo/2D asset (seconds) ·
@@ -667,6 +853,9 @@ STUDIO_HATS: list[dict] = [
 # Canonical product GLB (loop amend) served from /img/prod/ — demo + fallback
 STUDIO_CANONICAL_GLB = "/img/prod/chibi-figure-hook.glb"
 STUDIO_JAW_GLB = "/img/prod/chibi-figure-hook-jaw.glb"
+# Nibble proof: first personalised jibbit (mini mesh + pin, watertight)
+STUDIO_NIBBLE_JIBBIT_GLB = "/img/prod/nibble-jibbit.glb"
+STUDIO_NIBBLE_JIBBIT_PORTRAIT = "/img/prod/nibble-jibbit-hero.png"
 # Brick desk figures — parent GLBs from Creative Lab / svatantrya imports
 STUDIO_BRICK_GLB = "/img/prod/brick-figure.glb"
 STUDIO_BRICK_PORTRAIT = "/img/prod/brick-hero.png"

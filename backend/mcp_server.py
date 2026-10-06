@@ -529,14 +529,115 @@ async def figg_video_share(video_id: str) -> str:
     return _j(await _call("POST", f"/api/videos/{video_id}/share", {}))
 
 
+async def figg_gift_pack(budget_cents: int, owner: str = "",
+                         line: str = "", mesh_id: str = "",
+                         recipient: str = "") -> str:
+    """Oddy's game: best gift inside a budget — physical + card + free video.
+    Exact line honoured with cheap addons; otherwise best physical leaving
+    room for a card. Show the total before ordering parts."""
+    return _j(await _call("POST", "/api/gift-packs", {
+        "budget_cents": budget_cents, "owner": owner, "line": line,
+        "mesh_id": mesh_id, "recipient": recipient}))
+
+
+async def figg_studio_orders(owner: str = "") -> str:
+    """Your reservations and Shopify drafts. Read-only; nothing charges here."""
+    return _j(await _call("GET", "/api/studio/orders?owner=" + (owner or "anon")))
+
+
+async def figg_supplier_quote(line: str, material: str = "",
+                              colors: int = 1) -> str:
+    """Rough farm cost for a line at makr3d + printie. Estimates — live
+    quotes win. Uses the line's contract dims and volume."""
+    return _j(await _call("POST", "/api/design/validate", {
+        "line": line, "material": material, "colors": colors}))
+
+
 # ── the manifest: adding a tool = adding it to an area. One place. ───────────
+async def figg_upload_chatgpt_file(file: dict, owner: str = "") -> str:
+    """Pet photo attached in ChatGPT -> photo_id. ChatGPT populates `file`
+    (download_url + file_id) at call time; the server fetches the bytes
+    itself and runs them through intake. Never echo the URL."""
+    import urllib.request
+    import urllib.error
+    url = (file or {}).get("download_url", "")
+    name = (file or {}).get("file_name", "chatgpt-upload.jpg")
+    if not url:
+        return _j({"ok": False, "error": "no file attached — attach a photo in chat first"})
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (oddhobb-mcp)"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            blob = r.read(12 * 1024 * 1024 + 1)
+        if len(blob) > 12 * 1024 * 1024:
+            return _j({"ok": False, "error": "photo too large (12MB max)"})
+    except Exception as e:  # noqa: BLE001
+        return _j({"ok": False, "error": f"could not fetch attached photo: {str(e)[:120]}"})
+    import uuid as _uuid
+    import mimetypes as _mt
+    boundary = "oddhobb" + _uuid.uuid4().hex
+    ctype, _ = _mt.guess_type(name)
+    parts = [
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"owner\"\r\n\r\n{(owner or 'anon')}\r\n",
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"{name}\"\r\n"
+        f"Content-Type: {ctype or 'image/jpeg'}\r\n\r\n",
+    ]
+    body = parts[0].encode() + parts[1].encode() + blob + f"\r\n--{boundary}--\r\n".encode()
+    sep = "&"
+    target = f"{API}/api/photos?token={_service_token()}"
+    req = urllib.request.Request(target, data=body, method="POST",
+                                 headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return r.read().decode()
+    except urllib.error.HTTPError as e:
+        return e.read().decode()
+    except Exception as e:  # noqa: BLE001
+        return _j({"ok": False, "error": str(e)[:200]})
+
+
+async def figg_preview_image(line: str = "ornament", owner: str = "") -> list:
+    """Product preview as an actual image in chat, not a URL. Returns the
+    line's hero still inline + price text."""
+    from mcp.types import ImageContent, TextContent
+    try:
+        d = await _call("GET", "/api/products/studio?owner=" + (owner or "anon"))
+        item = next((i for i in d.get("items", []) if i.get("id") == line), None)
+        if not item:
+            return [TextContent(type="text", text=f"unknown line {line}")]
+        hero = ((item.get("stills") or {}).get("hero") or "")
+        price = f"£{(item.get('price_cents') or 0) / 100:.2f}"
+        import urllib.request
+        if not hero.startswith("http"):
+            hero = "https://oddhobb.com" + hero
+        req = urllib.request.Request(hero, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            blob, mime = r.read(2 * 1024 * 1024), r.headers.get("Content-Type", "image/png")
+        import base64
+        return [TextContent(type="text", text=f"{item.get('label', line)} — {price}"),
+                ImageContent(type="image", data=base64.b64encode(blob).decode(),
+                             mimeType=mime.split(";")[0])]
+    except Exception as e:  # noqa: BLE001
+        from mcp.types import TextContent
+        return [TextContent(type="text", text=f"preview failed: {str(e)[:150]}")]
+
+
+# _meta per tool: ChatGPT file picker wiring. figg_upload_chatgpt_file
+# declares its `file` param so ChatGPT attaches the photo at call time.
+TOOL_META: dict[str, dict] = {
+    "figg_upload_chatgpt_file": {
+        "openai/fileParams": ["file"],
+    },
+}
+
+
 TOOL_AREAS: dict[str, list] = {
     "cards":     [figg_card_library, figg_card_save, figg_card_render,
                   figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve,
                   figg_card_templates],
     "design":    [figg_blueprints, figg_design_validate, figg_design_base,
                   figg_design_save, figg_design_order, figg_blender_make],
-    "flow":      [figg_flow, figg_upload_photo, figg_start_mesh, figg_playbook, figg_quick_map,
+    "flow":      [figg_flow, figg_upload_photo, figg_upload_chatgpt_file,
+                  figg_preview_image, figg_start_mesh, figg_playbook, figg_quick_map,
                   figg_guide_open, figg_guide_turn, figg_guide_packs],
     "identity":  [figg_me, figg_create_account, figg_login, figg_credits],
     "mesh":      [figg_mesh_status, figg_measure, figg_print_export],
@@ -544,7 +645,8 @@ TOOL_AREAS: dict[str, list] = {
                   figg_check_sku, figg_product_assets, figg_studio_props,
                   figg_studio_combos, figg_studio_retexture,
                   figg_product_personalise, figg_checkout,
-                  figg_fullchain_personalise_order],
+                  figg_fullchain_personalise_order, figg_gift_pack,
+                  figg_studio_orders, figg_supplier_quote],
     "style":     [figg_styles, figg_install_style],
     "stage":     [figg_acts, figg_perform, figg_greeting, figg_rooms,
                   figg_video_share],
@@ -564,7 +666,7 @@ async def figg_tools() -> str:
 
 for _fns in list(TOOL_AREAS.values()):
     for _fn in _fns:
-        mcp.tool()(_fn)
+        mcp.tool(meta=TOOL_META.get(_fn.__name__))(_fn)
 mcp.tool()(figg_tools)
 
 

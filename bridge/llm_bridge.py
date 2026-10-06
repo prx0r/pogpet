@@ -186,8 +186,9 @@ class Handler(BaseHTTPRequestHandler):
         self._json({"success": False, "error": "bad token"}, 401)
         return False
 
-    def _mcp_proxy(self, method: str) -> None:
+    def _mcp_proxy(self, method: str, backend: str = "oddhobb") -> None:
         """POST/GET /mcp -> the local MCP server (:8799), streaming.
+        backend="pogtown" routes /pog to the joke MCP (:8801) instead.
 
         MCP streamable HTTP needs headers BOTH ways (mcp-session-id) and a
         text/event-stream that never sets Content-Length — so this proxies
@@ -197,7 +198,13 @@ class Handler(BaseHTTPRequestHandler):
         """
         import urllib.error
         raw = urlparse(self.path)
-        target = f"http://127.0.0.1:{os.environ.get('MCP_PORT', '8799')}{raw.path}"
+        if backend == "pogtown":
+            port = os.environ.get("POG_MCP_PORT", "8801")
+            sub = raw.path[len("/pog"):] or "/mcp"
+        else:
+            port = os.environ.get("MCP_PORT", "8799")
+            sub = raw.path
+        target = f"http://127.0.0.1:{port}{sub}"
         if raw.query:
             target += "?" + raw.query
         n = int(self.headers.get("Content-Length") or 0)
@@ -315,6 +322,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         raw = urlparse(self.path).path
+        if raw == "/pog" or raw.startswith("/pog/"):
+            if not self._gated():
+                self.close_connection = True
+                return
+            self._mcp_proxy("GET", backend="pogtown")
+            return
         if raw.startswith("/mcp"):
             if not self._gated():
                 self.close_connection = True
@@ -431,6 +444,12 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        if urlparse(self.path).path == "/pog" or urlparse(self.path).path.startswith("/pog/"):
+            if not self._gated():
+                self.close_connection = True
+                return
+            self._mcp_proxy("POST", backend="pogtown")
+            return
         if urlparse(self.path).path.startswith("/mcp"):
             if not self._gated():
                 self.close_connection = True

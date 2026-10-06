@@ -1588,8 +1588,11 @@
       <input type="text" id="pf-name" placeholder="Bender" maxlength="40">
 
       <button class="btn" id="pf-go" type="button">Take the stage &#8594;</button>
+      <button class="btn ghost" id="pf-premise" type="button">Sharpen my bit (writing room)</button>
+      <button class="btn ghost" id="pf-riff" type="button">Riff it</button>
       <div class="panel__status" id="pf-status"></div>
       <div class="panel__msg" id="pf-msg" role="status" aria-live="polite"></div>
+      <div class="panel__msg" id="pf-room" role="status" aria-live="polite"></div>
 
       <div class="out" id="pf-out" hidden>
         <video id="pf-video" controls playsinline></video>
@@ -5183,6 +5186,36 @@
       }).catch(function () {});
     }
 
+    var pfPremise = $("pf-premise"), pfRiff = $("pf-riff");
+    function pfRoomMsg(text, kind) { msg("pf-room", text, kind || ""); }
+    if (pfPremise) pfPremise.addEventListener("click", function () {
+      var topicEl = $("pf-topic"), topic = topicEl ? (topicEl.value || "").trim() : "";
+      if (!topic) { pfRoomMsg("Give me the rough bit first.", "err"); return; }
+      pfPremise.disabled = true;
+      pfRoomMsg("Writing room is sharpening it…", "");
+      var nameEl = $("pf-name");
+      post(API + "/jokes/premise", { owner: state.owner, topic: topic,
+        persona: nameEl && nameEl.value ? nameEl.value.trim() : "" })
+        .then(function (d) {
+          pfPremise.disabled = false;
+          if (!d.ok) { pfRoomMsg(d.error || "Writing room is down — stage still works.", "err"); return; }
+          if (topicEl) topicEl.value = d.premise || topic;
+          pfRoomMsg("Sharpened — edit freely, then take the stage.", "ok");
+        })
+        .catch(function (e) { pfPremise.disabled = false; pfRoomMsg("Writing room is down — stage still works.", "err"); });
+    });
+    if (pfRiff) pfRiff.addEventListener("click", function () {
+      var topicEl = $("pf-topic"), topic = topicEl ? (topicEl.value || "").trim() : "";
+      if (!topic) { pfRoomMsg("Give me the line first.", "err"); return; }
+      pfRiff.disabled = true;
+      pfRoomMsg("Riffing…", "");
+      post(API + "/jokes/riff", { owner: state.owner, line: topic })
+        .then(function (d) {
+          pfRiff.disabled = false;
+          pfRoomMsg(d.ok ? d.riffs : (d.error || "Writing room is down."), d.ok ? "ok" : "err");
+        })
+        .catch(function (e) { pfRiff.disabled = false; pfRoomMsg("Writing room is down — stage still works.", "err"); });
+    });
     var pfGo = $("pf-go");
     if (pfGo) pfGo.addEventListener("click", function () {
       var topicEl = $("pf-topic"), topic = topicEl ? (topicEl.value || "").trim() : "";

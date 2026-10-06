@@ -1,6 +1,6 @@
 # Test report — oddhobb
 
-> Run 2026-10-06 03:28 · `scripts/test_site.py` · **77/77 passed** · 0 credits
+> Run 2026-10-06 08:15 · `scripts/test_site.py` · **77/77 passed** · 0 credits
 
 | # | Result | Test | Detail |
 |---|---|---|---|
@@ -74,8 +74,8 @@
 | 68 | PASS | API without token -> 401 | HTTP 401 |
 | 69 | PASS | API bad token -> 401 | HTTP 401 |
 | 70 | PASS | POST /premesh (passthrough recipe) | HTTP 200 x-premesh-ok=1 bytes=7643 |
-| 71 | PASS | MCP initialize (token) | session d251028c |
-| 72 | PASS | MCP tools/list >= 30 | 46 tools |
+| 71 | PASS | MCP initialize (token) | session 8fc2b673 |
+| 72 | PASS | MCP tools/list >= 30 | 55 tools |
 | 73 | PASS | MCP foundation tools present |  |
 | 74 | PASS | MCP tools/call figg_flow | stage=ready mesh=msh_70edae28a4 |
 | 75 | PASS | MCP without token -> 401 | HTTP 401 |

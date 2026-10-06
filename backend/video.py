@@ -182,6 +182,16 @@ def _parse_lines(content: str) -> list[str]:
 # ── audio ─────────────────────────────────────────────────────────────
 
 def tts(text: str, voice_key: str, out_mp3: Path) -> Path:
+    # qwen:<voice> tries the realtime 3.8 stack first, edge-tts fallback —
+    # the $0 path never breaks for a missing token.
+    if str(voice_key or "").startswith("qwen:"):
+        try:
+            from . import qwen_voice
+            return qwen_voice.generate(text, out_mp3,
+                                      voice=str(voice_key).split(":", 1)[1] or "default")
+        except Exception as e:  # noqa: BLE001
+            print(f"qwen tts fell back to edge: {e}", flush=True)
+            voice_key = "ryan"
     import edge_tts
     out_mp3.parent.mkdir(parents=True, exist_ok=True)
     asyncio.run(edge_tts.Communicate(text, voice_id(voice_key)).save(str(out_mp3)))

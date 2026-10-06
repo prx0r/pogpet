@@ -1,3 +1,26 @@
+# HANDOVER — next session: viral video loop (cuts UI + funnel numbers)
+
+> **Status:** freaktown patterns integrated, Qwen realtime 3.8 wired with
+> edge fallback, clip planner live with rendered cuts. Detail:
+> `docs/video-integration.md`. Prior sessions below are background.
+
+## Live since last time
+
+- `backend/qwen_voice.py` — Qwen3-TTS via HF Inference, token env-only;
+  `qwen:iris`/`qwen:hero` in `/api/voices` (flagged until `HF_TOKEN`).
+- `backend/clips.py` + `POST /videos/<id>/clips` (plan or render) +
+  `GET /videos/<id>/clip/<cut>` — best-20s proven serving.
+- Share links, starter meshes on referral, prompt+script on rows (earlier).
+
+## Next
+
+1. Cut buttons on the feed UI (API renders, UI doesn't expose yet).
+2. Funnel numbers: share → signup → starter → upload → sets.
+3. Comedy-club splat behind greetings (needs `MARBLE_API_KEY`).
+4. Laugh-density windows when judging exists.
+
+---
+
 # HANDOVER — next session: companion launch + Dot standup shareables
 
 > **Status:** companion ingestion shipped (`9cdc3ea`). Screenshot sources,

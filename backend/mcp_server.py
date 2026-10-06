@@ -201,10 +201,17 @@ async def figg_perform(talent: str, topic: str, mesh_id: str,
     """Write, voice and render a performance for a mesh. `talent` is
     comedy|dance|singing, `act` is an id from figg_acts(). ~45s, $0.
     Returns the video URL and the lines it performed."""
-    return _j(await _call("POST", "/api/videos",
-                          {"talent": talent, "topic": topic, "mesh_id": mesh_id,
-                           "act": act, "pet_name": pet_name, "voice": voice,
-                           "owner": os.environ.get("FIGG_OWNER", "")}))
+    d = await _call("POST", "/api/videos",
+                    {"talent": talent, "topic": topic, "mesh_id": mesh_id,
+                     "act": act, "pet_name": pet_name, "voice": voice,
+                     "owner": os.environ.get("FIGG_OWNER", "")})
+    try:
+        vid = (d.get("video") or {}).get("id", "")
+        if vid:
+            d["watch_url"] = _watch_url(vid)
+    except (AttributeError, TypeError):
+        pass
+    return _j(d)
 
 
 async def figg_greeting(mesh_id: str, message: str, room: str = "void",
@@ -529,6 +536,17 @@ async def figg_video_share(video_id: str) -> str:
     return _j(await _call("POST", f"/api/videos/{video_id}/share", {}))
 
 
+async def figg_write_premise(topic: str, persona: str = "") -> str:
+    """Sharpen a rough bit via pogtown's writing room. Feeds perform."""
+    return _j(await _call("POST", "/api/jokes/premise",
+                         {"topic": topic, "persona": persona}))
+
+
+async def figg_write_riff(line: str) -> str:
+    """Tags and alts for one line, from the writing room."""
+    return _j(await _call("POST", "/api/jokes/riff", {"line": line}))
+
+
 async def figg_gift_pack(budget_cents: int, owner: str = "",
                          line: str = "", mesh_id: str = "",
                          recipient: str = "") -> str:
@@ -621,11 +639,69 @@ async def figg_preview_image(line: str = "ornament", owner: str = "") -> list:
         return [TextContent(type="text", text=f"preview failed: {str(e)[:150]}")]
 
 
+# ── inline video widget (MCP Apps UI) ────────────────────────────────
+# Plain tool results can't play video in chat — no video content type.
+# This widget does: ChatGPT renders it in an iframe, it grabs the first
+# playable URL from the tool result and plays it.
+VIDEO_PLAYER_URI = "ui://oddhobb/video-player"
+
+VIDEO_PLAYER_HTML = """<!doctype html><html><body style="margin:0;background:#111">
+<video id="v" controls playsinline style="width:100%;max-height:80vh;background:#000"></video>
+<p id="m" style="color:#ccc;font:13px sans-serif;padding:8px">Waiting for the clip…</p>
+<script>
+var src = null;
+function pick(text) {
+  if (!text) return null;
+  var m = String(text).match(/https?:\\/\\/[^\\s"']+\\.mp4[^\\s"']*|https?:\\/\\/[^\\s"']+\\/file[^\\s"']*/);
+  return m ? m[0] : null;
+}
+function render(text) {
+  var u = pick(text);
+  var v = document.getElementById("v"), m = document.getElementById("m");
+  if (u && u !== src) { src = u; v.src = u; m.textContent = ""; }
+  else if (!u) { m.textContent = "No playable clip in this result yet."; }
+}
+window.addEventListener("message", function (event) {
+  if (event.source !== window.parent) return;
+  var msg = event.data || {};
+  if (msg.method === "ui/notifications/tool-result" && msg.params) {
+    var p = msg.params;
+    var text = (p.structuredContent && JSON.stringify(p.structuredContent)) || "";
+    (p.content || []).forEach(function (c) { if (c.text) text += "\\n" + c.text; });
+    render(text);
+  }
+});
+setTimeout(function () {
+  if (!src) render((window.openai && window.openai.toolOutput) || "");
+}, 1500);
+</script></body></html>"""
+
+
+@mcp.resource(VIDEO_PLAYER_URI, mime_type="text/html;profile=mcp-app")
+async def oddhobb_video_player() -> str:
+    """Inline video player for perform clips and shared videos."""
+    return VIDEO_PLAYER_HTML
+
+
+def _watch_url(vid: str) -> str:
+    tok = (ROOT / ".token").read_text().strip() if (ROOT / ".token").exists() else os.environ.get("BRIDGE_TOKEN", "")
+    base = f"https://oddhobb.com/backend/api/videos/{vid}/file"
+    return base + (f"?token={tok}" if tok else "")
+
+
 # _meta per tool: ChatGPT file picker wiring. figg_upload_chatgpt_file
 # declares its `file` param so ChatGPT attaches the photo at call time.
 TOOL_META: dict[str, dict] = {
     "figg_upload_chatgpt_file": {
         "openai/fileParams": ["file"],
+    },
+    "figg_perform": {
+        "ui": {"resourceUri": VIDEO_PLAYER_URI},
+        "openai/outputTemplate": VIDEO_PLAYER_URI,
+    },
+    "figg_video_share": {
+        "ui": {"resourceUri": VIDEO_PLAYER_URI},
+        "openai/outputTemplate": VIDEO_PLAYER_URI,
     },
 }
 
@@ -649,7 +725,7 @@ TOOL_AREAS: dict[str, list] = {
                   figg_studio_orders, figg_supplier_quote],
     "style":     [figg_styles, figg_install_style],
     "stage":     [figg_acts, figg_perform, figg_greeting, figg_rooms,
-                  figg_video_share],
+                  figg_video_share, figg_write_premise, figg_write_riff],
     "company":   [figg_companygraph],
 }
 

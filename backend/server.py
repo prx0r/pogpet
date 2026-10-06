@@ -2319,9 +2319,14 @@ def mesh_usdz(mid: str):
 
 def voices():
     """Free voice library + scenes a free account can use."""
+    from backend import qwen_voice as _qv
+    qwen = [{"key": "qwen:iris", "label": "Iris — Qwen clone-ready (needs HF token)",
+             "id": "qwen3-tts", "needs_token": True, "live": _qv.configured()},
+            {"key": "qwen:hero", "label": "Hero — Qwen deep (needs HF token)",
+             "id": "qwen3-tts", "needs_token": True, "live": _qv.configured()}]
     return jsonify({"ok": True,
                     "voices": [{"key": k, "label": v["label"], "id": v["id"]}
-                               for k, v in video.VOICES.items()],
+                               for k, v in video.VOICES.items()] + qwen,
                     "scenes": [{"key": k, "label": v, "free": True}
                                for k, v in config.SCENES.items()]})
 
@@ -2628,6 +2633,37 @@ def get_video(vid: str):
     return jsonify({"ok": True, "video": d})
 
 
+@app.post("/api/jokes/premise")
+def jokes_premise():
+    """Writing help from pogtown's room: one premise for the perform tab."""
+    from backend import jokes as _jokes
+    body = request.get_json(silent=True) or {}
+    topic = (body.get("topic") or "").strip()[:200]
+    if not topic:
+        return _err("give me the bit first", 400)
+    try:
+        out = _jokes.call("pog_premise", {"topic": topic,
+                                          "persona": str(body.get("persona") or "")[:60]})
+    except _jokes.JokeRoomDown as e:
+        return _err(str(e), 502)
+    return jsonify({"ok": True, **out})
+
+
+@app.post("/api/jokes/riff")
+def jokes_riff():
+    """Tags and alts for one line, from the writing room."""
+    from backend import jokes as _jokes
+    body = request.get_json(silent=True) or {}
+    line = (body.get("line") or "").strip()[:300]
+    if not line:
+        return _err("give me the line first", 400)
+    try:
+        out = _jokes.call("pog_riff", {"line": line})
+    except _jokes.JokeRoomDown as e:
+        return _err(str(e), 502)
+    return jsonify({"ok": True, **out})
+
+
 @app.post("/api/videos/<vid>/share")
 def video_share(vid: str):
     """One-click share: link to the clip tab carrying ?ref=. The prompt and
@@ -2637,9 +2673,63 @@ def video_share(vid: str):
         row = c.execute("SELECT id,topic,talent,mesh_id FROM videos WHERE id=?", (vid,)).fetchone()
     if row is None:
         return _err("no such video", 404)
-    return jsonify({"ok": True, "share_url": f"/videos/{vid}?ref={vid}",
-                    "topic": row["topic"], "talent": row["talent"],
+    return jsonify({"ok": True, "share_url": f"/videos/{vid}?ref={vid}",                    "topic": row["topic"], "talent": row["talent"],
                     "hint": "Send the link. Signup with ?ref= installs starter meshes."})
+
+
+@app.post("/api/videos/<vid>/clips")
+def video_clips(vid: str):
+    """Viral cut-list for a finished clip: full, hook, social, tail reveal.
+    Time-based cuts (no fake laugh detection); pass {"render": true} to also
+    write the MP4s. Shares point at cuts via /videos/<vid>?clip=<id>."""
+    from backend import clips as _clips
+    from pathlib import Path as _Path
+    body = request.get_json(silent=True) or {}
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM videos WHERE id=?", (vid,)).fetchone()
+    if row is None:
+        return _err("no such video", 404)
+    d = db.dump(row)
+    src = _Path(d.get("path") or "")
+    if not src.is_file():
+        return _err("clip file missing", 404)
+    plan = _clips.plan(_clips.probe_duration(src))
+    out = []
+    if body.get("render"):
+        for cut in plan["cuts"]:
+            dest = src.parent / f"{src.stem}-{cut['id']}.mp4"
+            try:
+                _clips.render_cut(src, cut["start"], cut["end"], dest)
+                out.append({**cut, "file": f"/api/videos/{vid}/clip/{cut['id']}",
+                            "ready": True})
+            except Exception as e:  # noqa: BLE001
+                out.append({**cut, "ready": False, "error": str(e)[:150]})
+    else:
+        out = [{**c, "file": f"/api/videos/{vid}/clip/{c['id']}", "ready": False}
+               for c in plan["cuts"]]
+    return jsonify({"ok": True, "video_id": vid, "plan": plan, "clips": out})
+
+
+@app.get("/api/videos/<vid>/clip/<cid>")
+def video_clip_file(vid: str, cid: str):
+    """Fetch a rendered cut."""
+    import re as _re
+    if not _re.fullmatch(r"[a-z0-9-]+", cid or ""):
+        return _err("bad clip", 400)
+    with db.connect() as c:
+        row = c.execute("SELECT path FROM videos WHERE id=?", (vid,)).fetchone()
+    if row is None:
+        return _err("no such video", 404)
+    from pathlib import Path as _Path
+    src = _Path(row["path"])
+    target = (src.parent / f"{src.stem}-{cid}.mp4").resolve()
+    if not str(target).startswith(str(src.parent.resolve())) or not target.is_file():
+        return _err("cut not rendered yet — POST clips with render:true", 404)
+    data = target.read_bytes()
+    resp = Response(data)
+    resp.headers["Content-Type"] = "video/mp4"
+    resp.headers["Content-Length"] = str(len(data))
+    return resp
 
 
 @app.get("/api/videos/<vid>/file")

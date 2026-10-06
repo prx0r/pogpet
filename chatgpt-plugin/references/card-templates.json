@@ -1,0 +1,217 @@
+{
+ "portrait": {
+  "label": "The birthday portrait",
+  "min_photos": 1,
+  "max_photos": 1,
+  "design_contract": {
+   "domain": "paper",
+   "locked": [
+    "3mm bleed all round",
+    "300dpi floor at trim",
+    "folded formats: artwork keeps clear of the spine 6mm",
+    "1 photo exactly (face crop with focus point)"
+   ],
+   "envelope_mm": [
+    148,
+    210
+   ],
+   "material": "350gsm silk",
+   "colors_max": 0,
+   "formats": [
+    "A6",
+    "5x7",
+    "A5"
+   ],
+   "cost_target_cents": {
+    "A6": 120,
+    "5x7": 200,
+    "A5": 280
+   },
+   "verify": []
+  }
+ },
+ "family": {
+  "label": "From the whole family",
+  "min_photos": 1,
+  "max_photos": 5,
+  "design_contract": {
+   "domain": "paper",
+   "locked": [
+    "3mm bleed all round",
+    "300dpi floor at trim",
+    "1\u20135 photos in 2-col grid, order preserved",
+    "folded formats: spine clearance 6mm"
+   ],
+   "envelope_mm": [
+    148,
+    210
+   ],
+   "material": "350gsm silk",
+   "colors_max": 0,
+   "formats": [
+    "A6",
+    "5x7",
+    "A5"
+   ],
+   "cost_target_cents": {
+    "A6": 120,
+    "5x7": 200,
+    "A5": 280
+   },
+   "verify": []
+  }
+ },
+ "breaking_news": {
+  "label": "Breaking news",
+  "min_photos": 1,
+  "max_photos": 1,
+  "design_contract": {
+   "domain": "paper",
+   "locked": [
+    "3mm bleed all round",
+    "300dpi floor at trim",
+    "1 photo exactly",
+    "ticker zone reserved at foot on folded formats"
+   ],
+   "envelope_mm": [
+    148,
+    210
+   ],
+   "material": "350gsm silk",
+   "colors_max": 0,
+   "formats": [
+    "A6",
+    "5x7",
+    "A5"
+   ],
+   "cost_target_cents": {
+    "A6": 120,
+    "5x7": 200,
+    "A5": 280
+   },
+   "verify": []
+  }
+ },
+ "game_winner": {
+  "label": "The game winner",
+  "min_photos": 1,
+  "max_photos": 1,
+  "design_contract": {
+   "domain": "paper",
+   "locked": [
+    "3mm bleed all round",
+    "300dpi floor at trim",
+    "1 photo exactly",
+    "confetti zone keeps clear of the face crop"
+   ],
+   "envelope_mm": [
+    148,
+    210
+   ],
+   "material": "350gsm silk",
+   "colors_max": 0,
+   "formats": [
+    "A6",
+    "5x7",
+    "A5"
+   ],
+   "cost_target_cents": {
+    "A6": 120,
+    "5x7": 200,
+    "A5": 280
+   },
+   "verify": []
+  }
+ },
+ "awards": {
+  "label": "Lifetime achievement",
+  "min_photos": 1,
+  "max_photos": 1,
+  "design_contract": {
+   "domain": "paper",
+   "locked": [
+    "3mm bleed all round",
+    "300dpi floor at trim",
+    "1 photo exactly"
+   ],
+   "envelope_mm": [
+    148,
+    210
+   ],
+   "material": "350gsm silk",
+   "colors_max": 0,
+   "formats": [
+    "A6",
+    "5x7",
+    "A5"
+   ],
+   "cost_target_cents": {
+    "A6": 120,
+    "5x7": 200,
+    "A5": 280
+   },
+   "verify": []
+  }
+ },
+ "christmas": {
+  "label": "The Christmas cast",
+  "min_photos": 1,
+  "max_photos": 5,
+  "design_contract": {
+   "domain": "paper",
+   "locked": [
+    "3mm bleed all round",
+    "300dpi floor at trim",
+    "1\u20135 photos in 2-col grid",
+    "snowfall zone keeps clear of faces"
+   ],
+   "envelope_mm": [
+    148,
+    210
+   ],
+   "material": "350gsm silk",
+   "colors_max": 0,
+   "formats": [
+    "A6",
+    "5x7",
+    "A5"
+   ],
+   "cost_target_cents": {
+    "A6": 120,
+    "5x7": 200,
+    "A5": 280
+   },
+   "verify": []
+  }
+ },
+ "typography": {
+  "label": "Say it properly",
+  "min_photos": 0,
+  "max_photos": 0,
+  "design_contract": {
+   "domain": "paper",
+   "locked": [
+    "3mm bleed all round",
+    "0 photos \u2014 type only",
+    "headline wraps, never clips"
+   ],
+   "envelope_mm": [
+    148,
+    210
+   ],
+   "material": "350gsm silk",
+   "colors_max": 0,
+   "formats": [
+    "A6",
+    "5x7",
+    "A5"
+   ],
+   "cost_target_cents": {
+    "A6": 120,
+    "5x7": 200,
+    "A5": 280
+   },
+   "verify": []
+  }
+ }
+}

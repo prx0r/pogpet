@@ -1,0 +1,716 @@
+{
+ "ornament": {
+  "label": "Xmas ornament",
+  "price_cents": 1500,
+  "status": "live",
+  "design_contract": {
+   "origin": "mesh",
+   "locked": [
+    "printed loop: hole dia 5.0mm, wire 2.4mm",
+    "hang axis through CoM column"
+   ],
+   "envelope_mm": [
+    90,
+    90,
+    100
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 28.0,
+   "cost_target_cents": {
+    "makr3d": 250,
+    "printie": 390
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "face_swap",
+   "zone": "full_mesh",
+   "max_chars": 0
+  }
+ },
+ "keychain": {
+  "label": "Keychain / keyring",
+  "price_cents": 1500,
+  "status": "live",
+  "design_contract": {
+   "origin": "mesh",
+   "locked": [
+    "printed loop + ring: ring hole dia 4.0mm",
+    "no metal anywhere"
+   ],
+   "envelope_mm": [
+    70,
+    70,
+    90
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 14.0,
+   "cost_target_cents": {
+    "makr3d": 170,
+    "printie": 200
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "face_swap",
+   "zone": "full_mesh",
+   "max_chars": 0
+  }
+ },
+ "croc_tag": {
+  "label": "Croc tag pin",
+  "price_cents": 1000,
+  "status": "live",
+  "design_contract": {
+   "origin": "mesh",
+   "locked": [
+    "pin stem dia 4.2mm (fits ~5mm Croc holes)",
+    "stopper disc dia >= 6mm",
+    "face dia <= 32mm so it clears neighbouring holes"
+   ],
+   "envelope_mm": [
+    32,
+    32,
+    18
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 2.5,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": [
+    "pin fit on a real Croc hole"
+   ]
+  },
+  "personalization": {
+   "method": "face_swap",
+   "zone": "full_mesh",
+   "max_chars": 0
+  }
+ },
+ "gift_card": {
+  "label": "Gift card",
+  "price_cents": 2000,
+  "status": "live",
+  "design_contract": {
+   "origin": "digital",
+   "locked": [],
+   "envelope_mm": [
+    0,
+    0,
+    0
+   ],
+   "material": "digital",
+   "colors_max": 0,
+   "volume_cm3_est": 0.0,
+   "cost_target_cents": {
+    "makr3d": 0,
+    "printie": 0
+   },
+   "verify": []
+  },
+  "personalization": null
+ },
+ "brick": {
+  "label": "Brick figure",
+  "price_cents": 2000,
+  "status": "live",
+  "design_contract": {
+   "origin": "mesh",
+   "locked": [
+    "minifig scale: overall 75mm",
+    "footprint fits 6x6 stud grid (48mm pitch 8.0mm)"
+   ],
+   "envelope_mm": [
+    60,
+    60,
+    80
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 22.0,
+   "cost_target_cents": {
+    "makr3d": 250,
+    "printie": 310
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "face_swap",
+   "zone": "full_mesh",
+   "max_chars": 0
+  }
+ },
+ "clog_charm": {
+  "label": "Personalised Clog Shoe Charm",
+  "price_cents": 500,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "pin stem dia 5.0mm (Jibbitz post)",
+    "retention head dia >= 12mm",
+    "face <= 30mm"
+   ],
+   "envelope_mm": [
+    30,
+    30,
+    18
+   ],
+   "material": "PETG",
+   "colors_max": 4,
+   "volume_cm3_est": 1.6,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": [
+    "pin fit on a real Croc hole"
+   ]
+  },
+  "personalization": {
+   "method": "relief",
+   "zone": "top_face",
+   "max_chars": 10
+  }
+ },
+ "bag_charm": {
+  "label": "Personalised Bag Charm",
+  "price_cents": 1000,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "split-ring seat hole dia >= 5.0mm",
+    "strap slot width 8mm if present"
+   ],
+   "envelope_mm": [
+    40,
+    40,
+    20
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 3.0,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "relief",
+   "zone": "front_face",
+   "max_chars": 10
+  }
+ },
+ "brick_keychain": {
+  "label": "Custom Brick/Person Keychain",
+  "price_cents": 1000,
+  "status": "live",
+  "design_contract": {
+   "origin": "mesh",
+   "locked": [
+    "printed loop + ring: ring hole dia 4.0mm",
+    "minifig scale 60mm",
+    "no metal"
+   ],
+   "envelope_mm": [
+    50,
+    50,
+    70
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 12.0,
+   "cost_target_cents": {
+    "makr3d": 150,
+    "printie": 170
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "face_swap",
+   "zone": "full_mesh",
+   "max_chars": 0
+  }
+ },
+ "keycap": {
+  "label": "Personalised Cherry-MX Artisan Keycap",
+  "price_cents": 1500,
+  "status": "live",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "Cherry MX stem: cross 4.0x4.0mm outer, wall 1.2mm, mount depth 4.5mm",
+    "cap top zone 12x12mm for relief"
+   ],
+   "envelope_mm": [
+    18,
+    18,
+    14
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 1.8,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": [
+    "stem fit on a real MX switch"
+   ]
+  },
+  "personalization": {
+   "method": "relief",
+   "zone": "cap_top",
+   "max_chars": 6
+  }
+ },
+ "shoelace_charm": {
+  "label": "Personalised Shoelace Charm Pair",
+  "price_cents": 1000,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "lace channel 8x3mm clear",
+    "wall >= 1.6mm around channel"
+   ],
+   "envelope_mm": [
+    30,
+    20,
+    12
+   ],
+   "material": "PETG",
+   "colors_max": 4,
+   "volume_cm3_est": 1.5,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": [
+    "channel fit on a real lace"
+   ]
+  },
+  "personalization": {
+   "method": "relief",
+   "zone": "top_face",
+   "max_chars": 8
+  }
+ },
+ "book_holder": {
+  "label": "Personalised Book Thumb Page Holder",
+  "price_cents": 500,
+  "status": "live",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "thumb pad >= 18mm wide",
+    "page slot 2.5mm (holds ~40 pages)"
+   ],
+   "envelope_mm": [
+    60,
+    40,
+    25
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 6.0,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "paddle_face",
+   "max_chars": 12
+  }
+ },
+ "golf_marker": {
+  "label": "Personalised Golf Ball Marker",
+  "price_cents": 1000,
+  "status": "live",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "dia 24mm (measured marker-template)",
+    "thickness 2.0mm",
+    "flat top \u00b10.2mm"
+   ],
+   "envelope_mm": [
+    24,
+    24,
+    4
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 1.2,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "relief",
+   "zone": "top_face",
+   "max_chars": 10
+  }
+ },
+ "straw_charm": {
+  "label": "Personalised Tumbler Straw Charm",
+  "price_cents": 300,
+  "status": "live",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "ring inner dia 7.0mm (grips 6mm straws)",
+    "wall >= 1.6mm"
+   ],
+   "envelope_mm": [
+    30,
+    30,
+    16
+   ],
+   "material": "PETG",
+   "colors_max": 4,
+   "volume_cm3_est": 1.5,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": [
+    "ring grip on a real straw"
+   ]
+  },
+  "personalization": {
+   "method": "relief",
+   "zone": "topper_pad",
+   "max_chars": 8
+  }
+ },
+ "controller_stand": {
+  "label": "Personalised Controller Stand",
+  "price_cents": 2000,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "cradle width >= 165mm (standard pad)",
+    "support arms reach 60mm deep",
+    "base footprint stable at 200x140mm"
+   ],
+   "envelope_mm": [
+    220,
+    160,
+    140
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 90.0,
+   "cost_target_cents": {
+    "makr3d": 1080,
+    "printie": 1260
+   },
+   "verify": [
+    "fit on a real controller",
+    "weight/cost \u2014 287g flagged"
+   ]
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "fascia",
+   "max_chars": 14
+  }
+ },
+ "train_station": {
+  "label": "Mexican Train Family Station",
+  "price_cents": 2000,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "8 hub slots, each >= 50x26mm face for double-12 dominoes",
+    "slot depth >= 13mm"
+   ],
+   "envelope_mm": [
+    160,
+    160,
+    40
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 40.0,
+   "cost_target_cents": {
+    "makr3d": 480,
+    "printie": 560
+   },
+   "verify": [
+    "slot fit on real double-12 dominoes"
+   ]
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "hub_face",
+   "max_chars": 18
+  }
+ },
+ "domino_racks": {
+  "label": "Personalised Mexican Train Domino Racks",
+  "price_cents": 2000,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "rack groove width >= 25mm, depth >= 13mm (double-12)",
+    "4-player set geometry"
+   ],
+   "envelope_mm": [
+    220,
+    60,
+    40
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 25.0,
+   "cost_target_cents": {
+    "makr3d": 300,
+    "printie": 350
+   },
+   "verify": [
+    "groove fit on real dominoes"
+   ]
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "rack_fascia",
+   "max_chars": 10
+  }
+ },
+ "line_reader": {
+  "label": "Personalised Mahjong Line Reader",
+  "price_cents": 1000,
+  "status": "live",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "tile channel inner width >= 23mm, height >= 15mm (slides over a mahjong face)"
+   ],
+   "envelope_mm": [
+    120,
+    40,
+    25
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 8.0,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 115
+   },
+   "verify": [
+    "channel fit on real mahjong tiles"
+   ]
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "plate_face",
+   "max_chars": 12
+  }
+ },
+ "wind_indicator": {
+  "label": "Personalised Mahjong Wind Indicator",
+  "price_cents": 1500,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "base ring seats a rotating wheel: axle dia 6mm, wheel dia <= 60mm",
+    "numbers legible at 8mm cap height"
+   ],
+   "envelope_mm": [
+    80,
+    80,
+    25
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 10.0,
+   "cost_target_cents": {
+    "makr3d": 120,
+    "printie": 140
+   },
+   "verify": [
+    "geometry not yet authored \u2014 wheel + base to be designed"
+   ]
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "base_ring",
+   "max_chars": 8
+  }
+ },
+ "rummy_rack": {
+  "label": "Personalised 4-Tier Rummy Tile Rack",
+  "price_cents": 1500,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "4-tier grooves: pitch 6mm, depth >= 5mm, tile lean 70deg",
+    "holds 40+ tiles per rack"
+   ],
+   "envelope_mm": [
+    260,
+    60,
+    60
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 30.0,
+   "cost_target_cents": {
+    "makr3d": 360,
+    "printie": 420
+   },
+   "verify": [
+    "groove fit on real rummy tiles"
+   ]
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "back_fascia",
+   "max_chars": 12
+  }
+ },
+ "card_rack": {
+  "label": "Personalised Playing-Card Hand Rack",
+  "price_cents": 1500,
+  "status": "live",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "grooves 2.5mm wide (sleeved cards)",
+    "rack length >= 200mm for a full hand"
+   ],
+   "envelope_mm": [
+    220,
+    60,
+    50
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 20.0,
+   "cost_target_cents": {
+    "makr3d": 240,
+    "printie": 280
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "front_fascia",
+   "max_chars": 12
+  }
+ },
+ "tcg_stand": {
+  "label": "Personalised TCG \"Grail\" Stand",
+  "price_cents": 1500,
+  "status": "live",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "slab cradle inner >= 56mm wide, 90mm tall (PSA slab 85x54x7)",
+    "lean angle 75deg"
+   ],
+   "envelope_mm": [
+    100,
+    80,
+    120
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 15.0,
+   "cost_target_cents": {
+    "makr3d": 180,
+    "printie": 210
+   },
+   "verify": [
+    "cradle fit on a real slab"
+   ]
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "base_front",
+   "max_chars": 14
+  }
+ },
+ "cribbage_pegs": {
+  "label": "Personalised Cribbage Peg Pair",
+  "price_cents": 1500,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "shaft dia 3.0\u20133.2mm (sliding fit for 1/8in=3.175mm holes)",
+    "all parts manifold, print-ready"
+   ],
+   "envelope_mm": [
+    12,
+    12,
+    40
+   ],
+   "material": "PETG",
+   "colors_max": 4,
+   "volume_cm3_est": 1.0,
+   "cost_target_cents": {
+    "makr3d": 100,
+    "printie": 100
+   },
+   "verify": []
+  },
+  "personalization": {
+   "method": "relief",
+   "zone": "topper",
+   "max_chars": 0
+  }
+ },
+ "dart_stand": {
+  "label": "Personalised Dart Stand",
+  "price_cents": 2000,
+  "status": "soon",
+  "design_contract": {
+   "origin": "reference",
+   "locked": [
+    "3 bores dia 12mm, depth 40mm (barrel + flight clearance)",
+    "base stable at 120x80mm"
+   ],
+   "envelope_mm": [
+    130,
+    90,
+    60
+   ],
+   "material": "PLA",
+   "colors_max": 4,
+   "volume_cm3_est": 35.0,
+   "cost_target_cents": {
+    "makr3d": 420,
+    "printie": 490
+   },
+   "verify": [
+    "bore fit on real darts"
+   ]
+  },
+  "personalization": {
+   "method": "emboss",
+   "zone": "base_front",
+   "max_chars": 14
+  }
+ }
+}

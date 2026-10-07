@@ -4984,6 +4984,7 @@ def creative_catalog():
         audience=(request.args.get("audience") or "").strip(),
         tone=(request.args.get("tone") or "").strip(),
         q=(request.args.get("q") or "").strip(),
+        rank=(request.args.get("rank") or "").strip(),
     ))
 
 

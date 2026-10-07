@@ -1,3 +1,52 @@
+# HANDOVER — next session: meme engine live, Originals shelf opens
+
+> **Status:** lore-anchored premise system built, performance loop wired,
+> strip-to-video renderer ready. Detail: `docs/meme-engine.md`.
+
+## What shipped (in tree, unpushed at handover time)
+
+- **Originals shelf:** `templates/original/` (house cards you can just buy —
+  no photo needed) + `original` style in `templates/catalog.json` (Cards tab
+  renders the rail automatically) + first Original `superintelligence_rebrand`.
+  Premise bible verbatim: `docs/original-premise-bible.md` (80% premise rule,
+  8 mechanisms, taxonomy, 20 seeds).
+- **Halloween lore pack:** `templates/premises/halloween_families.json` —
+  8 families, 30 premises, every one with a `source_lore` object (real event,
+  exact phrase, date, community, recognition). Claude 15–20%, digestible mask,
+  less-tame successor, DEPRECATED exit interview, permission loop, HF board
+  lore, all 10 robot strips with format tags. `pumpkin_hallucination` dropped
+  per founder call (motif repetition, no mechanism).
+- **Performance loop:** `backend/creative/performance.py` (append-only JSONL
+  in gitignored `data/`, engagement = likes + 5×shares + 3×profile-taps +
+  views×completion) + `GET /api/creative/catalog?rank=top` (no signal =
+  identical order) + `scripts/meme_reweight.py` weekly table + snapshot.
+- **Strip-to-video:** `backend/meme_video.py` — panels + captions → 1080×1920
+  MP4 (push-in, deadpan VO via existing tts, burned captions, text never in
+  plates). Splat rooms slot in later; assembly doesn't care.
+- **Tests:** `tests/test_meme.py` + `tests/test_originals.py`; 104 passed
+  with viral/creative suites.
+
+## The wedge: meme creation platform
+
+Premise packs are the meme templates, the renderer is the meme generator,
+the ledger is the curation — and every platform (X, TikTok, IG, YouTube) is
+a tester, since one strip costs nothing extra to post everywhere. Public
+taste trains the weights; the site's personalization engine runs on them.
+Creators rent the engine later (vision house rules already cover it: $1
+remix royalty, provenance-gated, suppliers invisible). Comics establish
+taste; personalised cards monetize it.
+
+## Next
+
+1. `FAL_KEY` approval → fal render path (Ideogram 4 / Recraft V4.1, text-free
+   plates) so strips generate straight into Originals.
+2. Post first Halloween strips (X single image first, winners get video).
+3. First ledger rows → first reweight actually moves.
+4. Splat rooms still parked behind `MARBLE_API_KEY`.
+5. Matcher scoring boost from engagement (ledger → matcher, catalog hook done).
+
+---
+
 # HANDOVER — next session: brand split live, shelf + plugin + viral loop
 
 > **Status:** OddHobb owns identity, Pogtown owns world (`vision/brand-split.md`).

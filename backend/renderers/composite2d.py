@@ -180,7 +180,7 @@ def _photo_box(img, path, box, mono=False):
 
 
 def _render_style(d, img, style_id, photo_path, headline, subheadline, w, h):
-    if style_id == "xmasaisketch":
+    if style_id in ("xmasaisketch", "original"):
         _photo_box(img, photo_path, (90, 120, w - 180, 1120), mono=True)
         d.rectangle((76, 90, w - 76, 1300), outline=(23, 23, 23), width=5)
         d.line((100, 1400, w - 100, 1400), fill=(23, 23, 23), width=3)

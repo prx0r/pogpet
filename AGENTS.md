@@ -119,6 +119,8 @@ curl -s -o /dev/null -w '%{http_code}\n' https://oddhobb.com/#products
 | `HANDOVER.md` | session progress |
 | `docs/todo.md` | current 10 to-dos |
 | `docs/mcp.md` | agent connection |
+| `docs/meme-engine.md` | meme loop: post → ledger → reweight → site |
+| `docs/original-premise-bible.md` | premise quality guide (verbatim founder) |
 | `docs/studio.md` | studio + products contract |
 | `docs/studio-custom.md` | controlled custom + props |
 | `docs/etsy-listings.md` | Etsy packs + sizing |

@@ -12,6 +12,7 @@ and synthesizes a generic executable manifest for ideas that do not yet have one
 Current style families:
 
 - `xmasaisketch`
+- `original` (house Originals you can just buy — no photo needed; premise bible: `docs/original-premise-bible.md`)
 - `comicstory`
 - `studioroast`
 - `sportspresser`

@@ -19,7 +19,7 @@ def by_id() -> dict[str, dict]:
     return {t["id"]: t for t in load().get("templates", []) if t.get("id")}
 
 def query(*, style: str = "", occasion: str = "", audience: str = "",
-          tone: str = "", q: str = "") -> dict:
+          tone: str = "", q: str = "", rank: str = "") -> dict:
     cat = load()
     items = list(cat.get("templates") or [])
     ql = q.strip().lower()
@@ -45,6 +45,9 @@ def query(*, style: str = "", occasion: str = "", audience: str = "",
         return True
 
     items = [t for t in items if keep(t)]
+    if rank == "top":
+        from backend.creative import performance as _perf
+        items = _perf.apply_ranking(items)
     return {
         "ok": True,
         "version": cat.get("version", 1),

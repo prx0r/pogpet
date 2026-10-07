@@ -222,8 +222,8 @@ class Handler(BaseHTTPRequestHandler):
     # caller's own API key.
     PUBLIC_GETS = (
         "/api/catalog", "/api/agent/playbook", "/api/acts",
-        "/api/videos/feed", "/api/cards/templates", "/api/design/base",
-        "/api/companygraph",
+        "/api/videos/feed", "/api/videos", "/api/cards/templates", "/api/design/base",
+        "/api/companygraph", "/api/creative/catalog", "/api/creative/templates",
     )
 
     _public_hits: dict = {}
@@ -410,12 +410,9 @@ class Handler(BaseHTTPRequestHandler):
             self._proxy("GET")
             return
         if (raw.startswith("/api/seo/") or raw.startswith("/api/companygraph")
-                or raw.startswith("/learn") or raw == "/sitemap.xml"):
-            # Public discovery surface — GEO pages, sitemap, SEO packs.
-            self._proxy("GET", path=raw)
-            return
-        if raw.startswith("/guides/"):
-            # Crawlable companion guides (SEO document links) — public HTML.
+                or raw.startswith("/learn") or raw == "/sitemap.xml"
+                or raw.startswith("/guides/") or raw.startswith("/privacy")):
+            # Public discovery surface — GEO pages, sitemap, SEO packs, policy.
             self._proxy("GET", path=raw)
             return
         if raw.startswith("/backend"):
@@ -540,6 +537,11 @@ class Handler(BaseHTTPRequestHandler):
             return
         if urlparse(self.path).path.startswith("/backend"):
             if self._user_keyed():
+                self._proxy("POST")
+                return
+            sub = urlparse(self.path).path[len("/backend"):]
+            if sub in ("/api/accounts", "/api/accounts/login", "/api/session"):
+                # public signup/login/session — rate-limited by the API itself
                 self._proxy("POST")
                 return
             if not self._gated():

@@ -40,8 +40,19 @@ def validate_manifest(m: dict) -> list[str]:
     return gaps
 
 
+def _presentation(item: dict) -> dict:
+    return {
+        "label": item.get("label") or str(item.get("id") or "").replace("_", " ").title(),
+        "style": item.get("style") or "generic",
+        "audience": item.get("audience") or [],
+        "premise": item.get("premise") or "",
+        "example_caption": item.get("example_caption") or "",
+    }
+
+
 def load_all(root: Path | None = None) -> dict[str, dict]:
-    """id -> latest manifest. Invalid manifests are skipped with _errors."""
+    """id -> latest manifest. Hand-authored manifests win; catalog ideas
+    synthesize executable manifests (or enrich presentation only)."""
     out: dict[str, dict] = {}
     base = root or ROOT
     if not base.is_dir():
@@ -58,6 +69,56 @@ def load_all(root: Path | None = None) -> dict[str, dict]:
         if cur is None or m["version"] > cur["version"]:
             m["_dir"] = str(manifest.parent)
             out[m["id"]] = m
+    try:
+        cat = json.loads((base / "catalog.json").read_text())
+    except (OSError, ValueError):
+        cat = {}
+    for item in cat.get("templates", []):
+        tid = str(item.get("id") or "")
+        if not tid:
+            continue
+        if tid in out:
+            out[tid]["presentation"] = _presentation(item)
+            continue
+        style = str(item.get("style") or "generic")
+        req = item.get("requirements") or {}
+        slots = item.get("slots") or {
+            "star": {"type": "subject", "required": True},
+            "headline": {"type": "text", "max_chars": 42},
+            "caption": {"type": "text", "max_chars": 90},
+        }
+        m = {
+            "id": tid,
+            "version": int(item.get("version") or 1),
+            "taxonomy": {
+                "occasion": item.get("occasion") or ["general"],
+                "styles": [style],
+                "topics": item.get("topics") or [],
+                "tone": item.get("tone") or ["funny"],
+            },
+            "requirements": {
+                "subjects": int(req.get("subjects", 1)),
+                "face_photos_min": int(req.get("face_photos_min", 0)),
+                "mesh": bool(req.get("mesh", False)),
+                "voice": bool(req.get("voice", False)),
+            },
+            "slots": slots,
+            "renderers": {"preview": "composite2d", "hero": "identity_image_v1",
+                          "print": "composite2d", "video": "talking_scene_v1"},
+            "format": style,
+            "premise": item.get("premise") or "",
+            "caption_pattern": "{headline} — {caption}",
+            "tone": item.get("tone") or ["funny"],
+            "rules": {},
+            "presentation": _presentation(item),
+            "layout": {"photo": [0.08, 0.05, 0.92, 0.55],
+                       "headline": [0.08, 0.60, 0.92, 0.70],
+                       "caption": [0.08, 0.71, 0.92, 0.82],
+                       "safe_inset_mm": 5},
+        }
+        if not validate_manifest(m):
+            m["_dir"] = "catalog"
+            out[tid] = m
     return out
 
 

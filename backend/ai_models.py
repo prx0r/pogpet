@@ -182,6 +182,16 @@ MODELS: dict[str, dict] = {
 }
 
 
+OPENROUTER_FUNNY = {
+    "default": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+    "budget": "thedrummer/unslopnemo-12b",
+    "fallback": "gryphe/mythomax-l2-13b",
+    "premium": "anthracite-org/magnum-v4-72b",
+    "wit": "x-ai/grok-4.7",
+    "judge": "typesafe/jev-1.13",
+}
+
+
 def options_for(need: str) -> list[dict]:
     """Ranked model options for one of our machine needs. Unknown need → []."""
     entry = MODELS.get(need)
@@ -199,3 +209,10 @@ def options_for(need: str) -> list[dict]:
 def needs() -> list[str]:
     """Every machine need we have a model answer for."""
     return sorted(MODELS.keys())
+
+
+def funny_writers() -> dict:
+    """Uncensored creative writers + Jev judge (see docs/funny-models.md)."""
+    return {"writers": dict(OPENROUTER_FUNNY),
+            "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+            "decisions": "https://openrouter.ai/api/alpha/decisions"}

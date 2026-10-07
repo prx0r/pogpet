@@ -1,0 +1,13 @@
+{
+  "pack": "pets",
+  "audience": "pets",
+  "premises": [
+    {"id": "pet_favourite_child", "text": "pet is clearly the favourite child", "topics": ["pets", "family"]},
+    {"id": "pet_xmas_chaos", "text": "dog ruined Christmas", "topics": ["pets", "christmas"]},
+    {"id": "pet_bed_hog", "text": "takes up the entire bed", "topics": ["pets"]},
+    {"id": "pet_food_critic", "text": "rejects expensive food, begs for toast", "topics": ["pets", "food"]},
+    {"id": "pet_walks_human", "text": "walks the human, not the other way round", "topics": ["pets"]},
+    {"id": "pet_guilty_face", "text": "guilty face, unknown crime", "topics": ["pets"]},
+    {"id": "pet_spot_thief", "text": "steals your warm spot the second you stand", "topics": ["pets"]}
+  ]
+}

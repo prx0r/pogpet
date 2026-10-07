@@ -1,0 +1,1148 @@
+{
+  "version": 1,
+  "thesis": "viral joke grammar \u00d7 recipient facts \u00d7 occasion \u00d7 render style",
+  "facets": {
+    "occasions": [
+      "christmas",
+      "birthday",
+      "fathers_day",
+      "mothers_day",
+      "valentines",
+      "graduation",
+      "retirement",
+      "new_baby",
+      "general"
+    ],
+    "audiences": [
+      "dad",
+      "mum",
+      "partner",
+      "friend",
+      "kid",
+      "teen",
+      "grandparent",
+      "pet",
+      "family",
+      "coworker"
+    ],
+    "tones": [
+      "absurd",
+      "dry",
+      "warm",
+      "roast",
+      "mock-serious",
+      "cute",
+      "chaotic",
+      "sentimental"
+    ]
+  },
+  "styles": [
+    {
+      "id": "xmasaisketch",
+      "label": "AI Christmas Sketch",
+      "kind": "illustrated",
+      "description": "Black-and-white editorial cartoon: Santa, elves and AI-culture jokes.",
+      "video_ready": true
+    },
+    {
+      "id": "comicstory",
+      "label": "Comic Story",
+      "kind": "illustrated",
+      "description": "3\u20136 panel personalised stories with setup, escalation, reversal and payoff.",
+      "video_ready": true
+    },
+    {
+      "id": "studioroast",
+      "label": "Studio Roast",
+      "kind": "photoreal",
+      "description": "Late-night, confessional and roast-stage comedy with the recipient as the guest.",
+      "video_ready": true
+    },
+    {
+      "id": "sportspresser",
+      "label": "Sports Presser",
+      "kind": "photoreal",
+      "description": "Post-match interviews, trophy lifts and absurdly serious punditry.",
+      "video_ready": true
+    },
+    {
+      "id": "newsparody",
+      "label": "News Parody",
+      "kind": "photoreal",
+      "description": "Breaking news, field reports, press conferences and investigations.",
+      "video_ready": true
+    },
+    {
+      "id": "cinechaos",
+      "label": "Cine Chaos",
+      "kind": "photoreal",
+      "description": "Ordinary family life treated like an expensive feature film.",
+      "video_ready": true
+    },
+    {
+      "id": "screenshottalk",
+      "label": "Screenshot Talk",
+      "kind": "ui-meme",
+      "description": "Group chats, fake reviews, reports and social-native meme formats.",
+      "video_ready": false
+    }
+  ],
+  "templates": [
+    {
+      "id": "santa_ai_workshop",
+      "style": "xmasaisketch",
+      "label": "Santa + AI workshop",
+      "occasion": [
+        "christmas"
+      ],
+      "audience": [
+        "family",
+        "dad",
+        "mum"
+      ],
+      "tone": [
+        "absurd",
+        "mock-serious"
+      ],
+      "topics": [
+        "ai",
+        "christmas",
+        "family",
+        "agents"
+      ],
+      "premise": "Santa delegates Christmas to AI and discovers automation also invented middle management.",
+      "example_caption": "Everyone shipped agents. Nobody shipped more elves.",
+      "requirements": {
+        "subjects": 0,
+        "face_photos_min": 0,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "NORTH POLE STATUS"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Everyone shipped agents. Nobody shipped more elves."
+        }
+      }
+    },
+    {
+      "id": "sleep_deprived_parents",
+      "style": "xmasaisketch",
+      "label": "Sleep-deprived parents",
+      "occasion": [
+        "christmas",
+        "new_baby",
+        "general"
+      ],
+      "audience": [
+        "mum",
+        "dad",
+        "family"
+      ],
+      "tone": [
+        "dry",
+        "warm"
+      ],
+      "topics": [
+        "parents",
+        "sleep",
+        "family",
+        "ai"
+      ],
+      "premise": "AI optimises the child's gifts, but the exhausted parents are obviously the real customers.",
+      "example_caption": "I optimized your child's gifts for faster sleep onset. The parents were my real users.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "AI RECOMMENDED"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "I optimized your child's gifts for faster sleep onset. The parents were my real users."
+        }
+      }
+    },
+    {
+      "id": "goblin_hallucination",
+      "style": "xmasaisketch",
+      "label": "Why is everything a goblin?",
+      "occasion": [
+        "christmas",
+        "birthday"
+      ],
+      "audience": [
+        "family",
+        "kid",
+        "friend"
+      ],
+      "tone": [
+        "absurd"
+      ],
+      "topics": [
+        "ai",
+        "hallucination",
+        "goblins"
+      ],
+      "premise": "The assistant hallucinates one motif into absolutely every present and decoration.",
+      "example_caption": "I asked for stocking stuffers. Why is everything a goblin?",
+      "requirements": {
+        "subjects": 0,
+        "face_photos_min": 0,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "STOCKING STUFFERS"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "I asked for stocking stuffers. Why is everything a goblin?"
+        }
+      }
+    },
+    {
+      "id": "agent_managers",
+      "style": "xmasaisketch",
+      "label": "10,000 agent managers",
+      "occasion": [
+        "christmas",
+        "general"
+      ],
+      "audience": [
+        "family",
+        "coworker"
+      ],
+      "tone": [
+        "absurd",
+        "dry"
+      ],
+      "topics": [
+        "agents",
+        "work",
+        "christmas",
+        "ai"
+      ],
+      "premise": "A swarm of agents supervises every elf with endless review comments, retries and escalations.",
+      "example_caption": "By noon, every elf had seven managers.",
+      "requirements": {
+        "subjects": 0,
+        "face_photos_min": 0,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "MAKE NO MISTAKES"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "By noon, every elf had seven managers."
+        }
+      }
+    },
+    {
+      "id": "four_panel_family",
+      "style": "comicstory",
+      "label": "Four-panel family story",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "mothers_day",
+        "christmas",
+        "general"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "kid",
+        "partner",
+        "friend"
+      ],
+      "tone": [
+        "dry",
+        "warm",
+        "roast"
+      ],
+      "topics": [
+        "family",
+        "running-joke",
+        "comic"
+      ],
+      "premise": "A four-beat comic generated from one real habit: setup, escalation, reversal, payoff.",
+      "example_caption": "Another mystery solved by Britain's leading detective.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "A COMPLETELY TRUE STORY"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Another mystery solved by Britain's leading detective."
+        }
+      }
+    },
+    {
+      "id": "kid_logic_comic",
+      "style": "comicstory",
+      "label": "Kid logic: a true story",
+      "occasion": [
+        "birthday",
+        "christmas",
+        "general"
+      ],
+      "audience": [
+        "kid",
+        "family"
+      ],
+      "tone": [
+        "cute",
+        "chaotic"
+      ],
+      "topics": [
+        "kids",
+        "comic",
+        "family"
+      ],
+      "premise": "Turn a child's recurring phrase or bizarre logic into a short comic strip.",
+      "example_caption": "Technically, nobody said the dinosaur couldn't come to dinner.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "A TRUE STORY"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Technically, nobody said the dinosaur couldn't come to dinner."
+        }
+      }
+    },
+    {
+      "id": "late_night_interview",
+      "style": "studioroast",
+      "label": "Late-night couch interview",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "mothers_day",
+        "retirement",
+        "general"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "friend",
+        "partner"
+      ],
+      "tone": [
+        "roast",
+        "dry"
+      ],
+      "topics": [
+        "interview",
+        "family",
+        "celebrity"
+      ],
+      "premise": "Recipient is interviewed like a celebrity about a painfully ordinary personal achievement.",
+      "example_caption": "Another year? That's actually impressive.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "ANOTHER YEAR?"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Another year? That's actually impressive."
+        }
+      }
+    },
+    {
+      "id": "roast_stage",
+      "style": "studioroast",
+      "label": "Family roast stage",
+      "occasion": [
+        "birthday",
+        "retirement",
+        "fathers_day",
+        "mothers_day"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "friend",
+        "coworker"
+      ],
+      "tone": [
+        "roast",
+        "warm"
+      ],
+      "topics": [
+        "roast",
+        "awards",
+        "family"
+      ],
+      "premise": "Recipient gets a glamorous celebrity roast for their most predictable traits.",
+      "example_caption": "Same person. Just more honest now.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "ROAST LEGEND"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Same person. Just more honest now."
+        }
+      }
+    },
+    {
+      "id": "confessional",
+      "style": "studioroast",
+      "label": "Mock documentary confessional",
+      "occasion": [
+        "birthday",
+        "general",
+        "retirement"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "friend",
+        "partner"
+      ],
+      "tone": [
+        "dry",
+        "warm"
+      ],
+      "topics": [
+        "documentary",
+        "interview"
+      ],
+      "premise": "A deadpan documentary confessional where the recipient explains a ridiculous family incident.",
+      "example_caption": "No regrets. OK, maybe a few.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "THE CONFESSIONAL"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "No regrets. OK, maybe a few."
+        }
+      }
+    },
+    {
+      "id": "sideline_interview",
+      "style": "sportspresser",
+      "label": "Post-match sideline interview",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "mothers_day",
+        "christmas",
+        "general"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "friend",
+        "kid"
+      ],
+      "tone": [
+        "mock-serious",
+        "roast"
+      ],
+      "topics": [
+        "sports",
+        "interview",
+        "family"
+      ],
+      "premise": "Treat a domestic or family achievement like a post-match sporting triumph.",
+      "example_caption": "Dad reacts after carrying Christmas for another season.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "POST-MATCH INTERVIEW"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Dad reacts after carrying Christmas for another season."
+        }
+      }
+    },
+    {
+      "id": "trophy_lift",
+      "style": "sportspresser",
+      "label": "Trophy lift",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "mothers_day",
+        "graduation",
+        "retirement"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "kid",
+        "friend"
+      ],
+      "tone": [
+        "warm",
+        "mock-serious"
+      ],
+      "topics": [
+        "sports",
+        "achievement",
+        "trophy"
+      ],
+      "premise": "Recipient lifts an absurd trophy for a tiny personal achievement.",
+      "example_caption": "League champion of putting the bins out eventually.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "CHAMPION"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "League champion of putting the bins out eventually."
+        }
+      }
+    },
+    {
+      "id": "pundit_desk",
+      "style": "sportspresser",
+      "label": "Pundit desk analysis",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "general"
+      ],
+      "audience": [
+        "dad",
+        "friend"
+      ],
+      "tone": [
+        "dry",
+        "mock-serious"
+      ],
+      "topics": [
+        "sports",
+        "analysis"
+      ],
+      "premise": "Experts analyse one recipient habit with tactical-board seriousness.",
+      "example_caption": "The numbers confirm he still refuses to ask for directions.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "HALFTIME ANALYSIS"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "The numbers confirm he still refuses to ask for directions."
+        }
+      }
+    },
+    {
+      "id": "breaking_news",
+      "style": "newsparody",
+      "label": "Breaking news",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "mothers_day",
+        "retirement",
+        "general"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "friend",
+        "coworker"
+      ],
+      "tone": [
+        "mock-serious",
+        "absurd"
+      ],
+      "topics": [
+        "news",
+        "family",
+        "headline"
+      ],
+      "premise": "A real family habit becomes a national breaking-news event.",
+      "example_caption": "BREAKING: Dad has found the remote. Family urges calm.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "BREAKING NEWS"
+        },
+        "subheadline": {
+          "type": "text",
+          "max_chars": 90,
+          "default": "BREAKING: Dad has found the remote. Family urges calm."
+        }
+      }
+    },
+    {
+      "id": "holiday_press_conference",
+      "style": "newsparody",
+      "label": "Holiday press conference",
+      "occasion": [
+        "christmas"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "family"
+      ],
+      "tone": [
+        "mock-serious",
+        "chaotic"
+      ],
+      "topics": [
+        "news",
+        "christmas",
+        "family"
+      ],
+      "premise": "Recipient fields hostile questions about Christmas logistics at North Pole HQ.",
+      "example_caption": "Dad denies assembling everything at 2:14am.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "CHRISTMAS UNDER REVIEW"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Dad denies assembling everything at 2:14am."
+        }
+      }
+    },
+    {
+      "id": "biscuit_investigation",
+      "style": "newsparody",
+      "label": "The great biscuit investigation",
+      "occasion": [
+        "christmas",
+        "birthday",
+        "general"
+      ],
+      "audience": [
+        "family",
+        "pet",
+        "kid"
+      ],
+      "tone": [
+        "absurd",
+        "cute"
+      ],
+      "topics": [
+        "news",
+        "food",
+        "pets",
+        "mystery"
+      ],
+      "premise": "An evidence-board investigation into missing biscuits, mince pies or snacks.",
+      "example_caption": "Suspects include Santa, the dog and everyone currently denying it.",
+      "requirements": {
+        "subjects": 0,
+        "face_photos_min": 0,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "SPECIAL INVESTIGATION"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Suspects include Santa, the dog and everyone currently denying it."
+        }
+      }
+    },
+    {
+      "id": "christmas_morning_chaos",
+      "style": "cinechaos",
+      "label": "Christmas morning chaos",
+      "occasion": [
+        "christmas"
+      ],
+      "audience": [
+        "family",
+        "kid",
+        "dad",
+        "mum"
+      ],
+      "tone": [
+        "chaotic",
+        "warm"
+      ],
+      "topics": [
+        "family",
+        "christmas",
+        "movie"
+      ],
+      "premise": "Ordinary family Christmas chaos rendered like a huge cinematic event.",
+      "example_caption": "Some gifts change everything. Most just need batteries.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "CHRISTMAS MORNING CHAOS"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Some gifts change everything. Most just need batteries."
+        }
+      }
+    },
+    {
+      "id": "domestic_action_hero",
+      "style": "cinechaos",
+      "label": "Domestic action hero",
+      "occasion": [
+        "fathers_day",
+        "mothers_day",
+        "birthday",
+        "general"
+      ],
+      "audience": [
+        "dad",
+        "mum"
+      ],
+      "tone": [
+        "warm",
+        "roast"
+      ],
+      "topics": [
+        "family",
+        "home",
+        "movie"
+      ],
+      "premise": "A parent doing normal chores framed as a blockbuster action sequence.",
+      "example_caption": "Same house. Higher stakes.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "DOMESTIC ACTION HERO"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Same house. Higher stakes."
+        }
+      }
+    },
+    {
+      "id": "family_biopic",
+      "style": "cinechaos",
+      "label": "A life well chaotic",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "mothers_day",
+        "retirement"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "grandparent"
+      ],
+      "tone": [
+        "sentimental",
+        "warm",
+        "dry"
+      ],
+      "topics": [
+        "family",
+        "movie",
+        "memories"
+      ],
+      "premise": "A sentimental mock-biopic poster about the recipient's gloriously ordinary life.",
+      "example_caption": "Not perfect. Just real. And that's the best part.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "A LIFE WELL CHAOTIC"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Not perfect. Just real. And that's the best part."
+        }
+      }
+    },
+    {
+      "id": "family_group_chat",
+      "style": "screenshottalk",
+      "label": "Family group chat",
+      "occasion": [
+        "birthday",
+        "christmas",
+        "general"
+      ],
+      "audience": [
+        "family",
+        "friend",
+        "partner",
+        "kid"
+      ],
+      "tone": [
+        "dry",
+        "chaotic"
+      ],
+      "topics": [
+        "chat",
+        "family",
+        "meme"
+      ],
+      "premise": "A fake group chat built from real family personalities and recurring arguments.",
+      "example_caption": "Mum: who changed the group name again?",
+      "requirements": {
+        "subjects": 0,
+        "face_photos_min": 0,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "FAMILY GROUP CHAT"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Mum: who changed the group name again?"
+        }
+      }
+    },
+    {
+      "id": "fake_review",
+      "style": "screenshottalk",
+      "label": "Five-star review",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "mothers_day",
+        "general"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "partner",
+        "friend",
+        "pet"
+      ],
+      "tone": [
+        "dry",
+        "roast",
+        "warm"
+      ],
+      "topics": [
+        "review",
+        "meme"
+      ],
+      "premise": "Recipient reviewed like a product, with suspiciously specific pros and cons.",
+      "example_caption": "5/5. Would ask him to fix the Wi-Fi again.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "VERIFIED PURCHASE"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "5/5. Would ask him to fix the Wi-Fi again."
+        }
+      }
+    },
+    {
+      "id": "school_report",
+      "style": "screenshottalk",
+      "label": "Annual school report",
+      "occasion": [
+        "birthday",
+        "fathers_day",
+        "mothers_day",
+        "general"
+      ],
+      "audience": [
+        "dad",
+        "mum",
+        "friend",
+        "kid"
+      ],
+      "tone": [
+        "dry",
+        "roast"
+      ],
+      "topics": [
+        "report",
+        "meme",
+        "family"
+      ],
+      "premise": "Adult recipient gets a brutally accurate school report.",
+      "example_caption": "Shows promise. Must stop pretending not to hear the dishwasher.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 1,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "ANNUAL REPORT"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "Shows promise. Must stop pretending not to hear the dishwasher."
+        }
+      }
+    },
+    {
+      "id": "how_it_started",
+      "style": "screenshottalk",
+      "label": "How it started / how it's going",
+      "occasion": [
+        "birthday",
+        "valentines",
+        "general"
+      ],
+      "audience": [
+        "partner",
+        "friend",
+        "dad",
+        "mum"
+      ],
+      "tone": [
+        "warm",
+        "dry"
+      ],
+      "topics": [
+        "meme",
+        "timeline",
+        "family"
+      ],
+      "premise": "Two snapshots turn a familiar viral comparison into a personal timeline.",
+      "example_caption": "How it started / how it's going.",
+      "requirements": {
+        "subjects": 1,
+        "face_photos_min": 2,
+        "mesh": false,
+        "voice": false
+      },
+      "slots": {
+        "star": {
+          "type": "subject",
+          "required": true
+        },
+        "headline": {
+          "type": "text",
+          "max_chars": 42,
+          "default": "HOW IT STARTED"
+        },
+        "caption": {
+          "type": "text",
+          "max_chars": 140,
+          "default": "How it started / how it's going."
+        }
+      }
+    }
+  ]
+}

@@ -68,3 +68,18 @@ def fill_slots(template: dict, values: dict) -> tuple[dict, list[str]]:
         else:
             filled[sid] = values.get(sid, slot.get("default"))
     return filled, gaps
+
+
+def render_pattern(template: dict, filled: dict) -> str:
+    """Fill the template's caption_pattern with slot values. Pure string —
+    no geometry, no pixels, safe to show before any render."""
+    pattern = str(template.get("caption_pattern") or "")
+    if not pattern:
+        for key in ("headline", "caption", "message", "post", "title"):
+            if filled.get(key):
+                return str(filled[key])
+        return ""
+    out = pattern
+    for k, v in filled.items():
+        out = out.replace("{" + str(k) + "}", str(v))
+    return out

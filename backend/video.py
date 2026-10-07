@@ -216,7 +216,8 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
 
 
 def compose_frame(photo: Path | None, pet_name: str, scene: str,
-                  headline: str, watermark: bool) -> Path:
+                  headline: str, watermark: bool,
+                  face_box: list | tuple | None = None) -> Path:
     """PIL builds the full frame so ffmpeg only has to mux."""
     config.ensure_dirs()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -246,14 +247,21 @@ def compose_frame(photo: Path | None, pet_name: str, scene: str,
     d.text((VW // 2, 130), "figg.", font=_font(96), fill=(255, 255, 255), anchor="mm")
     d.text((VW // 2, 330), scene.upper(), font=_font(44), fill=FIGG_VIOLET, anchor="mm")
 
-    # the pet
+    # the pet — face-aware square crop (faces live upper-frame; a blind
+    # center crop decapitates portrait photos). Falls back to top-weighted.
     cx, cy, r = VW // 2, VH // 2 + 40, 340
     if photo and photo.is_file():
         try:
             src = Image.open(photo).convert("RGB")
-            side = min(src.size)
-            src = src.crop(((src.width - side) // 2, (src.height - side) // 2,
-                            (src.width + side) // 2, (src.height + side) // 2))
+            if face_box and len(face_box) == 4:
+                fx, fy, fw, fh = (float(v) for v in face_box)
+                fcx, fcy = (fx + fw / 2) * src.width, (fy + fh / 2) * src.height
+            else:
+                fcx, fcy = src.width / 2, src.height * 0.35
+            side = min(src.width, src.height)
+            x0 = int(min(max(fcx - side / 2, 0), max(src.width - side, 0)))
+            y0 = int(min(max(fcy - side / 2, 0), max(src.height - side, 0)))
+            src = src.crop((x0, y0, x0 + side, y0 + side))
             src = src.resize((r * 2, r * 2), Image.LANCZOS)
             mask = Image.new("L", (r * 2, r * 2), 0)
             ImageDraw.Draw(mask).ellipse([0, 0, r * 2, r * 2], fill=255)
@@ -312,7 +320,7 @@ def duration_of(path: Path) -> float:
 
 def make(*, topic: str, pet_name: str, scene: str, voice: str,
          photo: Path | None, persona: str = "", watermark: bool | None = None,
-         talent: str = "comedy") -> dict:
+         talent: str = "comedy", face_box: list | tuple | None = None) -> dict:
     """Full free-tier pipeline. Returns record for the DB/API."""
     if watermark is None:
         watermark = config.WATERMARK_FREE
@@ -330,7 +338,8 @@ def make(*, topic: str, pet_name: str, scene: str, voice: str,
     frame = None
     try:
         tts(script, voice, mp3)
-        frame = compose_frame(photo, pet_name, config.SCENES[scene], lines[0], watermark)
+        frame = compose_frame(photo, pet_name, config.SCENES[scene], lines[0], watermark,
+                              face_box=face_box)
         mux(frame, mp3, mp4)
     finally:
         for p in (frame,):

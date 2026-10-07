@@ -45,14 +45,10 @@ class ProceduralMusicAdapter(_Local):
     name = "local.procedural"
 
     def run(self, payload: dict) -> dict:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "freaktown_sound", "/home/ubuntu/freaktown/sound_synth.py")
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        from backend import performance as _perf
         out = Path(payload.get("out") or "/tmp/oddhobb-walkout.wav")
-        out.write_bytes(mod.generate(payload.get("recipe") or {},
-                                     int(payload.get("seed") or 0)))
+        out.write_bytes(_perf.procedural_music(int(payload.get("seed") or 0),
+                                              payload.get("recipe") or {}))
         return {"ok": True, "audio": str(out)}
 
 
@@ -70,23 +66,41 @@ class CompositeAdapter(_Local):
 @register
 class JawBakeAdapter(_Local):
     """Free lip-sync default from prx0r/freaktown: jawOpen morph poses baked
-    against the audio envelope (scripts/pose_lipsync.py), CPU-only."""
+    against the audio envelope (scripts/pose_lipsync.py), CPU-only. Takes
+    name/voice/script, returns the mp4 path + duration like the server does."""
     capability = "lip_sync"
     name = "local.jaw_bake"
 
     def run(self, payload: dict) -> dict:
+        import time
         script = Path(__file__).resolve().parents[3] / "scripts" / "pose_lipsync.py"
         name = str(payload.get("name") or "Buster")
         voice = str(payload.get("voice") or "ryan")
+        script_text = str(payload.get("script") or "")
+        out = Path(payload.get("out") or
+                   f"/tmp/oddhobb-jaw-{int(time.time())}.mp4")
+        cmd = ["python3", str(script), "--name", name, "--voice", voice,
+               "--out", str(out)]
+        if script_text:
+            cmd += ["--script", script_text]
         try:
-            proc = subprocess.run(
-                ["python3", str(script), "--name", name, "--voice", voice],
-                capture_output=True, text=True, timeout=600)
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
         except subprocess.TimeoutExpired:
             raise ProviderNotConfigured("lip_sync: jaw bake timed out")
-        if proc.returncode != 0:
-            raise ProviderNotConfigured(f"lip_sync: jaw bake failed: {(proc.stderr or '')[-200:]}")
-        return {"ok": True, "mode": "jawOpen bake", "log": (proc.stdout or "")[-300:]}
+        if proc.returncode != 0 or not out.is_file():
+            raise ProviderNotConfigured(f"lip_sync: jaw bake failed: {(proc.stderr or proc.stdout or '')[-200:]}")
+        import json as _json
+        dur = 0.0
+        try:
+            probe = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "csv=p=0", str(out)],
+                capture_output=True, text=True, timeout=30)
+            dur = float((probe.stdout or "").strip() or 0)
+        except Exception:  # noqa: BLE001
+            pass
+        return {"ok": True, "mode": "jawOpen bake", "path": str(out),
+                "bytes": out.stat().st_size, "duration": round(dur, 2)}
 
 
 @register

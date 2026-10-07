@@ -29,7 +29,7 @@ class TestExtract(unittest.TestCase):
     def test_occasion(self):
         self.assertEqual(guide._extract_occasion("His birthday"), "birthday")
         self.assertEqual(guide._extract_occasion("for Christmas"), "christmas")
-        self.assertEqual(guide._extract_occasion("just because"), "")
+        self.assertEqual(guide._extract_occasion("just because"), "just_because")
 
     def test_name(self):
         self.assertEqual(guide._extract_name("Shopping for my Dad"), "Dad")

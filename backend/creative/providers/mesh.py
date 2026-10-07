@@ -16,6 +16,7 @@ class MeshyAdapter(BaseAdapter):
     capability = "mesh"
     name = "local.meshy"
     paid = False  # free-tier accounted, ask-first; spend itself is BYO/user-approved
+    subsidized = True  # OddHobb pays Meshy; $0 to the user under daily caps
 
     def is_available(self) -> bool:
         return True

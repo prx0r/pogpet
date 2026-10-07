@@ -1,0 +1,30 @@
+{
+  "id": "group_chat",
+  "version": 1,
+  "format": "group_chat",
+  "premise": "family_group_chat_chaos",
+  "caption_pattern": "{sender}: {message}",
+  "tone": ["funny", "warm"],
+  "rules": {"escalation": "messages get shorter and more unhinged",
+            "payoff": "dad misunderstands the assignment"},
+  "video_ready": false,
+  "face_swap_ready": false,
+  "taxonomy": {
+    "occasion": ["christmas", "birthday", "general", "just_because"],
+    "styles": ["newsparody", "comicstory"],
+    "topics": ["family", "chat"],
+    "tone": ["ross", "warm"]
+  },
+  "requirements": {"subjects": 1, "face_photos_min": 0, "mesh": false, "voice": false},
+  "slots": {
+    "star": {"type": "subject", "required": true},
+    "sender": {"type": "text", "max_chars": 20, "default": "Dad"},
+    "message": {"type": "text", "max_chars": 120},
+    "reply": {"type": "text", "max_chars": 120, "default": "Seen at 21:47"}
+  },
+  "renderers": {"preview": "composite2d", "hero": "identity_image_v1",
+                "print": "composite2d", "video": "talking_scene_v1"},
+  "layout": {"bubble": [0.08, 0.30, 0.92, 0.55], "reply": [0.08, 0.58, 0.92, 0.75],
+             "safe_inset_mm": 5},
+  "files": {"layout": "layout/card.polotno.json"}
+}

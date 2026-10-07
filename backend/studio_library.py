@@ -94,6 +94,18 @@ def register(app, owner_denied):
         b = request.get_json(silent=True) or {}
         owner = str(request.args.get('owner') or b.get('owner') or '').strip()[:80]
         if not owner:
+            # keyed callers omit owner: derive it from their API key
+            key = request.headers.get("X-API-Key", "").strip()
+            if not key:
+                auth = request.headers.get("Authorization", "")
+                if auth.lower().startswith("bearer "):
+                    key = auth[7:].strip()
+            if key:
+                with db.connect() as c:
+                    u = db.get_user_by_api_key(c, key)
+                    a = db.get_agent_by_key(c, key) if not u else None
+                owner = (u["handle"] if u else a["agent_handle"] if a else "")
+        if not owner:
             return jsonify(ok=False, error='owner is required'), 400
         denied = owner_denied(owner)
         if denied is not None:
@@ -165,32 +177,35 @@ def register(app, owner_denied):
                         if not isinstance(link,dict) or not _owned(c,'studio_subjects',link.get('subject_id'),owner): raise ValueError('Friend not found.')
                         fid=link.get('face_id') or ''
                         if fid and not c.execute('SELECT 1 FROM photo_faces WHERE id=? AND photo_id=?',(fid,pid)).fetchone(): raise ValueError('Face does not belong to this photo.')
+                if 'faces' in b:
+                    faces=b['faces']
+                    if not isinstance(faces,list) or len(faces)>30: raise ValueError('Invalid detections.')
+                    boxes=[_box(f.get('box')) for f in faces if isinstance(f,dict)]
+                    if len(boxes)!=len(faces): raise ValueError('Invalid detections.')
+                c.execute('INSERT OR IGNORE INTO studio_photo_meta(photo_id) VALUES (?)',(pid,))
+                if 'faces' in b:
+                    # Do not invalidate an identity the customer already confirmed.
+                    if not c.execute("SELECT 1 FROM photo_faces WHERE photo_id=?",(pid,)).fetchone():
+                        for box in boxes:
+                            c.execute('INSERT INTO photo_faces VALUES (?,?,?,?,?)',(db.new_id('face'),pid,json.dumps(box),0,'mediapipe'))
+                    c.execute('UPDATE studio_photo_meta SET detection_status=? WHERE photo_id=?',('ready' if boxes else 'no_faces',pid))
+                if 'favourite' in b: c.execute('UPDATE studio_photo_meta SET favourite=? WHERE photo_id=?',(int(bool(b['favourite'])),pid))
+                if 'tags' in b:
+                    tags=b['tags']
+                    if not isinstance(tags,list) or len(tags)>20 or any(not isinstance(t,str) or len(t)>40 for t in tags): raise ValueError('Invalid photo tags.')
+                    c.execute('UPDATE studio_photo_meta SET tags=? WHERE photo_id=?',(json.dumps(tags),pid))
+                if links is not None:
                     c.execute('DELETE FROM photo_subjects WHERE photo_id=?',(pid,))
                     for link in links:
                         c.execute('INSERT OR IGNORE INTO photo_subjects VALUES (?,?,?,1,?)',(pid,link['subject_id'],link.get('face_id') or '', 'user-confirmed'))
                     # Legacy single-label consumers get a name only for a single subject.
                     names=[r['name'] for r in c.execute('SELECT DISTINCT s.name FROM photo_subjects ps JOIN studio_subjects s ON s.id=ps.subject_id WHERE ps.photo_id=?',(pid,))]
                     c.execute('UPDATE photos SET person=? WHERE id=?',(names[0] if len(names)==1 else None,pid))
-                c.execute('INSERT OR IGNORE INTO studio_photo_meta(photo_id) VALUES (?)',(pid,))
-                if 'favourite' in b: c.execute('UPDATE studio_photo_meta SET favourite=? WHERE photo_id=?',(int(bool(b['favourite'])),pid))
-                if 'tags' in b:
-                    tags=b['tags']
-                    if not isinstance(tags,list) or len(tags)>20 or any(not isinstance(t,str) or len(t)>40 for t in tags): raise ValueError('Invalid photo tags.')
-                    c.execute('UPDATE studio_photo_meta SET tags=? WHERE photo_id=?',(json.dumps(tags),pid))
-                if 'faces' in b:
-                    faces=b['faces']
-                    if not isinstance(faces,list) or len(faces)>30: raise ValueError('Invalid detections.')
-                    boxes=[_box(f.get('box')) for f in faces if isinstance(f,dict)]
-                    if len(boxes)!=len(faces): raise ValueError('Invalid detections.')
-                    # Do not invalidate an identity the customer already confirmed.
-                    if not c.execute("SELECT 1 FROM photo_faces WHERE photo_id=?",(pid,)).fetchone():
-                        for box in boxes:
-                            c.execute('INSERT INTO photo_faces VALUES (?,?,?,?,?)',(db.new_id('face'),pid,json.dumps(box),0,'mediapipe'))
-                    c.execute('UPDATE studio_photo_meta SET detection_status=? WHERE photo_id=?',('ready' if boxes else 'no_faces',pid))
                 c.commit()
+                linked=[dict(r) for r in c.execute('SELECT ps.subject_id,ps.face_id,ps.confirmed,s.name FROM photo_subjects ps JOIN studio_subjects s ON s.id=ps.subject_id WHERE ps.photo_id=?',(pid,))]
         except (ValueError,TypeError,AttributeError) as e:
             return jsonify(ok=False,error=str(e)),400
-        return jsonify(ok=True)
+        return jsonify(ok=True,linked=linked)
 
     @bp.post('/api/studio/meshes/<mid>/subject')
     def mesh_subject(mid):

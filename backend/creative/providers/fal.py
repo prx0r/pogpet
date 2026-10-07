@@ -52,6 +52,7 @@ def _result(endpoint: str, rid: str, key: str, timeout_s: int = 600) -> dict:
 
 class _Fal(BaseAdapter):
     paid = True
+    key_envs = ("FAL_KEY",)
     endpoint = ""
 
     def _k(self, payload: dict) -> str:
@@ -70,7 +71,7 @@ class _Fal(BaseAdapter):
 class FluxEditAdapter(_Fal):
     capability = "image_edit"
     name = "fal.flux_edit"
-    endpoint = "fal-ai/flux-3/edit"
+    endpoint = "blackforestlabs/flux-3/edit-image"
 
     def run(self, payload: dict) -> dict:
         return self.submit(payload, {"prompt": str(payload.get("prompt") or ""),

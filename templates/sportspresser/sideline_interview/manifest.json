@@ -2,10 +2,25 @@
   "id": "sideline_interview",
   "version": 1,
   "taxonomy": {
-    "occasion": ["christmas", "birthday", "fathers_day", "general"],
-    "styles": ["sportspresser", "photorealstudio"],
-    "topics": ["family", "sports", "christmas"],
-    "tone": ["ross", "mock-serious"]
+    "occasion": [
+      "christmas",
+      "birthday",
+      "fathers_day",
+      "general"
+    ],
+    "styles": [
+      "sportspresser",
+      "photorealstudio"
+    ],
+    "topics": [
+      "family",
+      "sports",
+      "christmas"
+    ],
+    "tone": [
+      "ross",
+      "mock-serious"
+    ]
   },
   "requirements": {
     "subjects": 1,
@@ -14,9 +29,18 @@
     "voice": false
   },
   "slots": {
-    "star": {"type": "subject", "required": true},
-    "headline": {"type": "text", "max_chars": 42},
-    "caption": {"type": "text", "max_chars": 90}
+    "star": {
+      "type": "subject",
+      "required": true
+    },
+    "headline": {
+      "type": "text",
+      "max_chars": 42
+    },
+    "caption": {
+      "type": "text",
+      "max_chars": 90
+    }
   },
   "renderers": {
     "preview": "composite2d",
@@ -27,5 +51,45 @@
   "files": {
     "layout": "layout/card.polotno.json",
     "prompts": "image.txt"
-  }
+  },
+  "layout": {
+    "photo": [
+      0.08,
+      0.05,
+      0.92,
+      0.52
+    ],
+    "band": [
+      0.0,
+      0.6,
+      1.0,
+      0.82
+    ],
+    "headline": [
+      0.08,
+      0.63,
+      0.92,
+      0.72
+    ],
+    "caption": [
+      0.08,
+      0.73,
+      0.92,
+      0.8
+    ],
+    "safe_inset_mm": 5
+  },
+  "format": "sports_interview",
+  "premise": "dad_carries_christmas",
+  "caption_pattern": "POST-MATCH: {headline} \u2014 {caption}",
+  "tone": [
+    "funny",
+    "mock-serious"
+  ],
+  "rules": {
+    "escalation": "each beat raises the stakes of the last",
+    "payoff": "final line reframes the whole scene"
+  },
+  "video_ready": true,
+  "face_swap_ready": true
 }

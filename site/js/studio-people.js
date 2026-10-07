@@ -9,7 +9,7 @@
     var friends=document.getElementById('friends'),grid=document.getElementById('as-grid');
     var status=document.getElementById('as-status'),heading=document.getElementById('studio-photo-title');
     var meshHeading=document.getElementById('studio-mesh-title'), controls=document.getElementById('studio-photo-controls');
-    var input=node('input');input.type='file';input.accept='image/jpeg,image/png';input.multiple=true;input.hidden=true;
+    var input=node('input');input.type='file';input.accept='image/jpeg,image/png,image/webp';input.multiple=true;input.hidden=true;
     var upload=button('Add photos',function(){input.click();});upload.id='studio-upload';
     var detect=button('Find faces',function(){detectPending().catch(error);});
     controls.replaceChildren(upload,input,detect,button('Refresh',function(){refresh().catch(error);}));

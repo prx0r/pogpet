@@ -772,7 +772,10 @@ def enqueue(c: sqlite3.Connection, kind: str, subject_id: str, payload: dict | N
 
 
 def claim_job(c: sqlite3.Connection, kind: str) -> sqlite3.Row | None:
-    """Atomically take the oldest pending job of a kind."""
+    """Atomically take the oldest pending job of a kind. Jobs stuck in
+    'running' for >10 min (dead worker) are reclaimed as pending."""
+    c.execute("UPDATE jobs SET status='pending' WHERE kind=? AND status='running'"
+              " AND updated_at < ?", (kind, now() - 600))
     row = c.execute(
         "SELECT * FROM jobs WHERE kind=? AND status='pending' ORDER BY created_at LIMIT 1",
         (kind,),

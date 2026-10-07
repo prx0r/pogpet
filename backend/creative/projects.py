@@ -47,18 +47,35 @@ def create_project(c: sqlite3.Connection, owner: str, subject_id: str = "",
             "template_id": template_id, "latest_revision": 0}
 
 
+def find_project(c: sqlite3.Connection, owner: str, subject_id: str,
+                 template_id: str) -> dict:
+    """Lineage key: (owner, subject, template). Mum never lands in Dad's project."""
+    row = c.execute("SELECT * FROM creative_projects WHERE owner=? AND subject_id=? AND template_id=?",
+                    (owner, subject_id, template_id)).fetchone()
+    return dict(row) if row else {}
+
+
 def save_revision(c: sqlite3.Connection, project_id: str, template_id: str,
-                  template_version: int, brief: dict, scene: dict) -> dict:
-    row = c.execute("SELECT latest_revision FROM creative_projects WHERE id=?",
+                  template_version: int, brief: dict, scene: dict,
+                  expected_revision: int | None = None) -> dict:
+    row = c.execute("SELECT latest_revision, template_id FROM creative_projects WHERE id=?",
                     (project_id,)).fetchone()
     if row is None:
         raise KeyError("no such project")
-    rev = int(dict(row)["latest_revision"]) + 1
+    cur = dict(row)
+    if cur["template_id"] != template_id:
+        raise ValueError(f"template lineage locked to {cur['template_id']} — start a new project")
+    if expected_revision is not None and int(expected_revision) != int(cur["latest_revision"]):
+        raise ValueError(f"stale write: latest is r{cur['latest_revision']}")
+    rev = int(cur["latest_revision"]) + 1
     c.execute("INSERT INTO creative_revisions (project_id,revision,template_id,template_version,brief_snapshot,scene,created_at)"
               " VALUES (?,?,?,?,?,?,?)",
               (project_id, rev, template_id, template_version,
                json.dumps(brief), json.dumps(scene), time.time()))
-    c.execute("UPDATE creative_projects SET latest_revision=? WHERE id=?", (rev, project_id))
+    n = c.execute("UPDATE creative_projects SET latest_revision=? WHERE id=? AND latest_revision=?",
+                  (rev, project_id, cur["latest_revision"])).rowcount
+    if not n:
+        raise ValueError("concurrent write lost — refetch and retry")
     c.commit()
     return {"project_id": project_id, "revision": rev, "template_id": template_id,
             "template_version": template_version}

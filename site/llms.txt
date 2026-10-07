@@ -80,7 +80,10 @@ Base path is `/backend/api` on any oddhobb.com host (plain `/api/*` is the
 site router, not the API). Machine contract: `/openapi.json`.
 Quotas are per-owner (3 sculpts + 5 videos/day free).
 Holders of the bridge token get the full MCP instead:
-`https://mcp.oddhobb.com/mcp?token=<BRIDGE_TOKEN>` (57 tools).
+`https://mcp.oddhobb.com/mcp?token=<BRIDGE_TOKEN>` (75 tools), including
+`figg_mint_agent` / `figg_my_agents` / `figg_revoke_agent`: sign in (password
+or Google), pass YOUR api_key, mint a scoped key for your agent. Agents never
+get the bridge token.
 
 Design loop rule (enforced): fetch `figg_design_base` for the line FIRST and
 design inside that geometry — locked interfaces arrive already modelled.

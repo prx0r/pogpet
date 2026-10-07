@@ -21,9 +21,15 @@ class BaseAdapter:
     name = ""
     #: True when this run costs provider money
     paid = False
+    #: cost to the END USER in cents (0 = free to them, even if subsidized)
+    cost_to_user_cents = 0
+    #: True when OddHobb subsidizes the provider cost (free-tier Meshy)
+    subsidized = False
+    #: env vars holding this adapter's key (BYO payload api_key checked first)
+    key_envs: tuple = ()
 
     def is_available(self) -> bool:
-        raise NotImplementedError
+        return True
 
     def run(self, payload: dict) -> dict:
         """payload in (scene fragment), {"ok": True, ...artifact refs} out."""

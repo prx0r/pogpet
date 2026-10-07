@@ -1,0 +1,16 @@
+{
+  "pack": "dads",
+  "audience": "dads",
+  "premises": [
+    {"id": "dad_hero", "text": "dad thinks he's a hero", "topics": ["family", "hero"]},
+    {"id": "dad_grill_master", "text": "dad treats the barbecue like a military operation", "topics": ["food", "hero"]},
+    {"id": "dad_nap_tactician", "text": "dad's nap is a scheduled event, do not disturb", "topics": ["family"]},
+    {"id": "dad_diy_veteran", "text": "grandad acts like a war veteran about DIY", "topics": ["family", "diy"]},
+    {"id": "dad_golf_serious", "text": "takes mini golf far too seriously", "topics": ["sports"]},
+    {"id": "dad_remote_keeper", "text": "controls the remote like airspace", "topics": ["family"]},
+    {"id": "dad_joke_machine", "text": "deploys a dad joke at every silence", "topics": ["family"]},
+    {"id": "dad_bbq_weather", "text": "checks the weather only to justify the barbecue", "topics": ["food"]},
+    {"id": "dad_asleep_tv", "text": "falls asleep watching TV, denies sleeping", "topics": ["family"]},
+    {"id": "dad_tool_wall", "text": "owns every tool, uses none correctly", "topics": ["diy"]}
+  ]
+}

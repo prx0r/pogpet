@@ -74,19 +74,33 @@ def start_mesh(photo_id: str, *, single: bool = False) -> dict:
         # allowance. Cached hits above never reach here and never charge.
         owner = photo["owner"] or "anon"
         day = datetime.now(timezone.utc).date().isoformat()
-        # 3-angle gate: same person, 3+ photos → multi-image build (better
-        # meshes, same 1 credit). Fewer angles needs explicit single:true —
-        # blind single-photo sculpts are where credits go to die.
+        # 3-angle gate: same subject, 3+ confirmed photos → multi-image build
+        # (better meshes, same 1 credit). Canonical identity is the
+        # studio_subjects → photo_subjects graph; the legacy person label is
+        # fallback only. Fewer angles needs explicit single:true.
+        person = ""
         try:
-            person = (photo["person"] or "").strip()
-        except (KeyError, IndexError, TypeError):
-            person = ""
-        if person:
-            group = c.execute("SELECT id FROM photos WHERE owner=? AND person=?",
-                              (owner, person)).fetchall()
-            angles = [dict(r)["id"] for r in group]
+            links = c.execute("SELECT subject_id FROM photo_subjects"
+                              " WHERE photo_id=? AND confirmed=1", (photo_id,)).fetchall()
+            sids = {dict(r)["subject_id"] for r in links}
+        except Exception:  # noqa: BLE001 — table missing on old DBs
+            sids = set()
+        if sids:
+            group = c.execute(f"SELECT DISTINCT photo_id FROM photo_subjects WHERE subject_id IN "
+                              f"({','.join('?' * len(sids))}) AND confirmed=1",
+                              tuple(sids)).fetchall()
+            angles = [dict(r)["photo_id"] for r in group]
         else:
-            angles = [photo_id]
+            try:
+                person = (photo["person"] or "").strip()
+            except (KeyError, IndexError, TypeError):
+                person = ""
+            if person:
+                group = c.execute("SELECT id FROM photos WHERE owner=? AND person=?",
+                                  (owner, person)).fetchall()
+                angles = [dict(r)["id"] for r in group]
+            else:
+                angles = [photo_id]
         multi = len(angles) >= 3
         if not multi and not single:
             raise PipelineError(

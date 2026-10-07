@@ -28,7 +28,7 @@
     var uploads = el('div', undefined, 'oc-uploads');
     var grid = el('div', undefined, 'oc-photos');
     var selectedLine = el('p', '', 'oc-status');
-    var file = el('input');file.type='file';file.accept='image/jpeg,image/png';file.multiple=true;file.hidden=true;
+    var file = el('input');file.type='file';file.accept='image/jpeg,image/png,image/webp';file.multiple=true;file.hidden=true;
     var toolbar=el('div',undefined,'oc-toolbar');
     toolbar.append(button('Upload photos',function(){file.click();}),button('Make a greeting card',function(){host.tab('cards');open();}),button('Refresh',refresh));
     library.append(el('h3','Your photo library'),el('p','Upload Dad, Mum, the kids or your pets. Select photos to use in your card.'),toolbar,file,uploads,selectedLine,grid);
@@ -140,6 +140,9 @@
       recipient.value=ctx.subject?ctx.subject.name:'';paintPhotos();paintCropChoices();
     });
     async function openDesign(id){await open();await refresh();await loadSaved(id);}
+    if(window.OddHobbViralCards&&panel){
+      try{window.OddHobbViralCards.mount(panel,host);}catch(e){}
+    }
     return {open:open,refresh:refresh,videos:videos,openDesign:openDesign};
   };
 })();

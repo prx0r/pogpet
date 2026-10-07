@@ -103,3 +103,30 @@ def agent_view(c: sqlite3.Connection, owner: str) -> dict:
     on = {dict(r)["provider"] for r in rows}
     return {"free": True, **{p: (p in on) for p in
             ("fal", "higgsfield", "alibaba", "openrouter", "replicate", "comfyui", "runpod")}}
+
+
+def connected(c: sqlite3.Connection, owner: str) -> list[str]:
+    rows = c.execute("SELECT provider FROM provider_connections WHERE owner=? AND status='connected'",
+                     (owner,)).fetchall()
+    return sorted({dict(r)["provider"] for r in rows})
+
+
+def migrate_plaintext(c: sqlite3.Connection) -> int:
+    """One-way migration: plaintext provider_keys → encrypted vault, then the
+    old table is dropped. After this exactly one credential store exists."""
+    try:
+        rows = [dict(r) for r in c.execute("SELECT * FROM provider_keys")]
+    except sqlite3.Error:
+        return 0
+    n = 0
+    for r in rows:
+        try:
+            connect(c, r.get("owner", ""), r.get("provider", ""),
+                    r.get("secret", ""), {"label": r.get("label", ""),
+                                          "migrated": True})
+            n += 1
+        except ValueError:
+            pass
+    c.execute("DROP TABLE IF EXISTS provider_keys")
+    c.commit()
+    return n

@@ -9,6 +9,26 @@
     var inner=node('div',undefined,'studio-dialog-inner'),close=node('button','Close','studio-dialog-close');close.type='button';close.onclick=function(){accountDialog.close();};
     inner.append(close,node('h2','Your OddHobb account'),node('p','Sign in to keep your friends, photos and saved designs together.'));
     ['g-signin','g-who'].forEach(function(id){var n=document.getElementById(id);if(n)inner.append(n);});
+    var pwWrap=node('div','oc-password'),pwH=node('input'),pwP=node('input'),pwMsg=node('p','','panel__msg'),pwIn=node('button','Sign in','oc-button'),pwUp=node('button','Create account','oc-button');
+    pwWrap.className='oc-password';
+    pwH.type='text';pwH.placeholder='handle (e.g. chris)';pwH.autocomplete='username';pwH.style.marginRight='6px';
+    pwP.type='password';pwP.placeholder='password (8+ chars)';pwP.autocomplete='current-password';pwP.style.marginRight='6px';
+    pwIn.type='button';pwUp.type='button';pwUp.style.marginLeft='6px';
+    function pwAuth(mode){
+      var handle=pwH.value.trim(),password=pwP.value;
+      if(!handle||!password){pwMsg.textContent='Handle + password needed.';return;}
+      pwMsg.textContent='Signing in…';pwIn.disabled=pwUp.disabled=true;
+      var body={handle:handle,password:password};
+      if(mode==='signup'&&window.__FIGG_ANON_OWNER)body.claim_owner=window.__FIGG_ANON_OWNER;
+      fetch('/backend/api/accounts'+(mode==='signup'?'':'/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(d){
+        pwIn.disabled=pwUp.disabled=false;
+        if(!d.ok){pwMsg.textContent=d.error||'Failed.';return;}
+        try{localStorage.setItem('pogpet.apikey',d.api_key);localStorage.setItem('pogpet.owner',d.handle);localStorage.removeItem('pogpet.ownersig');}catch(e){}
+        location.reload();
+      }).catch(function(e){pwIn.disabled=pwUp.disabled=false;pwMsg.textContent=e.message;});
+    }
+    pwIn.onclick=function(){pwAuth('signin');};pwUp.onclick=function(){pwAuth('signup');};
+    pwWrap.append(node('p','Or use a handle + password:'),pwH,pwP,pwIn,pwUp,pwMsg);inner.append(pwWrap);
     inner.append(link('Account and orders','/account'));accountDialog.append(inner);document.body.append(accountDialog);
     var accountPanel=document.getElementById('panel-account');
     if(accountPanel)accountPanel.querySelector('.panel__inner').append(node('h1','Your account'),node('p','Your photos and creations stay with your account.'),link('View basket','/cart'));
@@ -90,7 +110,7 @@
             }
           }catch(e){}
           var out=node('button','Sign out','oc-button');out.type='button';
-          out.onclick=function(){try{localStorage.removeItem('pogpet.apikey');}catch(e){}paintAcctName('sign in');account(ticket);};
+          out.onclick=function(){try{localStorage.removeItem('pogpet.apikey');localStorage.removeItem('pogpet.ownersig');localStorage.setItem('pogpet.owner','pog_'+Math.random().toString(36).slice(2,10));localStorage.removeItem('pogpet.mesh');}catch(e){}location.reload();};
           body.append(out);
         }else{
           var anon=ownerHint||'';

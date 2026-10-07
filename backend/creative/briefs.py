@@ -10,7 +10,7 @@ from __future__ import annotations
 def build(*, occasion: str = "general", occasion_date: str = "",
           subject: dict | None = None, profile: dict | None = None,
           asset_counts: dict | None = None, tone: str = "funny",
-          budget_cents: int = 0) -> dict:
+          budget_cents: int = 0, request: str = "") -> dict:
     sub = subject or {}
     prof = (profile or {}).get("profile", profile or {})
     return {
@@ -26,5 +26,5 @@ def build(*, occasion: str = "general", occasion_date: str = "",
             "dislikes": prof.get("dislikes", []),
         },
         "available_assets": asset_counts or {},
-        "request": {"tone": tone, "budget_cents": budget_cents},
+        "request": {"tone": tone, "budget_cents": budget_cents, "prompt": (request or "")[:1000]},
     }

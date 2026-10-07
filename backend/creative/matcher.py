@@ -75,6 +75,14 @@ def score(template: dict, brief: dict, *, seen: set[str] | None = None,
     if hits:
         pts += WEIGHTS["interest"]
         reasons.append(f"into {', '.join(hits[:2])}")
+    try:
+        from . import premises as _prem
+        pre = _prem.match_premises(interests, topics)
+        if pre:
+            pts += 5
+            reasons.append(f"premise ready: {pre[0]['text'][:60]}")
+    except Exception:  # noqa: BLE001 — premises never break matching
+        pass
     humour = rec.get("humour") or {}
     tones = [str(t).lower() for t in (tax.get("tone") or [])]
     hscore = 0.0
@@ -99,6 +107,18 @@ def score(template: dict, brief: dict, *, seen: set[str] | None = None,
         pts += min(WEIGHTS["engagement"], eng)
         reasons.append("picked before")
     pts += WEIGHTS["cost"] * 0.5  # placeholder: print lanes cost alike
+    # buyer's actual words: lexical evidence against id/label/premise/caption
+    ask = str((brief.get("request") or {}).get("prompt") or "").lower().split()
+    ask = [w.strip(",.!?") for w in ask if len(w) > 3]
+    if ask:
+        hay = " ".join([str(template.get("id") or ""),
+                        str((template.get("presentation") or {}).get("label") or ""),
+                        str(template.get("premise") or ""),
+                        str((template.get("presentation") or {}).get("example_caption") or "")]).lower()
+        hits = sum(1 for w in ask if w in hay)
+        if hits:
+            pts += min(20, 4 * hits)
+            reasons.append(f"matches your words ({hits})")
     return round(pts, 1), reasons
 
 
@@ -113,6 +133,9 @@ def match(brief: dict, templates: dict[str, dict], *,
         pts, reasons = score(t, brief, engagement=engagement, seen=seen)
         ranked.append({"id": tid, "version": t.get("version", 1),
                        "score": pts, "reasons": reasons,
+                       "format": t.get("format", tid),
+                       "premise": t.get("premise", ""),
+                       "tone": t.get("tone", []),
                        "renderers": t.get("renderers", {})})
     ranked.sort(key=lambda r: (-r["score"], r["id"]))
     return ranked[:limit]

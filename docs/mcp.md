@@ -1,8 +1,10 @@
 # MCP — agents (ChatGPT / Claude / Muse)
 
-> Public tier (no token): `https://mcp.oddhobb.com/mcp` — 28 safe tools
-> (reads + `figg_create_account`/`figg_login`). Unknown spend tools error.
-> Full tier: same URL `?token=<bridge-token>` (57 tools).
+> Public tier (no token): `https://mcp.oddhobb.com/mcp` — 47 safe tools
+> (reads + self-serve identity + reserve-only design + style adoption +
+> card save/preview).
+> Full tier: same URL `?token=<bridge-token>` (75 tools, incl. agent
+> credentials: `figg_mint_agent` / `figg_my_agents` / `figg_revoke_agent`).
 > Local: `MCP_HTTP=1 python3 -m backend.mcp_server` on `:8799` (127.0.0.1);
 > public: `PUBLIC_MCP=1 MCP_PORT=8800 MCP_HTTP=1 python3 -m backend.mcp_server`.
 > Tools: `pi/.pi/extensions/figgsite.ts` + `backend/mcp_server.py`

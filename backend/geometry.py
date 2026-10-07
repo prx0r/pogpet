@@ -12,7 +12,7 @@ import struct
 
 import numpy as np
 
-MAX_STL_BYTES = 8 * 1024 * 1024
+MAX_STL_BYTES = 32 * 1024 * 1024
 
 
 def parse_stl(blob: bytes) -> np.ndarray:
@@ -21,10 +21,9 @@ def parse_stl(blob: bytes) -> np.ndarray:
         raise ValueError(f"STL must be 84B–8MB, got {len(blob)}B")
     n, = struct.unpack("<I", blob[80:84])
     if n > 0 and 84 + 50 * n == len(blob):
-        tris = np.frombuffer(blob, dtype=np.uint8, count=n * 50, offset=84)
-        tris = tris.reshape(n, 50)[:, :48].reshape(n, 12)
-        floats = tris.view("<f4").reshape(n, 4, 3).astype(np.float64)
-        return floats[:, 1:, :]  # skip facet normals, keep 3 vertices
+        raw = np.frombuffer(blob, dtype=np.uint8, count=n * 50, offset=84)
+        floats = raw.reshape(n, 50)[:, :48].reshape(n, 12, 4).view("<f4")
+        return np.ascontiguousarray(floats.reshape(n, 4, 3)[:, 1:, :], dtype=np.float64)
     text = blob.decode("utf-8", errors="strict")
     verts, cur = [], []
     for line in text.splitlines():
@@ -82,18 +81,101 @@ def stem_gaps(tris: np.ndarray, stem: dict) -> list[str]:
     return []
 
 
-def base_preserved_gaps(upload: np.ndarray, base: np.ndarray,
-                        tol: float = 0.15, need: float = 0.90) -> list[str]:
-    """Share of base verts still present in the upload (chunked, 0.15mm)."""
+def base_match(upload: np.ndarray, base: np.ndarray, tol: float = 0.15) -> float:
+    """Share of base verts still present in the upload (chunked, 0.15mm).
+    Booleans move base verts legitimately, so this is a scored signal, not
+    a hard gate: ≥0.9 intact, 0.6–0.9 derived, below is a remodel."""
     bv = base.reshape(-1, 3)
     uv = upload.reshape(-1, 3)
     found = np.zeros(len(bv), dtype=bool)
     for i in range(0, len(uv), 20000):
         d = np.linalg.norm(uv[i:i + 20000, None, :] - bv[None, :, :], axis=2)
         found |= d.min(axis=0) <= tol
-        if found.mean() >= need:
+        if found.mean() >= 0.9:
             break
-    share = float(found.mean())
-    if share < need:
-        return [f"base geometry {share:.0%} preserved, need {need:.0%} — design inside the base"]
+    return round(float(found.mean()), 3)
+
+
+def base_preserved_gaps(upload: np.ndarray, base: np.ndarray,
+                        tol: float = 0.15, need: float = 0.60) -> list[str]:
+    """Hard gate at `need` (default 0.6: derived-from-base). The exact share
+    comes from base_match() for honest reporting above the bar."""
+    if base_match(upload, base, tol) < need:
+        return [f"base geometry under {need:.0%} preserved — design inside the base"]
     return []
+
+
+def parse_glb(blob: bytes) -> np.ndarray:
+    """GLB -> triangle soup (n,3,3) float64. De-indexed; no new deps."""
+    import json as _json
+    if len(blob) < 12 or blob[:4] != b"glTF":
+        raise ValueError("not a GLB")
+    off, json_doc,buffer = 12, None, b""
+    while off + 8 <= len(blob):
+        (ln,) = struct.unpack("<I", blob[off:off + 4])
+        typ = blob[off + 4:off + 8]
+        data = blob[off + 8:off + 8 + ln]
+        if typ == b"JSON":
+            json_doc = _json.loads(data.decode("utf-8"))
+        elif typ == b"BIN\x00":
+            buffer = bytes(data)
+        off += 8 + ln
+    if json_doc is None:
+        raise ValueError("GLB has no JSON chunk")
+    accessors = json_doc.get("accessors", [])
+    views = json_doc.get("bufferViews", [])
+
+    def read_acc(idx: int) -> np.ndarray:
+        acc = accessors[idx]
+        view = views[acc["bufferView"]]
+        start = int(view.get("byteOffset", 0)) + int(acc.get("byteOffset", 0))
+        ctype = {5121: "u1", 5123: "u2", 5125: "u4", 5126: "f4"}[acc["componentType"]]
+        ncomp = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}[acc["type"]]
+        count = int(acc["count"])
+        stride = int(view.get("byteStride", 0)) or (np.dtype(ctype).itemsize * ncomp)
+        raw = np.frombuffer(buffer, dtype=np.uint8)
+        rows = []
+        for i in range(count):
+            seg = raw[start + i * stride:start + i * stride + np.dtype(ctype).itemsize * ncomp]
+            rows.append(np.frombuffer(seg.tobytes(), dtype=ctype))
+        return np.array(rows, dtype=np.float64)
+
+    tris = []
+    for mesh in json_doc.get("meshes", []):
+        for prim in mesh.get("primitives", []):
+            pos = read_acc(prim["attributes"]["POSITION"])
+            if "indices" in prim:
+                idx = read_acc(prim["indices"]).astype(int).reshape(-1)
+                if len(idx) % 3:
+                    continue
+                tris.append(pos[idx.reshape(-1, 3)].reshape(-1, 3, 3))
+            else:
+                tris.append(pos.reshape(-1, 3, 3))
+    if not tris:
+        raise ValueError("GLB has no POSITION geometry")
+    return np.concatenate(tris, axis=0)
+
+
+def mesh_report(blob: bytes, *, envelope_mm: list | None = None,
+                stem: dict | None = None, units: str = "mm",
+                check_manifold: bool = True) -> dict:
+    """Deterministic acceptance facts for any mesh (STL or GLB): dims,
+    volume, manifold gaps, stem-lock gaps. Pure numbers — Jev judges on top.
+    units: mm for STL/print, m for GLB display meshes. Manifold only gates
+    print-bound geometry; display meshes are rarely watertight."""
+    data = parse_glb(blob) if blob[:4] == b"glTF" else parse_stl(blob)
+    if units == "m":
+        data = data * 1000.0  # work in mm throughout
+    gaps: list[str] = []
+    dims = bbox(data)
+    if envelope_mm:
+        for got, maxv, ax in zip(dims, envelope_mm, "XYZ"):
+            if got > maxv:
+                gaps.append(f"{ax} {got}mm exceeds envelope {maxv}mm")
+    mani = manifold_gaps(data) if check_manifold else []
+    gaps += mani
+    if stem:
+        gaps += stem_gaps(data, stem)
+    vol = volume_cm3(data) * (1e6 if units == "m" else 1.0)
+    return {"dims_mm": dims, "volume_cm3": round(vol, 2), "tris": int(len(data)),
+            "manifold_issues": len(mani), "gaps": gaps, "accepted": not gaps}

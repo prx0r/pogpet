@@ -1,0 +1,21 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: pip install pillow flask pytest
+      - name: Unit + contract suites
+        run: python -m pytest tests/ -q
+      - name: Router + site checks that need no services
+        run: |
+          node tests/test_site_router.cjs
+          python3 -c "import backend.server, backend.pipeline, backend.creative.providers.router; print('imports ok')"

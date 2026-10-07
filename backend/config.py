@@ -56,7 +56,7 @@ ROOMS: dict[str, dict] = {
 
 # Upload constraints (from the build prompt: single photo, JPEG/PNG, max 10MB)
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", 10 * 1024 * 1024))
-ALLOWED_MIME = {"image/jpeg", "image/png"}
+ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
 MAX_EDGE = 2048                 # downscale anything larger (Meshy is happy, R2 stays cheap)
 DAILY_UPLOAD_LIMIT = int(os.environ.get("DAILY_UPLOAD_LIMIT", 30))
 

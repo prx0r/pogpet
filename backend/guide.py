@@ -30,6 +30,10 @@ OCCASIONS = {
     "thank_you": ["thank you", "thanks"],
     "new_job": ["new job", "promotion"],
     "baby": ["baby", "shower", "newborn"],
+    "new_baby": ["new baby"],
+    "graduation": ["graduation", "graduated", "grad"],
+    "retirement": ["retirement", "retired", "retiring"],
+    "just_because": ["just because", "no reason", "thinking of you"],
 }
 
 NAME_PATS = [

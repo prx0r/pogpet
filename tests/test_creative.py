@@ -111,9 +111,11 @@ class TestBriefMatch(unittest.TestCase):
         reg = tmpl.load_all()
         b = self._brief()
         b["available_assets"] = {"photos": 0, "confirmed_face_photos": 0}
-        self.assertTrue(all("face photos" in str(matcher.eligible(t, b))
-                            for t in reg.values()) or
-                        matcher.match(b, reg) == [])
+        blocked = [tid for tid, t in reg.items()
+                   if any("face photos" in r for r in matcher.eligible(t, b))]
+        self.assertIn("sideline_interview", blocked)  # needs a face
+        open_tids = [tid for tid, t in reg.items() if not matcher.eligible(t, b)]
+        self.assertIn("dad_vs_tech", open_tids)  # comic needs none
 
     def test_fill_fields_not_pixels(self):
         reg = tmpl.load_all()
@@ -164,11 +166,12 @@ class TestBriefMatch(unittest.TestCase):
 
 class TestRevisionsArtifacts(CardsJourney):
     def test_revision_immutable_and_cached(self):
+        pid_photo = self.upload()
         r = self.post("/creative/revisions", {
             "template_id": "sideline_interview", "subject_id": "sub_dad",
             "fields": {"star": "sub_dad", "headline": "POST-MATCH INTERVIEW",
                        "caption": "Dad did it again"},
-            "subjects": [{"slot": "star", "subject_id": "sub_dad", "asset_ids": []}]})
+            "subjects": [{"slot": "star", "subject_id": "sub_dad", "asset_ids": [pid_photo]}]})
         self.assertTrue(r.json["ok"], r.json)
         pid, rev = r.json["revision"]["project_id"], r.json["revision"]["revision"]
         r2 = self.post("/creative/revisions", {
@@ -194,10 +197,6 @@ class TestRevisionsArtifacts(CardsJourney):
             cols = [row[1] for row in c.execute("PRAGMA table_info(videos)").fetchall()]
             for col in ("creative_project_id", "creative_revision", "renderer"):
                 self.assertIn(col, cols)
-
-
-if __name__ == "__main__":
-    unittest.main()
 
 
 class TestProvidersOddhobb(CardsJourney):
@@ -327,3 +326,93 @@ class TestVaultPoliciesKernel(CardsJourney):
         r.close()
         self.assertTrue(r.json["providers"]["free"])
         self.assertIn("free", r.json["policies"])
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class TestReviewLoop(CardsJourney):
+    def _project(self):
+        pid_photo = self.upload()
+        r = self.post("/creative/revisions", {
+            "template_id": "sideline_interview", "subject_id": "sub_dad",
+            "fields": {"star": "sub_dad", "headline": "BIG GAME",
+                       "caption": "Dad did it"},
+            "subjects": [{"slot": "star", "subject_id": "sub_dad",
+                          "asset_ids": [pid_photo]}]})
+        self.assertTrue(r.json["ok"], r.json)
+        return r.json["revision"]
+
+    def test_review_and_mood_revise(self):
+        rev = self._project()
+        rr = self.post("/creative/render", {"project_id": rev["project_id"],
+                                            "revision": rev["revision"]})
+        self.assertTrue(rr.json["ok"], rr.json)
+        art = rr.json["artifact"]["id"]
+        v = self.post("/creative/review", {"artifact_id": art})
+        self.assertTrue(v.json["ok"], v.json)
+        self.assertIn(v.json["verdict"], ("ship", "revise"))
+        self.assertIn("happier", v.json.get("moods", []))
+        r2 = self.post("/creative/revise", {
+            "project_id": rev["project_id"], "revision": rev["revision"],
+            "ops": {"mood": "happier", "copy": {"headline": "BIG WIN!"}},
+            "render": True})
+        self.assertTrue(r2.json["ok"], r2.json)
+        self.assertEqual(r2.json["revision"]["revision"], rev["revision"] + 1)
+        self.assertTrue(r2.json["render"]["ok"])
+
+    def test_revise_other_owner_denied(self):
+        rev = self._project()
+        r = self.post("/creative/revise", {"owner": "mallory",
+                                           "project_id": rev["project_id"],
+                                           "revision": rev["revision"],
+                                           "ops": {"copy": {"headline": "X"}}})
+        self.assertFalse(r.json.get("ok", True))
+
+    def test_review_unknown_artifact(self):
+        r = self.post("/creative/review", {"artifact_id": "art_nope"})
+        self.assertEqual(r.status_code, 404)
+
+
+class TestTemplatePack(CardsJourney):
+    def test_registry_counts(self):
+        from backend.creative import templates as _t
+        reg = _t.load_all()
+        for tid in ("breaking_news", "sideline_interview", "group_chat",
+                    "late_night", "movie_poster", "dad_vs_tech", "hot_take_tweet"):
+            self.assertIn(tid, reg, tid)
+        for tid, m in reg.items():
+            for k in ("format", "premise", "caption_pattern", "tone", "rules"):
+                self.assertIn(k, m, f"{tid}.{k}")
+
+    def test_premise_packs(self):
+        from backend.creative import premises as _p
+        packs = _p.load_packs()
+        for pack in ("dads", "christmas_chaos", "pets"):
+            self.assertIn(pack, packs)
+        hits = _p.match_premises(["golf"], ["sports"])
+        self.assertTrue(any(h["pack"] == "dads" for h in hits))
+
+    def test_pattern_fill(self):
+        from backend.creative import jobs as _j, templates as _t
+        m = _t.get("sideline_interview")
+        s = _j.render_pattern(m, {"headline": "DAD WINS", "caption": "again"})
+        self.assertIn("DAD WINS", s)
+
+    def test_comic_end_to_end(self):
+        r = self.post("/creative/revisions", {
+            "template_id": "dad_vs_tech", "subject_id": "sub_dad",
+            "fields": {"star": "sub_dad", "panel_1": "Dad says he will fix it",
+                       "panel_2": "Dad makes it worse", "panel_3": "Dad blames Wi-Fi",
+                       "panel_4": "Dad asks a child for help"}})
+        self.assertTrue(r.json["ok"], r.json)
+        d = r.json["revision"]
+        rr = self.post("/creative/render", {"project_id": d["project_id"], "revision": 1})
+        self.assertTrue(rr.json["ok"], rr.json)
+        self.assertIn("url", rr.json["artifact"])
+
+    def test_new_occasions(self):
+        for occ in ("new_baby", "graduation", "just_because", "retirement"):
+            r = self.post("/gift-packs", {"budget_cents": 2000, "occasion": occ})
+            self.assertTrue(r.json["ok"], (occ, r.json))

@@ -31,10 +31,19 @@ def register(adapter: BaseAdapter) -> BaseAdapter:
     return adapter
 
 
+def _has_key(ad: BaseAdapter, keychain: dict | None) -> bool:
+    import os
+    if keychain and keychain.get("key"):
+        return True
+    return any(os.environ.get(e) for e in (ad.key_envs or ()))
+
+
 def resolve(capability: str, *, allow_paid: bool = False,
             keychain: dict | None = None) -> BaseAdapter:
-    """First available adapter on the route. Paid adapters need allow_paid
-    AND a key (BYO owner key wins, server key fallback)."""
+    """First available adapter on the route. Free policy only resolves
+    adapters free TO THE USER (subsidized Meshy genesis counts: daily caps +
+    refunds, $0 to them). Paid adapters need allow_paid AND a reachable key
+    (BYO keychain or server env) — otherwise they are skipped, not errored."""
     last_error: Exception | None = None
     for name in ROUTES.get(capability, []):
         ad = _ADAPTERS.get(name)
@@ -42,6 +51,12 @@ def resolve(capability: str, *, allow_paid: bool = False,
             continue
         if ad.paid and not allow_paid:
             last_error = ProviderNotConfigured(f"{name}: paid, needs approval")
+            continue
+        if ad.paid and not _has_key(ad, keychain):
+            last_error = ProviderNotConfigured(f"{name}: paid, no key connected")
+            continue
+        if ad.cost_to_user_cents > 0 and not allow_paid:
+            last_error = ProviderNotConfigured(f"{name}: costs the user, needs approval")
             continue
         try:
             if ad.is_available():
@@ -71,8 +86,8 @@ def resolve_policy(capability: str, policy: str = "free", *,
         ad = _ADAPTERS.get(route)
         if ad is None:
             raise ProviderNotConfigured(f"unknown route {route}")
-        if ad.paid and not keychain and not _server_key_for(ad):
-            raise ProviderNotConfigured(f"{route}: needs a connected provider")
+        if ad.paid and not _has_key(ad, keychain):
+            raise ProviderNotConfigured(f"{route}: needs a connected provider key")
         return ad
     return resolve(capability, allow_paid=(policy in ("use-mine", "best")),
                    keychain=keychain)
@@ -93,11 +108,43 @@ def run(capability: str, payload: dict | None = None, *,
         ad = resolve_policy(capability, policy, route=route, keychain=keychain)
     else:
         ad = resolve(capability, allow_paid=allow_paid, keychain=keychain)
-    out = ad.run({**(payload or {}), **({"api_key": keychain["key"]} if keychain and keychain.get("key") else {})})
+    args = dict(payload or {})
+    if keychain and keychain.get("key") and ad.paid:
+        args.setdefault("api_key", keychain["key"])
+    out = ad.run(args)
     out.setdefault("adapter", ad.name)
     out.setdefault("paid", ad.paid)
     out.setdefault("policy", policy)
     return out
+
+
+# adapter name prefix -> vault provider id, for BYO key injection
+ADAPTER_PROVIDERS = {
+    "fal": "fal", "alibaba": "alibaba", "higgsfield": "higgsfield",
+    "openrouter": "openrouter", "meta": "meta",
+}
+
+
+def run_for_owner(capability: str, owner: str, payload: dict | None = None,
+                  *, policy: str = "free", route: str = "") -> dict:
+    """Owner-scoped run: pulls the owner's vault key for the resolved paid
+    adapter (BYO first, server env fallback inside adapters). Free policy
+    never touches the vault."""
+    from backend import db, vault as _vault
+    keychain = None
+    if policy in ("use-mine", "best", "specific"):
+        name = route or (ROUTES.get(capability, [None])[0] or "")
+        prov = ADAPTER_PROVIDERS.get(name.split(".")[0], "")
+        if prov:
+            with db.connect() as c:
+                _vault.ensure_tables(c)
+                try:
+                    secret = _vault.use(c, owner, prov)
+                    keychain = {"key": secret, "provider": prov}
+                except KeyError:
+                    keychain = None
+    return run(capability, payload, allow_paid=(policy != "free"),
+               keychain=keychain, policy=policy, route=route)
 
 
 def route_table() -> dict[str, list[str]]:

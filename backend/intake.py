@@ -70,7 +70,7 @@ def accept(data: bytes, orig_name: str, owner: str = "") -> Accepted:
 
     mime = sniff_mime(data[:16])
     if mime not in config.ALLOWED_MIME:
-        raise IntakeError("Please upload a JPEG or PNG photo of your pet.")
+        raise IntakeError("Please upload a JPEG, PNG or WebP photo of your pet.")
 
     try:
         img = Image.open(io.BytesIO(data))

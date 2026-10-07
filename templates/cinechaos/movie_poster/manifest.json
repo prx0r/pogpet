@@ -1,0 +1,29 @@
+{
+  "id": "movie_poster",
+  "version": 1,
+  "format": "movie_poster",
+  "premise": "dad_action_hero",
+  "caption_pattern": "{title} — {tagline}",
+  "tone": ["ross", "epic"],
+  "rules": {"escalation": "credits get more ridiculous down the billing block",
+            "payoff": "tagline reframes a mundane habit as heroism"},
+  "video_ready": false,
+  "face_swap_ready": true,
+  "taxonomy": {
+    "occasion": ["birthday", "fathers_day", "christmas", "general"],
+    "styles": ["cinechaos", "comicstory"],
+    "topics": ["family", "hero"],
+    "tone": ["ross", "epic"]
+  },
+  "requirements": {"subjects": 1, "face_photos_min": 1, "mesh": false, "voice": false},
+  "slots": {
+    "star": {"type": "subject", "required": true},
+    "title": {"type": "text", "max_chars": 30},
+    "tagline": {"type": "text", "max_chars": 70}
+  },
+  "renderers": {"preview": "composite2d", "hero": "identity_image_v1",
+                "print": "composite2d", "video": "talking_scene_v1"},
+  "layout": {"photo": [0.05, 0.03, 0.95, 0.62], "headline": [0.08, 0.65, 0.92, 0.74],
+             "caption": [0.08, 0.75, 0.92, 0.83], "safe_inset_mm": 5},
+  "files": {"layout": "layout/card.polotno.json"}
+}

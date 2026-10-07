@@ -12,8 +12,7 @@ class TestMcpTiers(unittest.TestCase):
             "figg_checkout", "figg_fullchain_personalise_order",
             "figg_studio_orders",
             "figg_blender_make",
-            "figg_card_save", "figg_card_render", "figg_card_job",
-            "figg_card_scene", "figg_card_cutout", "figg_card_reserve",
+            "figg_card_cutout", "figg_card_reserve",
             "figg_perform", "figg_greeting", "figg_video_share",
             "figg_write_premise", "figg_write_riff",
             "figg_guide_open", "figg_guide_turn", "figg_guide_packs",
@@ -29,6 +28,12 @@ class TestMcpTiers(unittest.TestCase):
         self.assertIn("figg_design_save", mcp.PUBLIC_TOOLS)
         self.assertIn("figg_design_order", mcp.PUBLIC_TOOLS)
         self.assertIn("figg_install_style", mcp.PUBLIC_TOOLS)
+        for tool in ("figg_card_save", "figg_card_render", "figg_card_scene",
+                     "figg_card_job"):
+            self.assertIn(tool, mcp.PUBLIC_TOOLS)
+        # agent credentials mint real access: full tier only, never public
+        for t in ("figg_mint_agent", "figg_my_agents", "figg_revoke_agent"):
+            self.assertNotIn(t, mcp.PUBLIC_TOOLS)
         # self-serve identity stays public so strangers can get their own key
         self.assertIn("figg_create_account", mcp.PUBLIC_TOOLS)
         self.assertIn("figg_login", mcp.PUBLIC_TOOLS)

@@ -1,0 +1,30 @@
+{
+  "id": "late_night",
+  "version": 1,
+  "format": "late_night_interview",
+  "premise": "dad_defends_hobby_on_tv",
+  "caption_pattern": "{headline}: {guest} on {topic}",
+  "tone": ["funny", "dry"],
+  "rules": {"escalation": "answers get more specific and less plausible",
+            "payoff": "applause sign lights up at the worst moment"},
+  "video_ready": true,
+  "face_swap_ready": true,
+  "taxonomy": {
+    "occasion": ["birthday", "fathers_day", "retirement", "general"],
+    "styles": ["newsparody", "sportspresser"],
+    "topics": ["family", "interview"],
+    "tone": ["mock-serious", "dry"]
+  },
+  "requirements": {"subjects": 1, "face_photos_min": 1, "mesh": false, "voice": false},
+  "slots": {
+    "star": {"type": "subject", "required": true},
+    "headline": {"type": "text", "max_chars": 42},
+    "guest": {"type": "text", "max_chars": 24},
+    "topic": {"type": "text", "max_chars": 60}
+  },
+  "renderers": {"preview": "composite2d", "hero": "identity_image_v1",
+                "print": "composite2d", "video": "talking_scene_v1"},
+  "layout": {"photo": [0.08, 0.05, 0.92, 0.52], "headline": [0.08, 0.60, 0.92, 0.70],
+             "caption": [0.08, 0.71, 0.92, 0.80], "safe_inset_mm": 5},
+  "files": {"layout": "layout/card.polotno.json"}
+}

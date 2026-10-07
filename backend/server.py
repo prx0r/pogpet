@@ -1417,6 +1417,59 @@ def seo_faq():
     return jsonify({"ok": True, "count": len(pairs), "pairs": pairs})
 
 
+@app.get("/privacy", strict_slashes=False)
+@app.get("/privacy/")
+def privacy_policy():
+    """Privacy policy (Google OAuth verification + footer link)."""
+    html = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — OddHobb</title>
+<meta name="description" content="How OddHobb accesses, uses, stores and shares your data, including Google account data.">
+<link rel="canonical" href="https://oddhobb.com/privacy">
+<style>body{font:16px/1.55 system-ui,sans-serif;max-width:44rem;margin:2rem auto;padding:0 1rem;color:#111}
+h1{font-size:1.7rem}h2{font-size:1.15rem;margin-top:1.6rem}li{margin:.3rem 0}}</style>
+</head><body>
+<p><a href="/">OddHobb</a> / privacy</p>
+<h1>Privacy Policy</h1>
+<p>Last updated: 7 October 2026. OddHobb (oddhobb.com, support@oddhobb.com)
+makes personalised gifts from your photos. This page discloses what data we
+access, use, store and share — including Google user data.</p>
+<h2>Google account data</h2>
+<p>When you choose “Continue with Google” we request three scopes only:
+<code>openid</code>, <code>email</code> and <code>profile</code>. Google sends us
+your verified email address, your name, and your Google subject ID. We use the
+email to find or create your OddHobb account (so work you made anonymously is
+adopted, never lost) and the name as your display name. We do not request or
+receive your contacts, calendar, Drive files, or any other Google data. We do
+not use Google data for advertising, and we do not sell it.</p>
+<h2>What you create</h2>
+<ul>
+<li>Photos you upload, meshes and cards you make, people profiles you name.</li>
+<li>Voice reference audio and enrollment consents, only when you explicitly
+enroll a voice — revocable at any time.</li>
+<li>Bring-your-own provider keys, encrypted server-side and never shown to
+agents or stored in revisions.</li>
+</ul>
+<h2>What we share, and with whom</h2>
+<ul>
+<li><b>Meshy</b> receives uploaded photo bytes solely to sculpt your mesh.</li>
+<li><b>Print/fulfilment suppliers</b> (e.g. Shopify drafts, print farms) receive
+only what an order needs — product, quantity and note. Drafts carry no email address.</li>
+<li><b>Creative providers you connect</b> (fal, Higgsfield, Alibaba) receive
+only the job inputs, billed to your own account with them — never ours.</li>
+<li>We never sell personal data to anyone.</li>
+</ul>
+<h2>Storage and retention</h2>
+<p>Data lives in our UK/EU-hosted store. API keys are shown once. Delete your
+account and its data any time by writing to support@oddhobb.com from your
+account email; provider connections and voice consents are revoked first.</p>
+<h2>Contact</h2>
+<p>Questions about this policy: support@oddhobb.com.</p>
+</body></html>"""
+    return Response(html, content_type="text/html; charset=utf-8")
+
+
 @app.get("/guides/<pid>")
 def guide_page(pid: str):
     """Crawlable companion guide per product + Product/FAQPage JSON-LD."""
@@ -1564,7 +1617,7 @@ def sitemap():
     """Simple sitemap — shop, learn, guides, feeds (AI crawler discovery)."""
     from xml.sax.saxutils import escape
     base = _public_base()
-    urls = ["/", "/learn/", "/llms.txt", "/api/seo/products.json",
+    urls = ["/", "/learn/", "/privacy", "/llms.txt", "/api/seo/products.json",
             "/api/seo/faq.json", "/api/companygraph"]
     urls += [f"/learn/{s}" for s in sorted(config.GEO_PAGES)]
     urls += [f"/guides/{p}" for p in sorted(config.SEO)]
@@ -1928,7 +1981,7 @@ def mint_agent():
     if not name:
         return _err("name is required", 400)
     perms = b.get("permissions")
-    if not isinstance(perms, list):
+    if not perms:
         perms = config.DEFAULT_AGENT_PERMISSIONS
     unknown = [p for p in perms if p not in config.AGENT_PERMISSIONS]
     if unknown:
@@ -2403,6 +2456,32 @@ def make_video():
                 f"That's {config.FREE_DAILY['video']} free videos today — "
                 "back tomorrow for more.", 429)
         photo_path = pipeline._local_photo(dict(photo)) if photo else None
+        face_box = None
+        if photo:
+            try:
+                import json as _json
+                frow = c.execute("SELECT box FROM photo_faces WHERE photo_id=? LIMIT 1",
+                                 (photo["id"],)).fetchone()
+                if frow:
+                    face_box = _json.loads(dict(frow)["box"])
+            except Exception:  # noqa: BLE001 — crop falls back to top-weighted
+                face_box = None
+        if photo and mesh and not face_box:
+            # prefer the mesh's own front render over the photo: the performer
+            # is the 3D character, not a circle-cropped upload
+            try:
+                import json as _json2
+                thumbs = _json2.loads(mesh.get("thumb_keys") or "[]")
+            except Exception:  # noqa: BLE001
+                thumbs = []
+            for tk in thumbs[:1]:
+                try:
+                    dest = config.LOCAL_TMP / f"vidmesh_{mesh_id}.png"
+                    storage.get(tk, dest)
+                    photo_path = dest
+                    break
+                except Exception:  # noqa: BLE001
+                    continue
 
     try:
         rec = video.make(
@@ -2414,6 +2493,7 @@ def make_video():
             persona=(str(body.get("persona") or act_premise) or "")[:200],
             talent=talent,
             watermark=bool(body.get("watermark", config.WATERMARK_FREE)),
+            face_box=face_box,
         )
     except video.VideoError as e:
         with db.connect() as c:
@@ -2440,6 +2520,17 @@ def make_video():
              str(body.get("renderer") or "")),
         )
         left = config.FREE_DAILY["video"] - db.credit_used(c, owner, day, "video")
+        try:
+            import hashlib as _hl
+            from backend import subjects as _subs
+            _subs.register_asset(c, owner, "video",
+                                 _hl.sha256(f"{vid}".encode()).hexdigest(),
+                                 rec["file"],
+                                 metadata={"video_id": vid, "mesh_id": mesh_id,
+                                           "duration": rec["duration"]},
+                                 provenance="perform")
+        except Exception:  # noqa: BLE001 — registry must never break renders
+            pass
 
     return jsonify({"ok": True, "video": {**rec, "id": vid, "file": None},
                     "download": f"/api/videos/{vid}/file",
@@ -2858,7 +2949,7 @@ def standup_render():
     script_path = config.ROOT / "scripts" / "pose_lipsync.py"
     if not script_path.exists():
         return _err("pose_lipsync.py missing", 500)
-    out_mp4 = config.DATA / "videos" / "p0_standup.mp4"
+    out_mp4 = config.DATA / "videos" / f"p0_standup_{uuid.uuid4().hex[:8]}.mp4"
     cmd = [
         "python3", str(script_path),
         "--name", name, "--voice", voice, "--script", script,
@@ -2879,7 +2970,6 @@ def standup_render():
     except ValueError:
         dur = 20.0
     with db.connect() as c:
-        c.execute("DELETE FROM videos WHERE id=?", (vid,))
         c.execute(
             """INSERT INTO videos (id,owner,mesh_id,scene,talent,voice,pet_name,topic,
                  script,lines,watermarked,duration,bytes,path,created_at)
@@ -3947,7 +4037,8 @@ def design_save():
     """A model plays with the base, saves the design: validated spec stored
     as a draft. Returns design_id for figg_design_order.
 
-    Pass stl_base64 (≤8MB STL of the finished design) and the geometry is
+    Pass stl_base64 (≤32MB STL of the finished design; aliases stl and
+    geometry_b64 also accepted) and the geometry is
     CHECKED, not trusted: envelope fit, manifoldness, stem lock vs the
     adapter, and base-preserved proof set base_first from evidence instead
     of the fetch log. Measured dims/volume override reported numbers."""
@@ -3965,14 +4056,19 @@ def design_save():
     volume = body.get("volume_cm3", contract.get("volume_cm3_est"))
     geo_gaps: list[str] = []
     geo_proof = False
-    stl_b64 = (body.get("stl_base64") or "").strip()
+    similarity = None
+    stl_b64 = (body.get("stl_base64") or body.get("stl") or body.get("geometry_b64") or "").strip()
+    ignored = sorted(k for k in body
+                     if k not in ("owner", "line", "dims_mm", "material", "colors", "text",
+                                  "volume_cm3", "stl_base64", "stl", "geometry_b64")
+                     and any(s in k.lower() for s in ("stl", "geom", "model", "mesh", "brep", "step")))
     if stl_b64:
         from backend import geometry as _geo
         try:
             import base64 as _b64
             tris = _geo.parse_stl(_b64.b64decode(stl_b64, validate=True))
         except Exception:  # noqa: BLE001
-            return _err("stl_base64 is not a parseable STL (binary or ASCII, ≤8MB)", 400)
+            return _err("stl_base64 is not a parseable STL (binary or ASCII, ≤32MB)", 400)
         envelope = contract.get("envelope_mm") or []
         if envelope:
             for got, maxv, ax in zip(_geo.bbox(tris), envelope, "XYZ"):
@@ -3984,7 +4080,9 @@ def design_save():
             geo_gaps += _geo.stem_gaps(tris, ad.get("stem") or {})
             base_path = Path("data/3dprint") / ad.get("base", "")
             if base_path.is_file():
-                geo_gaps += _geo.base_preserved_gaps(tris, _geo.parse_stl(base_path.read_bytes()))
+                base_tris = _geo.parse_stl(base_path.read_bytes())
+                similarity = _geo.base_match(tris, base_tris)
+                geo_gaps += _geo.base_preserved_gaps(tris, base_tris)
         except (OSError, ValueError, KeyError):
             pass
         if not geo_gaps:
@@ -4025,6 +4123,8 @@ def design_save():
                     "base_first": first, "geometry_proof": geo_proof,
                     "measured_dims_mm": dims if geo_proof else None,
                     "measured_volume_cm3": volume if geo_proof else None,
+                    "base_similarity": similarity,
+                    "ignored_keys": ignored,
                     "options": out.get("options", []),
                     "hint": out_hint})
 
@@ -4638,10 +4738,12 @@ def gift_pack():
     if occasion and occasion not in ("birthday", "wedding", "christmas",
                                      "fathers_day", "mothers_day", "valentine",
                                      "anniversary", "thank_you", "new_job", "baby",
-                                     "retirement"):
+                                     "retirement", "new_baby", "graduation",
+                                     "just_because"):
         return _err("unknown occasion — valid: birthday, wedding, christmas, "
                     "fathers_day, mothers_day, valentine, anniversary, "
-                    "thank_you, new_job, baby, retirement", 400)
+                    "thank_you, new_job, baby, retirement, new_baby, "
+                    "graduation, just_because", 400)
     want = (body.get("line") or "").strip()
     if want and want not in config.STUDIO_LINES:
         return _err("unknown line — valid ids: " + ", ".join(sorted(config.STUDIO_LINES)), 400)
@@ -4814,6 +4916,7 @@ from backend.creative import jobs as _cjobs
 from backend.creative import matcher as _matcher
 from backend.creative import projects as _cproj
 from backend.creative import templates as _ctmpl
+from backend.creative import catalog as _ccatalog
 from backend import subjects as _subjects
 
 
@@ -4831,24 +4934,57 @@ def creative_templates():
     _creative_tables()
     reg = _ctmpl.load_all()
     return jsonify({"ok": True, "count": len(reg),
-                    "templates": [{k: t[k] for k in
-                                   ("id", "version", "taxonomy", "requirements",
-                                    "slots", "renderers")} for t in reg.values()]})
+                    "templates": [
+                        {**{k: t[k] for k in ("id", "version", "taxonomy", "requirements",
+                                             "slots", "renderers")},
+                         **({"presentation": t.get("presentation", {})}
+                            if t.get("presentation") else {})}
+                        for t in reg.values()]})
 
 
-def _brief_asset_counts(c, owner: str) -> dict:
-    photos = c.execute("SELECT COUNT(*) n FROM photos WHERE owner=?", (owner,)).fetchone()
-    faces = 0
-    try:
-        faces = c.execute("SELECT COUNT(*) n FROM photo_subjects ps JOIN photos p ON p.id=ps.photo_id"
-                          " WHERE p.owner=? AND ps.confirmed=1", (owner,)).fetchone()
-    except sqlite3.Error:
-        pass
-    meshes = c.execute("SELECT COUNT(*) n FROM meshes m JOIN photos p ON p.id=m.photo_id"
-                       " WHERE p.owner=? AND m.status='succeeded'", (owner,)).fetchone()
-    return {"photos": (dict(photos)["n"] if photos else 0),
-            "confirmed_face_photos": (dict(faces)["n"] if faces else 0),
-            "meshes": (dict(meshes)["n"] if meshes else 0), "voice": False}
+def _brief_asset_counts(c, owner: str, subject_id: str = "") -> dict:
+    """Assets for THIS subject — never the whole account (a Mum with ten
+    photos must not qualify a photo-less Dad). Missing tables (fresh DBs)
+    count as zero, never 500."""
+    def one(sql, args):
+        try:
+            row = c.execute(sql, args).fetchone()
+            return dict(row)["n"] if row else 0
+        except sqlite3.Error:
+            return 0
+    if subject_id:
+        photos = one("SELECT COUNT(DISTINCT p.id) n FROM photos p"
+                     " JOIN photo_subjects ps ON ps.photo_id=p.id"
+                     " WHERE p.owner=? AND ps.subject_id=?", (owner, subject_id))
+        faces = one("SELECT COUNT(*) n FROM photo_subjects WHERE subject_id=? AND confirmed=1",
+                    (subject_id,))
+        meshes = one("SELECT COUNT(*) n FROM mesh_subjects WHERE subject_id=?", (subject_id,))
+        try:
+            voice = c.execute("SELECT 1 FROM voice_consents WHERE owner=? AND subject_id=?"
+                              " AND revoked_at=0", (owner, subject_id)).fetchone()
+        except sqlite3.Error:
+            voice = None
+    else:
+        photos = one("SELECT COUNT(*) n FROM photos WHERE owner=?", (owner,))
+        faces = one("SELECT COUNT(*) n FROM photo_subjects ps JOIN photos p ON p.id=ps.photo_id"
+                    " WHERE p.owner=? AND ps.confirmed=1", (owner,))
+        meshes = one("SELECT COUNT(*) n FROM meshes m JOIN photos p ON p.id=m.photo_id"
+                     " WHERE p.owner=? AND m.status='succeeded'", (owner,))
+        voice = None
+    return {"photos": photos, "confirmed_face_photos": faces,
+            "meshes": meshes, "voice": bool(voice)}
+
+
+@app.get("/api/creative/catalog")
+def creative_catalog():
+    """The viral-format library used by both storefront browsing and agents."""
+    return jsonify(_ccatalog.query(
+        style=(request.args.get("style") or "").strip(),
+        occasion=(request.args.get("occasion") or "").strip(),
+        audience=(request.args.get("audience") or "").strip(),
+        tone=(request.args.get("tone") or "").strip(),
+        q=(request.args.get("q") or "").strip(),
+    ))
 
 
 @app.post("/api/creative/brief")
@@ -4858,18 +4994,22 @@ def creative_brief():
     from backend import guide as _gde
     body = request.get_json(silent=True) or {}
     owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     _creative_tables()
     with db.connect() as c:
         sub = _subjects.get_subject(c, owner, (body.get("subject_id") or ""))
         if not sub and body.get("name"):
             sub = _subjects.find_subject_by_name(c, owner, body.get("name"))
         prof = _subjects.profile_for(c, owner, sub.get("id", "")) if sub else {}
-        counts = _brief_asset_counts(c, owner)
+        counts = _brief_asset_counts(c, owner, sub.get("id", "") if sub else "")
     brief = _briefs.build(occasion=(body.get("occasion") or "general"),
                           occasion_date=str(body.get("occasion_date") or ""),
                           subject=sub, profile=prof, asset_counts=counts,
                           tone=str(body.get("tone") or "funny"),
-                          budget_cents=int(body.get("budget_cents") or 0))
+                          budget_cents=int(body.get("budget_cents") or 0),
+                          request=str(body.get("request") or ""))
     return jsonify({"ok": True, "brief": brief})
 
 
@@ -4921,38 +5061,59 @@ def creative_revision_save():
         return jsonify({"ok": False, "gaps": gaps,
                         "hint": "Fix the fields — geometry stays in the template."}), 400
     with db.connect() as c:
-        proj = c.execute("SELECT * FROM creative_projects WHERE id=? AND owner=?",
-                         (body.get("project_id") or "", owner)).fetchone()
+        sid = str(body.get("subject_id") or "")
+        proj = None
+        if body.get("project_id"):
+            row = c.execute("SELECT * FROM creative_projects WHERE id=? AND owner=?",
+                            (body.get("project_id") or "", owner)).fetchone()
+            proj = dict(row) if row else None
         if proj is None:
-            p = _cproj.create_project(c, owner, str(body.get("subject_id") or ""), tid)
+            proj = _cproj.find_project(c, owner, sid, tid)
+        if not proj:
+            p = _cproj.create_project(c, owner, sid, tid)
             pid = p["id"]
         else:
-            pid = dict(proj)["id"]
-        rev = _cproj.save_revision(c, pid, tid, int(t.get("version", 1)),
-                                   body.get("brief") or {}, {
-                                       "scene_version": "oddhobb.scene.v2",
-                                       "template": {"id": tid, "version": t.get("version", 1)},
-                                       "subjects": body.get("subjects") or [],
-                                       "copy": filled,
-                                       "render_intent": body.get("render_intent") or {}})
+            pid = proj["id"]
+            if proj.get("subject_id") and sid and proj["subject_id"] != sid:
+                return _err("project belongs to another subject — start a new one", 400)
+        try:
+            rev = _cproj.save_revision(
+                c, pid, tid, int(t.get("version", 1)), body.get("brief") or {}, {
+                    "scene_version": "oddhobb.scene.v2",
+                    "template": {"id": tid, "version": t.get("version", 1)},
+                    "subjects": body.get("subjects") or [],
+                    "copy": filled,
+                    "render_intent": body.get("render_intent") or {}},
+                expected_revision=body.get("expected_revision"))
+        except (KeyError, ValueError) as e:
+            return _err(str(e)[:200], 400 if "stale" in str(e) or "lineage" in str(e) else 404)
     return jsonify({"ok": True, "revision": rev,
                     "hint": "Immutable — edits create new revisions; orders pin one."})
 
 
 @app.post("/api/creative/render")
 def creative_render():
-    """composite2d preview → artifact record + QC. Paid renderers staged."""    """composite2d preview → artifact record + QC. Paid renderers staged."""
+    """Manifest-driven render → preview + print_master artifacts + real QC.
+    Paid renderers staged."""
     body = request.get_json(silent=True) or {}
     owner = _own(body.get("owner") or "")
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
+    data, code = _render_revision(owner, str(body.get("project_id") or ""),
+                                  int(body.get("revision") or 0),
+                                  str(body.get("print_contract") or "card_5x7_folded_v1"))
+    return jsonify(data), code
+
+
+def _render_revision(owner: str, project_id: str, revision: int,
+                     contract_id: str = "card_5x7_folded_v1") -> tuple[dict, int]:
+    """Shared render core (endpoints call this directly — never nest HTTP)."""
     _creative_tables()
     with db.connect() as c:
-        rev = _cproj.get_revision(c, str(body.get("project_id") or ""),
-                                  int(body.get("revision") or 0))
+        rev = _cproj.get_revision(c, project_id, revision)
     if not rev:
-        return _err("no such revision", 404)
+        return {"ok": False, "error": "no such revision"}, 404
     from backend.renderers import composite2d as _c2d
     scene = rev.get("scene") or {}
     cp = scene.get("copy") or {}
@@ -4970,28 +5131,129 @@ def creative_render():
             except Exception:  # noqa: BLE001
                 photo_path = None
         break
-    img = _c2d.render_card(photo_path=photo_path,
-                           headline=str(cp.get("headline") or cp.get("caption") or "…"),
-                           subheadline=str(cp.get("subheadline") or cp.get("caption") or ""))
-    key = f"owners/{owner}/creative/{rev['project_id']}-r{rev['revision']}.png"
-    tmp = config.LOCAL_TMP / f"cr_{rev['project_id']}_r{rev['revision']}.png"
-    img.save(tmp)
+    reg = _ctmpl.load_all()
+    tid = (scene.get("template") or {}).get("id", "")
+    manifest = reg.get(tid, {})
+    contract = _art.PRINT_CONTRACTS.get(contract_id, _art.PRINT_CONTRACTS["card_5x7_folded_v1"])
+    from backend.creative import review as _revmod
+    pal = _revmod.PALETTES.get((scene.get("render_intent") or {}).get("palette", ""), None)
+    style_id = str(((manifest.get("taxonomy") or {}).get("styles") or ["generic"])[0])
+    if pal is None:
+        pal = dict(zip(("bg", "ink", "accent"),
+                       _c2d.PALETTES.get(style_id, _c2d.PALETTES["generic"])))
+    if (manifest.get("format") == "comic_strip" or
+            (manifest.get("layout") or {}).get("panels")):
+        beats = manifest.get("beats") or ["setup", "escalation", "reversal", "payoff"]
+        caps = [str(cp.get(f"panel_{i + 1}", "")) for i in range(len(beats))]
+        master, gaps = _c2d.render_panels(manifest, contract, panels=caps, palette=pal)
+    else:
+        master, gaps = _c2d.render_from_manifest(
+            manifest, contract, photo_path=photo_path, copy=cp, palette=pal)
+    if gaps:
+        return ({"ok": False, "gaps": gaps,
+                 "hint": "Render QC failed — fix fields/assets, not the template."}, 400)
+    key = f"owners/{owner}/creative/{rev['project_id']}-r{rev['revision']}-print.png"
+    tmp = config.LOCAL_TMP / f"cr_{rev['project_id']}_r{rev['revision']}-print.png"
+    master.save(tmp)
     storage.put(tmp, key)
     tmp.unlink(missing_ok=True)
-    cache = _cjobs.cache_key(template_version=int((scene.get("template") or {}).get("version", 1)),
-                             revision=int(rev["revision"]), renderer="composite2d",
-                             source_hashes=[], output_contract="preview-1500",
+    cache = _art.content_key(scene={**scene, "contract": contract["id"]},
+                             renderer="composite2d", renderer_version=1,
+                             output_contract="print_master",
                              provider_params={})
     with db.connect() as c:
-        hit = _art.by_cache(c, cache)
+        hit = _art.by_cache(c, cache, owner)
         if hit:
-            return jsonify({"ok": True, "cached": True, "artifact": hit})
+            return {"ok": True, "cached": True, "artifact": hit}, 200
         art = _art.record(c, owner, rev["project_id"], int(rev["revision"]),
-                          "composite2d", "preview", cache, key,
-                          mime="image/png", width=img.width, height=img.height)
+                          "composite2d", "print_master", cache, key,
+                          mime="image/png", width=master.width,
+                          height=master.height,
+                          dpi=int(contract.get("dpi") or 300))
         _art.mark_qc(c, art["id"], True)
-    return jsonify({"ok": True, "cached": False,
-                    "artifact": {**art, "url": storage.public_url(key)}})
+    return {"ok": True, "cached": False,
+            "artifact": {**art, "url": storage.public_url(key)}}, 200
+
+
+@app.post("/api/creative/review")
+def creative_review():
+    """Agent eyes: verdict + scores + concrete fix ops for an artifact.
+    Reads only, $0. Feed artifact_id from render/status calls."""
+    from backend.creative import review as _rev
+    aid = ((request.get_json(silent=True) or {}).get("artifact_id") or "").strip()
+    if not aid:
+        return _err("artifact_id is required", 400)
+    _creative_tables()
+    with db.connect() as c:
+        out = _rev.review_artifact(c, aid)
+    if not out.get("ok"):
+        return _err(out.get("error", "no such artifact"), 404)
+    return jsonify(out)
+
+
+@app.post("/api/creative/revise")
+def creative_revise():
+    """Agent hands: apply ops to a revision → new immutable revision.
+    ops: {copy: {headline,…}, mood: happier|funnier|warmer|classier,
+          voice, act, render_intent: {...}}. render:true also renders it."""
+    from backend.creative import review as _rev
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    _creative_tables()
+    pid, rev_n = str(body.get("project_id") or ""), int(body.get("revision") or 0)
+    with db.connect() as c:
+        base = _cproj.get_revision(c, pid, rev_n)
+        if not base:
+            return _err("no such revision", 404)
+    proj_owner = None
+    with db.connect() as c:
+        prow = c.execute("SELECT owner FROM creative_projects WHERE id=?", (pid,)).fetchone()
+        proj_owner = dict(prow)["owner"] if prow else None
+    if proj_owner != owner:
+        return _err("no such revision", 404)
+    ops = body.get("ops") or {}
+    scene = dict(base.get("scene") or {})
+    cp = dict(scene.get("copy") or {})
+    for k, v in (ops.get("copy") or {}).items():
+        cp[str(k)[:40]] = str(v)[:500]
+    render_opts: dict = {}
+    if ops.get("mood"):
+        cp, render_opts = _rev.apply_mood(cp, str(ops["mood"]))
+    ri = dict(scene.get("render_intent") or {})
+    for k in ("voice", "act", "palette", "expression"):
+        if ops.get(k) is not None:
+            ri[k] = str(ops[k])[:60]
+    for k, v in (ops.get("render_intent") or {}).items():
+        ri[str(k)[:40]] = str(v)[:200]
+    if render_opts:
+        ri.update({k: v for k, v in render_opts.items() if k != "caption_hint"})
+    scene = {**scene, "copy": cp, "render_intent": ri}
+    tid = (scene.get("template") or {}).get("id", "")
+    reg = _ctmpl.load_all()
+    t = reg.get(tid, {})
+    filled, gaps = _cjobs.fill_slots(t, cp) if t else (cp, [])
+    gaps += _art.qc_card_copy(filled, t) if t else []
+    if gaps:
+        return jsonify({"ok": False, "gaps": gaps,
+                        "hint": "Revise breaks copy QC — shorten or fill fields."}), 400
+    with db.connect() as c:
+        try:
+            saved = _cproj.save_revision(
+                c, pid, tid, int((scene.get("template") or {}).get("version", 1)),
+                base.get("brief_snapshot") or {}, scene)
+        except (KeyError, ValueError) as e:
+            return _err(str(e)[:200], 400)
+    out = {"ok": True, "revision": saved,
+           "hint": "New immutable revision. Render it to see the change."}
+    if body.get("render"):
+        data, code = _render_revision(owner, pid, saved["revision"])
+        out["render"] = data
+        if code != 200:
+            out["render_note"] = "revision saved; render needs attention"
+    return jsonify(out)
 
 
 @app.post("/api/creative/order")
@@ -5009,11 +5271,10 @@ def creative_order():
         r = _cproj.get_revision(c, pid, rev)
         if not r:
             return _err("no such revision", 404)
-        ok_art = [dict(a) for a in c.execute(
-            "SELECT * FROM render_artifacts WHERE project_id=? AND revision=? AND qc_status='passed'",
-            (pid, rev)).fetchall()]
+        ok_art = c.execute("SELECT * FROM render_artifacts WHERE project_id=? AND revision=? AND qc_status='passed'"
+                           " AND output_kind='print_master'", (pid, rev)).fetchone()
     if not ok_art:
-        return _err("no QC-passed artifact for this revision — render first", 400)
+        return _err("no QC-passed print_master for this revision — render first", 400)
     try:
         qty = max(1, min(20, int(body.get("qty") or 1)))
     except (TypeError, ValueError):
@@ -5033,7 +5294,10 @@ def creative_order():
 
 @app.post("/api/providers/keys")
 def provider_key_set():
+    """Deprecated alias: stores into the encrypted vault (provider_connections).
+    The old plaintext provider_keys table is migrated then dropped."""
     from backend import voice_chat as _vc
+    from backend import vault as _vault
     body = request.get_json(silent=True) or {}
     owner = _own(body.get("owner") or "")
     denied = _owner_denied(owner)
@@ -5041,32 +5305,37 @@ def provider_key_set():
         return denied
     provider = (body.get("provider") or "").strip()[:40]
     secret = (body.get("secret") or "").strip()
-    if provider not in ("fal", "alibaba", "openrouter", "replicate", "higgsfield"):
-        return _err("unknown provider — fal, alibaba, openrouter, replicate, higgsfield", 400)
     if not secret:
         return _err("secret is required", 400)
     with db.connect() as c:
         _vc.ensure_consent_tables(c)
-        c.execute("INSERT INTO provider_keys (owner,provider,label,secret,updated_at)"
-                  " VALUES (?,?,?,?,?) ON CONFLICT(owner,provider) DO UPDATE SET"
-                  " secret=excluded.secret, label=excluded.label, updated_at=excluded.updated_at",
-                  (owner, provider, str(body.get("label") or "")[:60], secret, time.time()))
-        c.commit()
+        _vault.ensure_tables(c)
+        _vault.migrate_plaintext(c)
+        try:
+            rec = _vault.connect(c, owner, provider, secret,
+                                 {"label": str(body.get("label") or "")})
+        except ValueError as e:
+            return _err(str(e), 400)
     return jsonify({"ok": True, "provider": provider,
-                    "hint": "Stored. Paid runs use your key first; free defaults unchanged."})
+                    "credential_id": rec["credential_id"],
+                    "hint": "Stored encrypted. Paid runs use your key first; free defaults unchanged."})
 
 
 @app.get("/api/providers/keys")
 def provider_key_list():
+    """Deprecated alias: masked vault listing, no secrets ever."""
     from backend import voice_chat as _vc
+    from backend import vault as _vault
     owner = _own(request.args.get("owner") or "")
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
     with db.connect() as c:
         _vc.ensure_consent_tables(c)
-        rows = [dict(r) for r in c.execute(
-            "SELECT provider,label,updated_at FROM provider_keys WHERE owner=?", (owner,))]
+        _vault.ensure_tables(c)
+        _vault.migrate_plaintext(c)
+        rows = [{"provider": p, "label": "", "connected": True}
+                for p in sorted(_vault.connected(c, owner))]
     return jsonify({"ok": True, "keys": rows})
 
 
@@ -5102,6 +5371,9 @@ def voice_consent():
 def oddhobb_people():
     """Whose world is this: subjects + profile facts for an owner."""
     owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     _creative_tables()
     with db.connect() as c:
         out = []
@@ -5115,20 +5387,24 @@ def oddhobb_ideas():
     """Person + occasion + request (+ agent_memory context) → ranked ideas."""
     body = request.get_json(silent=True) or {}
     owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     _creative_tables()
     with db.connect() as c:
         sub = _subjects.get_subject(c, owner, str(body.get("subject_id") or ""))
         if not sub and body.get("person"):
             sub = _subjects.find_subject_by_name(c, owner, str(body.get("person")))
         prof = _subjects.profile_for(c, owner, sub.get("id", "")) if sub else {}
-        counts = _brief_asset_counts(c, owner)
+        counts = _brief_asset_counts(c, owner, sub.get("id", "") if sub else "")
     ctx = body.get("context") or []
     memos = [str(f.get("fact") or "")[:200] for f in ctx
              if isinstance(f, dict) and f.get("fact")]
     brief = _briefs.build(occasion=str(body.get("occasion") or "general"),
                           subject=sub, profile=prof, asset_counts=counts,
                           tone=str(body.get("tone") or "funny"),
-                          budget_cents=int(body.get("budget_cents") or 0))
+                          budget_cents=int(body.get("budget_cents") or 0),
+                          request=str(body.get("request") or ""))
     if memos:
         brief["agent_memory"] = [{"fact": m, "source": "agent_memory"} for m in memos[:8]]
     reg = _ctmpl.load_all()
@@ -5164,22 +5440,24 @@ def oddhobb_create():
         sid = sub.get("id", "") if sub else ""
         if "star" in (t.get("slots") or {}) and "star" not in fields and sid:
             fields["star"] = sid
-        proj = [dict(r) for r in c.execute(
-            "SELECT * FROM creative_projects WHERE owner=? AND template_id=?",
-            (owner, tid)).fetchall()]
-        pid = proj[0]["id"] if proj else _cproj.create_project(c, owner, sid, tid)["id"]
+        proj = _cproj.find_project(c, owner, sid, tid)
+        pid = proj["id"] if proj else _cproj.create_project(c, owner, sid, tid)["id"]
         filled, gaps = _cjobs.fill_slots(t, fields)
         gaps += _art.qc_card_copy(filled, t)
         if gaps:
             return jsonify({"ok": False, "gaps": gaps,
                             "hint": "Pass overrides for the missing/short fields."}), 400
-        rev = _cproj.save_revision(c, pid, tid, int(t.get("version", 1)),
-                                   body.get("brief") or {}, {
-                                       "scene_version": "oddhobb.scene.v2",
-                                       "template": {"id": tid, "version": t.get("version", 1)},
-                                       "subjects": ([{"slot": "star", "subject_id": sid,
-                                                      "asset_ids": []}] if sid else []),
-                                       "copy": filled, "render_intent": {}})
+        try:
+            rev = _cproj.save_revision(c, pid, tid, int(t.get("version", 1)),
+                                       body.get("brief") or {}, {
+                                           "scene_version": "oddhobb.scene.v2",
+                                           "template": {"id": tid, "version": t.get("version", 1)},
+                                           "subjects": ([{"slot": "star", "subject_id": sid,
+                                                          "asset_ids": []}] if sid else []),
+                                           "copy": filled, "render_intent": {}},
+                                       expected_revision=body.get("expected_revision"))
+        except (KeyError, ValueError) as e:
+            return _err(str(e)[:200], 400)
     return jsonify({"ok": True, "creative_id": pid, "revision": rev["revision"],
                     "template_id": tid,
                     "hint": "oddhobb_render to realize it, oddhobb_buy to reserve it."})
@@ -5187,34 +5465,55 @@ def oddhobb_create():
 
 @app.post("/api/oddhobb/render")
 def oddhobb_render():
-    """Realize a revision: preview now (free), print/video staged per router."""
+    """Realize a revision: preview now (free); paid outputs route through
+    the vault (BYO key) or come back staged with the reason."""
+    from backend.creative.providers import router as _router
     body = request.get_json(silent=True) or {}
     owner = _own(body.get("owner") or "")
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
+    policy = str(body.get("policy") or "free")
+    if policy not in ("free", "use-mine", "best", "specific"):
+        return _err("unknown policy — free, use-mine, best, specific", 400)
     outputs = body.get("outputs") or ["preview"]
     done, staged = {}, []
-    with app.test_request_context(
-            json={"owner": owner, "project_id": body.get("creative_id"),
-                  "revision": body.get("revision") or 1}):
-        resp = creative_render()
-    data = resp.get_json()
-    if data.get("ok"):
-        done["preview"] = data["artifact"]
+    if "preview" in outputs:
+        data, _ = _render_revision(owner, str(body.get("creative_id") or ""),
+                                   int(body.get("revision") or 1))
+        if data.get("ok"):
+            done["preview"] = data["artifact"]
+    paid_wants = {"photoreal": "identity_image", "video": "video_scene",
+                  "lipsync": "lip_sync"}
     for o in outputs:
-        if o != "preview":
+        if o == "preview" or o not in paid_wants:
+            continue
+        if policy == "free":
             staged.append({"output": o, "status": "staged",
-                           "note": "paid router lane — BYO key + approval"})
+                           "reason": "free policy — set policy use-mine/best with a connected provider"})
+            continue
+        try:
+            got = _router.run_for_owner(
+                paid_wants[o], owner,
+                {"prompt": f"premium {o} pass"},
+                policy=policy,
+                route=str((body.get("routes") or {}).get(o) or ""))
+            done[o] = got
+        except Exception as e:  # noqa: BLE001 — staged, never 500
+            staged.append({"output": o, "status": "staged", "reason": str(e)[:200]})
     return jsonify({"ok": True, "done": done, "staged": staged})
 
 
 @app.get("/api/oddhobb/status/<creative_id>")
 def oddhobb_status(creative_id):
+    owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     _creative_tables()
     with db.connect() as c:
-        proj = c.execute("SELECT * FROM creative_projects WHERE id=?",
-                         (creative_id,)).fetchone()
+        proj = c.execute("SELECT * FROM creative_projects WHERE id=? AND owner=?",
+                         (creative_id, owner)).fetchone()
         if proj is None:
             return _err("no such creative", 404)
         p = dict(proj)
@@ -5239,10 +5538,11 @@ def oddhobb_buy():
                                 int(body.get("revision") or 0))
         if not r:
             return _err("no such revision", 404)
-        ok_art = c.execute("SELECT 1 FROM render_artifacts WHERE project_id=? AND revision=? AND qc_status='passed'",
+        ok_art = c.execute("SELECT 1 FROM render_artifacts WHERE project_id=? AND revision=? AND qc_status='passed'"
+                           " AND output_kind='print_master'",
                            (r["project_id"], r["revision"])).fetchone()
     if not ok_art:
-        return _err("render first — only QC-passed revisions are buyable", 400)
+        return _err("render first — only QC-passed print revisions are buyable", 400)
     with db.connect() as c:
         order = db.create_order(
             c, owner=owner, line=str(body.get("product") or "greeting_card"),
@@ -5279,6 +5579,9 @@ def provider_status():
     """Agent-safe view: which providers are on, free always true. No secrets."""
     from backend import vault as _vault
     owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     with db.connect() as c:
         _vault.ensure_tables(c)
         view = _vault.agent_view(c, owner)
@@ -5306,6 +5609,9 @@ def capsule_get(subject_id):
     assembled from existing stores. Input to every template."""
     from backend import capsule as _cap
     owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
     with db.connect() as c:
         cap = _cap.build(c, owner, subject_id)
     if not cap:
@@ -5335,20 +5641,80 @@ def capture_start():
                                "say something natural", "your most Dad-like shrug"]})
 
 
+@app.post("/api/capture/asset")
+def capture_asset():
+    """Attach the raw capture video: multipart (video) + capture_id. The file
+    is the first-class identity reference — stills/keyframes derive from it,
+    it is never thrown away. Also registers a video asset row."""
+    from backend import subjects as _subs
+    capture_id = (request.form.get("capture_id") or request.args.get("capture_id") or "")
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM capture_sessions WHERE id=?", (capture_id,)).fetchone()
+    if row is None:
+        return _err("no such capture", 404)
+    d = dict(row)
+    denied = _owner_denied(d.get("owner") or "anon")
+    if denied is not None:
+        return denied
+    f = request.files.get("video") or request.files.get("file")
+    if f is None:
+        return _err("attach the capture video in the 'video' field", 400)
+    blob = f.read(256 * 1024 * 1024 + 1)
+    if len(blob) > 256 * 1024 * 1024:
+        return _err("capture too large (256MB max)", 400)
+    import hashlib
+    sha = hashlib.sha256(blob).hexdigest()
+    key = f"owners/{d['owner']}/captures/{capture_id}.mp4"
+    tmp = config.LOCAL_TMP / f"cap_{capture_id}.mp4"
+    tmp.write_bytes(blob)
+    try:
+        storage.put(tmp, key)
+    finally:
+        tmp.unlink(missing_ok=True)
+    with db.connect() as c:
+        asset = _subs.register_asset(c, d["owner"], "video", sha, key,
+                                     metadata={"capture_id": capture_id,
+                                               "bytes": len(blob)},
+                                     provenance="capture")
+        c.execute("UPDATE capture_sessions SET status=? WHERE id=?",
+                  ("has_video", capture_id))
+        try:
+            c.execute("ALTER TABLE capture_sessions ADD COLUMN asset_id TEXT NOT NULL DEFAULT ''")
+        except sqlite3.Error:
+            pass
+        try:
+            c.execute("UPDATE capture_sessions SET asset_id=? WHERE id=?", (asset["id"], capture_id))
+        except sqlite3.Error:
+            pass
+        c.commit()
+    return jsonify({"ok": True, "asset": asset,
+                    "hint": "keyframes/audio/motion derive from this file later"})
+
+
 @app.post("/api/capture/mark")
 def capture_mark():
-    """Timestamp a moment: {capture_id, kind, note} — oddhobb.capture_mark."""
+    """Timestamp a moment: {capture_id, kind, note, t_media?} — oddhobb.capture_mark.
+    t_media is seconds into the capture media; when omitted it derives from
+    capture start (wall clock), so marks stay media-relative, not wall-clock."""
     body = request.get_json(silent=True) or {}
     with db.connect() as c:
         row = c.execute("SELECT * FROM capture_sessions WHERE id=?",
                         (str(body.get("capture_id") or ""),)).fetchone()
         if row is None:
             return _err("no such capture", 404)
-        marks = json.loads(dict(row).get("marks") or "[]")
-        marks.append({"t": time.time(), "kind": str(body.get("kind") or "note"),
+        d = dict(row)
+        marks = json.loads(d.get("marks") or "[]")
+        t_media = body.get("t_media")
+        if t_media is None:
+            try:
+                t_media = round(time.time() - float(d.get("created_at") or time.time()), 2)
+            except (TypeError, ValueError):
+                t_media = 0.0
+        marks.append({"t_media": float(t_media),
+                      "kind": str(body.get("kind") or "note"),
                       "note": str(body.get("note") or "")[:300]})
         c.execute("UPDATE capture_sessions SET marks=? WHERE id=?",
-                  (json.dumps(marks), dict(row)["id"]))
+                  (json.dumps(marks), d["id"]))
         c.commit()
     return jsonify({"ok": True, "marks": len(marks)})
 

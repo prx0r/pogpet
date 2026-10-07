@@ -2,10 +2,24 @@
   "id": "breaking_news",
   "version": 1,
   "taxonomy": {
-    "occasion": ["general", "birthday", "fathers_day", "retirement"],
-    "styles": ["newsparody", "photorealstudio"],
-    "topics": ["family", "news"],
-    "tone": ["absurd", "mock-serious"]
+    "occasion": [
+      "general",
+      "birthday",
+      "fathers_day",
+      "retirement"
+    ],
+    "styles": [
+      "newsparody",
+      "photorealstudio"
+    ],
+    "topics": [
+      "family",
+      "news"
+    ],
+    "tone": [
+      "absurd",
+      "mock-serious"
+    ]
   },
   "requirements": {
     "subjects": 1,
@@ -14,10 +28,22 @@
     "voice": false
   },
   "slots": {
-    "star": {"type": "subject", "required": true},
-    "headline": {"type": "text", "max_chars": 42},
-    "subheadline": {"type": "text", "max_chars": 90},
-    "location": {"type": "text", "default": "ODDHOBB NEWS HQ"}
+    "star": {
+      "type": "subject",
+      "required": true
+    },
+    "headline": {
+      "type": "text",
+      "max_chars": 42
+    },
+    "subheadline": {
+      "type": "text",
+      "max_chars": 90
+    },
+    "location": {
+      "type": "text",
+      "default": "ODDHOBB NEWS HQ"
+    }
   },
   "renderers": {
     "preview": "composite2d",
@@ -28,5 +54,46 @@
   "files": {
     "layout": "layout/card.polotno.json",
     "prompts": "prompts/image.txt"
-  }
+  },
+  "layout": {
+    "photo": [
+      0.08,
+      0.05,
+      0.92,
+      0.52
+    ],
+    "band": [
+      0.0,
+      0.6,
+      1.0,
+      0.82
+    ],
+    "headline": [
+      0.08,
+      0.63,
+      0.92,
+      0.72
+    ],
+    "caption": [
+      0.08,
+      0.73,
+      0.92,
+      0.8
+    ],
+    "safe_inset_mm": 5
+  },
+  "format": "breaking_news",
+  "premise": "family_chaos_incident",
+  "caption_pattern": "BREAKING: {headline} \u2014 {subheadline}",
+  "tone": [
+    "funny",
+    "warm",
+    "lightly absurd"
+  ],
+  "rules": {
+    "escalation": "agenda items get sillier down the list",
+    "payoff": "parent quote denies everything"
+  },
+  "video_ready": true,
+  "face_swap_ready": true
 }

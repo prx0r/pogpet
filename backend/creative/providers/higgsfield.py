@@ -26,6 +26,7 @@ class HiggsfieldWanAdapter(BaseAdapter):
     capability = "video_scene"
     name = "higgsfield.wan_3"
     paid = True
+    key_envs = ("HIGGSFIELD_API_KEY",)
 
     def is_available(self) -> bool:
         return False  # staged until first connected credential exists

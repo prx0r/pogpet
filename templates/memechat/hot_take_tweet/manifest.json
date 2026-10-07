@@ -1,0 +1,29 @@
+{
+  "id": "hot_take_tweet",
+  "version": 1,
+  "format": "fake_tweet",
+  "premise": "dad_hot_take",
+  "caption_pattern": "{handle}: {post}",
+  "tone": ["funny", "dry"],
+  "rules": {"escalation": "quote-tweets get progressively more unhinged",
+            "payoff": "ratio'd by his own child"},
+  "video_ready": false,
+  "face_swap_ready": false,
+  "taxonomy": {
+    "occasion": ["general", "just_because", "birthday"],
+    "styles": ["newsparody"],
+    "topics": ["family", "social"],
+    "tone": ["dry", "ross"]
+  },
+  "requirements": {"subjects": 1, "face_photos_min": 0, "mesh": false, "voice": false},
+  "slots": {
+    "star": {"type": "subject", "required": true},
+    "handle": {"type": "text", "max_chars": 20, "default": "@dad"},
+    "post": {"type": "text", "max_chars": 140}
+  },
+  "renderers": {"preview": "composite2d", "hero": "identity_image_v1",
+                "print": "composite2d", "video": "talking_scene_v1"},
+  "layout": {"photo": [0.08, 0.06, 0.30, 0.22], "headline": [0.34, 0.06, 0.92, 0.14],
+             "caption": [0.08, 0.26, 0.92, 0.60], "safe_inset_mm": 5},
+  "files": {"layout": "layout/card.polotno.json"}
+}

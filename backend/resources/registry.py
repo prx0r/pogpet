@@ -73,6 +73,16 @@ RESOURCES: dict[str, dict] = {
         "use_for": ["animated scenes", "motion graphics", "video overlays"],
         "status": "cloned — prototype free render backend",
     },
+    "noslop": {
+        "label": "NoSlop — AI slop detection + diagnosis (prx0r)",
+        "repo": "https://github.com/prx0r/noslop",
+        "license": "unlicensed upstream — reference import only, never vendored",
+        "local": "backend/resources/repos/noslop",
+        "relevance": "v6 pattern engine (NARR/NEG/3LIST/CLICHE/FLAT) + repair "
+                     "guidance as the no-slop filter on every generated script",
+        "use_for": ["script QC filter", "rewrite guidance", "slop budgets"],
+        "status": "cloned — comedy-calibrated wrapper in backend/funny/",
+    },
 }
 
 

@@ -1,6 +1,6 @@
 # Test report — oddhobb
 
-> Run 2026-10-07 04:06 · `scripts/test_site.py` · **78/78 passed** · 0 credits
+> Run 2026-10-07 09:44 · `scripts/test_site.py` · **78/78 passed** · 0 credits
 
 | # | Result | Test | Detail |
 |---|---|---|---|
@@ -41,17 +41,17 @@
 | 35 | PASS | trademark doc exists |  |
 | 36 | PASS | GET /api/seo/products.json (public) | 13 products |
 | 37 | PASS | GET /api/seo/faq.json (public) | 422 pairs |
-| 38 | PASS | GET /guides/greeting_card (FAQPage schema) | HTTP 200 10784b |
+| 38 | PASS | GET /guides/greeting_card (FAQPage schema) | HTTP 200 10792b |
 | 39 | PASS | google feed carries AI attributes | HTTP 200 |
 | 40 | PASS | shopify feed Q&A in body_html | greeting-card |
 | 41 | PASS | GET /api/companygraph (public) | 20 products, 7 caps |
 | 42 | PASS | page names bobdod as helper |  |
 | 43 | PASS | robots.txt allows AI crawlers | HTTP 200 |
 | 44 | PASS | GET /learn/ hub | HTTP 200 |
-| 45 | PASS | comparison page + Article JSON-LD | HTTP 200 3097b |
+| 45 | PASS | comparison page + Article JSON-LD | HTTP 200 3105b |
 | 46 | PASS | guide has Product + FAQPage JSON-LD | HTTP 200 |
 | 47 | PASS | Q&A volume >= 200 pairs (GEO bank) | 422 pairs |
-| 48 | PASS | sitemap.xml lists learn + guides | HTTP 200 27 urls |
+| 48 | PASS | sitemap.xml lists learn + guides | HTTP 200 28 urls |
 | 49 | PASS | GET /sections | 5 sections |
 | 50 | PASS | GET /catalog | 21 products |
 | 51 | PASS | autosort groups (person/photos/r2_key/mesh_id) | 1 groups |
@@ -74,8 +74,8 @@
 | 68 | PASS | API catalog public -> 200 | HTTP 200 |
 | 69 | PASS | API bad token -> 401 | HTTP 401 |
 | 70 | PASS | POST /premesh (passthrough recipe) | HTTP 200 x-premesh-ok=1 bytes=7643 |
-| 71 | PASS | MCP initialize (token) | session c5c45313 |
-| 72 | PASS | MCP tools/list >= 30 | 72 tools |
+| 71 | PASS | MCP initialize (token) | session 7a0498bb |
+| 72 | PASS | MCP tools/list >= 30 | 75 tools |
 | 73 | PASS | MCP foundation tools present |  |
 | 74 | PASS | MCP tools/call figg_flow | stage=ready mesh=msh_70edae28a4 |
 | 75 | PASS | MCP without token -> public tier | HTTP 200 |

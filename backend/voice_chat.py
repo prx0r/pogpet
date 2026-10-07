@@ -177,8 +177,43 @@ def ensure_consent_tables(c) -> None:
     c.execute("""CREATE TABLE IF NOT EXISTS voice_consents (
       id TEXT PRIMARY KEY, owner TEXT NOT NULL, subject_id TEXT NOT NULL DEFAULT '',
       audio_sha TEXT NOT NULL DEFAULT '', created_at REAL NOT NULL)""")
+    try:
+        cols = [r[1] for r in c.execute("PRAGMA table_info(voice_consents)").fetchall()]
+    except Exception:  # noqa: BLE001
+        cols = []
+    if cols and "scopes" not in cols:
+        c.execute("ALTER TABLE voice_consents ADD COLUMN scopes TEXT NOT NULL DEFAULT 'clone,tts'")
+    if cols and "revoked_at" not in cols:
+        c.execute("ALTER TABLE voice_consents ADD COLUMN revoked_at REAL NOT NULL DEFAULT 0")
     c.execute("""CREATE TABLE IF NOT EXISTS provider_keys (
       owner TEXT NOT NULL, provider TEXT NOT NULL, label TEXT NOT NULL DEFAULT '',
       secret TEXT NOT NULL DEFAULT '', updated_at REAL NOT NULL,
       PRIMARY KEY (owner, provider))""")
     c.commit()
+
+
+def check_consent(c, consent_id: str, *, owner: str, subject_id: str,
+                  op: str) -> dict:
+    """Real grant check: the consent row must exist, belong to this owner +
+    subject, not be revoked, and carry the op scope. Adapters never see the
+    request until this passes — 'lol' fails here, server-side."""
+    row = c.execute("SELECT * FROM voice_consents WHERE id=?", (consent_id,)).fetchone()
+    if row is None:
+        raise VoiceError("unknown consent_id — enroll with explicit consent first")
+    g = dict(row)
+    if g.get("owner") != owner or g.get("subject_id") != subject_id:
+        raise VoiceError("consent does not cover this owner/subject")
+    if float(g.get("revoked_at") or 0):
+        raise VoiceError("consent revoked")
+    scopes = [s.strip() for s in str(g.get("scopes") or "clone,tts").split(",")]
+    if op not in scopes:
+        raise VoiceError(f"consent lacks '{op}' scope")
+    return g
+
+
+def revoke_consent(c, consent_id: str, owner: str) -> bool:
+    import time
+    cur = c.execute("UPDATE voice_consents SET revoked_at=? WHERE id=? AND owner=?",
+                    (time.time(), consent_id, owner))
+    c.commit()
+    return cur.rowcount > 0

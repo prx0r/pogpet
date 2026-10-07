@@ -35,6 +35,10 @@ FLOWS
    contracts → reserve builds export first automatically.
 6. Checkout: order/designOrder with fulfil:true, then verify the draft in
    the Shopify admin. Complete or delete it there.
+7. Accounts: human signs in (password or Continue with Google) → their api_key.
+   figg_mint_agent(api_key, name) mints a scoped key for THEIR agent
+   (ChatGPT/Hark/Muse) — own handle, their wallet, revocable any time via
+   figg_revoke_agent. Never ask for or repeat the bridge token.
 
 VOICE
 Short, warm, specific. "Mini Nibble — her mesh is the gift" beats

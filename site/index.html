@@ -796,8 +796,10 @@
     @media (prefers-reduced-motion: reduce){.pogboot__stage *{transition:none;animation:none}}
   </style>
   <link rel="stylesheet" href="/css/cards-studio.css">
+  <link rel="stylesheet" href="/css/viral-card-library.css?v=viral-1">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/api-client.js?v=studio-2"></script>
+  <script src="/js/viral-card-library.js?v=viral-1"></script>
   <script src="/js/cards-studio.js?v=studio-2"></script>
   <script src="/js/card-gallery.js?v=studio-2"></script>
 
@@ -853,6 +855,7 @@
       <div class="greet__who" id="g-who" hidden></div>
 
       <p class="greet__fine">Already know what you want? Open <b>quick</b> — ramble, watch products appear.</p>
+      <p class="greet__fine"><a href="/privacy">Privacy</a> · <a href="mailto:support@oddhobb.com">support@oddhobb.com</a></p>
     </div>
   </div>
 
@@ -2170,6 +2173,8 @@
       state.owner = "pog_" + Math.random().toString(36).slice(2, 10);
       try { localStorage.setItem("pogpet.owner", state.owner); } catch (e) {}
     }
+    // anon handle, so password signup can claim this browser's work
+    try { if (/^pog_/.test(state.owner)) window.__FIGG_ANON_OWNER = state.owner; } catch (e) {}
 
     function $(id) { return document.getElementById(id); }
     function msg(id, t, cls) { var e = $(id); if (!e) return; e.textContent = t || ""; e.className = "panel__msg" + (cls ? " " + cls : ""); }
@@ -2768,11 +2773,16 @@
         el.innerHTML = "signed in as <b>@" + state.owner + "</b> " +
           '<button type="button" id="g-signout">sign out</button>';
         var b = $("g-signout");
-        if (b) b.addEventListener("click", function () {
-          try { localStorage.removeItem("pogpet.apikey"); } catch (e) {}
-          state.apiKey = "";
-          paintWho();
-        });
+      if (b) b.addEventListener("click", function () {
+        try {
+          localStorage.removeItem("pogpet.apikey");
+          localStorage.removeItem("pogpet.ownersig");
+          var fresh = "pog_" + Math.random().toString(36).slice(2, 10);
+          localStorage.setItem("pogpet.owner", fresh);
+          localStorage.removeItem("pogpet.mesh");
+        } catch (e) {}
+        location.reload();
+      });
       }
       if (an) an.textContent = "@" + state.owner;
     }

@@ -55,8 +55,11 @@ mcp = MCPServer("oddhobb", instructions=(
 ))
 
 
-async def _call(method: str, path: str, body: dict | None = None) -> dict:
-    """Hit our own API with both the service token and the caller's key."""
+async def _call(method: str, path: str, body: dict | None = None,
+                api_key: str = "") -> dict:
+    """Hit our own API with both the service token and the caller's key.
+    api_key (a user's own key, e.g. fresh from Google sign-in) travels as
+    X-API-Key so writes land under THEIR account, never the operator's."""
     import urllib.request
     import urllib.error
 
@@ -67,8 +70,9 @@ async def _call(method: str, path: str, body: dict | None = None) -> dict:
         req = urllib.request.Request(url, data=data, method=method)
         if data:
             req.add_header("Content-Type", "application/json")
-        if _key():
-            req.add_header("X-API-Key", _key())
+        caller = (api_key or "").strip() or _key()
+        if caller:
+            req.add_header("X-API-Key", caller)
         figg_owner = os.environ.get("FIGG_OWNER", "").strip()
         claimed = ""
         if body and isinstance(body, dict):
@@ -118,6 +122,26 @@ async def figg_login(handle: str, password: str) -> str:
     """Sign in with handle + password. Returns the api_key for this session."""
     return _j(await _call("POST", "/api/accounts/login",
                           {"handle": handle, "password": password}))
+
+
+async def figg_mint_agent(api_key: str, name: str, permissions: list | None = None) -> str:
+    """Mint a delegated agent credential under YOUR account (api_key from sign-in
+    or Google session). Returns agent_api_key (shown once) — paste THAT into
+    ChatGPT/Hark/Muse, never the bridge token. Own handle, your wallet,
+    revocable any time via figg_revoke_agent. Full tier only."""
+    return _j(await _call("POST", "/api/agents",
+                         {"name": name, "permissions": permissions or []},
+                         api_key=api_key))
+
+
+async def figg_my_agents(api_key: str) -> str:
+    """List your delegated agents + available permissions. Full tier only."""
+    return _j(await _call("GET", "/api/agents", api_key=api_key))
+
+
+async def figg_revoke_agent(api_key: str, agent_id: str) -> str:
+    """Kill an agent credential instantly. Nothing else changes. Full tier only."""
+    return _j(await _call("POST", f"/api/agents/{agent_id}/revoke", {}, api_key=api_key))
 
 
 # ── meshes ──────────────────────────────────────────────────────────
@@ -334,19 +358,31 @@ async def figg_companygraph() -> str:
 
 
 async def figg_creative_templates() -> str:
-    """Versioned card/scene templates: taxonomy, requirements, typed slots,
-    renderer bindings. Data, not functions — AI fills fields, never pixels."""
+    """Versioned executable card/scene templates: taxonomy, typed slots and renderers."""
     return _j(await _call("GET", "/api/creative/templates"))
+
+
+async def figg_creative_catalog(style: str = "", occasion: str = "",
+                                audience: str = "", tone: str = "",
+                                q: str = "") -> str:
+    """Browse the same viral-format library customers see on oddhobb.com.
+    Filter by occasion, recipient, tone/style, or free-text meme intent."""
+    import urllib.parse
+    params = {"style": style, "occasion": occasion, "audience": audience,
+              "tone": tone, "q": q}
+    qs = urllib.parse.urlencode({k: v for k, v in params.items() if v})
+    return _j(await _call("GET", "/api/creative/catalog" + (("?" + qs) if qs else "")))
 
 
 async def figg_creative_brief(subject_id: str = "", name: str = "", owner: str = "",
                               occasion: str = "general", tone: str = "funny",
-                              budget_cents: int = 0) -> str:
+                              budget_cents: int = 0, request: str = "") -> str:
     """Compile the creative brief from the person graph: occasion + recipient
     facts + available assets + ask. Goes to the matcher, never a renderer."""
     return _j(await _call("POST", "/api/creative/brief", {
         "subject_id": subject_id, "name": name, "owner": owner,
-        "occasion": occasion, "tone": tone, "budget_cents": budget_cents}))
+        "occasion": occasion, "tone": tone, "budget_cents": budget_cents,
+        "request": request}))
 
 
 async def figg_creative_match(brief: dict | None = None, limit: int = 5) -> str:
@@ -398,11 +434,14 @@ async def oddhobb_create(idea_id: str = "", owner: str = "", subject_id: str = "
 
 
 async def oddhobb_render(creative_id: str = "", revision: int = 1,
-                         owner: str = "", outputs: list | None = None) -> str:
-    """Realize a revision: preview now (free); print/video staged per router."""
+                         owner: str = "", outputs: list | None = None,
+                         policy: str = "free", routes: dict | None = None) -> str:
+    """Realize a revision: preview now (free); photoreal/video/lipsync route
+    through the vault on use-mine/best/specific, staged with reasons otherwise."""
     return _j(await _call("POST", "/api/oddhobb/render", {
         "creative_id": creative_id, "revision": revision, "owner": owner,
-        "outputs": outputs or ["preview"]}))
+        "outputs": outputs or ["preview"], "policy": policy,
+        "routes": routes or {}}))
 
 
 async def oddhobb_status(creative_id: str = "") -> str:
@@ -447,6 +486,54 @@ async def oddhobb_capture_finish(capture_id: str = "", owner: str = "") -> str:
     """Close a capture → mannerism manifest lands on the subject profile."""
     return _j(await _call("POST", "/api/capture/finish",
                          {"capture_id": capture_id, "owner": owner}))
+
+
+async def oddhobb_review(artifact_id: str = "") -> str:
+    """Agent eyes: verdict + scores + concrete fix ops for a render. $0.
+    Feed it artifact ids from render/status, apply fixes via oddhobb_revise."""
+    return _j(await _call("POST", "/api/creative/review", {"artifact_id": artifact_id}))
+
+
+async def oddhobb_revise(project_id: str = "", revision: int = 0, owner: str = "",
+                         ops: dict | None = None, render: bool = False) -> str:
+    """Agent hands: ops {copy, mood (happier/funnier/warmer/classier), voice,
+    act} → new immutable revision, optionally rendered. The 'make them happier' loop."""
+    return _j(await _call("POST", "/api/creative/revise", {
+        "project_id": project_id, "revision": revision, "owner": owner,
+        "ops": ops or {}, "render": render}))
+
+
+async def oddhobb_joke_ideas(person: str = "", occasion: str = "general",
+                              owner: str = "", interests: str = "",
+                              memories: str = "", humour: str = "") -> str:
+    """Three joke-set variants, zero spend: main (our funniest), darker, and
+    personal (matched to their humour + context). Human picks one to render."""
+    from backend.funny import variants as _jv
+    profile = {"name": person or "Dad",
+               "interests": [s.strip() for s in interests.split(",") if s.strip()],
+               "memories": [s.strip() for s in memories.split("|") if s.strip()],
+               "humour": {"absurd": 0.9} if "absurd" in humour else {}}
+    return _j({"ok": True, "variants": _jv.plan_variants({}, profile),
+               "hint": "render one with oddhobb_joke_render (approved spend, pennies)"})
+
+
+async def oddhobb_joke_render(variant_id: str = "", owner: str = "",
+                              brief: dict | None = None,
+                              approved: bool = False) -> str:
+    """Render one variant into a judged set. approved=True spends pennies."""
+    from backend.funny import pipeline as _fp, variants as _jv
+    b = brief or {}
+    profile = {"name": b.get("name", "Dad"), "interests": b.get("interests", []),
+               "memories": b.get("memories", []), "humour": b.get("humour", {})}
+    out = _fp.run_set(profile, approved=approved)
+    return _j(out)
+
+
+async def oddhobb_joke_pick(owner: str = "", chosen_id: str = "",
+                            variants: list | None = None) -> str:
+    """Record the human pick as DPO fuel (chosen > rejected). Free."""
+    from backend.funny import variants as _jv
+    return _j({"ok": True, "pick": _jv.record_pick(owner, chosen_id, variants or [])})
 
 
 async def figg_playbook() -> str:
@@ -557,7 +644,11 @@ async def figg_card_save(spec: dict, owner: str = "", design_id: str = "",
 
 async def figg_card_render(design_id: str, revision: int, kind: str = "preview",
                            owner: str = "") -> str:
-    """Render saved card preview/export/motion. Returns async job; same revision drives paper and MP4."""
+    """Render saved card preview/export/motion. Returns async job; same revision drives paper and MP4.
+    Public tier: preview only (free CPU). Export/motion need the bridge token."""
+    if os.environ.get("PUBLIC_MCP") == "1" and kind != "preview":
+        return _j({"ok": False,
+                   "error": "public tier renders previews only — export/motion need the bridge token"})
     return _j(await _call("POST", f"/api/cards/{design_id}/render",
                          {"owner": owner, "revision": revision, "kind": kind}))
 
@@ -625,9 +716,10 @@ async def figg_design_save(line: str, owner: str = "",
     """Play with the base, save the design: validated spec stored as a draft.
     Returns design_id for figg_design_order. Invalid designs 400 with gaps.
     BASE-FIRST: fetch figg_design_base for the line before saving — fulfil
-    refuses drafts saved without it. Pass stl_base64 (your finished STL) and
-    the geometry itself is CHECKED (envelope, manifold, stem lock, base still
-    present) — proof, not honour — with measured dims/volume overriding yours."""
+    refuses drafts saved without it. Pass stl_base64 (aliases stl,
+    geometry_b64; ≤32MB) and the geometry itself is CHECKED (envelope,
+    manifold, stem lock, base similarity scored) — proof, not honour —
+    with measured dims/volume overriding yours."""
     return _j(await _call("POST", "/api/design/save", {
         "owner": owner, "line": line, "dims_mm": dims_mm, "material": material,
         "colors": colors, "text": text, "volume_cm3": volume_cm3,
@@ -854,7 +946,8 @@ TOOL_AREAS: dict[str, list] = {
     "flow":      [figg_flow, figg_upload_photo, figg_upload_chatgpt_file,
                   figg_preview_image, figg_start_mesh, figg_playbook, figg_quick_map,
                   figg_guide_open, figg_guide_turn, figg_guide_packs],
-    "identity":  [figg_me, figg_create_account, figg_login, figg_credits],
+    "identity":  [figg_me, figg_create_account, figg_login, figg_credits,
+                  figg_mint_agent, figg_my_agents, figg_revoke_agent],
     "mesh":      [figg_mesh_status, figg_measure, figg_print_export],
     "shop":      [figg_catalog, figg_products, figg_concepts, figg_quote,
                   figg_check_sku, figg_product_assets, figg_studio_props,
@@ -866,13 +959,14 @@ TOOL_AREAS: dict[str, list] = {
     "stage":     [figg_acts, figg_perform, figg_greeting, figg_rooms,
                   figg_video_share, figg_write_premise, figg_write_riff],
     "company":   [figg_companygraph],
-    "creative":  [figg_creative_templates, figg_creative_brief,
-                  figg_creative_match, figg_creative_revision],
+    "creative":  [figg_creative_catalog, figg_creative_templates,
+                  figg_creative_brief, figg_creative_match, figg_creative_revision],
     "oddhobb":   [oddhobb_people, oddhobb_ideas, oddhobb_create,
                   oddhobb_render, oddhobb_status, oddhobb_buy,
                   oddhobb_providers, oddhobb_capsule,
                   oddhobb_capture_start, oddhobb_capture_mark,
-                  oddhobb_capture_finish],
+                  oddhobb_capture_finish, oddhobb_review, oddhobb_revise,
+                  oddhobb_joke_ideas, oddhobb_joke_render, oddhobb_joke_pick],
 }
 
 # ── public tier: any agent, no token ─────────────────────────────────────
@@ -891,15 +985,18 @@ PUBLIC_TOOLS = frozenset({
     "figg_design_save", "figg_design_order",
     "figg_flow", "figg_playbook", "figg_quick_map",
     "figg_card_library", "figg_card_templates",
+    "figg_card_save", "figg_card_render", "figg_card_scene", "figg_card_job",
     "figg_mesh_status", "figg_measure",
     "figg_styles", "figg_install_style",
     "figg_acts", "figg_rooms",
     "figg_companygraph",
-    "figg_creative_templates", "figg_creative_brief", "figg_creative_match",
-    "figg_creative_revision",
+    "figg_creative_catalog", "figg_creative_templates", "figg_creative_brief",
+    "figg_creative_match", "figg_creative_revision",
     "oddhobb_people", "oddhobb_ideas", "oddhobb_create",
     "oddhobb_render", "oddhobb_status", "oddhobb_buy",
     "oddhobb_providers", "oddhobb_capsule",
+    "oddhobb_review", "oddhobb_revise",
+    "oddhobb_joke_ideas", "oddhobb_joke_pick",
 })
 
 if os.environ.get("PUBLIC_MCP") == "1":

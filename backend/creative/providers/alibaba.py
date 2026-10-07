@@ -15,14 +15,24 @@ from .router import register
 from .base import BaseAdapter
 
 API = "https://dashscope-intl.aliyuncs.com/api/v1"
+# Workspace-specific domains (Beijing/Singapore) outperform the shared one;
+# _workspace_api() builds them when a workspace id is configured.
+
+
+def _workspace_api(payload: dict, region: str = "ap-southeast-1") -> str:
+    ws = str(payload.get("workspace_id") or os.environ.get("DASHSCOPE_WORKSPACE_ID") or "")
+    if ws:
+        return f"https://{ws}.{region}.maas.aliyuncs.com/api/v1"
+    return API
 
 
 def _key(payload: dict) -> str:
     return str(payload.get("api_key") or os.environ.get("DASHSCOPE_API_KEY") or "")
 
 
-def _post(path: str, body: dict, key: str, timeout: int = 120) -> dict:
-    req = urllib.request.Request(API + path, data=json.dumps(body).encode(),
+def _post(path: str, body: dict, key: str, timeout: int = 120,
+          base: str = "") -> dict:
+    req = urllib.request.Request((base or API) + path, data=json.dumps(body).encode(),
                                  method="POST")
     req.add_header("Authorization", f"Bearer {key}")
     req.add_header("Content-Type", "application/json")
@@ -32,12 +42,26 @@ def _post(path: str, body: dict, key: str, timeout: int = 120) -> dict:
 
 class _Ali(BaseAdapter):
     paid = True
+    key_envs = ("DASHSCOPE_API_KEY",)
 
     def _k(self, payload: dict) -> str:
         k = _key(payload)
         if not k:
             raise ProviderNotConfigured(f"{self.name}: no DashScope key (BYO or env)")
         return k
+
+    def _consent(self, payload: dict, op: str) -> dict:
+        """Server-side grant verification: consent row must cover this exact
+        owner + subject with the op scope and no revocation. Arbitrary strings
+        die here, before any provider call."""
+        from backend import db, voice_chat as _vc
+        cid = str(payload.get("consent_id") or "")
+        if not cid:
+            raise ProviderNotConfigured(f"{self.name}: consent_id required")
+        with db.connect() as c:
+            return _vc.check_consent(c, cid, owner=str(payload.get("owner") or ""),
+                                    subject_id=str(payload.get("subject_id") or ""),
+                                    op=op)
 
 
 @register
@@ -46,10 +70,13 @@ class QwenImageAdapter(_Ali):
     name = "alibaba.qwen_image"
 
     def run(self, payload: dict) -> dict:
-        d = _post("/services/aigc/text2image/image-synthesis", {
+        # messages/content shape on the workspace endpoint (Singapore default)
+        d = _post("/services/aigc/multimodal-generation/generation", {
             "model": "qwen-image-3.0-pro",
-            "input": {"prompt": str(payload.get("prompt") or "")},
-        }, self._k(payload), timeout=300)
+            "messages": [{"role": "user", "content": [
+                {"text": str(payload.get("prompt") or "")},
+                *[{"image": u} for u in (payload.get("images") or [])]]}],
+        }, self._k(payload), timeout=300, base=_workspace_api(payload))
         return {"ok": True, "task": d}
 
 
@@ -76,8 +103,7 @@ class VoiceEnrollAdapter(_Ali):
     name = "alibaba.qwen_enroll"
 
     def run(self, payload: dict) -> dict:
-        if not payload.get("consent_id"):
-            raise ProviderNotConfigured("voice_clone: consent_id required")
+        self._consent(payload, "clone")
         d = _post("/services/voice/qwen-voice-enrollment", {
             "reference_audio_url": payload.get("audio_url"),
             "target_model": "qwen3.8-omni-flash-realtime",
@@ -92,8 +118,7 @@ class ClonedTTSAdapter(_Ali):
     name = "alibaba.qwen_tts_vc"
 
     def run(self, payload: dict) -> dict:
-        if not payload.get("consent_id"):
-            raise ProviderNotConfigured("cloned_tts: consent_id required")
+        self._consent(payload, "tts")
         d = _post("/services/audio/qwen3-tts-vc", {
             "text": str(payload.get("text") or ""),
             "provider_voice_id": payload.get("provider_voice_id"),

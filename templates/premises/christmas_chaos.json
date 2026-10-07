@@ -1,0 +1,14 @@
+{
+  "pack": "christmas_chaos",
+  "audience": "family",
+  "premises": [
+    {"id": "xmas_tree_incident", "text": "the tree did not survive the holidays", "topics": ["christmas", "chaos"]},
+    {"id": "xmas_present_hide", "text": "presents hidden so well nobody finds them", "topics": ["christmas"]},
+    {"id": "xmas_dinner_burn", "text": "dinner rescued at the last possible second", "topics": ["christmas", "food"]},
+    {"id": "xmas_lights_tangled", "text": "lights tangled since last January", "topics": ["christmas"]},
+    {"id": "xmas_nap_shutdown", "text": "dad enters annual festive shutdown after lunch", "topics": ["christmas", "family"]},
+    {"id": "xmas_wrapping_fail", "text": "gifts wrapped in newspaper and hope", "topics": ["christmas"]},
+    {"id": "xmas_dog_tree", "text": "dog versus tree, tree loses", "topics": ["christmas", "pets"]},
+    {"id": "xmas_battery_hunt", "text": "the great battery hunt of Christmas morning", "topics": ["christmas", "family"]}
+  ]
+}

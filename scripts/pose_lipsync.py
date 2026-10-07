@@ -60,6 +60,16 @@ async def tts(text: str, voice: str, out_wav: Path) -> None:
 
 
 def envelope(path: Path, fps: int = FPS) -> list[float]:
+    """Batch audio envelope via the shared performance kernel (same math the
+    browser analyser mirrors live). Falls back to the local copy if the
+    package is unreachable (Blender subprocess context)."""
+    try:
+        import sys
+        sys.path.insert(0, str(ROOT))
+        from backend.performance import audio_envelope
+        return audio_envelope(str(path), fps)
+    except Exception:  # noqa: BLE001
+        pass
     with wave.open(str(path), "rb") as w:
         n, sw, ch, rate = w.getnframes(), w.getsampwidth(), w.getnchannels(), w.getframerate()
         raw = w.readframes(n)

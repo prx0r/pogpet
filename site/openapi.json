@@ -1,1 +1,499 @@
-{"info": {"title": "OddHobb — personalised pet products", "version": "1.0.0", "description": "Pets become meshes, meshes become products, cards and videos. Prices first, orders never charge (pending_checkout or Shopify draft), Meshy ask-first."}, "openapi": "3.1.0", "paths": {"/backend/api/products/studio": {"get": {"operationId": "listProducts", "summary": "Live lines, prices, gifts for the friend, contracts (?design=1 adds supplier options)", "parameters": [{"in": "query", "name": "owner", "schema": {"type": "string"}}, {"in": "query", "name": "design", "schema": {"type": "string"}}, {"in": "query", "name": "token", "schema": {"type": "string"}}]}}, "/backend/api/products/personalise": {"post": {"operationId": "personalise", "summary": "Validate coat/hat/pattern on a line (registry IDs only)", "requestBody": {"content": {"application/json": {"schema": {"properties": {"line": {"type": "string"}, "coat": {"type": "string"}, "hat": {"type": "string"}, "pattern": {"type": "string"}, "owner": {"type": "string"}}, "type": "object"}}}}, "responses": {"200": {"description": "stills + price"}}}}, "/backend/api/products/order": {"post": {"operationId": "order", "summary": "Reserve; fulfil:true creates Shopify draft with invoice_url. Never charges.", "requestBody": {"content": {"application/json": {"schema": {"properties": {"line": {"type": "string"}, "coat": {"type": "string"}, "hat": {"type": "string"}, "pattern": {"type": "string"}, "mesh_id": {"type": "string"}, "qty": {"type": "integer"}, "fulfil": {"type": "boolean"}, "owner": {"type": "string"}}, "type": "object"}}}}, "responses": {"200": {"description": "order + shopify draft"}}}}, "/backend/api/gift-packs": {"post": {"operationId": "giftPack", "summary": "Best gift inside a budget: physical + card + free video", "requestBody": {"content": {"application/json": {"schema": {"properties": {"budget_cents": {"type": "integer"}, "line": {"type": "string"}, "mesh_id": {"type": "string"}, "recipient": {"type": "string"}, "owner": {"type": "string"}}, "type": "object"}}}}, "responses": {"200": {"description": "pack + total + change"}}}}, "/backend/api/design/validate": {"post": {"operationId": "designValidate", "summary": "Check dims/material/text against the line contract + farm costs", "requestBody": {"content": {"application/json": {"schema": {"properties": {"line": {"type": "string"}, "dims_mm": {"type": "array"}, "material": {"type": "string"}, "colors": {"type": "integer"}, "text": {"type": "string"}, "volume_cm3": {"type": "number"}}, "type": "object"}}}}, "responses": {"200": {"description": "feasible + gaps + options"}}}}, "/backend/api/design/base/{line}": {"get": {"operationId": "designBase", "summary": "Download the 3D base (master STL or dog GLB)", "parameters": [{"in": "path", "name": "line", "required": true, "schema": {"type": "string"}}, {"in": "query", "name": "token", "schema": {"type": "string"}}], "responses": {"200": {"description": "STL or GLB bytes"}}}}, "/backend/api/design/save": {"post": {"operationId": "designSave", "summary": "Store a validated spec, returns design_id", "requestBody": {"content": {"application/json": {"schema": {"type": "object"}}}}, "responses": {"200": {"description": "design_id"}}}}, "/backend/api/design/make": {"post": {"operationId": "blenderMake", "summary": "Headless Blender embosses text on the master, returns STL URL (~1-2 min)", "requestBody": {"content": {"application/json": {"schema": {"properties": {"line": {"type": "string"}, "text": {"type": "string"}, "owner": {"type": "string"}}, "type": "object"}}}}, "responses": {"200": {"description": "stl_url + log"}}}}, "/backend/api/design/order": {"post": {"operationId": "designOrder", "summary": "Order a saved design; fulfil:true drafts Shopify", "requestBody": {"content": {"application/json": {"schema": {"properties": {"design_id": {"type": "string"}, "qty": {"type": "integer"}, "fulfil": {"type": "boolean"}, "owner": {"type": "string"}}, "type": "object"}}}}, "responses": {"200": {"description": "order + shopify"}}}}, "/backend/api/cards/gallery": {"get": {"operationId": "cardGallery", "summary": "Ready-made cards from uploads", "parameters": [{"in": "query", "name": "owner", "schema": {"type": "string"}}, {"in": "query", "name": "token", "schema": {"type": "string"}}]}}, "/backend/api/cards/templates": {"get": {"operationId": "cardTemplates", "summary": "Card templates with paper contracts", "parameters": [{"in": "query", "name": "owner", "schema": {"type": "string"}}, {"in": "query", "name": "token", "schema": {"type": "string"}}]}}, "/backend/api/quick/map": {"post": {"operationId": "quickMap", "summary": "Ramble text to confidence-ranked lines", "requestBody": {"content": {"application/json": {"schema": {"properties": {"text": {"type": "string"}, "owner": {"type": "string"}}, "type": "object"}}}}, "responses": {"200": {"description": "matches + funnel"}}}}, "/backend/api/videos/feed": {"get": {"operationId": "videoFeed", "summary": "Performance clips", "parameters": [{"in": "query", "name": "token", "schema": {"type": "string"}}]}}, "/backend/api/studio/orders": {"get": {"operationId": "listOrders", "summary": "Reservations and drafts", "parameters": [{"in": "query", "name": "owner", "schema": {"type": "string"}}, {"in": "query", "name": "token", "schema": {"type": "string"}}]}}}, "servers": [{"url": "https://oddhobb.com"}]}
+{
+  "info": {
+    "title": "OddHobb \u2014 personalised pet products",
+    "version": "1.0.0",
+    "description": "Pets become meshes, meshes become products, cards and videos. Prices first, orders never charge (pending_checkout or Shopify draft), Meshy ask-first."
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/backend/api/products/studio": {
+      "get": {
+        "operationId": "listProducts",
+        "summary": "Live lines, prices, gifts for the friend, contracts (?design=1 adds supplier options)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "design",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/products/personalise": {
+      "post": {
+        "operationId": "personalise",
+        "summary": "Validate coat/hat/pattern on a line (registry IDs only)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "line": {
+                    "type": "string"
+                  },
+                  "coat": {
+                    "type": "string"
+                  },
+                  "hat": {
+                    "type": "string"
+                  },
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "owner": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "stills + price"
+          }
+        }
+      }
+    },
+    "/backend/api/products/order": {
+      "post": {
+        "operationId": "order",
+        "summary": "Reserve; fulfil:true creates Shopify draft with invoice_url. Never charges.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "line": {
+                    "type": "string"
+                  },
+                  "coat": {
+                    "type": "string"
+                  },
+                  "hat": {
+                    "type": "string"
+                  },
+                  "pattern": {
+                    "type": "string"
+                  },
+                  "mesh_id": {
+                    "type": "string"
+                  },
+                  "qty": {
+                    "type": "integer"
+                  },
+                  "fulfil": {
+                    "type": "boolean"
+                  },
+                  "owner": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "order + shopify draft"
+          }
+        }
+      }
+    },
+    "/backend/api/gift-packs": {
+      "post": {
+        "operationId": "giftPack",
+        "summary": "Best gift inside a budget: physical + card + free video",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "budget_cents": {
+                    "type": "integer"
+                  },
+                  "line": {
+                    "type": "string"
+                  },
+                  "mesh_id": {
+                    "type": "string"
+                  },
+                  "recipient": {
+                    "type": "string"
+                  },
+                  "owner": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "pack + total + change"
+          }
+        }
+      }
+    },
+    "/backend/api/design/validate": {
+      "post": {
+        "operationId": "designValidate",
+        "summary": "Check dims/material/text against the line contract + farm costs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "line": {
+                    "type": "string"
+                  },
+                  "dims_mm": {
+                    "type": "array"
+                  },
+                  "material": {
+                    "type": "string"
+                  },
+                  "colors": {
+                    "type": "integer"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "volume_cm3": {
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "feasible + gaps + options"
+          }
+        }
+      }
+    },
+    "/backend/api/design/base/{line}": {
+      "get": {
+        "operationId": "designBase",
+        "summary": "Download the 3D base (master STL or dog GLB)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "line",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "STL or GLB bytes"
+          }
+        }
+      }
+    },
+    "/backend/api/design/save": {
+      "post": {
+        "operationId": "designSave",
+        "summary": "Store a validated spec, returns design_id",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "design_id"
+          }
+        }
+      }
+    },
+    "/backend/api/design/make": {
+      "post": {
+        "operationId": "blenderMake",
+        "summary": "Headless Blender embosses text on the master, returns STL URL (~1-2 min)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "line": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "owner": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "stl_url + log"
+          }
+        }
+      }
+    },
+    "/backend/api/design/order": {
+      "post": {
+        "operationId": "designOrder",
+        "summary": "Order a saved design; fulfil:true drafts Shopify",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "design_id": {
+                    "type": "string"
+                  },
+                  "qty": {
+                    "type": "integer"
+                  },
+                  "fulfil": {
+                    "type": "boolean"
+                  },
+                  "owner": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "order + shopify"
+          }
+        }
+      }
+    },
+    "/backend/api/cards/gallery": {
+      "get": {
+        "operationId": "cardGallery",
+        "summary": "Ready-made cards from uploads",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/cards/templates": {
+      "get": {
+        "operationId": "cardTemplates",
+        "summary": "Card templates with paper contracts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/quick/map": {
+      "post": {
+        "operationId": "quickMap",
+        "summary": "Ramble text to confidence-ranked lines",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "owner": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "matches + funnel"
+          }
+        }
+      }
+    },
+    "/backend/api/videos/feed": {
+      "get": {
+        "operationId": "videoFeed",
+        "summary": "Performance clips",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/studio/orders": {
+      "get": {
+        "operationId": "listOrders",
+        "summary": "Reservations and drafts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/videos": {
+      "post": {
+        "operationId": "performVideo",
+        "summary": "Perform: script + voice + free MP4 (5/day/owner, watermarked)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "owner": {
+                    "type": "string",
+                    "description": "omit when calling with X-API-Key \u2014 derived from the key"
+                  },
+                  "mesh_id": {
+                    "type": "string",
+                    "description": "from /api/meshes or /api/meshes/style (styles are instant meshes, no Meshy)"
+                  },
+                  "topic": {
+                    "type": "string",
+                    "description": "one funny detail \u2014 required"
+                  },
+                  "talent": {
+                    "type": "string",
+                    "enum": [
+                      "comedy",
+                      "dance",
+                      "singing"
+                    ],
+                    "default": "comedy"
+                  },
+                  "act": {
+                    "type": "string",
+                    "description": "slug from GET /api/acts"
+                  },
+                  "pet_name": {
+                    "type": "string"
+                  },
+                  "voice": {
+                    "type": "string",
+                    "default": "ryan"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backend/api/meshes/style": {
+      "post": {
+        "operationId": "adoptStyle",
+        "summary": "Adopt a ready-made style as a mesh \u2014 no photo, no Meshy spend",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "style": {
+                    "type": "string",
+                    "description": "dad, badger-classic, buster\u2026"
+                  },
+                  "owner": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://oddhobb.com"
+    }
+  ]
+}

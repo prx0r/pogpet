@@ -1,4 +1,9 @@
-"""Qwen3-TTS voice provider (realtime 3.8 stack) via HuggingFace Inference.
+"""Qwen3-TTS voice provider via HuggingFace Inference — CHEAP FALLBACK ONLY.
+
+This is NOT the canonical Qwen path (see devplan-2026-10-07): canonical is
+Model Studio (qwen3-tts-vc for deterministic cloned reads, qwen3.8-omni for
+live Oddy) via backend/creative/providers/alibaba.py. This HF route stays as
+the $0-ish fallback when no DashScope key exists.
 
 Token is loaded from env/vault at call time, never hardcoded or committed.
 No token, no gated-model accept, any error -> raise; callers fall back to

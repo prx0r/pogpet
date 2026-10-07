@@ -1,9 +1,11 @@
 """Meshy client + offline stub.
 
-Real path (needs MESHY_API_KEY):
-    POST /openapi/v1/image-to-3D  -> task id
-    GET  /openapi/v1/tasks/{id}   -> poll until SUCCEEDED
-    -> model_urls.glb, thumbnail_urls[], texture_urls[]
+Real path (needs MESHY_API_KEY), per https://docs.meshy.ai (llms.txt):
+    POST /openapi/v1/image-to-3d  -> {"result": task_id}
+    GET  /openapi/v1/image-to-3d/{id} -> task object (status/model_urls/...)
+Paths are lowercase and per-resource — the old generic /tasks/{id} route
+is gone (NoMatchingRoute). Meshy refunds server-side on FAILED tasks;
+we mirror that by refunding our free-tier sculpt on provider failure.
 
 Meshy accepts base64 data URIs for the source image, so we never need the
 photo to be publicly reachable — it goes straight from our private staging
@@ -71,7 +73,7 @@ def create_task(image_path: Path, *, chibi: bool = False) -> str:
         res = _req("POST", "/creative-lab/figure/v1/prototype", {"image_url": uri})
         return str(res.get("result") or res.get("task_id") or "")
 
-    res = _req("POST", "/image-to-3D", {
+    res = _req("POST", "/image-to-3d", {
         "image_url": uri,
         "ai_model": "latest",
         "should_texture": True,
@@ -88,14 +90,22 @@ def create_task(image_path: Path, *, chibi: bool = False) -> str:
 def get_task(task_id: str) -> dict:
     if not config.MESHY_API_KEY:
         raise MeshyAuthError("MESHY_API_KEY not set")
-    return _req("GET", f"/tasks/{task_id}")
+    return _req("GET", f"/image-to-3d/{task_id}")
+
+
+def get_multi_task(task_id: str) -> dict:
+    if not config.MESHY_API_KEY:
+        raise MeshyAuthError("MESHY_API_KEY not set")
+    return _req("GET", f"/multi-image-to-3d/{task_id}")
 
 
 # ── companion path: screenshot -> multiview -> multi-image 3D ──────────
-# Companion avatars (Dot/Muse grabs) arrive as screenshots. One view is
-# good, several are better — but we never ask customers for turnarounds.
-# Instead: image-to-image synthesizes the missing views, multi-image builds
-# the mesh. All ask-first; without a key everything below refuses.
+# OFF-PIPELINE: research helpers only. Meshy is GENESIS ONLY — it creates the
+# mesh (single image-to-3d or multi-image-to-3d from REAL photos) and nothing
+# else. View synthesis, repair and retexture never go to Meshy: angles must be
+# real photos (the 3-angle gate), repair is local Blender, rendering is ours.
+# backend/pipeline.py must never import the two functions below
+# (tests/test_mesh_gate.py::TestGenesisOnly enforces it).
 
 def create_multiview(image_path: Path, *, prompt: str = "") -> str:
     """Screenshot -> consistent multi-view set. Returns a task id."""
@@ -119,7 +129,7 @@ def create_multi_image_build(image_urls: list[str]) -> str:
         raise MeshyAuthError("MESHY_API_KEY not set")
     if not (1 <= len(image_urls) <= 4):
         raise MeshyError("multi-image build needs 1-4 view URLs")
-    res = _req("POST", "/multi-image-to-3D", {
+    res = _req("POST", "/multi-image-to-3d", {
         "image_urls": image_urls,
         "should_texture": True,
         "target_formats": ["glb"],
@@ -131,8 +141,7 @@ def create_multi_image_build(image_urls: list[str]) -> str:
 
 
 def repair_printability(model_url: str) -> str:
-    """Watertight repair for the physical body (holes, non-manifold,
-    degeneracies). The print path runs through here, never around it."""
+    """OFF-PIPELINE (see above): print repair is local Blender, never Meshy."""
     if not config.MESHY_API_KEY:
         raise MeshyAuthError("MESHY_API_KEY not set")
     res = _req("POST", "/repair-printability", {"model_url": model_url})

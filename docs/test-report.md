@@ -1,6 +1,6 @@
 # Test report — oddhobb
 
-> Run 2026-10-06 22:45 · `scripts/test_site.py` · **77/77 passed** · 0 credits
+> Run 2026-10-07 04:06 · `scripts/test_site.py` · **78/78 passed** · 0 credits
 
 | # | Result | Test | Detail |
 |---|---|---|---|
@@ -71,16 +71,17 @@
 | 65 | PASS | llms.txt served | HTTP 200 |
 | 66 | PASS | shopify-app scaffold | scopes=write_products,read_products,write_product_listings,read_product_listings,write_pub |
 | 67 | PASS | sync-catalog.mjs syntax | clean |
-| 68 | PASS | API without token -> 401 | HTTP 401 |
+| 68 | PASS | API catalog public -> 200 | HTTP 200 |
 | 69 | PASS | API bad token -> 401 | HTTP 401 |
 | 70 | PASS | POST /premesh (passthrough recipe) | HTTP 200 x-premesh-ok=1 bytes=7643 |
-| 71 | PASS | MCP initialize (token) | session ab6d4bc7 |
-| 72 | PASS | MCP tools/list >= 30 | 57 tools |
+| 71 | PASS | MCP initialize (token) | session c5c45313 |
+| 72 | PASS | MCP tools/list >= 30 | 72 tools |
 | 73 | PASS | MCP foundation tools present |  |
 | 74 | PASS | MCP tools/call figg_flow | stage=ready mesh=msh_70edae28a4 |
-| 75 | PASS | MCP without token -> 401 | HTTP 401 |
-| 76 | PASS | api.log: no NEW tracebacks during this run | baseline=0 now=0 (2 historical = fixed flow bug) |
-| 77 | PASS | oddhobb.com final smoke | HTTP 200 |
+| 75 | PASS | MCP without token -> public tier | HTTP 200 |
+| 76 | PASS | MCP wrong token -> 401 | HTTP 401 |
+| 77 | PASS | api.log: no NEW tracebacks during this run | baseline=0 now=0 (2 historical = fixed flow bug) |
+| 78 | PASS | oddhobb.com final smoke | HTTP 200 |
 
 Re-run: `python3 scripts/test_site.py` (exits non-zero on FAIL).
 Covers: 6 hosts + mcp host, page structure & brand, contract APIs, sample-flow, inheritance, preview assets, auth gates, free premesh edge call, public feeds (google.xml, shopify.json, image fetch, llms.txt), shopify-app scaffold + sync syntax, MCP session/tools/call/gate, logs.

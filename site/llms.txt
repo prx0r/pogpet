@@ -23,6 +23,10 @@ ramble (voice/text)
 Machine-readable playbook: `GET /backend/api/agent/playbook`
 Shared mapper (same as the site Quick panel): `POST /backend/api/quick/map`
 Body: `{"text":"chocolate keychain for my dog","owner":"..."}` → `matches[].confidence`
+No-photo perform path: `POST /backend/api/meshes/style` (adopt dad/badger/buster
+as a mesh, no Meshy) → `POST /backend/api/videos` (mesh_id + one funny topic
+→ free MP4). Sculpt path wants 3 angles of the same person (auto multi-image,
+same 1 credit) or explicit single:true. Owner defaults to your API key.
 
 Human funnel (in the app): https://oddhobb.com/#quick — Products tab → Quick
 (same as `/quick.html` which redirects there).
@@ -58,9 +62,35 @@ OddHobb exposes a standard MCP server (streamable HTTP) covering pets, meshes,
 the studio product library, ramble→product mapping, quotes and checkout:
 https://mcp.oddhobb.com/mcp
 
-Connect with the bridge token as a query parameter:
-`https://mcp.oddhobb.com/mcp?token=<BRIDGE_TOKEN>` — without it the server
-answers 401. Start with `figg_tools`, then `figg_playbook` / `figg_quick_map`.
+No token needed to start. Any agent connects and gets the public tier:
+catalog, product assets and stills, studio props and combos, design
+contracts, bases, validation, saving and reserve-only ordering, gift packs,
+supplier quotes, acts, rooms, card library and templates, company graph,
+quick-map and playbook, plus `figg_create_account` / `figg_login` for
+self-serve identity. Start with `figg_tools` (docs are inline, ~280 chars
+per tool). Spending tools (mesh sculpts, video renders, fulfil, Blender
+making, card saving/rendering) are absent here by design — unknown tools
+error instead of executing.
+
+To act (upload, sculpt, render, reserve): create an account over the public
+tier (`figg_create_account` — key shown once), then call the REST API with
+your key in the `X-API-Key` header (or `?api_key=`, or Bearer token) —
+NOT `?token=`, which is the bridge/service token and will 401 your key.
+Base path is `/backend/api` on any oddhobb.com host (plain `/api/*` is the
+site router, not the API). Machine contract: `/openapi.json`.
+Quotas are per-owner (3 sculpts + 5 videos/day free).
+Holders of the bridge token get the full MCP instead:
+`https://mcp.oddhobb.com/mcp?token=<BRIDGE_TOKEN>` (57 tools).
+
+Design loop rule (enforced): fetch `figg_design_base` for the line FIRST and
+design inside that geometry — locked interfaces arrive already modelled.
+`figg_design_save` records a `base_first` flag; fulfil refuses drafts saved
+without it. Validate checks your numbers; the sample checks your geometry.
+Bases: STL in mm, GLB in metres, axes [x, y, z].
+
+HTTP notes: send a real User-Agent (Cloudflare challenges stock
+urllib/python-requests defaults); MCP needs the initialize →
+notifications/initialized handshake before tools/list.
 
 ## Contact
 

@@ -53,7 +53,15 @@ def _gated():
     tok = request.args.get("token") or request.headers.get("X-API-Token", "")
     if tok == config.API_TOKEN:
         return None
-    return jsonify({"ok": False, "error": "bad token"}), 401
+    # A valid user/agent API key also passes the global gate (it only proves
+    # identity — per-action permission checks still apply downstream).
+    ukey = _api_key()
+    if ukey:
+        with db.connect() as c:
+            if db.get_user_by_api_key(c, ukey) or db.get_agent_by_key(c, ukey):
+                return None
+        return jsonify({"ok": False, "error": "unknown API key — create one via POST /api/accounts or the MCP figg_create_account"}), 401
+    return jsonify({"ok": False, "error": "bad token — browser/MCP-full needs ?token=<bridge-token>; user keys go in X-API-Key header or ?api_key="}), 401
 
 
 @app.before_request
@@ -178,7 +186,8 @@ def api_session():
 
 @app.post("/api/photos")
 def upload_photo():
-    owner = (request.form.get("owner") or request.args.get("owner") or "anon").strip()[:80]
+    h0, k0, _ = _principal()
+    owner = _own(request.form.get("owner") or request.args.get("owner") or "")
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
@@ -255,11 +264,20 @@ def start_mesh():
         photo = db.get_photo(c, photo_id)
     if photo is None:
         return _err("That photo isn't on file — upload it first.", 404)
+    h, kind, _ = _principal()
+    if (photo["owner"] or "anon") == "anon" and kind in ("user", "agent") and h:
+        # keyed caller sculpting an anon photo adopts it — uploads and
+        # meshes stay under one identity instead of 403ing
+        with db.connect() as c:
+            c.execute("UPDATE photos SET owner=? WHERE id=?", (h, photo_id))
+            c.commit()
+        photo = dict(photo)
+        photo["owner"] = h
     denied = _owner_denied(photo["owner"] or "anon")
     if denied is not None:
         return denied
     try:
-        res = pipeline.start_mesh(photo_id)
+        res = pipeline.start_mesh(photo_id, single=bool(body.get("single")))
     except pipeline.PipelineError as e:
         return _err(str(e), e.code)
     return jsonify({"ok": True, **res})
@@ -268,7 +286,7 @@ def start_mesh():
 @app.get("/api/meshes")
 def list_meshes():
     """Latest meshes for an owner — what the shop/studio tabs bind to."""
-    owner = (request.args.get("owner") or "anon").strip()[:80]
+    owner = _own(request.args.get("owner") or "")
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
@@ -600,9 +618,7 @@ def _guide_pack_items(owner: str, state: dict, active_mesh: str = "") -> list[di
 def guide_open():
     from backend import guide as _g
     body = request.get_json(silent=True) or {}
-    owner = (body.get("owner") or "").strip()[:80]
-    if not owner:
-        return _err("owner is required", 400)
+    owner = _own(body.get("owner") or "")
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
@@ -1577,7 +1593,7 @@ def flow():
     stage: empty (no photos) -> uploaded (photo, no mesh yet) ->
            sculpting (a mesh queued/running) -> ready (an active mesh succeeded)
     """
-    owner = (request.args.get("owner") or "anon").strip()[:80]
+    owner = _own(request.args.get("owner") or "")
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
@@ -1884,6 +1900,18 @@ def _require(permission: str) -> tuple[bool, tuple[str, str, list[str]]]:
     if kind == "revoked":
         return False, ("", kind, [])
     return False, (h, kind, perms)
+
+
+def _own(raw: str = "") -> str:
+    """Owner for this call: explicit owner wins, else the key holder's
+    handle, else anon. Lets keyed callers omit ?owner= without 403ing."""
+    raw = (raw or "").strip()[:80]
+    if raw:
+        return raw
+    h, kind, _ = _principal()
+    if kind in ("user", "agent") and h:
+        return h
+    return "anon"
 
 
 @app.post("/api/agents")
@@ -2335,7 +2363,7 @@ def voices():
 def make_video():
     """The wedge: free talking/comedy video. Spends a video credit first."""
     body = request.get_json(silent=True) or {}
-    owner = (body.get("owner") or request.args.get("owner") or "anon").strip()[:80]
+    owner = _own(body.get("owner") or request.args.get("owner") or "")
     denied = _owner_denied(owner)
     if denied is not None:
         return denied
@@ -2400,13 +2428,16 @@ def make_video():
     with db.connect() as c:
         c.execute(
             "INSERT INTO videos (id,owner,mesh_id,scene,talent,voice,pet_name,topic,"
-            "script,lines,watermarked,duration,bytes,path,created_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "script,lines,watermarked,duration,bytes,path,created_at,"
+            "creative_project_id,creative_revision,renderer)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (vid, owner, mesh_id, rec["scene"], rec.get("talent", "comedy"),
              rec["voice"],
              str(body.get("pet_name") or "your pet")[:40], topic,
              rec["script"], json.dumps(rec["lines"]), 1 if rec["watermarked"] else 0,
-             rec["duration"], rec["bytes"], rec["file"], db.now()),
+             rec["duration"], rec["bytes"], rec["file"], db.now(),
+             str(body.get("project_id") or ""), int(body.get("revision") or 0),
+             str(body.get("renderer") or "")),
         )
         left = config.FREE_DAILY["video"] - db.credit_used(c, owner, day, "video")
 
@@ -2482,12 +2513,15 @@ def make_greeting_video():
     with db.connect() as c:
         c.execute(
             "INSERT INTO videos (id,owner,mesh_id,scene,talent,voice,pet_name,topic,"
-            "script,lines,watermarked,duration,bytes,path,created_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "script,lines,watermarked,duration,bytes,path,created_at,"
+            "creative_project_id,creative_revision,renderer)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (vid, owner, mesh_id, rec["scene"], "greeting", rec["voice"],
              speaker, message,
              rec["script"], json.dumps(rec["lines"]), 1 if rec["watermarked"] else 0,
-             rec["duration"], rec["bytes"], rec["file"], db.now()),
+             rec["duration"], rec["bytes"], rec["file"], db.now(),
+             str(body.get("project_id") or ""), int(body.get("revision") or 0),
+             str(body.get("renderer") or "")),
         )
         left = config.FREE_DAILY["video"] - db.credit_used(c, owner, day, "video")
 
@@ -3411,22 +3445,30 @@ def quick_map():
                 "5. POST /api/products/order {fulfil:true} → Shopify draft",
             ],
         })
-    def _evidence(hay_text: str) -> int:
+    def _evidence(lid: str, hay_text: str) -> int:
         """Query tokens actually found in this line: ranking strength, not
-        understanding certainty. 'blahblah gift' ~= 1 hit, never 97%."""
+        understanding certainty. 'blahblah gift' ~= 1 hit, never 97%.
+        Stopwords and recipient names never count; a token inside the line id
+        counts double (naming the thing beats mentioning it)."""
+        stop = {"for", "my", "a", "an", "the", "and", "or", "to", "of",
+                "in", "on", "is", "it", "me", "dad", "mum", "mom", "grandma",
+                "grandad", "grandpa"}
         n = 0
         for tok in q.split():
-            if not tok:
+            tok = tok.strip(",.!?").lower()
+            if not tok or tok in stop:
                 continue
             if tok in hay_text or any(p.startswith(tok) for p in hay_text.split()):
                 n += 1
+                if tok in lid:
+                    n += 1
         return n
 
     for m in scored:
         spec = config.STUDIO_LINES.get(m["id"], {})
         hay = " ".join([m["id"], spec.get("label", ""), spec.get("blurb", ""),
                         spec.get("theme", "")]).lower()
-        hits = _evidence(hay)
+        hits = _evidence(m["id"], hay)
         conf = min(0.97, 0.20 + 0.10 * hits)
         if m["id"] in boosts:
             conf = min(0.97, conf + 0.15)  # customer-pointed counts as evidence
@@ -3436,6 +3478,7 @@ def quick_map():
         m["evidence_hits"] = hits
     scored.sort(key=lambda m: (-m["confidence"], -m["score"], m["label"]))
     best = scored[0]
+    strong = best["confidence"] >= 0.5 and best.get("evidence_hits", 0) >= 2
     return jsonify({
         "ok": True,
         "owner": owner,
@@ -3451,6 +3494,9 @@ def quick_map():
                 f"({best.get('recommended_coat') or 'as printed'}"
                 + (f", {best['recommended_hat']}" if best.get("recommended_hat") not in (None, "none") else "")
                 + ")."
+                if strong else
+                f"Best guess: {best['label']} "
+                f"({best.get('evidence_hits', 0)} matching words) — say more for a surer pick."
             ),
             "actions": (
                 ["upload_photo", "start_mesh", "order"]
@@ -3467,10 +3513,12 @@ def quick_map():
             "5. POST /api/products/order {fulfil:true}  (Shopify draft, no card charge)",
         ],
         "agent_hint": (
-            "ChatGPT/MCP: call figg_quick_map with the customer's words, show the top "
-            "2–3 matches with confidence, then figg_upload_photo + figg_start_mesh "
-            "(human must approve Meshy), then figg_fullchain_personalise_order with "
-            "fulfil=true. Always show price before order."
+            "ChatGPT/MCP (public tier, no token): call figg_quick_map with the customer's words, "
+            "show the top 2–3 matches with confidence. Custom geometry goes base-first: "
+            "figg_design_base → design inside it → figg_design_validate → figg_design_save "
+            "(base_first flag) → figg_design_order reserve. fulfil, uploads, sculpts and "
+            "renders need the bridge token or the caller's own API key. "
+            "Always show price before order."
         ),
     })
 
@@ -3525,11 +3573,19 @@ def agent_playbook():
             "personalise": "/api/products/personalise",
             "order": "/api/products/order",
             "playbook": "/api/agent/playbook",
+            "design_base": "/api/design/base/<line>",
+            "design_save": "/api/design/save",
+            "design_order": "/api/design/order",
+            "adopt_style": "/api/meshes/style",
+            "perform": "/api/videos",
+            "acts": "/api/acts",
             "mcp": "https://mcp.oddhobb.com/mcp",
         },
         "chatgpt_script": (
             "1) Listen to the ramble. 2) figg_quick_map(text) — show top matches + confidence. "
-            "3) If no mesh yet, ask for a photo; figg_upload_photo + figg_start_mesh (approve spend). "
+            "3) Custom design goes base-first: figg_design_base → validate → figg_design_save "
+            "(check base_first) → figg_design_order reserve. fulfil, uploads, sculpts and renders "
+            "need your own API key (figg_create_account) or the bridge token. "
             "4) figg_fullchain_personalise_order({line,coat,hat,pattern,qty,fulfil:true}) "
             "after showing the price. 5) Hand back order id + Shopify draft name."
         ),
@@ -3699,7 +3755,7 @@ def products_personalise():
 def design_validate():
     """Validate a candidate design against a line's design contract.
 
-    Body: {line, dims_mm:[x,y,z], material, colors, text, volume_cm3}.
+    Body: {line, dims_mm:[x,y,z] mm (x=width, y=depth, z=height/up), material, colors, text, volume_cm3}.
     Checks envelope fit, locked material/colours, text length vs the
     personalisation zone, and rough cost at makr3d + printie.
     Geometry truth (manifold, interface dims) is verified at sample, not here.
@@ -3708,7 +3764,7 @@ def design_validate():
     body = request.get_json(silent=True) or {}
     line = (body.get("line") or "").strip()
     if line not in config.STUDIO_LINES:
-        return _err("unknown line", 400)
+        return _err("unknown line — valid ids: " + ", ".join(sorted(config.STUDIO_LINES)), 400)
     spec = config.STUDIO_LINES[line]
     contract = spec.get("design_contract") or {}
     gaps = []
@@ -3731,7 +3787,11 @@ def design_validate():
     material = (body.get("material") or contract.get("material") or "PLA").strip()
     if not isinstance(material, str):
         return _err("material must be a string", 400)
-    material = material.upper() if material.upper() in ("PLA", "PETG", "TPU", "ASA") else material
+    KNOWN_MATS = ("PLA", "PETG", "TPU", "ASA", "PAPER", "DIGITAL")
+    if material.upper() in KNOWN_MATS:
+        material = material.upper()
+    else:
+        gaps.append(f"unknown material '{material}' — stocked: {', '.join(KNOWN_MATS)}")
     try:
         colors = int(body.get("colors") or 1)
     except (TypeError, ValueError):
@@ -3743,6 +3803,11 @@ def design_validate():
         gaps.append(f"{colors} colours > max {cmax}")
     text = str(body.get("text") or "")
     zone_max = ((spec.get("personalization") or {}).get("max_chars")) if isinstance(spec.get("personalization"), dict) else 0
+    try:
+        ad = json.loads((Path("scripts/factory/adapters") / f"{line}.json").read_text())
+        zone_max = int(ad.get("text", {}).get("max_chars") or zone_max or 0)
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
     if zone_max and len(text) > zone_max:
         gaps.append(f"text {len(text)} chars > zone max {zone_max}")
     volume = body.get("volume_cm3")
@@ -3761,6 +3826,7 @@ def design_validate():
         "line": line,
         "feasible": feasible,
         "gaps": gaps,
+        "axes": "[x, y, z] mm (x=width, y=depth, z=height/up)",
         "locked": contract.get("locked", []),
         "verify": contract.get("verify", []),
         "options": options,
@@ -3770,19 +3836,24 @@ def design_validate():
 
 def _design_base(line: str) -> Path | None:
     """3D base version of a line: own master STL for reference lines,
-    canonical dog GLB for mesh lines. The thing a model plays with."""
+    canonical dog GLB for mesh lines. The thing a model plays with.
+
+    An adapter with a modelled base always wins when present — e.g. croc_tag
+    is a face_swap (mini) line that ALSO carries a standard pin base for
+    relief/text motifs, so agents emboss onto our geometry instead of
+    free-modelling (and re-breaking) the locked interfaces."""
+    for cand in (Path("scripts/factory/adapters") / f"{line}.json",):
+        try:
+            ad = json.loads(cand.read_text())
+            base = Path("data/3dprint") / ad["base"]
+            if base.is_file():
+                return base
+        except (OSError, ValueError, KeyError):
+            pass
     spec = config.STUDIO_LINES.get(line) or {}
     method = ((spec.get("personalization") or {}).get("method")
               if isinstance(spec.get("personalization"), dict) else "")
     if method in ("emboss", "relief"):
-        for cand in (Path("scripts/factory/adapters") / f"{line}.json",):
-            try:
-                ad = json.loads(cand.read_text())
-                base = Path("data/3dprint") / ad["base"]
-                if base.is_file():
-                    return base
-            except (OSError, ValueError, KeyError):
-                pass
         return None
     if method == "face_swap":
         dog = Path("data/uploads/chibi-figure-hook.glb")
@@ -3793,10 +3864,50 @@ def _design_base(line: str) -> Path | None:
 @app.get("/api/design/base/<line>")
 def design_base(line: str):
     """Download the 3D base version: master STL (reference lines) or the
-    canonical dog GLB (mesh lines). Locked interfaces included as modelled."""
+    canonical dog GLB (mesh lines). Locked interfaces included as modelled.
+
+    ?format=json returns metadata + base64 for MCP/agents (binary STL/GLB
+    cannot travel inside JSON otherwise): {bytes, md5, units, axes, dims_mm}.
+    Units are millimetres, axes are [x, y, z] (x = width, y = depth, z = up).
+    GLB bases are metres, Z up, thin along X — scale ×1000 for mm."""
     base = _design_base(line)
     if base is None or not base.is_file():
         return _err("no base modelled for this line yet", 404)
+    owner = (request.args.get("owner") or "anon").strip()[:80]
+    try:
+        _design_tables()
+        with db.connect() as c:
+            c.execute("INSERT INTO design_base_fetches VALUES (?,?,?)",
+                      (owner, line, time.time()))
+            c.commit()
+    except Exception:  # noqa: BLE001 — logging must never break the download
+        pass
+    if (request.args.get("format") or "") == "json":
+        import base64
+        import hashlib
+        data = base.read_bytes()
+        contract = (config.STUDIO_LINES.get(line) or {}).get("design_contract", {})
+        dims = list(contract.get("envelope_mm") or [])
+        try:
+            ad = json.loads((Path("scripts/factory/adapters") / f"{line}.json").read_text())
+        except (OSError, ValueError):
+            ad = {}
+        measured = ad.get("measured_mm") or dims
+        units = "mm" if base.suffix == ".stl" else "m"
+        meta = {"ok": True, "line": line,
+                "filename": f"oddhobb-{line}-base{base.suffix}",
+                "mime": "model/stl" if base.suffix == ".stl" else "model/gltf-binary",
+                "bytes": len(data), "md5": hashlib.md5(data).hexdigest(),
+                "units": units, "axes": "[x, y, z]",
+                "dims_mm": measured, "envelope_mm": dims,
+                "mount": ad.get("mount"), "stem": ad.get("stem")}
+        if len(data) > 2_000_000:
+            # mesh bases (dog GLB) are too big for inline JSON — download it
+            meta.update({"base64": None, "download": f"/api/design/base/{line}",
+                         "note": "too big for inline base64 — GET the download URL"})
+            return jsonify(meta)
+        meta["base64"] = base64.b64encode(data).decode()
+        return jsonify(meta)
     ctype = {"stl": "model/stl", "glb": "model/gltf-binary"}.get(
         base.suffix.lstrip("."), "application/octet-stream")
     data = base.read_bytes()
@@ -3812,18 +3923,39 @@ def _design_tables():
         c.execute("""CREATE TABLE IF NOT EXISTS design_drafts (
             id TEXT PRIMARY KEY, owner TEXT NOT NULL, line TEXT NOT NULL,
             spec TEXT NOT NULL DEFAULT '{}', created_at REAL NOT NULL)""")
+        c.execute("""CREATE TABLE IF NOT EXISTS design_base_fetches (
+            owner TEXT NOT NULL, line TEXT NOT NULL, created_at REAL NOT NULL)""")
+        c.execute("""CREATE INDEX IF NOT EXISTS idx_base_fetches
+            ON design_base_fetches(owner, line)""")
         c.commit()
+
+
+def _base_first(owner: str, line: str) -> bool:
+    """Did this owner fetch the line base before designing? Base-first is how
+    locked interfaces survive: the model plays with our geometry, never its own."""
+    try:
+        with db.connect() as c:
+            row = c.execute("SELECT 1 FROM design_base_fetches WHERE owner=? AND line=?",
+                            (owner, line)).fetchone()
+            return row is not None
+    except Exception:  # noqa: BLE001 — table missing on old DBs: treat as no
+        return False
 
 
 @app.post("/api/design/save")
 def design_save():
     """A model plays with the base, saves the design: validated spec stored
-    as a draft. Returns design_id for figg_design_order."""
+    as a draft. Returns design_id for figg_design_order.
+
+    Pass stl_base64 (≤8MB STL of the finished design) and the geometry is
+    CHECKED, not trusted: envelope fit, manifoldness, stem lock vs the
+    adapter, and base-preserved proof set base_first from evidence instead
+    of the fetch log. Measured dims/volume override reported numbers."""
     body = request.get_json(silent=True) or {}
     owner = (body.get("owner") or "anon").strip()[:80]
     line = (body.get("line") or "").strip()
     if line not in config.STUDIO_LINES:
-        return _err("unknown line", 400)
+        return _err("unknown line — valid ids: " + ", ".join(sorted(config.STUDIO_LINES)), 400)
     spec = config.STUDIO_LINES[line]
     contract = spec.get("design_contract") or {}
     dims = body.get("dims_mm") or contract.get("envelope_mm") or []
@@ -3831,6 +3963,34 @@ def design_save():
     colors = body.get("colors", 1)
     text = str(body.get("text") or "")
     volume = body.get("volume_cm3", contract.get("volume_cm3_est"))
+    geo_gaps: list[str] = []
+    geo_proof = False
+    stl_b64 = (body.get("stl_base64") or "").strip()
+    if stl_b64:
+        from backend import geometry as _geo
+        try:
+            import base64 as _b64
+            tris = _geo.parse_stl(_b64.b64decode(stl_b64, validate=True))
+        except Exception:  # noqa: BLE001
+            return _err("stl_base64 is not a parseable STL (binary or ASCII, ≤8MB)", 400)
+        envelope = contract.get("envelope_mm") or []
+        if envelope:
+            for got, maxv, ax in zip(_geo.bbox(tris), envelope, "XYZ"):
+                if got > maxv:
+                    geo_gaps.append(f"geometry {ax} {got}mm exceeds envelope {maxv}mm")
+        geo_gaps += _geo.manifold_gaps(tris)
+        try:
+            ad = json.loads((Path("scripts/factory/adapters") / f"{line}.json").read_text())
+            geo_gaps += _geo.stem_gaps(tris, ad.get("stem") or {})
+            base_path = Path("data/3dprint") / ad.get("base", "")
+            if base_path.is_file():
+                geo_gaps += _geo.base_preserved_gaps(tris, _geo.parse_stl(base_path.read_bytes()))
+        except (OSError, ValueError, KeyError):
+            pass
+        if not geo_gaps:
+            geo_proof = True
+            dims = _geo.bbox(tris)
+            volume = _geo.volume_cm3(tris)
     # reuse the validator by direct call shape
     with app.test_request_context(json={"line": line, "dims_mm": dims, "material": material,
                                         "colors": colors, "text": text, "volume_cm3": volume}):
@@ -3842,15 +4002,31 @@ def design_save():
                         "hint": "Fix the gaps against the contract, then save again."}), 400
     _design_tables()
     did = "dsn_" + uuid.uuid4().hex[:12]
+    first = geo_proof or _base_first(owner, line)
     with db.connect() as c:
         c.execute("INSERT INTO design_drafts VALUES (?,?,?,?,?)",
                   (did, owner, line, json.dumps({"dims_mm": dims, "material": material,
                                                  "colors": colors, "text": text,
-                                                 "volume_cm3": volume}), time.time()))
+                                                 "volume_cm3": volume,
+                                                 "base_first": first,
+                                                 "geometry_proof": geo_proof}), time.time()))
         c.commit()
+    if geo_gaps:
+        return jsonify({"ok": False, "feasible": False, "gaps": geo_gaps,
+                        "hint": "Geometry failed against the base — fix the model, not the numbers."}), 400
+    out_hint = ("Saved with geometry proof — stem, envelope and base all verified."
+                if geo_proof else
+                "Saved. Order it with POST /api/design/order."
+                if first else
+                "Saved WITHOUT the line base — fulfil will refuse until you "
+                "fetch GET /backend/api/design/base/<line>?owner=<you> and save again. "
+                "Free-modelling voids the interface warranty.")
     return jsonify({"ok": True, "design_id": did, "line": line,
+                    "base_first": first, "geometry_proof": geo_proof,
+                    "measured_dims_mm": dims if geo_proof else None,
+                    "measured_volume_cm3": volume if geo_proof else None,
                     "options": out.get("options", []),
-                    "hint": "Saved. Order it with POST /api/design/order."})
+                    "hint": out_hint})
 
 
 @app.post("/api/design/make")
@@ -3934,6 +4110,10 @@ def design_order():
     draft = json.loads(d["spec"])
     spec = config.STUDIO_LINES.get(d["line"]) or {}
     price = int(spec.get("price_cents") or 0) * qty
+    if fulfil and not draft.get("base_first"):
+        return _err("fulfil refused: this draft was saved without fetching the line base. "
+                    "GET /api/design/base/<line>, design inside it, save again — "
+                    "locked interfaces must come from our geometry.", 400)
     with db.connect() as c:
         order = db.create_order(
             c, owner=owner, line=d["line"], mesh_id=str(body.get("mesh_id") or ""),
@@ -4437,7 +4617,10 @@ def _line_sizes(lid: str, spec: dict) -> list[dict]:
 def gift_pack():
     """Oddy's game: best gift for the cheapest price inside a budget.
 
-    Body: {owner, budget_cents, line? (exact thing), mesh_id?, recipient?}.
+    Body: {owner, budget_cents, line? (exact thing), mesh_id?, recipient?,
+           occasion?}. Occasion must be one of: birthday, wedding, christmas,
+    fathers_day, mothers_day, valentine, anniversary, thank_you, new_job,
+    baby, retirement.
     A pack is usually physical + card + free video addon. Exact requests are
     honoured with cheap addons while they fit; otherwise Oddy picks the best
     physical that leaves room for a card, video always free.
@@ -4451,19 +4634,77 @@ def gift_pack():
         return _err("budget_cents must be a number", 400)
     if budget <= 0:
         return _err("tell Oddy the budget first", 400)
+    occasion = (body.get("occasion") or "").strip().lower()
+    if occasion and occasion not in ("birthday", "wedding", "christmas",
+                                     "fathers_day", "mothers_day", "valentine",
+                                     "anniversary", "thank_you", "new_job", "baby",
+                                     "retirement"):
+        return _err("unknown occasion — valid: birthday, wedding, christmas, "
+                    "fathers_day, mothers_day, valentine, anniversary, "
+                    "thank_you, new_job, baby, retirement", 400)
     want = (body.get("line") or "").strip()
+    if want and want not in config.STUDIO_LINES:
+        return _err("unknown line — valid ids: " + ", ".join(sorted(config.STUDIO_LINES)), 400)
     mesh_id = (body.get("mesh_id") or "").strip()
     recipient = (body.get("recipient") or "").strip()[:60]
     card_floor = min(v["price_cents"] for v in _scenes.FORMATS.values())
     card_format = min(_scenes.FORMATS.items(), key=lambda kv: kv[1]["price_cents"])[0]
+    card_label = _scenes.FORMATS[card_format]["label"]
+    # card truth: the shelf postcard (£3.99 Prodigi) undercuts our A6 print
+    # cost — quote the cheaper one honestly, and pick a folded greeting for
+    # card occasions whenever it fits
+    folded_occasions = ("birthday", "wedding", "valentine", "anniversary",
+                        "mothers_day", "fathers_day", "christmas", "retirement")
+    _greet = config.PRODIGI_PRODUCTS.get("greeting_card", {})
+    _post = config.PRODIGI_PRODUCTS.get("postcard", {})
+
+    def _pick_card(room_cents: int):
+        if occasion in folded_occasions and int(_greet.get("price_cents") or 0) <= room_cents:
+            return {"template": "portrait", "format": "greeting",
+                    "label": _greet.get("label", "Greeting Card"),
+                    "price_cents": int(_greet["price_cents"])}
+        if int(_post.get("price_cents") or 0) <= room_cents:
+            return {"template": "portrait", "format": "postcard",
+                    "label": _post.get("label", "Postcard"),
+                    "price_cents": int(_post["price_cents"])}
+        if card_floor <= room_cents:
+            return {"template": "portrait", "format": card_format,
+                    "label": card_label, "price_cents": card_floor}
+        return None
     live = [(lid, s) for lid, s in config.STUDIO_LINES.items()
             if s.get("status") == "live" and (s.get("fulfilment") or "") == "print_farm"]
+    # recipient-aware pick: a named friend with known interests steers Oddy
+    # toward their motif; otherwise the recipient text itself is scanned for
+    # known interests ("dad, loves golf" → golf) before falling back to
+    # dearest-that-fits
+    motif = ""
+    if recipient:
+        try:
+            with db.connect() as c:
+                prow = c.execute("SELECT interests FROM subject_profiles WHERE owner=? AND name=?",
+                                 (owner, recipient)).fetchone()
+                interests = json.loads((dict(prow).get("interests") or "[]")) if prow else []
+        except Exception:  # noqa: BLE001
+            interests = []
+        if not interests:
+            low = recipient.lower()
+            interests = [k for k in config.INTEREST_MOTIFS
+                         if re.search(r"\b" + re.escape(k) + r"\b", low)]
+        if interests:
+            motif = (_suggest_motif(interests) or {}).get("motif", "")
+
+    def _rank_key(item):
+        price, lid = item
+        s = config.STUDIO_LINES[lid]
+        hay = f"{lid} {s.get('label', '')} {s.get('theme', '')}".lower()
+        loved = 0 if (motif and motif.replace("_", " ") in hay) else 1
+        return (loved, -price)
+
     pack: dict = {"video": {"kind": "motion", "label": "Matching video",
                             "price_cents": 0,
-                            "note": "rendered from the card scene, free"}}
+                            "note": "rendered from the card scene, free" +
+                                    ("" if mesh_id else " — needs a mesh: upload a photo first")}}
     if want:
-        if want not in config.STUDIO_LINES:
-            return _err("unknown line", 400)
         spec = config.STUDIO_LINES[want]
         price = int(spec.get("price_cents") or 0)
         if price > budget:
@@ -4471,17 +4712,18 @@ def gift_pack():
         pack["physical"] = {"line": want, "label": spec.get("label", want),
                             "price_cents": price}
         rest = budget - price
-        if rest >= card_floor:
-            pack["card"] = {"template": "portrait", "format": card_format,
-                            "price_cents": card_floor,
-                            "note": "cheap add-on inside the budget"}
+        card = _pick_card(rest)
+        if card:
+            card["note"] = "cheap add-on inside the budget"
+            pack["card"] = card
     else:
-        room = budget - card_floor
+        cheapest_card = min(card_floor, int(_post.get("price_cents") or card_floor))
+        room = budget - cheapest_card
         cands = sorted(((int(s.get("price_cents") or 0), lid)
-                        for lid, s in live), reverse=True)
+                        for lid, s in live), key=_rank_key)
         pick = next(((p, lid) for p, lid in cands if p <= room), None)
         if not pick:
-            cheapest = min(cands) if cands else None
+            cheapest = min(cands, key=lambda t: t[0]) if cands else None
             if not cheapest:
                 return _err("nothing orderable yet", 400)
             pack["physical"] = {"line": cheapest[1], "price_cents": cheapest[0],
@@ -4491,12 +4733,28 @@ def gift_pack():
             spec = config.STUDIO_LINES[lid]
             pack["physical"] = {"line": lid, "label": spec.get("label", lid),
                                 "price_cents": price}
-            pack["card"] = {"template": "portrait", "format": card_format,
-                            "price_cents": card_floor}
+            if motif:
+                pack["physical"]["reason"] = f"picked for {recipient}: {motif.replace('_', ' ')}"
+            card = _pick_card(budget - price)
+            if card:
+                pack["card"] = card
     total = sum(v.get("price_cents", 0) for v in pack.values())
     pack["total_cents"] = total
     pack["remaining_cents"] = budget - total
+    leftover = budget - total
+    others = sorted(((int(s.get("price_cents") or 0), lid) for lid, s in live
+                     if lid != (pack.get("physical") or {}).get("line")),
+                    key=_rank_key)
+    addon = next(((p, lid) for p, lid in others if p <= leftover), None)
+    if addon:
+        price, lid = addon
+        pack["suggested_addon"] = {"line": lid,
+                                   "label": config.STUDIO_LINES[lid].get("label", lid),
+                                   "price_cents": price,
+                                   "note": "fits the unspent remainder"}
     pack["recipient"] = recipient
+    if occasion:
+        pack["occasion"] = occasion
     pack["mesh_id"] = mesh_id
     return jsonify({"ok": True, "pack": pack,
                     "hint": "Reserve each part (products/order, cards/order); video renders free from the card."})
@@ -4544,6 +4802,586 @@ from backend import cards as card_api
 card_api.register(app, _owner_denied)
 from backend import studio_library
 studio_library.register(app, _owner_denied)
+
+
+# ── creative compiler (cardgen.md) ─────────────────────────────────────
+# Person graph → brief → ranked versioned templates → immutable scene →
+# renderer DAG → validated artifacts. AI fills fields, never pixels.
+
+from backend.creative import artifacts as _art
+from backend.creative import briefs as _briefs
+from backend.creative import jobs as _cjobs
+from backend.creative import matcher as _matcher
+from backend.creative import projects as _cproj
+from backend.creative import templates as _ctmpl
+from backend import subjects as _subjects
+
+
+def _creative_tables():
+    with db.connect() as c:
+        from backend import studio_library as _sl
+        c.executescript(_sl.SCHEMA)
+        _subjects.ensure_tables(c)
+        _cproj.ensure_tables(c)
+        _art.ensure_tables(c)
+
+
+@app.get("/api/creative/templates")
+def creative_templates():
+    _creative_tables()
+    reg = _ctmpl.load_all()
+    return jsonify({"ok": True, "count": len(reg),
+                    "templates": [{k: t[k] for k in
+                                   ("id", "version", "taxonomy", "requirements",
+                                    "slots", "renderers")} for t in reg.values()]})
+
+
+def _brief_asset_counts(c, owner: str) -> dict:
+    photos = c.execute("SELECT COUNT(*) n FROM photos WHERE owner=?", (owner,)).fetchone()
+    faces = 0
+    try:
+        faces = c.execute("SELECT COUNT(*) n FROM photo_subjects ps JOIN photos p ON p.id=ps.photo_id"
+                          " WHERE p.owner=? AND ps.confirmed=1", (owner,)).fetchone()
+    except sqlite3.Error:
+        pass
+    meshes = c.execute("SELECT COUNT(*) n FROM meshes m JOIN photos p ON p.id=m.photo_id"
+                       " WHERE p.owner=? AND m.status='succeeded'", (owner,)).fetchone()
+    return {"photos": (dict(photos)["n"] if photos else 0),
+            "confirmed_face_photos": (dict(faces)["n"] if faces else 0),
+            "meshes": (dict(meshes)["n"] if meshes else 0), "voice": False}
+
+
+@app.post("/api/creative/brief")
+def creative_brief():
+    """Compile the creative brief: occasion + recipient (subject graph) +
+    available assets + ask. Thrown at the matcher, never a renderer."""
+    from backend import guide as _gde
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    _creative_tables()
+    with db.connect() as c:
+        sub = _subjects.get_subject(c, owner, (body.get("subject_id") or ""))
+        if not sub and body.get("name"):
+            sub = _subjects.find_subject_by_name(c, owner, body.get("name"))
+        prof = _subjects.profile_for(c, owner, sub.get("id", "")) if sub else {}
+        counts = _brief_asset_counts(c, owner)
+    brief = _briefs.build(occasion=(body.get("occasion") or "general"),
+                          occasion_date=str(body.get("occasion_date") or ""),
+                          subject=sub, profile=prof, asset_counts=counts,
+                          tone=str(body.get("tone") or "funny"),
+                          budget_cents=int(body.get("budget_cents") or 0))
+    return jsonify({"ok": True, "brief": brief})
+
+
+@app.post("/api/creative/match")
+def creative_match():
+    """Deterministic template ranking for a brief: eligibility filter +
+    weighted score + reasons. LLM explains; it never decides."""
+    body = request.get_json(silent=True) or {}
+    brief = body.get("brief") or {}
+    if not brief and body.get("subject_id"):
+        return _err("pass a brief (POST /api/creative/brief first)", 400)
+    _creative_tables()
+    reg = _ctmpl.load_all()
+    return jsonify({"ok": True, "matches": _matcher.match(
+        brief, reg, limit=int(body.get("limit") or 5))})
+
+
+@app.post("/api/creative/projects")
+def creative_project_create():
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    _creative_tables()
+    with db.connect() as c:
+        p = _cproj.create_project(c, owner, str(body.get("subject_id") or ""),
+                                  str(body.get("template_id") or ""))
+    return jsonify({"ok": True, "project": p})
+
+
+@app.post("/api/creative/revisions")
+def creative_revision_save():
+    """Fill template FIELDS (§5), QC the copy, freeze a revision (§8)."""
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    _creative_tables()
+    reg = _ctmpl.load_all()
+    tid = str(body.get("template_id") or "")
+    t = reg.get(tid)
+    if t is None:
+        return _err("unknown template — valid: " + ", ".join(sorted(reg)), 400)
+    filled, gaps = _cjobs.fill_slots(t, body.get("fields") or {})
+    gaps += _art.qc_card_copy(filled, t)
+    if gaps:
+        return jsonify({"ok": False, "gaps": gaps,
+                        "hint": "Fix the fields — geometry stays in the template."}), 400
+    with db.connect() as c:
+        proj = c.execute("SELECT * FROM creative_projects WHERE id=? AND owner=?",
+                         (body.get("project_id") or "", owner)).fetchone()
+        if proj is None:
+            p = _cproj.create_project(c, owner, str(body.get("subject_id") or ""), tid)
+            pid = p["id"]
+        else:
+            pid = dict(proj)["id"]
+        rev = _cproj.save_revision(c, pid, tid, int(t.get("version", 1)),
+                                   body.get("brief") or {}, {
+                                       "scene_version": "oddhobb.scene.v2",
+                                       "template": {"id": tid, "version": t.get("version", 1)},
+                                       "subjects": body.get("subjects") or [],
+                                       "copy": filled,
+                                       "render_intent": body.get("render_intent") or {}})
+    return jsonify({"ok": True, "revision": rev,
+                    "hint": "Immutable — edits create new revisions; orders pin one."})
+
+
+@app.post("/api/creative/render")
+def creative_render():
+    """composite2d preview → artifact record + QC. Paid renderers staged."""    """composite2d preview → artifact record + QC. Paid renderers staged."""
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    _creative_tables()
+    with db.connect() as c:
+        rev = _cproj.get_revision(c, str(body.get("project_id") or ""),
+                                  int(body.get("revision") or 0))
+    if not rev:
+        return _err("no such revision", 404)
+    from backend.renderers import composite2d as _c2d
+    scene = rev.get("scene") or {}
+    cp = scene.get("copy") or {}
+    photo_path = None
+    for s in scene.get("subjects") or []:
+        aids = s.get("asset_ids") or []
+        if not aids:
+            break
+        with db.connect() as c2:
+            row = c2.execute("SELECT * FROM photos WHERE id=? AND owner=?",
+                             (aids[0], owner)).fetchone()
+        if row:
+            try:
+                photo_path = str(pipeline._local_photo(dict(row)))
+            except Exception:  # noqa: BLE001
+                photo_path = None
+        break
+    img = _c2d.render_card(photo_path=photo_path,
+                           headline=str(cp.get("headline") or cp.get("caption") or "…"),
+                           subheadline=str(cp.get("subheadline") or cp.get("caption") or ""))
+    key = f"owners/{owner}/creative/{rev['project_id']}-r{rev['revision']}.png"
+    tmp = config.LOCAL_TMP / f"cr_{rev['project_id']}_r{rev['revision']}.png"
+    img.save(tmp)
+    storage.put(tmp, key)
+    tmp.unlink(missing_ok=True)
+    cache = _cjobs.cache_key(template_version=int((scene.get("template") or {}).get("version", 1)),
+                             revision=int(rev["revision"]), renderer="composite2d",
+                             source_hashes=[], output_contract="preview-1500",
+                             provider_params={})
+    with db.connect() as c:
+        hit = _art.by_cache(c, cache)
+        if hit:
+            return jsonify({"ok": True, "cached": True, "artifact": hit})
+        art = _art.record(c, owner, rev["project_id"], int(rev["revision"]),
+                          "composite2d", "preview", cache, key,
+                          mime="image/png", width=img.width, height=img.height)
+        _art.mark_qc(c, art["id"], True)
+    return jsonify({"ok": True, "cached": False,
+                    "artifact": {**art, "url": storage.public_url(key)}})
+
+
+@app.post("/api/creative/order")
+def creative_order():
+    """Reserve a creative revision: requires a QC-passed artifact for that
+    exact revision. Orders pin revisions; editing creates new ones."""
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    _creative_tables()
+    pid, rev = str(body.get("project_id") or ""), int(body.get("revision") or 0)
+    with db.connect() as c:
+        r = _cproj.get_revision(c, pid, rev)
+        if not r:
+            return _err("no such revision", 404)
+        ok_art = [dict(a) for a in c.execute(
+            "SELECT * FROM render_artifacts WHERE project_id=? AND revision=? AND qc_status='passed'",
+            (pid, rev)).fetchall()]
+    if not ok_art:
+        return _err("no QC-passed artifact for this revision — render first", 400)
+    try:
+        qty = max(1, min(20, int(body.get("qty") or 1)))
+    except (TypeError, ValueError):
+        return _err("qty must be 1-20", 400)
+    with db.connect() as c:
+        order = db.create_order(
+            c, owner=owner, line="greeting_card", mesh_id="", coat="none", hat="none",
+            qty=qty, price_cents=799 * qty,
+            note=f"creative {pid} r{rev} ({r.get('template_id')})"[:200])
+    return jsonify({"ok": True, "order": order, "status": "pending_checkout",
+                    "hint": "Reserved the pinned revision. No card charge from this API."})
+
+
+# ── provider keys (BYO) + voice consent ───────────────────────────────
+# Free-first: everything resolves $0 without these. Paid adapters use the
+# owner's key when present, server key as fallback — never the reverse.
+
+@app.post("/api/providers/keys")
+def provider_key_set():
+    from backend import voice_chat as _vc
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    provider = (body.get("provider") or "").strip()[:40]
+    secret = (body.get("secret") or "").strip()
+    if provider not in ("fal", "alibaba", "openrouter", "replicate", "higgsfield"):
+        return _err("unknown provider — fal, alibaba, openrouter, replicate, higgsfield", 400)
+    if not secret:
+        return _err("secret is required", 400)
+    with db.connect() as c:
+        _vc.ensure_consent_tables(c)
+        c.execute("INSERT INTO provider_keys (owner,provider,label,secret,updated_at)"
+                  " VALUES (?,?,?,?,?) ON CONFLICT(owner,provider) DO UPDATE SET"
+                  " secret=excluded.secret, label=excluded.label, updated_at=excluded.updated_at",
+                  (owner, provider, str(body.get("label") or "")[:60], secret, time.time()))
+        c.commit()
+    return jsonify({"ok": True, "provider": provider,
+                    "hint": "Stored. Paid runs use your key first; free defaults unchanged."})
+
+
+@app.get("/api/providers/keys")
+def provider_key_list():
+    from backend import voice_chat as _vc
+    owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        _vc.ensure_consent_tables(c)
+        rows = [dict(r) for r in c.execute(
+            "SELECT provider,label,updated_at FROM provider_keys WHERE owner=?", (owner,))]
+    return jsonify({"ok": True, "keys": rows})
+
+
+@app.post("/api/voice/consent")
+def voice_consent():
+    """Explicit enrollment consent: whose voice, which audio. Required before
+    any provider_voice_id is stored or a clone runs."""
+    from backend import voice_chat as _vc
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    subject_id = (body.get("subject_id") or "").strip()
+    audio_sha = (body.get("audio_sha") or "").strip()
+    if not subject_id or not audio_sha:
+        return _err("subject_id and audio_sha are required — consent names whose voice", 400)
+    cid = "vcs_" + uuid.uuid4().hex[:12]
+    with db.connect() as c:
+        _vc.ensure_consent_tables(c)
+        c.execute("INSERT INTO voice_consents (id,owner,subject_id,audio_sha,created_at)"
+                  " VALUES (?,?,?,?,?)", (cid, owner, subject_id, audio_sha, time.time()))
+        c.commit()
+    return jsonify({"ok": True, "consent_id": cid,
+                    "hint": "Pass consent_id to cloned runs. Revoke by deleting it."})
+
+
+# ── six high-level agent tools (devplan-2026-10-07) ───────────────────
+# One surface for ChatGPT, Muse Connector, Muse Code, Claude, OpenCode,
+# Oddy. Each fans out to the figg_* machinery; Muse never names a provider.
+
+@app.get("/api/oddhobb/people")
+def oddhobb_people():
+    """Whose world is this: subjects + profile facts for an owner."""
+    owner = _own(request.args.get("owner") or "")
+    _creative_tables()
+    with db.connect() as c:
+        out = []
+        for s in _subjects.subjects_for(c, owner):
+            out.append({"subject": s, "profile": _subjects.profile_for(c, owner, s["id"])})
+    return jsonify({"ok": True, "owner": owner, "people": out})
+
+
+@app.post("/api/oddhobb/ideas")
+def oddhobb_ideas():
+    """Person + occasion + request (+ agent_memory context) → ranked ideas."""
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    _creative_tables()
+    with db.connect() as c:
+        sub = _subjects.get_subject(c, owner, str(body.get("subject_id") or ""))
+        if not sub and body.get("person"):
+            sub = _subjects.find_subject_by_name(c, owner, str(body.get("person")))
+        prof = _subjects.profile_for(c, owner, sub.get("id", "")) if sub else {}
+        counts = _brief_asset_counts(c, owner)
+    ctx = body.get("context") or []
+    memos = [str(f.get("fact") or "")[:200] for f in ctx
+             if isinstance(f, dict) and f.get("fact")]
+    brief = _briefs.build(occasion=str(body.get("occasion") or "general"),
+                          subject=sub, profile=prof, asset_counts=counts,
+                          tone=str(body.get("tone") or "funny"),
+                          budget_cents=int(body.get("budget_cents") or 0))
+    if memos:
+        brief["agent_memory"] = [{"fact": m, "source": "agent_memory"} for m in memos[:8]]
+    reg = _ctmpl.load_all()
+    matches = _matcher.match(brief, reg, limit=3)
+    ideas = [{"idea_id": f"idea_{m['id']}", "template_id": m["id"],
+              "version": m["version"], "score": m["score"],
+              "why": "; ".join(m["reasons"])} for m in matches]
+    return jsonify({"ok": True, "brief": brief, "ideas": ideas,
+                    "hint": "oddhobb_create with an idea_id to make it real."})
+
+
+@app.post("/api/oddhobb/create")
+def oddhobb_create():
+    """Idea → brief → match → frozen revision. Fifteen ops, one call."""
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    _creative_tables()
+    idea = str(body.get("idea_id") or "")
+    tid = idea[5:] if idea.startswith("idea_") else str(body.get("template_id") or "")
+    reg = _ctmpl.load_all()
+    t = reg.get(tid)
+    if t is None:
+        return _err("unknown idea — valid: " + ", ".join(sorted(reg)), 400)
+    overrides = body.get("overrides") or {}
+    fields = dict(overrides)
+    with db.connect() as c:
+        sub = _subjects.get_subject(c, owner, str(body.get("subject_id") or ""))
+        if not sub and body.get("person"):
+            sub = _subjects.find_subject_by_name(c, owner, str(body.get("person")))
+        sid = sub.get("id", "") if sub else ""
+        if "star" in (t.get("slots") or {}) and "star" not in fields and sid:
+            fields["star"] = sid
+        proj = [dict(r) for r in c.execute(
+            "SELECT * FROM creative_projects WHERE owner=? AND template_id=?",
+            (owner, tid)).fetchall()]
+        pid = proj[0]["id"] if proj else _cproj.create_project(c, owner, sid, tid)["id"]
+        filled, gaps = _cjobs.fill_slots(t, fields)
+        gaps += _art.qc_card_copy(filled, t)
+        if gaps:
+            return jsonify({"ok": False, "gaps": gaps,
+                            "hint": "Pass overrides for the missing/short fields."}), 400
+        rev = _cproj.save_revision(c, pid, tid, int(t.get("version", 1)),
+                                   body.get("brief") or {}, {
+                                       "scene_version": "oddhobb.scene.v2",
+                                       "template": {"id": tid, "version": t.get("version", 1)},
+                                       "subjects": ([{"slot": "star", "subject_id": sid,
+                                                      "asset_ids": []}] if sid else []),
+                                       "copy": filled, "render_intent": {}})
+    return jsonify({"ok": True, "creative_id": pid, "revision": rev["revision"],
+                    "template_id": tid,
+                    "hint": "oddhobb_render to realize it, oddhobb_buy to reserve it."})
+
+
+@app.post("/api/oddhobb/render")
+def oddhobb_render():
+    """Realize a revision: preview now (free), print/video staged per router."""
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    outputs = body.get("outputs") or ["preview"]
+    done, staged = {}, []
+    with app.test_request_context(
+            json={"owner": owner, "project_id": body.get("creative_id"),
+                  "revision": body.get("revision") or 1}):
+        resp = creative_render()
+    data = resp.get_json()
+    if data.get("ok"):
+        done["preview"] = data["artifact"]
+    for o in outputs:
+        if o != "preview":
+            staged.append({"output": o, "status": "staged",
+                           "note": "paid router lane — BYO key + approval"})
+    return jsonify({"ok": True, "done": done, "staged": staged})
+
+
+@app.get("/api/oddhobb/status/<creative_id>")
+def oddhobb_status(creative_id):
+    _creative_tables()
+    with db.connect() as c:
+        proj = c.execute("SELECT * FROM creative_projects WHERE id=?",
+                         (creative_id,)).fetchone()
+        if proj is None:
+            return _err("no such creative", 404)
+        p = dict(proj)
+        arts = [dict(r) for r in c.execute(
+            "SELECT id,revision,renderer,output_kind,qc_status,created_at"
+            " FROM render_artifacts WHERE project_id=? ORDER BY revision DESC", (creative_id,))]
+    return jsonify({"ok": True, "creative_id": creative_id,
+                    "latest_revision": p["latest_revision"], "artifacts": arts})
+
+
+@app.post("/api/oddhobb/buy")
+def oddhobb_buy():
+    """Reserve a QC-passed revision. No card charge from this endpoint."""
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    _creative_tables()
+    with db.connect() as c:
+        r = _cproj.get_revision(c, str(body.get("creative_id") or ""),
+                                int(body.get("revision") or 0))
+        if not r:
+            return _err("no such revision", 404)
+        ok_art = c.execute("SELECT 1 FROM render_artifacts WHERE project_id=? AND revision=? AND qc_status='passed'",
+                           (r["project_id"], r["revision"])).fetchone()
+    if not ok_art:
+        return _err("render first — only QC-passed revisions are buyable", 400)
+    with db.connect() as c:
+        order = db.create_order(
+            c, owner=owner, line=str(body.get("product") or "greeting_card"),
+            mesh_id="", coat="none", hat="none", qty=max(1, min(20, int(body.get("qty") or 1))),
+            price_cents=799, note=f"oddhobb {r['project_id']} r{r['revision']}"[:200])
+    return jsonify({"ok": True, "order": order, "status": "pending_checkout"})
+
+
+# ── provider vault (BYOC) + capture sessions ──────────────────────────
+
+@app.post("/api/providers/connect")
+def provider_connect():
+    """Connect a BYO creative provider: secret goes to the vault encrypted,
+    agents only ever see {fal: true}. Body: {owner, provider, secret}."""
+    from backend import vault as _vault
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        _vault.ensure_tables(c)
+        try:
+            rec = _vault.connect(c, owner, str(body.get("provider") or ""),
+                                 str(body.get("secret") or ""),
+                                 {"label": str(body.get("label") or "")})
+        except ValueError as e:
+            return _err(str(e), 400)
+    return jsonify({"ok": True, "connection": rec})
+
+
+@app.get("/api/providers")
+def provider_status():
+    """Agent-safe view: which providers are on, free always true. No secrets."""
+    from backend import vault as _vault
+    owner = _own(request.args.get("owner") or "")
+    with db.connect() as c:
+        _vault.ensure_tables(c)
+        view = _vault.agent_view(c, owner)
+    return jsonify({"ok": True, "providers": view,
+                    "policies": ["free", "use-mine", "best", "specific"]})
+
+
+@app.post("/api/providers/disconnect")
+def provider_disconnect():
+    from backend import vault as _vault
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        _vault.ensure_tables(c)
+        ok = _vault.disconnect(c, owner, str(body.get("provider") or ""))
+    return jsonify({"ok": True, "revoked": ok})
+
+
+@app.get("/api/capsule/<subject_id>")
+def capsule_get(subject_id):
+    """Person Capsule: identity/voice/behaviour/spatial/knowledge/provenance
+    assembled from existing stores. Input to every template."""
+    from backend import capsule as _cap
+    owner = _own(request.args.get("owner") or "")
+    with db.connect() as c:
+        cap = _cap.build(c, owner, subject_id)
+    if not cap:
+        return _err("no such subject", 404)
+    return jsonify({"ok": True, "capsule": cap})
+
+
+@app.post("/api/capture/start")
+def capture_start():
+    """Begin a guided person capture (Qwen-Omni-directed onboarding later)."""
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        c.execute("""CREATE TABLE IF NOT EXISTS capture_sessions (
+          id TEXT PRIMARY KEY, owner TEXT NOT NULL, subject_id TEXT NOT NULL DEFAULT '',
+          marks TEXT NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'open',
+          created_at REAL NOT NULL)""")
+        cid = "cap_" + uuid.uuid4().hex[:12]
+        c.execute("INSERT INTO capture_sessions VALUES (?,?,?,?,?,?)",
+                  (cid, owner, str(body.get("subject_id") or ""), "[]", "open", time.time()))
+        c.commit()
+    return jsonify({"ok": True, "capture_id": cid,
+                    "script": ["turn head slowly", "step back, full body",
+                               "say something natural", "your most Dad-like shrug"]})
+
+
+@app.post("/api/capture/mark")
+def capture_mark():
+    """Timestamp a moment: {capture_id, kind, note} — oddhobb.capture_mark."""
+    body = request.get_json(silent=True) or {}
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM capture_sessions WHERE id=?",
+                        (str(body.get("capture_id") or ""),)).fetchone()
+        if row is None:
+            return _err("no such capture", 404)
+        marks = json.loads(dict(row).get("marks") or "[]")
+        marks.append({"t": time.time(), "kind": str(body.get("kind") or "note"),
+                      "note": str(body.get("note") or "")[:300]})
+        c.execute("UPDATE capture_sessions SET marks=? WHERE id=?",
+                  (json.dumps(marks), dict(row)["id"]))
+        c.commit()
+    return jsonify({"ok": True, "marks": len(marks)})
+
+
+@app.post("/api/capture/finish")
+def capture_finish():
+    """Close the capture → mannerism manifest skeleton on the subject profile."""
+    from backend import subjects as _subs
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM capture_sessions WHERE id=? AND owner=?",
+                        (str(body.get("capture_id") or ""), owner)).fetchone()
+        if row is None:
+            return _err("no such capture", 404)
+        d = dict(row)
+        marks = json.loads(d.get("marks") or "[]")
+        c.execute("UPDATE capture_sessions SET status='done' WHERE id=?", (d["id"],))
+        if d.get("subject_id"):
+            prof = _subs.profile_for(c, owner, d["subject_id"]).get("profile", {})
+            have = set(prof.get("mannerisms", []))
+            for m in marks:
+                if m.get("note"):
+                    have.add(m["note"][:120])
+            _subs.set_profile(c, owner, d["subject_id"],
+                              profile={**prof, "mannerisms": sorted(have)[:20]})
+        c.commit()
+    return jsonify({"ok": True, "marks": len(marks),
+                    "hint": "raw capture stays a first-class reference — never thrown away"})
+
 
 
 # ── worker ────────────────────────────────────────────────────────────

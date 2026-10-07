@@ -8,7 +8,11 @@
 
 ## Golden rules
 
-1. **Ask the user before every Meshy call.** The key spends real money.
+1. **Meshy is genesis only.** It creates the mesh (single image-to-3d, or
+   multi-image-to-3d from 3+ REAL photos) and nothing else — no view
+   synthesis (angles must be real, enforced by the 3-angle gate), no repair
+   (local Blender), no retexture, no animation. Freaktown rule, same here.
+2. **Ask the user before every Meshy call.** The key spends real money.
    This includes "harmless" reads except `/balance` (free, no credits) —
    and even that only after the user has said go for the session.
 2. **Never write the key anywhere except `.env`** (0600, gitignored). Not in

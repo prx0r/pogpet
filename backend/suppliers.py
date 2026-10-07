@@ -172,6 +172,18 @@ SUPPLIERS: dict[str, dict] = {
         "notes": "PAPER lane for greeting cards (folded, creased) + postcards: no minimums, 300dpi + 3mm bleed matches our card contracts, human artwork check. Correctly infeasible for filament lines. No key stored.",
         "est": {"kind": "quote", "ccy": "GBP"},
     },
+    "printify": {
+        "label": "Printify (global merch network, API + Shopify/Etsy)",
+        "home": "global", "ships": ["worldwide"],
+        "materials": ["paper"], "colors_max": 99,
+        "build_mm": [500, 500, 500],
+        "order": "api", "api": "shops → products → orders; production by network print providers",
+        "min_qty": 1, "account": "free",
+        "commitment": "none — pay per order",
+        "dispatch_days": [3, 7],
+        "notes": "PAPER/MERCH lane for cards/postcards/posters via provider network; pick provider per destination like Gelato. Correctly infeasible for filament lines. No key stored.",
+        "est": {"kind": "quote", "ccy": "USD"},
+    },
 }
 
 

@@ -2,7 +2,7 @@
 
 > Status: live contract docs (2026-10-06). Code truth: `backend/config.py`
 > (`STUDIO_LINES`, `DESIGN_CONTRACTS`, `PRODIGI_PRODUCTS`), `backend/card_scenes.py`
-> (`FORMATS`, `CARD_DESIGN_CONTRACTS`), `backend/suppliers.py` (13 suppliers),
+> (`FORMATS`, `CARD_DESIGN_CONTRACTS`), `backend/suppliers.py` (14 suppliers),
 > `backend/prodigi.py` (live paper quotes), `backend/server.py` (`/api/design/validate`,
 > `/api/products/studio`, `/api/gift-packs`). Vision parent: `vision/docs-vision.md`
 > (products as AI design contracts), `vision/thesis.md` (one-shot manufacturing).
@@ -168,6 +168,7 @@ with no relationship (`can_single_order`). No keys stored anywhere.
 | Xometry | 3D industrial overflow | US/EU → worldwide | PLA/PETG/Nylon/Resin | quote (instant engine + DFM, no open key) | **quote** |
 | Gelato | **paper** global | global → worldwide (32 countries, 250+ partners) | paper | **api** (Order Flow + ecommerce, X-API-KEY, webhooks) | **quote** |
 | Mixam | **paper** UK/US/EU | UK → worldwide (UK/US/IE/CA/DE/AU shops) | paper | **api** (OpenAPI v3, instant calculator) | **quote** |
+| Printify | **paper/merch** global | global → worldwide | paper | **api** (shops → products → orders) | **quote** |
 | Prodigi (separate module) | **paper/merch live** | global → worldwide | paper + merch SKUs | **api** (key in `.env`, verified) | **LIVE quote** for SKUs in config; everything else EST |
 
 Why these five are the right additions: Slant 3D is the US equivalent of MAKR3D with
@@ -209,7 +210,14 @@ mixam.co.uk + mixam.com API documentation pages.
 - `figg_fullchain_personalise_order` → personalise + reserve + optional Shopify draft
   (`fulfil:true`). No card charge from our API; price shown before every order call.
 
-## 8. Gaps and next steps (honest)
+## 8. Intelligence sits beside it
+
+The same normalization now covers AI models: `backend/ai_models.py` registers
+three aggregators (OpenRouter = brain, fal.ai = media specialist, Alibaba =
+value lane) against twelve machine needs (card art, lipsync, voice clone,
+mesh second opinion…). Full comparison: `docs/ai-models.md`.
+
+## 9. Gaps and next steps (honest)
 
 1. `cost_target_cents` covers 2 of 13 suppliers — fill the rest from first live
    quotes (Slant estimate/draft calls are free; Mixam instant calculator; Gelato
@@ -217,7 +225,7 @@ mixam.co.uk + mixam.com API documentation pages.
 2. Material is a per-line default, not yet auto-derived from geometry — the matcher
    (`vision/docs-asset-filters.md` part 3) should confirm PETG flags from bbox/wall
    analysis rather than trusting the default.
-3. Paper fulfilment is Prodigi-only in code — Gelato and Mixam are registered but
+3. Paper fulfilment is Prodigi-only in code — Gelato, Mixam and Printify are registered but
    unwired (no keys stored, no order path). Next: one paper order path with the same
    invisible-farm rule.
 4. US-lane ranking is ready but unproven end-to-end — run a Slant draft (free) on a

@@ -4,6 +4,7 @@
 *.key
 token
 .token
+.vault_key
 *.pem
 
 # runtime
@@ -18,6 +19,9 @@ __pycache__/
 
 # local pipeline state: sqlite, staged photos, downloaded meshes
 data/
+
+# reference clones (read-only research copies, re-clone anytime)
+backend/resources/repos/
 
 # figg-studio: the nested kit zip is rebuilt by scripts/package.py
 figg-studio/downloads/*.zip

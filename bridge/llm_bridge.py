@@ -183,24 +183,87 @@ class Handler(BaseHTTPRequestHandler):
         auth = self.headers.get("Authorization", "")
         if auth.removeprefix("Bearer ") == TOKEN:
             return True
-        self._json({"success": False, "error": "bad token"}, 401)
+        if q.get("token", [""])[0] or auth:
+            self._json({"success": False,
+                        "error": "wrong bridge token — public reads need no token at all; "
+                                 "your own API key goes in X-API-Key header or ?api_key="}, 401)
+        else:
+            self._json({"success": False,
+                        "error": "bridge token required here — or no token on the public tier "
+                                 "(/mcp reads, catalog, playbook) or your own key in X-API-Key"}, 401)
         return False
+
+    def _has_token(self) -> bool:
+        """Token present (validity checked by _gated). No response sent."""
+        if not TOKEN:
+            return True
+        q = parse_qs(urlparse(self.path).query)
+        if q.get("token", [""])[0]:
+            return True
+        if self.headers.get("Authorization", "").removeprefix("Bearer "):
+            return True
+        return False
+
+    def _user_keyed(self) -> bool:
+        """Caller presents its own API key (header or ?api_key=), not the
+        bridge token. Flask validates it; the bridge just lets it through."""
+        if self.headers.get("X-API-Key", "").strip():
+            return True
+        auth = self.headers.get("Authorization", "")
+        if auth.lower().startswith("bearer ") and auth[7:].strip():
+            return True
+        q = parse_qs(urlparse(self.path).query)
+        if (q.get("api_key", [""])[0] or "").strip():
+            return True
+        return False
+
+    # GETs safe for the whole internet: read-only catalog/design data.
+    # Everything else under /backend still needs the bridge token or the
+    # caller's own API key.
+    PUBLIC_GETS = (
+        "/api/catalog", "/api/agent/playbook", "/api/acts",
+        "/api/videos/feed", "/api/cards/templates", "/api/design/base",
+        "/api/companygraph",
+    )
+
+    _public_hits: dict = {}
+
+    def _public_allowed(self) -> bool:
+        """60 req/min per IP on the tokenless public MCP tier. 429 beyond."""
+        import time
+        ip = (self.headers.get("X-Forwarded-For", "") or "").split(",")[0].strip() \
+            or self.client_address[0]
+        now = time.time()
+        hits = self._public_hits.get(ip) or []
+        hits = [t for t in hits if now - t < 60]
+        if len(hits) >= 60:
+            self._json({"success": False,
+                        "error": "public tier rate limit (60/min) — slow down or use a token"}, 429)
+            return False
+        hits.append(now)
+        self._public_hits[ip] = hits
+        return True
 
     def _mcp_proxy(self, method: str, backend: str = "oddhobb") -> None:
         """POST/GET /mcp -> the local MCP server (:8799), streaming.
         backend="pogtown" routes /pog to the joke MCP (:8801) instead.
+        backend="public" routes tokenless callers to the read-only MCP
+        (:8800, PUBLIC_MCP=1 — spend tools never registered there).
 
         MCP streamable HTTP needs headers BOTH ways (mcp-session-id) and a
         text/event-stream that never sets Content-Length — so this proxies
-        line-by-line instead of buffering. Gated by _gated() first: without
-        a token the local MCP (which carries the service token inside) must
-        never be reachable.
+        line-by-line instead of buffering. The full MCP (which carries the
+        service token inside) stays token-gated; the public tier is a
+        separate process with a safe tool allowlist.
         """
         import urllib.error
         raw = urlparse(self.path)
         if backend == "pogtown":
             port = os.environ.get("POG_MCP_PORT", "8801")
             sub = raw.path[len("/pog"):] or "/mcp"
+        elif backend == "public":
+            port = os.environ.get("MCP_PUBLIC_PORT", "8800")
+            sub = raw.path
         else:
             port = os.environ.get("MCP_PORT", "8799")
             sub = raw.path
@@ -272,7 +335,8 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         body = self.rfile.read(n) if n > 0 and method == "POST" else None
         headers = {}
-        for h in ("Content-Type", "X-API-Token", "X-Owner-Sig", "X-API-Key"):
+        for h in ("Content-Type", "X-API-Token", "X-Owner-Sig", "X-API-Key",
+                  "Authorization"):
             if self.headers.get(h):
                 headers[h] = self.headers[h]
         if body is not None and "Content-Type" not in headers:
@@ -329,10 +393,16 @@ class Handler(BaseHTTPRequestHandler):
             self._mcp_proxy("GET", backend="pogtown")
             return
         if raw.startswith("/mcp"):
-            if not self._gated():
-                self.close_connection = True
-                return
-            self._mcp_proxy("GET")
+            if self._has_token():
+                if not self._gated():
+                    return
+                self._mcp_proxy("GET")
+            else:
+                # No token: public read-only tier (own process, spend tools
+                # never registered there). 60 req/min per IP.
+                if not self._public_allowed():
+                    return
+                self._mcp_proxy("GET", backend="public")
             return
         if raw.startswith("/backend/api/feeds/") or raw.startswith("/backend/api/seo/"):
             # Product feeds + SEO packs for shopping/AI agents: read-only
@@ -349,6 +419,14 @@ class Handler(BaseHTTPRequestHandler):
             self._proxy("GET", path=raw)
             return
         if raw.startswith("/backend"):
+            if self._user_keyed():
+                self._proxy("GET")
+                return
+            sub = raw[len("/backend"):]
+            if sub.split("?")[0] in self.PUBLIC_GETS or any(
+                    sub.split("?")[0].startswith(p + "/") for p in self.PUBLIC_GETS):
+                self._proxy("GET")
+                return
             if not self._gated():
                 return
             self._proxy("GET")
@@ -451,12 +529,19 @@ class Handler(BaseHTTPRequestHandler):
             self._mcp_proxy("POST", backend="pogtown")
             return
         if urlparse(self.path).path.startswith("/mcp"):
-            if not self._gated():
-                self.close_connection = True
-                return
-            self._mcp_proxy("POST")
+            if self._has_token():
+                if not self._gated():
+                    return
+                self._mcp_proxy("POST")
+            else:
+                if not self._public_allowed():
+                    return
+                self._mcp_proxy("POST", backend="public")
             return
         if urlparse(self.path).path.startswith("/backend"):
+            if self._user_keyed():
+                self._proxy("POST")
+                return
             if not self._gated():
                 return
             self._proxy("POST")

@@ -402,11 +402,21 @@ def register(app,owner_denied):
                     known[key] = (r["id"], r["latest"])
                 except CardError:
                     pass
-        # recipient per photo: mesh -> subject profile name
+        # recipient per photo: confirmed photo_subjects → studio_subject →
+        # subject_profile (cardgen §1). A person needs no mesh for cards.
+        # Legacy mesh-keyed profiles remain as fallback for unmigrated rows.
         who = {}
         bdays = {}
         with db.connect() as c:
+            from backend import subjects as _sub
             for p in photos:
+                hit = _sub.profile_for_photo(c, owner, p["id"])
+                prof = (hit.get("profile") or {}).get("profile", {})
+                if hit and (hit.get("subject") or {}).get("name"):
+                    who[p["id"]] = hit["subject"]["name"]
+                    if prof.get("birthday") or (hit.get("profile") or {}).get("birthday"):
+                        bdays[p["id"]] = prof.get("birthday") or hit["profile"]["birthday"]
+                    continue
                 m = c.execute("SELECT id FROM meshes WHERE photo_id=? ORDER BY created_at DESC LIMIT 1",
                               (p["id"],)).fetchone()
                 if m:

@@ -23,12 +23,14 @@ FLOWS
 3. Gift pack: giftPack(budget_cents, recipient) → physical + card + free
    video inside the money, state total and change.
 4. Design: blueprints come from listProducts (?design=1 carries contracts).
-   designBase downloads the 3D base. designValidate checks dims, material,
-   text against locked interfaces. designSave stores → design_id.
-   blenderMake embosses text headlessly (~1-2 min) → STL link.
-   designOrder(design_id, fulfil:true) → Shopify draft + invoice_url.
-   Example: "golf-ball jibbit for Dad" = golf_marker line, validate
-   dims [24,24,3] PLA text DAD, save, make, order.
+    designBase downloads the 3D base FIRST — always, no exceptions. The base
+    carries locked interfaces already modelled; free-modelling voids the
+    warranty and fulfil refuses drafts saved without it. designValidate checks dims, material,
+    text against locked interfaces. designSave stores → design_id (check
+    base_first in the reply). blenderMake embosses text headlessly (~1-2 min) → STL link.
+    designOrder(design_id, fulfil:true) → Shopify draft + invoice_url.
+    Example: "golf-ball jibbit for Dad" = croc_tag line, designBase FIRST for
+    the pin base, validate dims PLA text DAD, save, make, order.
 5. Cards: cardGallery (ready-made from uploads) → cardTemplates for paper
    contracts → reserve builds export first automatically.
 6. Checkout: order/designOrder with fulfil:true, then verify the draft in

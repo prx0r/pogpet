@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OddHobb template manifest",
+  "type": "object",
+  "required": ["id", "version", "taxonomy", "requirements", "slots", "renderers"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+    "version": {"type": "integer", "minimum": 1},
+    "taxonomy": {
+      "type": "object",
+      "properties": {
+        "occasion": {"type": "array", "items": {"type": "string"}},
+        "styles": {"type": "array", "items": {"type": "string"}},
+        "topics": {"type": "array", "items": {"type": "string"}},
+        "tone": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "properties": {
+        "subjects": {"type": "integer", "minimum": 0},
+        "face_photos_min": {"type": "integer", "minimum": 0},
+        "mesh": {"type": "boolean"},
+        "voice": {"type": "boolean"}
+      }
+    },
+    "slots": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {"enum": ["subject", "text", "asset", "choice"]},
+          "required": {"type": "boolean"},
+          "max_chars": {"type": "integer", "minimum": 0},
+          "default": {"type": "string"}
+        }
+      }
+    },
+    "renderers": {
+      "type": "object",
+      "properties": {
+        "preview": {"type": "string"},
+        "hero": {"type": "string"},
+        "print": {"type": "string"},
+        "video": {"type": "string"}
+      }
+    },
+    "files": {"type": "object"}
+  }
+}

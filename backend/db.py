@@ -256,6 +256,12 @@ def _migrate_videos_talent(c: sqlite3.Connection) -> None:
         return
     if cols and "talent" not in cols:
         c.execute("ALTER TABLE videos ADD COLUMN talent TEXT NOT NULL DEFAULT 'comedy'")
+    if cols and "creative_project_id" not in cols:
+        c.execute("ALTER TABLE videos ADD COLUMN creative_project_id TEXT NOT NULL DEFAULT ''")
+    if cols and "creative_revision" not in cols:
+        c.execute("ALTER TABLE videos ADD COLUMN creative_revision INTEGER NOT NULL DEFAULT 0")
+    if cols and "renderer" not in cols:
+        c.execute("ALTER TABLE videos ADD COLUMN renderer TEXT NOT NULL DEFAULT ''")
 
 
 def _migrate_orders_design(c: sqlite3.Connection) -> None:
@@ -287,6 +293,9 @@ def init() -> None:
         _migrate_photos_person(c)
         _migrate_users_email_unique(c)
         _migrate_orders_design(c)
+        from backend import subjects as _subjects
+        _subjects.ensure_tables(c)
+        _subjects.migrate_mesh_profiles(c)
 
 
 def _migrate_users_email_unique(c: sqlite3.Connection) -> None:

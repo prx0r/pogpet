@@ -1,8 +1,12 @@
 # MCP — agents (ChatGPT / Claude / Muse)
 
-> Public endpoint: `https://mcp.oddhobb.com/mcp?token=$(cat .token)`
-> Local: `MCP_HTTP=1 python3 -m backend.mcp_server` on `:8799` (127.0.0.1).
-> Tools: `pi/.pi/extensions/figgsite.ts` + `backend/mcp_server.py`.
+> Public tier (no token): `https://mcp.oddhobb.com/mcp` — 28 safe tools
+> (reads + `figg_create_account`/`figg_login`). Unknown spend tools error.
+> Full tier: same URL `?token=<bridge-token>` (57 tools).
+> Local: `MCP_HTTP=1 python3 -m backend.mcp_server` on `:8799` (127.0.0.1);
+> public: `PUBLIC_MCP=1 MCP_PORT=8800 MCP_HTTP=1 python3 -m backend.mcp_server`.
+> Tools: `pi/.pi/extensions/figgsite.ts` + `backend/mcp_server.py`
+> (`PUBLIC_TOOLS` allowlist; tiers pinned by `tests/test_mcp_tiers.py`).
 > Rules: `AGENTS.md` · money: `docs/meshy.md` · custom: `docs/studio-custom.md`.
 
 ## What an agent can do (full chain)
@@ -25,7 +29,13 @@
 ```
 1. figg_blueprints                — every line + design contract (locked,
                                     envelope, material, cost targets)
-2. figg_design_base               — download the 3D base (master STL or dog GLB)
+2. figg_design_base               — download the 3D base (master STL or dog GLB).
+                                    ALWAYS start here: the base carries the locked
+                                    interfaces already modelled (pin stems, MX sockets,
+                                    channels). Adapters win when modelled — e.g. croc_tag
+                                    serves its standard pin base even though the line is
+                                    face_swap. Free-modelling voids the warranty: v1
+                                    designs that skip the base fail validation.
 3. figg_design_validate           — check dims/material/text vs the contract
 4. figg_design_save               — validated spec stored → design_id
 5. figg_blender_make              — Blender on our farm box embosses the text

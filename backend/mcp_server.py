@@ -45,7 +45,7 @@ def _key() -> str:
     return os.environ.get("FIGG_API_KEY", "")
 
 
-mcp = MCPServer("figgsite", instructions=(
+mcp = MCPServer("oddhobb", instructions=(
     "OddHobb storefront API (oddhobb.com): pets become meshes, meshes become products, "
     "meshes perform. Canonical funnel: ramble → figg_quick_map (confidence-ranked live "
     "lines) → upload photo → mesh → figg_fullchain_personalise_order(fulfil=true) → "
@@ -273,13 +273,15 @@ async def figg_flow(owner: str = "") -> str:
     return _j(await _call("GET", "/api/flow?owner=" + owner))
 
 
-async def figg_start_mesh(photo_id: str, owner: str = "") -> str:
+async def figg_start_mesh(photo_id: str, owner: str = "", single: bool = False) -> str:
     """Start sculpting an uploaded photo (photo_id from figg_upload_photo) -> returns the mesh job.
 
     Pass `owner` when acting for a known handle — without FIGG_OWNER/API key
     matching that owner the backend refuses non-anon credit burns.
+    Sculpts want 3 angles of the same person (auto multi-image build, same 1
+    credit); fewer needs explicit single=true. Provider failures refund.
     """
-    payload = {"photo_id": photo_id}
+    payload = {"photo_id": photo_id, "single": single}
     if owner:
         payload["owner"] = owner
     return _j(await _call("POST", "/api/meshes", payload))
@@ -329,6 +331,122 @@ async def figg_upload_photo(file_name: str, owner: str = "") -> str:
 async def figg_companygraph() -> str:
     """OddHobb company graph — FACTS (products/policies), RESOURCES, CAPABILITIES, and the bobdod helper agent identity. Read-only."""
     return _j(await _call("GET", "/api/companygraph"))
+
+
+async def figg_creative_templates() -> str:
+    """Versioned card/scene templates: taxonomy, requirements, typed slots,
+    renderer bindings. Data, not functions — AI fills fields, never pixels."""
+    return _j(await _call("GET", "/api/creative/templates"))
+
+
+async def figg_creative_brief(subject_id: str = "", name: str = "", owner: str = "",
+                              occasion: str = "general", tone: str = "funny",
+                              budget_cents: int = 0) -> str:
+    """Compile the creative brief from the person graph: occasion + recipient
+    facts + available assets + ask. Goes to the matcher, never a renderer."""
+    return _j(await _call("POST", "/api/creative/brief", {
+        "subject_id": subject_id, "name": name, "owner": owner,
+        "occasion": occasion, "tone": tone, "budget_cents": budget_cents}))
+
+
+async def figg_creative_match(brief: dict | None = None, limit: int = 5) -> str:
+    """Deterministic template ranking: eligibility filter + weighted score +
+    reasons. Pass the brief from figg_creative_brief."""
+    return _j(await _call("POST", "/api/creative/match",
+                         {"brief": brief or {}, "limit": limit}))
+
+
+async def figg_creative_revision(project_id: str = "", template_id: str = "",
+                                 owner: str = "", subject_id: str = "",
+                                 fields: dict | None = None,
+                                 subjects: list | None = None,
+                                 brief: dict | None = None) -> str:
+    """Fill template fields and freeze an immutable revision. Copy QC enforced
+    (overflow/missing); geometry stays in the template. Edits = new revisions."""
+    return _j(await _call("POST", "/api/creative/revisions", {
+        "project_id": project_id, "template_id": template_id, "owner": owner,
+        "subject_id": subject_id, "fields": fields or {},
+        "subjects": subjects or [], "brief": brief or {}}))
+
+
+# ── six high-level agent tools: the whole product behind six names ─────
+# Muse/ChatGPT never name providers; each fans out to figg_* machinery.
+
+async def oddhobb_people(owner: str = "") -> str:
+    """Whose world is this: subjects + profile facts for an owner."""
+    return _j(await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon")))
+
+
+async def oddhobb_ideas(person: str = "", occasion: str = "general", request: str = "",
+                        owner: str = "", subject_id: str = "", context: list | None = None,
+                        tone: str = "funny", budget_cents: int = 0) -> str:
+    """Person + occasion + request (+ your relevant agent_memory context facts)
+    → ranked creative ideas with reasons. Send facts, never whole memories."""
+    return _j(await _call("POST", "/api/oddhobb/ideas", {
+        "person": person, "occasion": occasion, "request": request, "owner": owner,
+        "subject_id": subject_id, "context": context or [], "tone": tone,
+        "budget_cents": budget_cents}))
+
+
+async def oddhobb_create(idea_id: str = "", owner: str = "", subject_id: str = "",
+                         person: str = "", overrides: dict | None = None,
+                         brief: dict | None = None) -> str:
+    """Idea → frozen creative revision. Fifteen ops, one call."""
+    return _j(await _call("POST", "/api/oddhobb/create", {
+        "idea_id": idea_id, "owner": owner, "subject_id": subject_id,
+        "person": person, "overrides": overrides or {}, "brief": brief or {}}))
+
+
+async def oddhobb_render(creative_id: str = "", revision: int = 1,
+                         owner: str = "", outputs: list | None = None) -> str:
+    """Realize a revision: preview now (free); print/video staged per router."""
+    return _j(await _call("POST", "/api/oddhobb/render", {
+        "creative_id": creative_id, "revision": revision, "owner": owner,
+        "outputs": outputs or ["preview"]}))
+
+
+async def oddhobb_status(creative_id: str = "") -> str:
+    """Creative status: latest revision + artifacts with QC state."""
+    return _j(await _call("GET", f"/api/oddhobb/status/{creative_id}"))
+
+
+async def oddhobb_buy(creative_id: str = "", revision: int = 1, owner: str = "",
+                      product: str = "greeting_card", qty: int = 1) -> str:
+    """Reserve a QC-passed revision. No card charge from this endpoint."""
+    return _j(await _call("POST", "/api/oddhobb/buy", {
+        "creative_id": creative_id, "revision": revision, "owner": owner,
+        "product": product, "qty": qty}))
+
+
+async def oddhobb_providers(owner: str = "") -> str:
+    """Which creative providers are on for this owner: {free: true, fal: …}.
+    Secrets are never visible — capabilities only. Policies: free/use-mine/best/specific."""
+    return _j(await _call("GET", "/api/providers?owner=" + (owner or "anon")))
+
+
+async def oddhobb_capsule(subject_id: str = "", owner: str = "") -> str:
+    """Person Capsule: identity/voice/behaviour/spatial/knowledge/provenance
+    for a subject. Input to every template."""
+    return _j(await _call("GET", f"/api/capsule/{subject_id}?owner=" + (owner or "anon")))
+
+
+async def oddhobb_capture_start(subject_id: str = "", owner: str = "") -> str:
+    """Begin a guided person capture; returns the capture script."""
+    return _j(await _call("POST", "/api/capture/start",
+                         {"subject_id": subject_id, "owner": owner}))
+
+
+async def oddhobb_capture_mark(capture_id: str = "", kind: str = "note",
+                               note: str = "") -> str:
+    """Timestamp a capture moment (oddhobb.capture_mark)."""
+    return _j(await _call("POST", "/api/capture/mark",
+                         {"capture_id": capture_id, "kind": kind, "note": note}))
+
+
+async def oddhobb_capture_finish(capture_id: str = "", owner: str = "") -> str:
+    """Close a capture → mannerism manifest lands on the subject profile."""
+    return _j(await _call("POST", "/api/capture/finish",
+                         {"capture_id": capture_id, "owner": owner}))
 
 
 async def figg_playbook() -> str:
@@ -490,35 +608,53 @@ async def figg_design_validate(line: str, dims_mm: list[float] | None = None,
         "colors": colors, "text": text, "volume_cm3": volume_cm3}))
 
 
-async def figg_design_base(line: str) -> str:
+async def figg_design_base(line: str, owner: str = "") -> str:
     """The 3D base version to play with: master STL (reference lines) or the
-    canonical dog GLB (mesh lines). Locked interfaces included as modelled."""
-    return _j(await _call("GET", f"/api/design/base/{line}"))
+    canonical dog GLB (mesh lines). Locked interfaces included as modelled.
+    Returns metadata + base64 (binary cannot travel in JSON): decode it and
+    design INSIDE this geometry. Units mm (STL) / m (GLB), axes [x, y, z].
+    Pass owner (your handle) — the fetch logs base-first for your saves."""
+    return _j(await _call("GET", f"/api/design/base/{line}?format=json&owner=" + (owner or "anon")))
 
 
 async def figg_design_save(line: str, owner: str = "",
                            dims_mm: list[float] | None = None,
                            material: str = "", colors: int = 1,
-                           text: str = "", volume_cm3: float | None = None) -> str:
+                           text: str = "", volume_cm3: float | None = None,
+                           stl_base64: str = "") -> str:
     """Play with the base, save the design: validated spec stored as a draft.
-    Returns design_id for figg_design_order. Invalid designs 400 with gaps."""
+    Returns design_id for figg_design_order. Invalid designs 400 with gaps.
+    BASE-FIRST: fetch figg_design_base for the line before saving — fulfil
+    refuses drafts saved without it. Pass stl_base64 (your finished STL) and
+    the geometry itself is CHECKED (envelope, manifold, stem lock, base still
+    present) — proof, not honour — with measured dims/volume overriding yours."""
     return _j(await _call("POST", "/api/design/save", {
         "owner": owner, "line": line, "dims_mm": dims_mm, "material": material,
-        "colors": colors, "text": text, "volume_cm3": volume_cm3}))
+        "colors": colors, "text": text, "volume_cm3": volume_cm3,
+        "stl_base64": stl_base64}))
 
 
 async def figg_design_order(design_id: str, owner: str = "", qty: int = 1,
                             fulfil: bool = False) -> str:
     """Order a saved design: re-validates, reserves, optional Shopify draft.
-    Show price first. No card charge from this endpoint."""
-    return _j(await _call("POST", "/api/design/order", {
-        "design_id": design_id, "owner": owner, "qty": qty, "fulfil": fulfil}))
+    Show price first. No card charge from this endpoint. fulfil=true REFUSES
+    drafts saved without fetching the line base first (base_first flag).
+    On the public tier fulfil is always dropped to reserve-only."""
+    if os.environ.get("PUBLIC_MCP") == "1" and fulfil:
+        fulfil = False
+    d = await _call("POST", "/api/design/order", {
+        "design_id": design_id, "owner": owner, "qty": qty, "fulfil": fulfil})
+    if os.environ.get("PUBLIC_MCP") == "1" and isinstance(d, dict):
+        d["fulfil_dropped"] = "public tier is reserve-only — fulfil needs the bridge token"
+    return _j(d)
 
 
 async def figg_blender_make(line: str, text: str, owner: str = "") -> str:
     """Use Blender on our farm box: emboss text onto the line's master via
     its adapter, get back a watertight STL URL. For remote agents (ChatGPT)
-    with no local Blender — same contracts, headless, ~1-2 min."""
+    with no local Blender — same contracts, headless, ~1-2 min. This is the
+    manufacture path: never install Blender locally to model our interfaces;
+    fetch the base, design inside it, make here."""
     return _j(await _call("POST", "/api/design/make",
                          {"owner": owner, "line": line, "text": text}))
 
@@ -549,13 +685,16 @@ async def figg_write_riff(line: str) -> str:
 
 async def figg_gift_pack(budget_cents: int, owner: str = "",
                          line: str = "", mesh_id: str = "",
-                         recipient: str = "") -> str:
+                         recipient: str = "", occasion: str = "") -> str:
     """Oddy's game: best gift inside a budget — physical + card + free video.
     Exact line honoured with cheap addons; otherwise best physical leaving
-    room for a card. Show the total before ordering parts."""
+    room for a card, recipient interests steer the pick, unspent remainder
+    gets a suggested_addon. Occasion must be a known one (birthday, wedding,
+    christmas, fathers_day, mothers_day, valentine, anniversary, thank_you,
+    new_job, baby, retirement). Show the total before ordering parts."""
     return _j(await _call("POST", "/api/gift-packs", {
         "budget_cents": budget_cents, "owner": owner, "line": line,
-        "mesh_id": mesh_id, "recipient": recipient}))
+        "mesh_id": mesh_id, "recipient": recipient, "occasion": occasion}))
 
 
 async def figg_studio_orders(owner: str = "") -> str:
@@ -727,14 +866,54 @@ TOOL_AREAS: dict[str, list] = {
     "stage":     [figg_acts, figg_perform, figg_greeting, figg_rooms,
                   figg_video_share, figg_write_premise, figg_write_riff],
     "company":   [figg_companygraph],
+    "creative":  [figg_creative_templates, figg_creative_brief,
+                  figg_creative_match, figg_creative_revision],
+    "oddhobb":   [oddhobb_people, oddhobb_ideas, oddhobb_create,
+                  oddhobb_render, oddhobb_status, oddhobb_buy,
+                  oddhobb_providers, oddhobb_capsule,
+                  oddhobb_capture_start, oddhobb_capture_mark,
+                  oddhobb_capture_finish],
 }
+
+# ── public tier: any agent, no token ─────────────────────────────────────
+# Names here are the ONLY tools registered when PUBLIC_MCP=1. Reads plus
+# self-serve identity (create account → own API key → keyed writes over REST
+# or the gated MCP). Anything that spends (Meshy, video credits, our LLM key,
+# Blender CPU, orders) stays on the token-gated server.
+PUBLIC_TOOLS = frozenset({
+    "figg_tools",
+    "figg_create_account", "figg_login",
+    "figg_catalog", "figg_products", "figg_concepts", "figg_quote",
+    "figg_check_sku", "figg_product_assets", "figg_studio_props",
+    "figg_studio_combos", "figg_product_personalise", "figg_gift_pack",
+    "figg_supplier_quote",
+    "figg_blueprints", "figg_design_validate", "figg_design_base",
+    "figg_design_save", "figg_design_order",
+    "figg_flow", "figg_playbook", "figg_quick_map",
+    "figg_card_library", "figg_card_templates",
+    "figg_mesh_status", "figg_measure",
+    "figg_styles", "figg_install_style",
+    "figg_acts", "figg_rooms",
+    "figg_companygraph",
+    "figg_creative_templates", "figg_creative_brief", "figg_creative_match",
+    "figg_creative_revision",
+    "oddhobb_people", "oddhobb_ideas", "oddhobb_create",
+    "oddhobb_render", "oddhobb_status", "oddhobb_buy",
+    "oddhobb_providers", "oddhobb_capsule",
+})
+
+if os.environ.get("PUBLIC_MCP") == "1":
+    TOOL_AREAS = {a: [fn for fn in fns if fn.__name__ in PUBLIC_TOOLS]
+                  for a, fns in TOOL_AREAS.items()}
+    TOOL_AREAS = {a: fns for a, fns in TOOL_AREAS.items() if fns}
 
 
 async def figg_tools() -> str:
     """The self-describing library: every area and tool this MCP server exposes."""
-    areas = {a: [{"name": fn.__name__,
-                   "doc": (fn.__doc__ or "").strip().split("\n")[0]}
-                  for fn in fns]
+    def short(fn) -> str:
+        doc = (fn.__doc__ or "").strip().replace("\n", " ")
+        return " ".join(doc.split())[:500]
+    areas = {a: [{"name": fn.__name__, "doc": short(fn)} for fn in fns]
              for a, fns in TOOL_AREAS.items()}
     count = sum(len(v) for v in TOOL_AREAS.values()) + 1   # + figg_tools itself
     return _j({"ok": True, "count": count, "areas": areas})

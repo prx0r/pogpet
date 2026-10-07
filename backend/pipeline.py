@@ -36,7 +36,26 @@ def _local_photo(photo: dict) -> Path:
     return dest
 
 
-def start_mesh(photo_id: str) -> dict:
+def _refund_mesh(owner: str) -> None:
+    """Provider-side failure refunds our free-tier sculpt — Meshy refunds
+    server-side on FAILED tasks, so we mirror it. The customer never pays
+    for our provider erroring."""
+    try:
+        with db.connect() as c:
+            db.refund_credit(c, owner, datetime.now(timezone.utc).date().isoformat(), "mesh")
+    except Exception:  # noqa: BLE001 — refund must never fail the failure path
+        pass
+
+
+def _job_payload(c, job_id: str) -> dict:
+    try:
+        row = c.execute("SELECT payload FROM jobs WHERE id=?", (job_id,)).fetchone()
+        return json.loads((dict(row).get("payload") or "{}"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def start_mesh(photo_id: str, *, single: bool = False) -> dict:
     with db.connect() as c:
         photo = db.get_photo(c, photo_id)
         if photo is None:
@@ -55,6 +74,26 @@ def start_mesh(photo_id: str) -> dict:
         # allowance. Cached hits above never reach here and never charge.
         owner = photo["owner"] or "anon"
         day = datetime.now(timezone.utc).date().isoformat()
+        # 3-angle gate: same person, 3+ photos → multi-image build (better
+        # meshes, same 1 credit). Fewer angles needs explicit single:true —
+        # blind single-photo sculpts are where credits go to die.
+        try:
+            person = (photo["person"] or "").strip()
+        except (KeyError, IndexError, TypeError):
+            person = ""
+        if person:
+            group = c.execute("SELECT id FROM photos WHERE owner=? AND person=?",
+                              (owner, person)).fetchall()
+            angles = [dict(r)["id"] for r in group]
+        else:
+            angles = [photo_id]
+        multi = len(angles) >= 3
+        if not multi and not single:
+            raise PipelineError(
+                f"Only {len(angles)} angle(s) of "
+                f"{person or 'this subject'} on file — sculpt needs 3 angles "
+                "or explicit single:true. Upload 2 more views (or label them "
+                "via people), then sculpt once instead of three times.", 400)
         ok, used = db.spend_credit(c, owner, day, "mesh", config.FREE_DAILY["mesh"])
         if not ok:
             raise PipelineError(
@@ -64,10 +103,13 @@ def start_mesh(photo_id: str) -> dict:
             )
 
         mid = db.create_mesh(c, photo_id)
-        db.enqueue(c, "mesh.generate", mid)
+        db.enqueue(c, "mesh.generate", mid,
+                   {"multi": angles[:4] if multi else []})
         mesh = db.get_mesh(c, mid)
         out = db.dump(mesh)
         out["credits_remaining"] = config.FREE_DAILY["mesh"] - used
+        out["angles"] = len(angles) if multi else 1
+        out["multi_image"] = multi
     return {"mesh": out, "reused": False}
 
 
@@ -98,10 +140,22 @@ def run_generate(job_id: str) -> None:
             return
 
         try:
-            task_id = meshy.create_task(src)
+            payload = _job_payload(c, job_id)
+            pids = [p for p in (payload.get("multi") or []) if p != mesh["photo_id"]]
+            if pids:
+                urls = [meshy._data_uri(src)]
+                for pid in pids[:3]:
+                    p = db.get_photo(c, pid)
+                    if p:
+                        urls.append(meshy._data_uri(_local_photo(dict(p))))
+                task_id = meshy.create_multi_image_build(urls[:4]) if len(urls) >= 2 \
+                    else meshy.create_task(src)
+            else:
+                task_id = meshy.create_task(src)
         except meshy.MeshyError as e:
             db.update_mesh(c, mid, status="failed", error=str(e)[:400])
             db.finish_job(c, job_id, "failed", str(e)[:400])
+            _refund_mesh(_owner_of(mid))
             return
 
         db.update_mesh(c, mid, status="running", provider_task=task_id, stub=0)
@@ -117,8 +171,10 @@ def run_poll(job_id: str) -> None:
         if mesh is None or not mesh["provider_task"]:
             db.finish_job(c, job_id, "failed", "no provider task")
             return
+        payload = _job_payload(c, job_id)
+        getter = meshy.get_multi_task if payload.get("multi") else meshy.get_task
         try:
-            raw = meshy.get_task(mesh["provider_task"])
+            raw = getter(mesh["provider_task"])
         except meshy.MeshyError as e:
             db.finish_job(c, job_id, "failed", str(e)[:400])
             db.enqueue(c, "mesh.poll", mid)   # transient: try again
@@ -128,6 +184,7 @@ def run_poll(job_id: str) -> None:
         if status == "failed":
             db.update_mesh(c, mid, status="failed", error=err)
             db.finish_job(c, job_id, "failed", err)
+            _refund_mesh(_owner_of(mid))   # provider failed: credit back
             return
 
         if status != "succeeded":

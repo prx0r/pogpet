@@ -484,8 +484,8 @@ def main() -> int:
 
     # ── 4. auth gates ───────────────────────────────────────────────────────
     code, _, _ = fetch(f"{API}/catalog")
-    rec("API without token -> 401", code == 401, f"HTTP {code}")
-    code, _, _ = fetch(f"{API}/catalog?token=wrong")
+    rec("API catalog public -> 200", code == 200, f"HTTP {code}")
+    code, _, _ = fetch(f"{API}/studio/orders?owner=anon&token=wrong")
     rec("API bad token -> 401", code == 401, f"HTTP {code}")
 
     # ── 5. premesh (edge, free) ─────────────────────────────────────────────
@@ -560,12 +560,18 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001
         rec("MCP contract", False, e)
 
-    # no-token gate on the public MCP host
+    # no-token callers land on the public read-only tier (spenders absent),
+    # wrong-token callers still get 401
     code, _, _ = fetch(MCP.split("?")[0],
                        data=json.dumps(init).encode(),
                        headers={"Content-Type": "application/json",
                                 "Accept": "application/json, text/event-stream"})
-    rec("MCP without token -> 401", code == 401, f"HTTP {code}")
+    rec("MCP without token -> public tier", code == 200, f"HTTP {code}")
+    code, _, _ = fetch(MCP.split("?")[0] + "?token=wrong",
+                       data=json.dumps(init).encode(),
+                       headers={"Content-Type": "application/json",
+                                "Accept": "application/json, text/event-stream"})
+    rec("MCP wrong token -> 401", code == 401, f"HTTP {code}")
 
     # ── 7. infra sanity ─────────────────────────────────────────────────────
     log = Path("/tmp/opencode/api.log")

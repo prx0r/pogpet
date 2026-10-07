@@ -1,19 +1,18 @@
 """Voice brain: swappable conversational provider with barge-in.
 
-Gemini Live is the premium path (native interruption, affective dialog,
-tool calls mid-sentence, ephemeral browser tokens). But models turn over
-fast, so nothing outside this module names one: the active provider and
-model come from config (env-overridable), and every caller goes through
-active_provider().
+Two jobs, never mixed: when the user talks to MUSE, Qwen stays out of it
+(OddHobb only produces artifacts); when the user talks to ODDY directly,
+a realtime provider carries the conversation and calls the same OddHobb
+MCP tools Muse uses. No duplicated personal-shopper logic.
 
-    GEMINI_VOICE_PROVIDER=gemini_live|stub   (default: key ? live : stub)
-    GEMINI_VOICE_MODEL=<any live-capable id> (default below)
-    GOOGLE_API_KEY=<server-side only, never leaves this box>
+    QWEN_MODEL=qwen3.8-omni-flash-realtime (default)
+    GEMINI_VOICE_PROVIDER=gemini_live|stub   (legacy path)
+    GOOGLE_API_KEY / DASHSCOPE_API_KEY = server-side only, never leave box
 
-Without a key the stub serves local echo sessions: the whole shopper flow
-stays testable offline, and swapping to the latest best model later is a
-one-line env change, not a rewrite. Paid Live calls follow the same
-ask-first + ledger discipline as Meshy/Marble (ledger: data/voice_ledger.jsonl).
+Without keys the stub serves local echo sessions. Paid calls follow the
+same ask-first + ledger discipline as Meshy (ledger: data/voice_ledger.jsonl).
+Voice cloning additionally requires explicit enrollment consent
+(voice_consents table) before any voice identity is stored.
 """
 from __future__ import annotations
 
@@ -61,6 +60,11 @@ class BaseVoiceProvider:
 
     def create_session(self, owner: str, tools: list[str] | None = None) -> dict:
         raise NotImplementedError
+
+
+# RealtimeProvider is the devplan name for this exact interface: one surface
+# for live-character voice no matter which model speaks.
+RealtimeProvider = BaseVoiceProvider
 
 
 def register(cls):
@@ -135,6 +139,46 @@ def active_provider() -> BaseVoiceProvider:
     want = (config.GEMINI_VOICE_PROVIDER or "").strip().lower()
     if want in PROVIDERS:
         return PROVIDERS[want]
+    if getattr(config, "DASHSCOPE_API_KEY", ""):
+        return PROVIDERS.get("qwen_omni", PROVIDERS["stub"])
     if config.GOOGLE_API_KEY:
         return PROVIDERS["gemini_live"]
     return PROVIDERS["stub"]
+
+
+@register
+class QwenOmniRealtimeProvider(BaseVoiceProvider):
+    """Live Oddy voice: qwen3.8-omni-flash-realtime. Streaming audio/video
+    in, text/audio out, interruptions, tool calls into the same OddHobb MCP
+    tools Muse uses, cloned voices. Browser connects direct (WebRTC/WS/AOQ);
+    the server mints nothing and proxies no media. Needs DASHSCOPE_API_KEY."""
+    name = "qwen_omni"
+    MODEL = "qwen3.8-omni-flash-realtime"
+
+    def is_configured(self) -> bool:
+        return bool(getattr(config, "DASHSCOPE_API_KEY", ""))
+
+    def list_models(self) -> list[dict]:
+        return [{"id": self.MODEL, "label": "Oddy live voice (Singaporestack)",
+                 "active": True}]
+
+    def create_session(self, owner: str, tools: list[str] | None = None) -> dict:
+        if not self.is_configured():
+            raise VoiceError("DASHSCOPE_API_KEY not set")
+        return {"ok": True, "provider": "qwen_omni", "model": self.MODEL,
+                "session_id": "vs_" + uuid.uuid4().hex[:12],
+                "transports": ["webrtc", "websocket", "aoq"],
+                "instructions": SHOPPER_INSTRUCTIONS,
+                "tools": tools or VOICE_TOOLS,
+                "note": "browser connects direct; server holds no audio"}
+
+
+def ensure_consent_tables(c) -> None:
+    c.execute("""CREATE TABLE IF NOT EXISTS voice_consents (
+      id TEXT PRIMARY KEY, owner TEXT NOT NULL, subject_id TEXT NOT NULL DEFAULT '',
+      audio_sha TEXT NOT NULL DEFAULT '', created_at REAL NOT NULL)""")
+    c.execute("""CREATE TABLE IF NOT EXISTS provider_keys (
+      owner TEXT NOT NULL, provider TEXT NOT NULL, label TEXT NOT NULL DEFAULT '',
+      secret TEXT NOT NULL DEFAULT '', updated_at REAL NOT NULL,
+      PRIMARY KEY (owner, provider))""")
+    c.commit()

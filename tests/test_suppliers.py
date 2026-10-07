@@ -16,8 +16,8 @@ from backend import suppliers as sup  # noqa: E402
 
 
 class TestRegistry(unittest.TestCase):
-    def test_thirteen_suppliers(self):
-        self.assertEqual(len(sup.SUPPLIERS), 13)
+    def test_fourteen_suppliers(self):
+        self.assertEqual(len(sup.SUPPLIERS), 14)
         for sid, s in sup.SUPPLIERS.items():
             for k in ("label", "ships", "materials", "order", "est"):
                 self.assertIn(k, s, sid)
@@ -53,7 +53,7 @@ class TestEstimate(unittest.TestCase):
 
     def test_quote_suppliers(self):
         for sid in ("treatstock", "craftcloud", "dapi3d", "sculpteo", "yorkshire3d",
-                    "slant3d", "shapeways", "xometry", "gelato", "mixam"):
+                    "slant3d", "shapeways", "xometry", "gelato", "mixam", "printify"):
             r = sup.estimate(sid, material="PLA", weight_g=5)
             if sup.SUPPLIERS[sid]["est"]["kind"] == "quote" or "PLA" not in sup.SUPPLIERS[sid]["materials"]:
                 # paper lanes are correctly infeasible for filament; quote lanes never fake numbers
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
 
 FARM_IDS = {"makr3d", "yorkshire3d", "3dfarm", "treatstock", "craftcloud", "dapi3d", "sculpteo",
-            "slant3d", "shapeways", "xometry", "gelato", "mixam", "printie", "fdfarm"}
+            "slant3d", "shapeways", "xometry", "gelato", "mixam", "printify", "printie", "fdfarm"}
 
 
 class TestStorefrontAnonymity(unittest.TestCase):

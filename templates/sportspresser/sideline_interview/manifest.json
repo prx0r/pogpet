@@ -1,0 +1,31 @@
+{
+  "id": "sideline_interview",
+  "version": 1,
+  "taxonomy": {
+    "occasion": ["christmas", "birthday", "fathers_day", "general"],
+    "styles": ["sportspresser", "photorealstudio"],
+    "topics": ["family", "sports", "christmas"],
+    "tone": ["ross", "mock-serious"]
+  },
+  "requirements": {
+    "subjects": 1,
+    "face_photos_min": 1,
+    "mesh": false,
+    "voice": false
+  },
+  "slots": {
+    "star": {"type": "subject", "required": true},
+    "headline": {"type": "text", "max_chars": 42},
+    "caption": {"type": "text", "max_chars": 90}
+  },
+  "renderers": {
+    "preview": "composite2d",
+    "hero": "identity_image_v1",
+    "print": "composite2d",
+    "video": "talking_scene_v1"
+  },
+  "files": {
+    "layout": "layout/card.polotno.json",
+    "prompts": "image.txt"
+  }
+}

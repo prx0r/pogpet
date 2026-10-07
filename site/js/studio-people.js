@@ -132,10 +132,10 @@
       }catch(e){msg.textContent=e.message;save.disabled=false;}});view.box.append(save,msg);
       var current=person();
       if(current&&belongs(p)){
-        view.box.append(node('p','Create a character from this photo using your sculpt allowance. For group photos, crop to one person first in the card editor.'));
+        view.box.append(node('p','Create a character from this photo using your sculpt allowance. 3 angles of the same person sculpt better — upload front, side and back first, or sculpt this single view now.'));
         var sculpt=button('Create character for '+current.name,async function(){sculpt.disabled=true;try{
           if(p.faces.length>1)throw Error('Choose a single-person photo for sculpting. You can still use this group photo in cards.');
-          var result=await host.post('/meshes',{photo_id:p.id});var mesh=result.mesh||{};
+          var result=await host.post('/meshes',{photo_id:p.id,single:true});var mesh=result.mesh||{};
           if(mesh.id)await host.post('/studio/meshes/'+mesh.id+'/subject',{subject_id:current.id});
           msg.textContent='Character queued. Refresh Studio to check its progress.';await refresh();
         }catch(e){msg.textContent=e.message;sculpt.disabled=false;}});view.box.append(sculpt);

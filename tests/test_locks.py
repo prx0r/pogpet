@@ -30,4 +30,5 @@ def test_mcp_tool_registered():
     assert mcp_server.figg_constraints is not None
     names = [fn.__name__ for fns in mcp_server.TOOL_AREAS.values() for fn in fns]
     assert "figg_constraints" in names
-    assert "figg_constraints" in mcp_server.PUBLIC_TOOLS
+    # constraints are internal machinery: keyed full tier, never anonymous
+    assert "figg_constraints" not in mcp_server.PUBLIC_TOOLS

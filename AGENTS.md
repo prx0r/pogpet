@@ -3,6 +3,11 @@
 > **Read `HANDOVER.md` first** — session status. This file = map + rules.
 > Product truth: `README.md` · studio/custom: `docs/studio.md`, `docs/studio-custom.md` ·
 > Etsy packs: `docs/etsy-listings.md` (config `ETSY_LISTINGS`) · money: `docs/meshy.md`.
+> **Card invariant: for a personalised card request, the external agent
+> supplies person + occasion + vibe. OddHobb chooses and completely executes
+> one curated template. The only customer-facing render outputs are FRONT,
+> INSIDE, BACK. No external agent may design layout or invoke lower-level
+> card composition tools.** Detail: `docs/cardspec.md`.
 
 ## What this is
 
@@ -57,7 +62,7 @@ Browser only ever holds `window.__FIGG_TOKEN` (bridge-swapped).
 | ornament | £12.99 | 80 mm · loop 5.0 mm | santa / xmas_hat · coats · patterns |
 | keychain | £14.99 | 60–80 mm · hole 4.0 mm | coats · patterns |
 | **croc_tag** | £8.99 | **28 mm** · printed pin stem | coats · patterns |
-| gift_card | £25 / £50 / £100 | digital | — |
+| gift_card | £5 / £10 / £15 / £20 (amounts_cents) | digital | — |
 | brick | soon | 75 mm | awaiting parent GLBs |
 
 **Policy:** registry IDs only (`config.STUDIO_CUSTOM_POLICY`). No free-form mesh edits.

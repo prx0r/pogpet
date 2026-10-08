@@ -1398,6 +1398,9 @@ AGENT_PERMISSIONS = {
     "video:render":   "Render videos (spends video credits)",
     "products:read":  "Read the catalogue and product mockups",
     "products:order": "Place orders (needs Stripe — not yet)",
+    "cards:read":    "See card designs, gallery, shelf and previews",
+    "cards:create":   "Save cards, render, re-roll and attach art",
+    "cards:order":    "Reserve and checkout cards (£7.99 fixed)",
 }
 DEFAULT_AGENT_PERMISSIONS = ["profile:read", "mesh:read", "products:read"]
 

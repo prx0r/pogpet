@@ -1,3 +1,61 @@
+# HANDOVER — next session: freeze review (Dad's 5 cards await verdict)
+
+> **Status:** recipes/ + compiler + canonical six MCP tools live and
+> verified on oddhobb.com (98 full-tier / 6 public). Dad's profile
+> produced 5 finished export-ready birthday options via recommend +
+> variants. Freeze holds: NO new creative features until the founder
+> calls those five sellable. Start here: `card actual.md`, then
+> `docs/cardspec.md` (canonical six table).
+
+## What shipped (this session batch, all live)
+
+- **Recipes + compiler** (`recipes/`, `backend/recipes/`): schema,
+  registry (immutable versions), matcher, compiler (person × recipe →
+  design + renders). First published recipe:
+  `birthday_four_photos_party_title_v1`. Provenance (`recipe_id`) rides
+  revisions through validate.
+- **Canonical six MCP**: people / make / change / get / add_media / buy
+  (`backend/mcp_server.py`). Public tier is EXACTLY these six
+  (verified live); everything else needs the caller's key. Envelope
+  responses (`status/summary/artifacts/price/next_actions`), `needs_input`
+  states instead of errors, unsigned previews allowed, signer enforced
+  at buy. Auth args optional (Bearer → key → anon).
+- **Card resets folded in**: middle-title geometry restored + golden
+  tests, fullbleed attach lane + YuNet face gate, triptych default,
+  solo-first photos, relationship labels (father→Dad), bundle retry on
+  busy queue, edit auto-renders, gallery is one canonical card,
+  rail previews with viewer photos, stock family seeded (Chris+Cathy
+  demo copies, revocable), shelf/reroll/deal endpoints.
+- **50-customer auth**: per-customer + per-agent keys (`fagg_`, grants
+  cards:read/create/order), bridge routes keyed callers to full tier,
+  owner-from-key enforcement, secrets scrubbed from all logs, master
+  token rotated + operator-only. Hark agent key minted under
+  hark-dad-a7a5cc (grants read/create/order) — revoke at
+  `/api/agents/agt_b980f0dc726744859372/revoke` if leaked.
+- **Site cleanup**: tab rail overflow fixed, /funnier + /art deep links
+  live, gift tiers charge what they show (£5–£20), uploads carry auth +
+  owner, sign-in claims work like signup, stale-cache version bumps.
+
+## Verify green
+
+- 98 pytest (card/auth/recipe/golden suites) + 78/78 `scripts/test_site.py`
+  (live). 3 pre-existing failures elsewhere in the full suite
+  (2 creative-lane, 1 order-dependent family) fail identically on the
+  clean tree — untouched, out of scope.
+- Live tiers re-verified after deploy: 98 full / 6 public, shelf 200,
+  locks law serving, no secrets in fresh logs.
+
+## Next
+
+1. Founder reviews the 5 Dad proofs → sellable verdict (freeze gate).
+2. FAL_KEY (or DashScope) approval → own-generator path goes live
+   through the existing staged adapters; nothing architectural needed.
+3. Per-key rate limits + spend caps (designed, not built).
+4. OAuth front door for connectors (spec researched, parked per
+   founder call — pasted keys remain the fallback).
+
+---
+
 # HANDOVER — next session: Comedy OS live (blocks → judge → duel page)
 
 > **Status:** theory-aware JokeBlock library built and tested (57+ green);

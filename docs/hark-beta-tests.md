@@ -8,17 +8,18 @@ tool results, and every `card_url`/`proof_url` with each run.
 ## T1 — acceptance: birthday card for Chris (the whole game)
 
 1. `oddhobb_make_card({subject_id: "person_9fdc85d6730d43e099dc", occasion: "birthday", vibe: "playful_balloons", tone: "funny", signature: "Ben & co"})`
-2. Expect: `ok:true`, `template_id birthday_4photo`, revision 1, six previews
-   (front, inside_left, inside_right, back, listing, print_pdf), a `proof_url`,
-   and a second content block (contact-sheet image).
-3. Open `proof_url` → latest revision renders with all four faces.
-4. PASS = six views present, contact sheet visible, proof opens the card.
+2. Expect: `ok:true`, `template_id birthday_4photo`, revision 1, surfaces
+    (front, inside spread, back) plus `preview_triptych` and `print_pdf`, a `proof_url`,
+    and a second content block (triptych image).
+3. Open `proof_url` → latest revision renders with all three surfaces.
+4. PASS = front/inside/back present at full size (never miniatures in a
+    collage), triptych visible, proof opens the card.
 
 ## T2 — one-call photo path
 
 1. `figg_card_for_person({person: "Dad", occasion: "birthday", tone: "funny"})`
 2. Expect: subject resolved to Chris, best confirmed photo picked, `via:mcp`,
-   £7.99 FIXED product, `card_url` + `proof_url`, contact sheet attached.
+   £7.99 FIXED product, `card_url` + `proof_url`, triptych attached.
 3. PASS = no manual photo_id, no invented copy beyond profile facts.
 
 ## T3 — copy edit loop
@@ -57,6 +58,15 @@ Each must fail with the cap named (40 / 240 / 40):
 1. Save with `"via":"rest"` in the body over MCP → expect stored `via:mcp` (transport wins, spoof ignored).
 2. Health `tools_full` (94) vs your `tools/list` count on public tier — report both numbers.
 3. PASS = stamp says mcp, counts reported, no 502s without a ray id logged.
+
+## T8 — fullbleed attach lane (art in, product out)
+
+1. `oddhobb_make_card({subject_id: "person_9fdc85d6730d43e099dc", template: "birthday_fullbleed_v1", signature: "Love, Prior x"})` with no art → expect `ok:false`, `art_required`, 409.
+2. `oddhobb_attach_card_art({front_art_url: <864x1216 5:7>, inside_art_url: <1232x864 10:7>})` → expect `ok:true`, new revision, three views fetchable without a key, triptych image attached.
+3. `oddhobb_edit_card_copy({design_id, message: "New message here"})` → new revision, front art bytes unchanged.
+4. Attach with a faceless flat image → 400. Attach at 1:1 aspect → 400.
+5. `oddhobb_checkout_card` on the revision → £7.99, ODD-CARD-5X7, `checkout_url`, Shopify draft, `awaiting_payment`.
+6. PASS = 409 before art, 400s on bad art, edit preserves art, checkout pays.
 
 ## Reporting format (every run)
 

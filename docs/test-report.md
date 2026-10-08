@@ -1,6 +1,6 @@
 # Test report — oddhobb
 
-> Run 2026-10-08 07:34 · `scripts/test_site.py` · **78/78 passed** · 0 credits
+> Run 2026-10-08 17:27 · `scripts/test_site.py` · **78/78 passed** · 0 credits
 
 | # | Result | Test | Detail |
 |---|---|---|---|
@@ -54,7 +54,7 @@
 | 48 | PASS | sitemap.xml lists learn + guides | HTTP 200 28 urls |
 | 49 | PASS | GET /sections | 5 sections |
 | 50 | PASS | GET /catalog | 21 products |
-| 51 | PASS | autosort groups (person/photos/r2_key/mesh_id) | 2 groups |
+| 51 | PASS | autosort groups (person/photos/r2_key/mesh_id) | 4 groups |
 | 52 | PASS | rename round-trip (who's this? -> saved) | Nibble -> NibbleTmp -> Nibble |
 | 53 | PASS | GET /flow (sample owner) | stage=ready active=msh_70edae28a4 |
 | 54 | PASS | flow hint present | Ready — every product below previews against this  |
@@ -74,8 +74,8 @@
 | 68 | PASS | API catalog public -> 200 | HTTP 200 |
 | 69 | PASS | API bad token -> 401 | HTTP 401 |
 | 70 | PASS | POST /premesh (passthrough recipe) | HTTP 200 x-premesh-ok=1 bytes=7643 |
-| 71 | PASS | MCP initialize (token) | session 75b9dd01 |
-| 72 | PASS | MCP tools/list >= 30 | 89 tools |
+| 71 | PASS | MCP initialize (token) | session 88ea6e7b |
+| 72 | PASS | MCP tools/list >= 30 | 104 tools |
 | 73 | PASS | MCP foundation tools present |  |
 | 74 | PASS | MCP tools/call figg_flow | stage=ready mesh=msh_70edae28a4 |
 | 75 | PASS | MCP without token -> public tier | HTTP 200 |

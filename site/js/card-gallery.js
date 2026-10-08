@@ -25,6 +25,32 @@
       var grid = el("div", null, "oc-gallery__grid");
       wrap.append(head, grid);
       panelInner.insertBefore(wrap, panelInner.firstChild);
+      // Active person: templates wear THEIR confirmed photos. Listens for
+      // Studio person switches and reloads scoped. Explicit selection wins
+      // when the editor hands us photo ids (AI-picked or user-picked).
+      var subjectId = "", selectedIds = [];
+      function galleryUrl() {
+        var u = "/cards/gallery";
+        var q = [];
+        if (subjectId) q.push("subject_id=" + encodeURIComponent(subjectId));
+        if (selectedIds.length) q.push("photo_ids=" + encodeURIComponent(selectedIds.join(",")));
+        return q.length ? u + "?" + q.join("&") : u;
+      }
+      function trackContext() {
+        var ctx = window.OddHobbStudioContext || {};
+        var sid = (ctx.subject && ctx.subject.id) || "";
+        if (sid !== subjectId) { subjectId = sid; load(); }
+      }
+      document.addEventListener("oddhobb:subject", function (e) {
+        var ctx = (e && e.detail) || window.OddHobbStudioContext || {};
+        var sid = (ctx.subject && ctx.subject.id) || "";
+        if (sid !== subjectId) { subjectId = sid; load(); }
+      });
+      document.addEventListener("oddhobb:card-photos", function (e) {
+        var ids = ((e && e.detail && e.detail.photo_ids) || []).slice(0, 8);
+        selectedIds = ids;
+        load();
+      });
 
       function tile(item) {
         var card = el("div", null, "oc-card");
@@ -42,9 +68,10 @@
         body.append(el("div", item.template_label + " · " + money(item.price_cents), "oc-card__meta"));
         var bar = el("div", null, "oc-toolbar");
         var prevBtn = el("button", "Preview", "oc-button");
+        var rollBtn = el("button", "Re-roll", "oc-button");
         var motBtn = el("button", "Motion", "oc-button");
         var ordBtn = el("button", "Reserve " + money(item.price_cents), "oc-button");
-        bar.append(prevBtn, motBtn, ordBtn);
+        bar.append(prevBtn, rollBtn, motBtn, ordBtn);
         body.append(bar);
         var msg = el("div", null, "oc-card__msg");
         body.append(msg);
@@ -56,6 +83,13 @@
           status.textContent = "";
           if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         }
+        // Never a broken icon: if the render isn't reachable, fall back to
+        // the photo itself and keep polling for the finished card.
+        img.onerror = function () {
+          if (item.photo && item.photo.url && img.getAttribute("src") !== host.asset(item.photo.url)) {
+            img.src = host.asset(item.photo.url);
+          }
+        };
         function pollPreview() {
           status.textContent = "rendering preview…";
           var tries = 0;
@@ -65,7 +99,7 @@
               return host.post("/cards/" + item.design_id + "/render",
                 { revision: item.revision, kind: "preview" }).catch(function () { return null; });
             }).then(function () {
-              return host.get("/cards/gallery");
+              return host.get(galleryUrl());
             }).then(function (g) {
               var fresh = (g.items || []).filter(function (x) { return x.design_id === item.design_id; })[0];
               if (fresh && fresh.preview_url) { item.preview_url = fresh.preview_url; showPreview(fresh.preview_url); }
@@ -82,6 +116,13 @@
           host.post("/cards/" + item.design_id + "/render",
             { revision: item.revision, kind: "preview" })
             .then(function () { pollPreview(); })
+            .catch(function (e) { msg.textContent = e.message || String(e); });
+        };
+        rollBtn.onclick = function () {
+          msg.textContent = "Re-rolling with different photos…";
+          host.post("/cards/" + item.design_id + "/reroll",
+            { revision: item.revision, subject_id: subjectId })
+            .then(function () { msg.textContent = "Re-rolled — new card below."; load(); })
             .catch(function (e) { msg.textContent = e.message || String(e); });
         };
         motBtn.onclick = function () {
@@ -105,7 +146,7 @@
             })
             .then(function (d) {
               msg.textContent = "Reserved" + (d.order && d.order.id ? " · " + d.order.id : "") + ". No charge — supplier checkout connects next.";
-              try { var b = document.getElementById('cart-n'); if (b) b.textContent = String((parseInt(b.textContent || '0', 10) || 0) + 1); } catch (e) {}
+              try { if (typeof siteShell !== "undefined" && siteShell.refreshBadge) siteShell.refreshBadge(); } catch (e) {}
             })
             .catch(function (e) { msg.textContent = e.message || String(e); });
         };
@@ -123,16 +164,27 @@
         return card;
       }
 
-      host.get("/cards/gallery").then(function (g) {
-        grid.replaceChildren();
-        if (!g.items || !g.items.length) {
-          grid.append(el("p", "Upload a photo and your ready-made cards appear here.", "oc-empty"));
-          return;
-        }
-        g.items.forEach(function (item) { grid.append(tile(item)); });
-      }).catch(function () {
-        grid.append(el("p", "Gallery unavailable — the studio below still works.", "oc-empty"));
-      });
+      function load() {
+        trackContextSilent();
+        host.get(galleryUrl()).then(function (g) {
+          grid.replaceChildren();
+          if (!g.items || !g.items.length) {
+            grid.append(el("p", subjectId ? "No confirmed photos for this person yet — tag them in Studio and cards appear here." : "Upload a photo and your ready-made cards appear here.", "oc-empty"));
+            return;
+          }
+          g.items.forEach(function (item) { grid.append(tile(item)); });
+        }).catch(function () {
+          grid.append(el("p", "Gallery unavailable — the studio below still works.", "oc-empty"));
+        });
+      }
+      function trackContextSilent() {
+        var ctx = window.OddHobbStudioContext || {};
+        var sid = (ctx.subject && ctx.subject.id) || "";
+        if (sid !== subjectId) subjectId = sid;
+      }
+      trackContextSilent();
+      load();
+      document.addEventListener("oddhobb:route", function () { trackContext(); });
     }
   };
 })();

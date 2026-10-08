@@ -11,12 +11,25 @@
     }
     return photos[0]&&photos[0].id||"";
   }
-  function art(t){
-    var a=el("div",null,"oc-vt-art");a.dataset.style=t.style||"generic";
-    a.append(el("span",(t.style||"template").replace(/_/g," "),"oc-vt-style"),
-             el("strong",t.label||t.id,"oc-vt-name"));
-    var ghost=el("div",null,"oc-vt-ghost");
-    ghost.append(el("i"),el("i"),el("i"));a.append(ghost);return a;
+  function art(t, host, photoId) {
+    var a = el("div", null, "oc-vt-art");a.dataset.style = t.style || "generic";
+    if (photoId) {
+      // The Moonpig shelf: the template already wearing your photo.
+      var im = el("img");
+      im.loading = "lazy";
+      im.alt = t.label || t.id;
+      im.src = host.asset("/creative/catalog/preview?template_id=" +
+        encodeURIComponent(t.id) + "&photo_id=" + encodeURIComponent(photoId));
+      im.onerror = function () { im.remove(); };
+      a.append(im);
+    }
+    a.append(el("span", (t.style || "template").replace(/_/g, " "), "oc-vt-style"),
+             el("strong", t.label || t.id, "oc-vt-name"));
+    if (!photoId) {
+      var ghost = el("div", null, "oc-vt-ghost");
+      ghost.append(el("i"), el("i"), el("i"));a.append(ghost);
+    }
+    return a;
   }
   async function instantiate(t,host,msg){
     var ctx=window.OddHobbStudioContext||{},subject=ctx.subject||{},sid=subject.id||"";
@@ -60,7 +73,18 @@
         el("p","Viral joke formats, remixed around your people. Same template can become a printed card now and a talking clip later."));
       var filters=el("div",null,"oc-viral-filters"),rails=el("div",null,"oc-viral-rails");
       root.append(intro,filters,rails);panel.insertBefore(root,panel.firstChild);
-      var cat=null,occasion="all";
+      var cat=null,occasion="all",photoId="";
+      function currentPhoto(){
+        var ctx=window.OddHobbStudioContext||{},subject=ctx.subject||{};
+        var photos=ctx.photos||[];
+        for(var i=0;i<photos.length;i++){
+          var p=photos[i],links=p.subjects||[];
+          if(subject.id&&links.some(function(l){return l.subject_id===subject.id&&l.confirmed;}))return p.id;
+        }
+        return photos[0]&&photos[0].id||"";
+      }
+      function refreshPhoto(){var next=currentPhoto();if(next!==photoId){photoId=next;paint();}}
+      document.addEventListener("oddhobb:subject",function(){refreshPhoto();});
       var filterDefs=[["For you","all"],["Christmas","christmas"],["Birthday","birthday"],["Father's Day","fathers_day"],["Mother's Day","mothers_day"],["Retirement","retirement"]];
       function paintFilters(){
         filters.replaceChildren();
@@ -71,7 +95,7 @@
       }
       function tile(t){
         var card=el("article",null,"oc-vt");
-        card.append(art(t));
+        card.append(art(t, host, photoId));
         var copy=el("div",null,"oc-vt-copy");
         copy.append(el("p",t.premise||"","oc-vt-premise"),
                     el("p","“"+(t.example_caption||"")+"”","oc-vt-example"));
@@ -97,6 +121,7 @@
         if(!rails.children.length)rails.append(el("p","Nothing in this filter yet.","oc-viral-empty"));
       }
       paintFilters();
+      refreshPhoto();
       host.get("/creative/catalog").then(function(d){cat=d;paint();})
         .catch(function(e){rails.append(el("p","Template library unavailable: "+e.message,"oc-viral-empty"));});
     }

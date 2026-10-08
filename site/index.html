@@ -802,22 +802,22 @@
     @media (prefers-reduced-motion: reduce){.pogboot__stage *{transition:none;animation:none}}
   </style>
   <link rel="stylesheet" href="/css/cards-studio.css">
-  <link rel="stylesheet" href="/css/viral-card-library.css?v=viral-1">
+  <link rel="stylesheet" href="/css/viral-card-library.css?v=viral-2">
   <link rel="stylesheet" href="/css/moments.css">
-  <script src="/js/api-client.js?v=studio-2"></script>
-  <script src="/js/viral-card-library.js?v=viral-1"></script>
-  <script src="/js/cards-studio.js?v=studio-2"></script>
-  <script src="/js/card-gallery.js?v=studio-2"></script>
+  <script src="/js/api-client.js?v=studio-3"></script>
+  <script src="/js/viral-card-library.js?v=viral-2"></script>
+  <script src="/js/cards-studio.js?v=studio-3"></script>
+  <script src="/js/card-gallery.js?v=studio-3"></script>
 
   <script src="/js/oddy.js"></script>
   <link rel="stylesheet" href="/vendor/swiper/swiper-bundle.min.css">
-  <link rel="stylesheet" href="/css/site-shell.css?v=studio-2">
+  <link rel="stylesheet" href="/css/site-shell.css?v=studio-3">
   <script src="/vendor/swiper/swiper-bundle.min.js"></script>
-  <script src="/js/site-router.js?v=studio-2"></script>
+  <script src="/js/site-router.js?v=studio-3"></script>
   <script src="/js/duel.js?v=1"></script>
   <script src="/js/art.js?v=1"></script>
-  <script src="/js/studio-people.js?v=studio-2"></script>
-  <script src="/js/site-shell.js?v=studio-2"></script>
+  <script src="/js/studio-people.js?v=studio-3"></script>
+  <script src="/js/site-shell.js?v=studio-3"></script>
 </head>
 <body class="studio-chrome">
   <!-- boot screen: mark draws, thickens to coin, spins, tours products, lifts -->
@@ -1224,8 +1224,6 @@
       <div class="panel__status" id="as-status" role="status" aria-live="polite"></div>
       <div class="panel__msg" id="as-msg" role="status" aria-live="polite"></div>
       <div id="studio-photo-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px">
-        <button class="btn ghost" id="as-ai" type="button" style="width:auto;margin:0">Name everyone</button>
-        <button class="btn ghost" id="as-refresh" type="button" style="width:auto;margin:0">Refresh</button>
       </div>
       <div class="photo-grid" id="as-grid"></div>
     </div>
@@ -1476,7 +1474,7 @@
           <button class="qk-opt" data-act="order" type="button"><b>Order this</b><span>One-click Shopify on the top match</span></button>
           <button class="qk-opt" data-act="upload" type="button"><b>Upload a photo</b><span>Personal mesh → every product inherits</span></button>
           <button class="qk-opt" data-act="products" type="button"><b>Browse all products</b><span>Full Etsy-style shelf</span></button>
-          <button class="qk-opt" data-act="gift" type="button"><b>Gift card</b><span>£10 / £25 / £50 digital</span></button>
+          <button class="qk-opt" data-act="gift" type="button"><b>Gift card</b><span>£5 / £10 / £15 / £20 digital</span></button>
           <button class="qk-opt" data-act="chat" type="button"><b>Talk to bobdod</b><span>Agent guides the rest</span></button>
           <button class="qk-opt" data-act="again" type="button"><b>Ramble again</b><span>Open the mic again</span></button>
         </div>
@@ -1490,7 +1488,7 @@
           </div>
         </div>
         <div class="qk-mesh-chip-row">
-          <div class="pr-banner__mesh" id="qk-mesh-chip">mesh —</div>
+          <div class="pr-banner__mesh" id="qk-mesh-chip-results">mesh —</div>
           <button class="btn ghost" id="qk-shuffle" type="button" style="width:auto;margin:0;padding:8px 12px">Another prompt idea</button>
         </div>
         <div class="quick__prompt" id="qk-prompt" hidden>What’s their funniest habit?</div>
@@ -2291,7 +2289,7 @@
       if(!state.apiKey){try{t+='&claim_owner='+encodeURIComponent(state.owner)+'&owner_sig='+encodeURIComponent(localStorage.getItem('pogpet.ownersig')||'');}catch(e){}}
       // probe first so an unconfigured backend explains itself instead of
       // dumping JSON at the user
-      fetch("/api/auth/google/start" + t, { redirect: "manual" })
+      fetch("/backend/api/auth/google/start" + t, { redirect: "manual" })
         .then(function (r) {
           if (r.status === 501 || (r.status >= 400 && r.type !== "opaqueredirect")) {
             return r.json().then(function (d) {
@@ -2300,9 +2298,9 @@
               if (w) { w.hidden = false; w.textContent = "Sign-in is temporarily unavailable. Your current work is still here."; }
             });
           }
-          location.href = "/api/auth/google/start" + t;
+          location.href = "/backend/api/auth/google/start" + t;
         })
-        .catch(function () { location.href = "/api/auth/google/start" + t; });
+        .catch(function () { location.href = "/backend/api/auth/google/start" + t; });
     });
 
     // ── tab routing ─────────────────────────────────────────
@@ -2377,9 +2375,24 @@
       }
       var target=id==='cards'?'/cards':id==='my'?'/studio':'/products'+(id==='all'?'':'?section='+encodeURIComponent(id));
       if(!fromHash) window.OddHobbRouter.navigate(target);
+      if (typeof applySection === "function") applySection();
     }
 
     function applySection() {
+      // Visible shelves first: the products grid and prints carry data-sec
+      // tags (SECTION_OF from /sections, fallback all/gifts). The legacy
+      // shop-grid filter below stays for the hidden panel.
+      var secMaps = [["pr-grid", "all"], ["pr-prints", "gifts"]];
+      for (var si = 0; si < secMaps.length; si++) {
+        var vg = $(secMaps[si][0]);
+        if (!vg) continue;
+        var vtiles = vg.querySelectorAll(".etsy__tile");
+        for (var vi = 0; vi < vtiles.length; vi++) {
+          var tsec = vtiles[vi].dataset.sec || secMaps[si][1];
+          vtiles[vi].style.display =
+            (state.section === "all" || tsec === state.section) ? "" : "none";
+        }
+      }
       if (!shopLoaded) return;
       var grid = $("shop-grid"); if (!grid) return;
       var q = (state.q || "").toLowerCase();
@@ -2539,11 +2552,11 @@
           hay: hay.toLowerCase(), live: it.status === "live"
         });
       });
-      (typeof CARD_CATALOG !== "undefined" ? CARD_CATALOG : []).forEach(function (it) {
+      (CARD_ROWS || []).forEach(function (it) {
         rows.push({
           kind: "card", id: it.id, label: it.label,
-          blurb: it.blurb || "", price_cents: it.price_cents || 0,
-          status: "live", img: it.img, hay: (it.label + " " + it.blurb + " " + (it.section||"") + " " + it.id).toLowerCase(),
+          blurb: it.blurb || "", price_cents: it.price_cents || 799,
+          status: "live", img: it.img, hay: (it.label + " card greeting " + it.id).toLowerCase(),
           live: true
         });
       });
@@ -2643,6 +2656,22 @@
       return tile;
     }
 
+    var CARD_ROWS = null, cardRowsLoading = false;
+    function ensureCardRows(q) {
+      if (CARD_ROWS || cardRowsLoading) return;
+      cardRowsLoading = true;
+      get(API + "/cards/templates").then(function (d) {
+        CARD_ROWS = (d.templates || []).map(function (t) {
+          return { id: t.id, label: t.label || t.id, blurb: "Greeting card template",
+                   price_cents: 799, img: "/img/prod/prod-hero.png" };
+        });
+      }).catch(function () { CARD_ROWS = []; }).then(function () {
+        cardRowsLoading = false;
+        var qq = $("qsearch");
+        if (qq && (qq.value || "").trim() === q && q) runSearchDrop(q);
+      });
+    }
+
     function runSearchDrop(q) {
       var drop = $("search-drop");
       var grid = $("search-grid");
@@ -2656,6 +2685,7 @@
         if (empty) empty.hidden = true;
         return;
       }
+      ensureCardRows(q);
       var hits = rankSearch(q);
       drop.classList.add("open");
       if (hd) hd.textContent = hits.length + " live match" + (hits.length === 1 ? "" : "es") + " · “" + q + "”";
@@ -2688,7 +2718,7 @@
       if(peopleStudio) return peopleStudio.refresh();
       get(API + "/me?owner=" + encodeURIComponent(state.owner))
         .then(function (d) {
-          if (myGen !== vf.gen) return;
+          if (typeof myGen !== "undefined" && myGen !== vf.gen) return;
           if (!d.ok) return;
           state.meshId = d.active_mesh_id || null;
           try { if (state.meshId) localStorage.setItem("pogpet.mesh", state.meshId); } catch (e) {}
@@ -2941,7 +2971,7 @@
       var fd = new FormData();
       fd.append("photo", file, file.name);
       fd.append("owner", state.owner);
-      fetch(API + "/photos", { method: "POST", body: fd })
+      fetch(withTok(API + "/photos"), { method: "POST", headers: authHeaders(), body: fd })
         .then(function (r) { return window.OddHobbAPI.readJSON(r); })
         .then(function (d) {
           if (!d.ok) { msg("up-msg", d.error || "Upload failed.", "err"); stat("up-status", ""); return; }
@@ -2959,7 +2989,7 @@
       sculptBtn.disabled = true;
       stat("up-status", "Sculpting…");
       msg("up-msg", "", "");
-      post(API + "/meshes", { photo_id: state.photoId })
+      post(API + "/meshes", { photo_id: state.photoId, owner: state.owner })
         .then(function (d) {
           if (!d.ok) { msg("up-msg", d.error || "Could not start.", "err"); sculptBtn.disabled = false; stat("up-status", ""); return; }
           if (d.reused) { msg("up-msg", "Cached — already sculpted.", "ok"); }
@@ -3285,7 +3315,7 @@
     // products live on the Products tab — studio no longer hosts line/coat/hat UI
 
     // ── products tab: Etsy storefront, mesh-inherited ──────
-    var pr = { items: [], sel: null, coat: "none", hat: "none", pattern: "solid", ready: false, qty: 1, activeMesh: "" };
+    var pr = { items: [], sel: null, coat: "none", hat: "none", pattern: "solid", ready: false, qty: 1, activeMesh: "", size: null, amount_cents: null };
 
     function paintMeshChip() {
       var chip = $("pr-mesh-chip");
@@ -3401,7 +3431,8 @@
           '</div>';
         tile.addEventListener("click", function () {
           if (itemById(g.line)) selectProduct(g.line);
-          if (g.method === "name" && g.text) msg("pr-msg", g.reason + " — text: " + g.text, "");
+          pr.giftText = (g.method === "name" && g.text) ? String(g.text).slice(0, 200) : null;
+          if (g.method === "name" && g.text) msg("pr-msg", g.reason + " — text: " + g.text + " (goes on the order).", "");
         });
         grid.appendChild(tile);
       });
@@ -3459,7 +3490,7 @@
               scale_mm: (itemById(pend.line) || {}).scale_mm,
               confidence: null
             });
-            msg("quick-pick-msg", "Resumed from your last Quick pick — upload photo or checkout.", "ok");
+            msg("pr-msg", "Resumed from your last Quick pick — upload photo or checkout.", "ok");
             setFunnelStep(pend.from === "quick" ? 2 : 4);
           }
         })
@@ -3493,6 +3524,7 @@
         var live = it.status === "live";
         var tile = document.createElement("button");
         tile.type = "button";
+        tile.dataset.sec = (typeof SECTION_OF !== "undefined" && SECTION_OF[it.id]) || "all";
         tile.className = "etsy__tile" + (it.id === pr.sel ? " on" : "");
         tile.disabled = !live;
         var img = (it.stills && (it.stills.hero || it.stills.front)) || "/img/prod/prod-hero.png";
@@ -3547,6 +3579,7 @@
         grid.appendChild(tile);
       });
       paintMeshChip();
+      if (typeof applySection === "function") applySection();
     }
 
     function selectProduct(id, opts) {
@@ -3555,6 +3588,7 @@
       if (!it) return;
       pr.sel = id;
       pr.qty = 1;
+      pr.size = null; pr.amount_cents = null; pr.giftText = null;
       var qn = $("pr-qty-n"); if (qn) qn.textContent = "1";
       try {
         var lo = JSON.parse(localStorage.getItem("pogpet.loadout") || "{}");
@@ -3600,16 +3634,24 @@
         (it.sizes || []).forEach(function (s) {
           var b = document.createElement("button");
           b.type = "button";
-          b.className = "chip";
-          b.textContent = s.label + (s.mm ? " · " + s.mm : "");
-          if (s.price_cents != null && it.id === "gift_card") {
-            b.onclick = function () {
-              pr.sel = it.id;
-              var p = $("pr-d-price");
-              if (p) p.textContent = money(s.price_cents);
+          b.className = "chip" + (pr.size === s.label ? " on" : "");
+          b.textContent = s.label + (s.mm ? " · " + s.mm : "") +
+            (s.price_cents != null ? " · " + money(s.price_cents) : "");
+          b.setAttribute("aria-pressed", String(pr.size === s.label));
+          b.onclick = function () {
+            pr.sel = it.id;
+            pr.size = s.label;
+            paintChipsSel(sb, s.label);
+            var p = $("pr-d-price");
+            if (it.id === "gift_card" && s.price_cents != null) {
+              pr.amount_cents = s.price_cents;
+              if (p) p.textContent = money(s.price_cents * (pr.qty || 1));
+              msg("pr-msg", it.label + " · " + s.label + " — charged at checkout.", "");
+            } else {
+              if (p && it.status === "live") p.textContent = money((it.price_cents || 0) * (pr.qty || 1));
               msg("pr-msg", it.label + " · " + s.label, "");
-            };
-          }
+            }
+          };
           sb.appendChild(b);
         });
       }
@@ -3734,20 +3776,43 @@
         });
     }
 
+    function unitPrice(it) {
+      if (it.id === "gift_card") {
+        if (pr.amount_cents) return pr.amount_cents;
+        var tiers = (it.sizes || []).filter(function (s) { return s.price_cents != null; });
+        if (tiers.length) return tiers[0].price_cents;
+      }
+      return it.price_cents || 0;
+    }
+
+    function paintChipsSel(box, label) {
+      if (!box) return;
+      var chips = box.querySelectorAll(".chip");
+      for (var i = 0; i < chips.length; i++) {
+        var on = chips[i].textContent.indexOf(label) === 0 || chips[i].textContent === label ||
+          (chips[i].textContent.split(" · ")[0] === label);
+        chips[i].classList.toggle("on", on);
+        chips[i].setAttribute("aria-pressed", String(on));
+      }
+    }
+
     function orderPayload(fulfil) {
       var it = itemById(pr.sel);
       if (!it || it.status !== "live") return null;
-      return {
+      var body = {
         owner: state.owner,
         line: it.id,
         coat: pr.coat,
         hat: pr.hat,
         pattern: pr.pattern || "solid",
+        note: pr.giftText || "",
         mesh_id: pr.activeMesh || state.meshId || "",
         qty: pr.qty || 1,
         fulfil: !!fulfil,
         email: (state.owner && state.owner.indexOf("@") > 0) ? state.owner : ""
       };
+      if (it.id === "gift_card") body.amount_cents = unitPrice(it);
+      return body;
     }
 
     function runOrder(fulfil) {
@@ -3856,14 +3921,14 @@
       var qn = $("pr-qty-n"); if (qn) qn.textContent = String(pr.qty);
       var it = itemById(pr.sel);
       var p = $("pr-d-price");
-      if (it && it.status === "live" && p) p.textContent = money((it.price_cents || 0) * pr.qty);
+      if (it && it.status === "live" && p) p.textContent = money(unitPrice(it) * pr.qty);
     });
     if (qDec) qDec.addEventListener("click", function () {
       pr.qty = Math.max(1, (pr.qty || 1) - 1);
       var qn = $("pr-qty-n"); if (qn) qn.textContent = String(pr.qty);
       var it = itemById(pr.sel);
       var p = $("pr-d-price");
-      if (it && it.status === "live" && p) p.textContent = money((it.price_cents || 0) * pr.qty);
+      if (it && it.status === "live" && p) p.textContent = money(unitPrice(it) * pr.qty);
     });
 
     function setFunnelStep(n) {
@@ -3927,14 +3992,14 @@
     var qpUpload = $("qp-upload");
     if (qpUpload) qpUpload.addEventListener("click", function () {
       setFunnelStep(3);
-      showTab("upload");
-      msg("up-msg", "Upload a photo of the star — after sculpt we'll bring you back to this product.", "ok");
+      showTab("studio");
+      msg("as-msg", "Upload a photo of the star — after sculpt we'll bring you back to this product.", "ok");
     });
 
     var qpOrder = $("qp-order");
     if (qpOrder) qpOrder.addEventListener("click", function () {
       var m = prQuickPick.item;
-      if (!m) { msg("quick-pick-msg", "Find a product first.", "err"); return; }
+      if (!m) { msg("pr-msg", "Find a product first.", "err"); return; }
       if (itemById(m.id)) {
         selectProduct(m.id, { silent: true });
         if (m.recommended_coat) pr.coat = m.recommended_coat;
@@ -3945,7 +4010,7 @@
       }
       setFunnelStep(4);
       runOrder(true);
-      msg("quick-pick-msg", "Ordering " + (m.label || m.id) + " on mesh " +
+      msg("pr-msg", "Ordering " + (m.label || m.id) + " on mesh " +
           (pr.activeMesh || state.meshId || "canonical") + "…", "");
     });
 
@@ -4216,6 +4281,7 @@
       PRINTS_CATALOG.forEach(function (it) {
         var tile = document.createElement("button");
         tile.type = "button";
+        tile.dataset.sec = (typeof SECTION_OF !== "undefined" && SECTION_OF[it.id]) || "gifts";
         tile.className = "etsy__tile" + (it.id === prPrintSel ? " on" : "");
         tile.innerHTML =
           '<div class="etsy__badges"><span class="etsy__badge">Print &amp; gift</span></div>' +
@@ -4233,6 +4299,7 @@
         });
         grid.appendChild(tile);
       });
+      if (typeof applySection === "function") applySection();
     }
 
     // ── quick tab: adaptive ramble (mythicbee GiftIntelligence pattern) ──
@@ -4241,7 +4308,7 @@
     // Here: confidence is per PRODUCT LINE / use-case; prompts fire only to
     // reduce uncertainty — not random spam. Ramble window = 60s.
     var qk = {
-      ready: false, phase: "idle",
+      ready: false, phase: "idle", asked: [],
       boosts: [], matches: [], top: null, rec: null, recLive: false,
       text: "", interim: "", secondsLeft: 60, duration: 60,
       tick: null, promptTimer: null, levelTimer: null, mapTimer: null,
@@ -4504,7 +4571,7 @@
         if (!d || !d.ok) return;
         if (d.active_mesh_id) {
           state.meshId = d.active_mesh_id;
-          var chips = document.querySelectorAll("#qk-mesh-chip");
+          var chips = document.querySelectorAll("#qk-mesh-chip,#qk-mesh-chip-results");
           for (var ci = 0; ci < chips.length; ci++) {
             chips[ci].textContent = "mesh " + String(d.active_mesh_id).replace("msh_", "").slice(0, 8);
           }
@@ -4730,7 +4797,7 @@
         .then(function (d) {
           if (d && d.ok && d.active_mesh_id) {
             state.meshId = d.active_mesh_id;
-            var chips = document.querySelectorAll("#qk-mesh-chip");
+            var chips = document.querySelectorAll("#qk-mesh-chip,#qk-mesh-chip-results");
             for (var i = 0; i < chips.length; i++) {
               chips[i].textContent = "mesh " + String(d.active_mesh_id).replace("msh_", "").slice(0, 8);
             }
@@ -4777,7 +4844,7 @@
           qty: 1, from: "quick-immersive"
         });
         showTab("products");
-        msg("quick-pick-msg", "From Quick: " + top.label + " — review price, then One-click Shopify.", "ok");
+        msg("qk-opt-msg", "From Quick: " + top.label + " — review price, then One-click Shopify.", "ok");
       } else if (act === "upload") {
         if (top) {
           setPendingOrder({
@@ -4786,8 +4853,8 @@
             qty: 1, from: "quick-immersive"
           });
         }
-        showTab("upload");
-        msg("up-msg", "Upload the star — after sculpt we’ll bring you back to your product.", "ok");
+        showTab("studio");
+        msg("as-msg", "Upload the star in Studio — after sculpt we'll bring you back to your product.", "ok");
       } else if (act === "products") {
         showTab("products");
       } else if (act === "gift") {
@@ -4862,7 +4929,7 @@
       host.innerHTML = "";
       if (vf.obs) { try { vf.obs.disconnect(); } catch (e) {} vf.obs = null; }
       if (!vf.items.length) {
-        host.innerHTML = '<div class="feed__empty">No clips yet — make one in Perform.</div>';
+        host.innerHTML = '<div class="feed__empty">No clips yet — <a href="/perform" data-route>make one in Perform</a>.</div>';
         return;
       }
       vf.items.forEach(function (item, i) {
@@ -5034,7 +5101,8 @@
         renderChips("st-scenes", d.scenes, "key", "label", state.scene, function (k) { state.scene = k; });
       }).catch(function () { stat("st-status", "voice list unavailable"); });
       get(API + "/credits?owner=" + encodeURIComponent(state.owner)).then(function (d) {
-        if (d.ok) $("st-credits").textContent = "Free videos left today: " +
+        var _sc = $("st-credits");
+        if (d.ok && _sc) _sc.textContent = "Free videos left today: " +
           d.credits.video.remaining + "/" + d.credits.video.limit +
           " · watermarked: " + (d.watermark_free ? "yes" : "no");
       }).catch(function () {});
@@ -5167,7 +5235,7 @@
               '<div class="card__tag">prodigi · ' + it.shape + '</div>' +
               '<div class="card__name">' + it.label + '</div>' +
               '<div class="card__note">' + it.sku_note + '</div>' +
-              '<div class="card__price">$' + (it.price_cents / 100).toFixed(2) +
+              '<div class="card__price">£' + (it.price_cents / 100).toFixed(2) +
                 ' <small style="font-size:9px;color:var(--muted)">' + it.price_grade + '</small></div>' +
               '<button class="card__btn" type="button">Add to cart</button>';
             grid.appendChild(el);
@@ -5208,11 +5276,11 @@
 
     // ── perform: talent show ─────────────────────────────────
     var perfLoaded = false;
-    function loadPerf() {
-      if (perfLoaded) return;
+    function loadPerf(force) {
+      if (perfLoaded && !force) return;
       perfLoaded = true;
       get(API + "/acts").then(function (d) {
-        if (!d.ok) { stat("pf-status", d.error || "roster unavailable"); return; }
+        if (!d.ok) { perfLoaded = false; stat("pf-status", d.error || "roster unavailable"); return; }
         var box = $("pf-talents");
         if (box) {
           box.innerHTML = "";
@@ -5324,7 +5392,18 @@
     if (pfGo) pfGo.addEventListener("click", function () {
       var topicEl = $("pf-topic"), topic = topicEl ? (topicEl.value || "").trim() : "";
       if (!topic) { msg("pf-msg", "Give me the bit — one funny detail.", "err"); return; }
-      if (!state.meshId) { msg("pf-msg", "Sculpt a photo in the spotlight first.", "err"); return; }
+      if (!state.meshId) {
+        msg("pf-msg", "", "err");
+        var _pm = $("pf-msg");
+        if (_pm) {
+          _pm.append(document.createTextNode("Sculpt a photo in the spotlight first — "));
+          var _pa = document.createElement("a");
+          _pa.href = "/studio"; _pa.setAttribute("data-route", "");
+          _pa.textContent = "open Studio";
+          _pm.append(_pa, document.createTextNode(" and pick your star."));
+        }
+        return;
+      }
       pfGo.disabled = true;
       var out = $("pf-out"); if (out) out.hidden = true;
       stat("pf-status", "writing, voicing, rendering — about 45 seconds…");
@@ -5415,7 +5494,7 @@
         });
       }
     });
-    function studioAsset(path){var u=path.indexOf('/api/')===0?'/backend'+path:API+path;u+=(u.indexOf('?')>=0?'&':'?')+'owner='+encodeURIComponent(state.owner);try{u+='&owner_sig='+encodeURIComponent(localStorage.getItem('pogpet.ownersig')||'');}catch(e){}if(state.apiKey)u+='&api_key='+encodeURIComponent(state.apiKey);return withTok(u);}
+    function studioAsset(path){if(!path)return "";var u=path.indexOf('/api/')===0?'/backend'+path:API+path;u+=(u.indexOf('?')>=0?'&':'?')+'owner='+encodeURIComponent(state.owner);try{u+='&owner_sig='+encodeURIComponent(localStorage.getItem('pogpet.ownersig')||'');}catch(e){}if(state.apiKey)u+='&api_key='+encodeURIComponent(state.apiKey);return withTok(u);}
     var studioReadiness=null;
     function studioReady(){
       if(!studioReadiness)studioReadiness=get(API+'/studio/status').then(function(d){
@@ -5433,7 +5512,7 @@
       clearMesh:function(){state.meshId='';pr.activeMesh='';try{localStorage.removeItem('pogpet.mesh');}catch(e){}},
       renderMeshes:function(meshes,preferred){
         var meta=meshes.filter(function(m){return m.status==='succeeded';});
-        var installed=meta.map(function(m,i){var keys=JSON.parse(m.thumb_keys||'[]');return {mesh_id:m.id,label:shortName(m.id),glb_url:m.glb_key?studioAsset('/api/artifacts/'+m.glb_key):'',portrait:keys[0]?studioAsset('/api/artifacts/'+keys[0]):studioAsset('/api/studio/photos/'+m.photo_id+'/image?size=480'),demo:false,n:i+1};});
+        var installed=meta.map(function(m,i){var keys=JSON.parse(m.thumb_keys||'[]');return {mesh_id:m.id,label:shortName(m.id),glb_url:m.glb_key?studioAsset('/api/artifacts/'+m.glb_key):'',portrait:keys[0]?studioAsset('/api/artifacts/'+keys[0]):(m.photo_id?studioAsset('/api/studio/photos/'+m.photo_id+'/image?size=480'):''),demo:false,n:i+1};});
         // Demo lineup: canonical dog + both bricks are static /img/prod files,
         // always present so the tab is never an empty viewer.
         var haveLabel={};installed.forEach(function(m){haveLabel[m.label]=1;});

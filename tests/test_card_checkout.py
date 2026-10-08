@@ -262,7 +262,7 @@ def test_spread_flow_mocked():
                 break
             time.sleep(0.5)
         urls = s["outputs"]["spread"]["urls"]
-        assert set(urls) == {"front", "inside_left", "inside_right", "back", "listing"}
+        assert set(urls) == {"front", "inside_left", "inside_right", "back", "listing", "triptych", "inside"}
         for part in ("front", "inside_left", "inside_right", "back"):
             r = c.get(f"/api/cards/{did}/r{rev}/spread/{part}?owner=anon&token=test-token")
             assert (r.status_code, r.content_type) == (200, "image/png"), part
@@ -607,6 +607,7 @@ def test_listing_view():
     did, rev = d["design"]["id"], d["design"]["revision"]
     try:
         assert c.get(f"/api/cards/{did}/r{rev}/listing?owner=anon&token=test-token").status_code == 409
+        assert c.get(f"/api/cards/{did}/r{rev}/triptych?owner=anon&token=test-token").status_code == 409
         c.post(f"/api/cards/{did}/render?owner=anon&token=test-token",
                json={"owner": "anon", "revision": rev, "kind": "spread"})
         for _ in range(30):
@@ -615,8 +616,11 @@ def test_listing_view():
                 break
             time.sleep(0.5)
         assert "listing" in s["outputs"]["spread"]["urls"]
+        assert "triptych" in s["outputs"]["spread"]["urls"]
         r = c.get(f"/api/cards/{did}/r{rev}/listing?owner=anon&token=test-token")
         assert (r.status_code, r.content_type) == (200, "image/jpeg")
+        t = c.get(f"/api/cards/{did}/r{rev}/triptych?owner=anon&token=test-token")
+        assert (t.status_code, t.content_type) == (200, "image/jpeg")
     finally:
         from backend import db
         with db.connect() as conn:

@@ -433,6 +433,12 @@ class Handler(BaseHTTPRequestHandler):
             self._mcp_proxy("GET", backend="pogtown")
             return
         if raw.startswith("/mcp"):
+            if self._user_keyed() and not self._has_token():
+                # Customer's own API key, no bridge token: full tier —
+                # Flask/MCP authenticate the key per call (owner-scoped).
+                # Never downgrade keyed callers to the public tier.
+                self._mcp_proxy("GET")
+                return
             if self._has_token():
                 if not self._gated():
                     return
@@ -475,7 +481,7 @@ class Handler(BaseHTTPRequestHandler):
         if raw.startswith("/api/"):
             self._json({"success": False, "error": "GET not supported"}, 405)
             return
-        if re.fullmatch(r"/(?:studio(?:/people/[\w-]+)?|products(?:/[\w-]+)?|cards(?:/[\w-]+(?:/r\d+)?)?|videos(?:/[\w-]+)?|perform|search|cart|account|upload|shop|quick|proof/[\w-]+)/?", raw):
+        if re.fullmatch(r"/(?:studio(?:/people/[\w-]+)?|products(?:/[\w-]+)?|cards(?:/[\w-]+(?:/r\d+)?)?|videos(?:/[\w-]+)?|perform|funnier|art|search|cart|account|upload|shop|quick|proof/[\w-]+)/?", raw):
             # Product + proof pages live in the SPA (site/index.html):
             # /proof/<card_id> always shows the card's latest revision.
             # Products tab + per-line pages live in the SPA (site/index.html);
@@ -580,6 +586,11 @@ class Handler(BaseHTTPRequestHandler):
             self._mcp_proxy("POST", backend="pogtown")
             return
         if urlparse(self.path).path.startswith("/mcp"):
+            if self._user_keyed() and not self._has_token():
+                # Customer's own API key, no bridge token: full tier —
+                # Flask/MCP authenticate the key per call (owner-scoped).
+                self._mcp_proxy("POST")
+                return
             if self._has_token():
                 if not self._gated():
                     return
@@ -667,6 +678,6 @@ if __name__ == "__main__":
     if not TOKEN:
         import secrets
         TOKEN = secrets.token_urlsafe(24)
-    print(f"figgsite bridge: http://127.0.0.1:{PORT}  token={TOKEN}")
+    print(f"figgsite bridge: http://127.0.0.1:{PORT}  token=set (see .token, 0600)")
     print(f"provider={PROVIDER} model={MODEL} pi_cli={'OK' if PI_CLI.exists() else 'MISSING'}")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()

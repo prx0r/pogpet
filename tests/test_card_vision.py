@@ -42,10 +42,18 @@ def test_vision_tools_registered_and_tiered():
     for t in ("figg_card_fonts", "figg_card_edit", "figg_card_variants",
               "figg_card_messages"):
         assert t in names, t
-    assert "figg_card_fonts" in M.PUBLIC_TOOLS
-    assert "figg_card_messages" in M.PUBLIC_TOOLS
-    assert "figg_card_edit" not in M.PUBLIC_TOOLS
-    assert "figg_card_variants" not in M.PUBLIC_TOOLS
+    # Canonical doctrine: only the six intent tools are public. Creation
+    # machinery — including gallery display and the old make/edit paths —
+    # needs the caller's own key.
+    for t in ("figg_card_fonts", "figg_card_messages", "figg_card_create",
+              "figg_card_for_person", "figg_card_save", "figg_card_templates",
+              "figg_card_render", "figg_card_scene", "figg_card_job",
+              "oddhobb_deal_cards", "figg_card_gallery", "figg_card_reroll",
+              "oddhobb_make_card", "oddhobb_edit_card_copy"):
+        assert t not in M.PUBLIC_TOOLS, t
+    for t in ("oddhobb_people", "oddhobb_make", "oddhobb_change",
+              "oddhobb_get", "oddhobb_add_media", "oddhobb_buy"):
+        assert t in M.PUBLIC_TOOLS, t
     assert "vibe" in (M.figg_card_fonts.__doc__ or "")
 
 

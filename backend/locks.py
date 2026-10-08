@@ -17,6 +17,9 @@ GLOBAL_LOCKS = [
     "card grammars are hard constraints (panels, bubbles, lengths)",
     "never metal hardware in product photos or designs",
     "prices are EST until a live Prodigi SKU quote lands",
+    "agents display and personalize cards — never generate card pixels: "
+    "all art enters through attach-art validation, and only rendered "
+    "revisions through checkout become buyable",
 ]
 
 

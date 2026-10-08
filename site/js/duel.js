@@ -67,9 +67,9 @@
     }
     return {
       open: function () {
-        if (!mount || mount.querySelector(".oc-duel")) { if (mount && !mount.querySelector(".oc-duel")) mount.append(score, arena, msg); paintScore(); return; }
-        mount.replaceChildren();
-        mount.append(score, arena, msg);
+        if (!mount) return;
+        if (!mount.querySelector(".oc-duel")) mount.append(score, arena, msg);
+        else arena.replaceChildren();
         paintScore();
         load();
       },

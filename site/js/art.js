@@ -51,7 +51,9 @@
       if (format === "mp4") {
         host.post("/creative/art/mp4", {art_id: item.id}).then(function (d) {
           var a = el("a", "Download MP4", "btn");
-          a.href = host.asset(d.mp4_url); a.download = item.id + ".mp4";
+          // host.asset() already prepends the API root: pass a rootless path
+          var u = String(d.mp4_url || "").replace(/^\/api\//, "/");
+          a.href = host.asset(u); a.download = item.id + ".mp4";
           msg.replaceChildren(document.createTextNode("Your video is ready. "), a);
         }).catch(function (e) { done(e.message || String(e)); });
         return;
@@ -66,7 +68,7 @@
       open: function () {
         if (!mount) return;
         if (!mount.querySelector(".oc-art-grid")) mount.append(grid, sheet, msg);
-        if (grid.children.length) return;
+        grid.replaceChildren();
         msg.textContent = "Hanging the gallery…";
         host.get("/creative/art").then(function (d) {
           formats = d.formats || {};

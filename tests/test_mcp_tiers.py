@@ -1,43 +1,44 @@
-"""MCP tiers: public allowlist never includes spending tools."""
+"""MCP tiers: the public surface is six intent tools, nothing else."""
 import unittest
 
 
+CANONICAL_SIX = {
+    "oddhobb_people",
+    "oddhobb_make",
+    "oddhobb_change",
+    "oddhobb_get",
+    "oddhobb_add_media",
+    "oddhobb_buy",
+}
+
+
 class TestMcpTiers(unittest.TestCase):
-    def test_public_excludes_spenders(self):
+    def test_public_is_exactly_the_six(self):
         import backend.mcp_server as mcp
 
-        spenders = {
-            "figg_upload_photo", "figg_upload_chatgpt_file", "figg_start_mesh",
-            "figg_preview_image",
-            "figg_checkout", "figg_fullchain_personalise_order",
-            "figg_studio_orders",
-            "figg_blender_make",
-            "figg_card_cutout", "figg_card_reserve",
-            "figg_perform", "figg_greeting", "figg_video_share",
-            "figg_write_premise", "figg_write_riff",
-            "figg_guide_open", "figg_guide_turn", "figg_guide_packs",
-            "figg_me", "figg_credits",
-            "figg_print_export",
-        }
-        # figg_install_style is $0 local CPU (preset GLB, no Meshy) — public.
-        # figg_design_save/order are reserve-only with fulfil neutered.
-        self.assertTrue(mcp.PUBLIC_TOOLS.isdisjoint(spenders),
-                        mcp.PUBLIC_TOOLS & spenders)
-        # save + reserve-only order + style adoption are public: they cost
-        # nothing until fulfil/uplink, and fulfil is neutered on this tier
-        self.assertIn("figg_design_save", mcp.PUBLIC_TOOLS)
-        self.assertIn("figg_design_order", mcp.PUBLIC_TOOLS)
-        self.assertIn("figg_install_style", mcp.PUBLIC_TOOLS)
+        self.assertEqual(set(mcp.PUBLIC_TOOLS), CANONICAL_SIX)
+
+    def test_machinery_needs_a_key(self):
+        import backend.mcp_server as mcp
+
         for tool in ("figg_card_save", "figg_card_render", "figg_card_scene",
-                     "figg_card_job"):
-            self.assertIn(tool, mcp.PUBLIC_TOOLS)
-        # agent credentials mint real access: full tier only, never public
-        for t in ("figg_mint_agent", "figg_my_agents", "figg_revoke_agent"):
-            self.assertNotIn(t, mcp.PUBLIC_TOOLS)
-        # self-serve identity stays public so strangers can get their own key
-        self.assertIn("figg_create_account", mcp.PUBLIC_TOOLS)
-        self.assertIn("figg_login", mcp.PUBLIC_TOOLS)
-        self.assertIn("figg_tools", mcp.PUBLIC_TOOLS)
+                     "figg_card_job", "figg_card_create", "figg_card_update",
+                     "figg_card_for_person", "figg_card_templates",
+                     "figg_card_fonts", "figg_card_messages",
+                     "figg_card_edit", "figg_card_variants",
+                     "figg_card_library", "figg_card_cutout",
+                     "figg_card_reserve", "figg_card_checkout",
+                     "figg_card_gallery", "figg_card_reroll",
+                     "oddhobb_make_card", "oddhobb_deal_cards",
+                     "oddhobb_attach_card_art", "oddhobb_edit_card_copy",
+                     "oddhobb_checkout_card", "oddhobb_recommend",
+                     "oddhobb_regenerate_title_art",
+                     "oddhobb_ideas", "oddhobb_create",
+                     "oddhobb_render", "oddhobb_status",
+                     "oddhobb_providers", "oddhobb_capsule",
+                     "oddhobb_review", "oddhobb_revise",
+                     "figg_tools", "figg_create_account", "figg_login"):
+            self.assertNotIn(tool, mcp.PUBLIC_TOOLS, tool)
 
     def test_every_registered_tool_has_a_tier(self):
         import backend.mcp_server as mcp

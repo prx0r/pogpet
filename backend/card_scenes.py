@@ -37,22 +37,80 @@ TEMPLATES = {
     # subline + footer zones. Exact zones live in CANONICAL_ZONES (1500×2100
     # trim space). Agent supplies photos + bounded copy only.
     "birthday_4photo": {"label": "Birthday four-photo", "headline": "Happy Birthday!", "max_photos": 4, "min_photos": 4, "motion": "photo reveal", "bg": "#faf6ee", "ink": "#23201b", "accent": "#b34a30", "fonts": {"headline": "fraunces", "body": "inter"}},
+    # ── fullbleed product: birthday_fullbleed (docs/cardspec.md) ──
+    # No photo slots, no PIL composition. Art is attached (generated or
+    # agent-supplied) and stored per revision; live type is set by the
+    # renderer in real fonts. Agent supplies art + bounded copy only.
+    "birthday_fullbleed": {"label": "Birthday full-bleed", "headline": "Happy Birthday!", "max_photos": 0, "min_photos": 0, "motion": "art reveal", "bg": "#faf6ee", "ink": "#1e2a3a", "accent": "#b34a30", "fonts": {"headline": "fraunces", "body": "fraunces"}},
 }
 
 # Canonical zones in 1500×2100 trim px (see docs/cardspec.md §2–4).
-# Grid gutter (56px) stays ≤ twice the slot corner radius: slots read as one
-# grid, never four stickers. Type zones sit on flat stock, never on photos.
+# The founder's geometry: two photos on top, the generative title zone in
+# the MIDDLE, two photos below. Grid gutter (56px) stays ≤ twice the slot
+# corner radius: slots read as one grid, never four stickers. Type zones sit
+# on flat stock, never on photos.
 CANONICAL_ZONES = {
     "photos": [(120, 160, 602, 560), (778, 160, 602, 560),
-               (120, 776, 602, 560), (778, 776, 602, 560)],
+               (120, 1166, 602, 560), (778, 1166, 602, 560)],
     "photo_radius": 28,
-    "title_art": (285, 1390, 930, 320),
-    "front_footer": (525, 1990, 450, 45),
-    "inside_message": (1710, 430, 1040, 820),
-    "inside_signature": (1710, 1330, 520, 120),
+    "title_art": (285, 790, 930, 320),
+    "front_footer": (450, 1860, 600, 70),
+    "inside_message": (1710, 550, 1040, 820),
+    "inside_signature": (1990, 1450, 520, 120),
     "back_logo": (525, 1740, 450, 80),
     "back_url": (585, 1970, 330, 36),
 }
+
+# Stored prompt templates (art direction) for the fullbleed line.
+# The manifest says WHAT; these say HOW the art should look. Task the
+# generator (or the agent) with one of these per face; the renderer still
+# owns all live type. {headline}, {palette}, {motif}, {name} filled by caller.
+ART_DIRECTIONS = {
+    "birthday_fullbleed": {
+        "front": ("Front of a premium 5x7 portrait greeting card (5:7), flat artwork, "
+                  "no mockup. Style: rich editorial gouache, vintage poster crossed with "
+                  "a New Yorker cover. Scene: {scene}. The person from the reference photo, "
+                  "a faithful flattering likeness, painted in the same style. Large "
+                  "hand-lettered cream title: '{headline}'. Generous margins, everything "
+                  "inside a safe zone. Palette: {palette}. No other text, no logos, "
+                  "no watermark, no border, no photo collage."),
+        "inside_spot": ("Small elegant spot illustration of {motif}, lots of negative space, "
+                        "cream paper, same gouache style and palette ({palette}), no text."),
+        "back": ("Solid {palette_colour} with fine paper texture, small line-drawn {motif} "
+                 "in the lower third, no text."),
+        "palettes": {
+            "golf_dusk": "deep navy, forest green, amber and cream",
+        },
+    },
+}
+
+
+def _fit_cover(img, width, height):
+    """Fill a frame exactly: centre-crop to aspect, then scale. No distortion,
+    no letterbox — full-bleed art must reach every trim edge."""
+    return ImageOps.fit(img.convert("RGB"), (max(1, width), max(1, height)),
+                        method=Image.Resampling.LANCZOS, centering=(0.5, 0.5))
+
+
+def reference_prompt(template_id: str, *, scene: str, headline: str = "",
+                     palette: str = "", motif: str = "") -> dict:
+    """Fill the stored art direction into provider-ready prompts. Pure data —
+    no key, no spend. The caller's photo rides as the generator's reference
+    image (Kontext image_url / Qwen images[] / Ideogram character ref) while
+    these strings ride as the prompt; validation + live type happen downstream
+    in attach-art exactly as for agent-supplied art."""
+    directions = (ART_DIRECTIONS.get(template_id) or {})
+    palettes = directions.get("palettes") or {}
+    pal = palette or next(iter(palettes.values()), "navy, cream")
+    return {
+        "front": (directions.get("front") or "").format(
+            scene=scene, headline=headline[:40], palette=pal),
+        "inside_spot": (directions.get("inside_spot") or "").format(
+            motif=motif or scene, palette=pal),
+        "back": (directions.get("back") or "").format(
+            palette_colour=pal.split(",")[0].strip(), motif=motif or scene),
+    }
+
 
 # Frozen title-art vibes. The model may style lettering + mini-elements;
 # never layout, logos, or extra text.
@@ -198,6 +256,17 @@ CARD_DESIGN_CONTRACTS = {
         "locked": ["3mm bleed all round", "300dpi floor at trim", "exactly 4 photos in fixed slots r28",
                    "title art 930x320 transparent in the middle zone only",
                    "fonts fixed by template — agent supplies 4 photos + bounded copy only"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["5x7"],
+        "cost_target_cents": {"5x7": 200},
+        "verify": [],
+    },
+    "birthday_fullbleed": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "0 photos — attached art only",
+                   "front art 5:7, inside art 10:7, 800px short-edge floor",
+                   "message + signature always live type — headline may be baked in art",
+                   "agent supplies art + bounded copy only"],
         "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
         "formats": ["5x7"],
         "cost_target_cents": {"5x7": 200},
@@ -408,20 +477,23 @@ def ink_for(design, which="ink", *, paper="#fffdf7"):
     return tpl["ink"]
 
 
-def back(design, width=720, height=None):
-    """Canonical back: brand mark, tagline, URL, quiet margins. The renderer
-    owns it — never AI, never blank."""
+def back(design, width=720, height=None, assets=None):
+    """Canonical back: tiny brand mark + URL, nothing else. The renderer
+    owns it — never AI, never blank. Quiet on purpose: the front and the
+    inside carry the emotion, the back just signs it. Fullbleed templates
+    may attach their own designed back instead (motif + wordmark in art)."""
     fmt = FORMATS[design["format"]]
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
+    if design.get("template") == "birthday_fullbleed":
+        art = (assets or {}).get("__back_art__")
+        if art is not None:
+            return _fit_cover(art, width, height)
     img = Image.new("RGB", (width, height), "#fffdf7")
     d = ImageDraw.Draw(img)
-    ink, muted, gold = "#22221d", "#55554d", "#8a6a2f"
-    d.text((width / 2, height * 0.42), "oddhobb.", font=get_font("display", width * 0.09),
-           fill=ink, anchor="mm")
-    d.text((width / 2, height * 0.50), "odd little gifts for the things they're obsessed with",
-           font=get_font("sans", width * 0.028), fill=muted, anchor="mm")
-    d.text((width / 2, height * 0.90), "oddhobb.com", font=get_font("sans", width * 0.03),
-           fill=gold, anchor="mm")
+    d.text((width / 2, height * 0.46), "oddhobb.", font=get_font("display", width * 0.05),
+           fill="#22221d", anchor="mm")
+    d.text((width / 2, height * 0.92), "oddhobb.com", font=get_font("sans", width * 0.026),
+           fill="#8a6a2f", anchor="mm")
     return img
 
 
@@ -760,6 +832,15 @@ def front(design, assets, width=720, height=None, progress=1.0):
         text_block(d, design["sender"], (w*.08, h*.875, w*.84, h*.03), ink, w*.021)
         return card.convert("RGB")
 
+    if tid == "birthday_fullbleed":
+        # attached art fills the frame exactly: no border, no slots, no brand.
+        # Baked headline (if any) already lives in the art; live type never
+        # touches the front.
+        art = assets.get("__front_art__")
+        if art is None:
+            raise TextOverflow("Full-bleed front needs attached art — call attach-art first (art_required).")
+        return _fit_cover(art, w, h)
+
     if tid == "birthday_4photo" and count == 4:
         # canonical product: 4 rounded slots, title-art zone, subline + footer
         s = w / 1500.0
@@ -792,8 +873,9 @@ def front(design, assets, width=720, height=None, progress=1.0):
         elif progress > .15:
             # fallback lettering fills the zone on ONE line — shrink to fit,
             # never wrap small. Generated title art replaces this when present.
+            # It is the hero of the cover, so start large (42% of zone height).
             _t = design["headline"]
-            _fs = round(th * 0.30)
+            _fs = round(th * 0.42)
             while _fs > 8:
                 _f = font_for(design.get("headline_font") or "fraunces", _fs, True)
                 if d.textlength(_t, font=_f) <= tw:
@@ -801,8 +883,8 @@ def front(design, assets, width=720, height=None, progress=1.0):
                 _fs -= 2
             else:
                 _f = font_for(design.get("headline_font") or "fraunces", 8, True)
-            d.text((tx + (tw - d.textlength(_t, font=_f)) / 2, ty + (th - _fs) / 2),
-                   _t, font=_f, fill=ink)
+            _tx = tx + (tw - d.textlength(_t, font=_f)) / 2
+            d.text((_tx, ty + (th - _fs) / 2), _t, font=_f, fill=ink)
         sx, sy, sw, sh = [v * s for v in CANONICAL_ZONES["front_footer"]]
         # footer is the bare signature — no prefixes stacked, no recipient echo
         foot = design.get("sender", "") if len(design.get("sender", "")) <= 32 else ""
@@ -843,12 +925,37 @@ def _panel_style(panel: dict, default_font: str) -> tuple:
     return font, CARD_SIZES[size], colour, align
 
 
-def inside(design, width=720, height=None):
+def inside(design, width=720, height=None, assets=None):
     """Folded inside spread, double-panel wide: left half then right half.
     Left defaults blank (quiet stock); right carries the message + sender.
-    Per-panel font/size/colour/align ride in design["inside"]."""
+    Per-panel font/size/colour/align ride in design["inside"]. Fullbleed
+    templates read attached spread art from assets (may be None → cream).
+    A fullbleed spread is 10:7 landscape by construction, so an omitted
+    height derives from the width — never the portrait ratio."""
     fmt = FORMATS[design["format"]]
+    if design.get("template") == "birthday_fullbleed" and height is None:
+        height = round(width * 7 / 10)
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
+    if design.get("template") == "birthday_fullbleed":
+        # fullbleed spread: attached inside art (or cream) with the message +
+        # signature set live in real fonts on the right page. Left page stays
+        # quiet (spot illustration lives in the art, if any).
+        art = (assets or {}).get("__inside_art__")
+        if art is not None:
+            img = _fit_cover(art, width, height)
+        else:
+            img = Image.new("RGB", (width, height), "#fffdf7")
+        d = ImageDraw.Draw(img)
+        right = ((design.get("inside") or {}).get("right")) or {}
+        mx, my, mw, mh = width * 0.55, height * 0.24, width * 0.40, height * 0.42
+        text_block(d, right.get("message", design.get("inside_message", "")),
+                   (mx, my, mw, mh), "#1e2a3a", mw * 0.072, align="center",
+                   font_id="fraunces")
+        sw, sh = width * 0.26, height * 0.08
+        sx, sy = width * 0.62, my + mh + height * 0.04
+        text_block(d, design.get("sender", ""), (sx, sy, sw, sh),
+                   "#1e2a3a", sw * 0.11, align="center", font_id="caveat")
+        return img
     if design.get("template") == "birthday_4photo":
         # canonical spread: 3000×2100 space, blank left, message + signature
         # + brand zones on the right. Coordinates from CANONICAL_ZONES.
@@ -858,12 +965,13 @@ def inside(design, width=720, height=None):
         mx, my, mw, mh = [v * s for v in CANONICAL_ZONES["inside_message"]]
         right = ((design.get("inside") or {}).get("right")) or {}
         rfont = right.get("font") if right.get("font") in CARD_FONT_IDS else "inter"
+        # message carries the card: large, dark, centred on the right page
         text_block(d, right.get("message", design.get("inside_message", "")),
-                   (mx, my, mw, mh), "#23201b", mw * 0.062, align="center",
+                   (mx, my, mw, mh), "#23201b", mw * 0.072, align="center",
                    font_id=rfont)
         sx, sy, sw, sh = [v * s for v in CANONICAL_ZONES["inside_signature"]]
         text_block(d, design.get("sender", ""), (sx, sy, sw, sh),
-                   "#55554d", sw * 0.09, align="center", font_id="caveat")
+                   "#3a3a32", sw * 0.11, align="center", font_id="caveat")
         # no brand mark inside a personal card — back only
         return img
     img = Image.new("RGB", (width, height), "#fffdf7")
@@ -889,13 +997,40 @@ def inside(design, width=720, height=None):
     return img
 
 
-def inside_half(design, half="right", width=720, height=None):
+def inside_half(design, half="right", width=720, height=None, assets=None):
     """One inside half as its own PNG (agent-showable panels)."""
     fmt = FORMATS[design["format"]]
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
-    full = inside(design, width * 2, height)
+    full = inside(design, width * 2, height, assets=assets)
     return full.crop((0, 0, width, height) if half == "left"
                      else (width, 0, width * 2, height))
+
+
+def triptych(front_img, inside_img, back_img, *, height=1008, pad=36,
+             bg="#e9e6e1"):
+    """Fixed 3-panel customer preview: front | inside spread | back.
+
+    Every panel is scaled to the same height so the front is never a
+    miniature inside a poster canvas. Front and back keep single-page size,
+    the inside keeps its spread width. Deterministic geometry owned here —
+    AI never touches panel order, sizes, or background.
+    """
+    panels = []
+    for im in (front_img, inside_img, back_img):
+        im = im.convert("RGB")
+        r = height / im.height
+        panels.append(im.resize((max(1, round(im.width * r)), height),
+                                Image.Resampling.LANCZOS))
+    sheet_w = pad * 4 + sum(p.width for p in panels)
+    sheet = Image.new("RGB", (sheet_w, height + pad * 2), bg)
+    d = ImageDraw.Draw(sheet)
+    x = pad
+    for p in panels:
+        d.rectangle((x - 1, pad - 1, x + p.width + 1, pad + height + 1),
+                    outline="#c9c4ba")
+        sheet.paste(p, (x, pad))
+        x += p.width + pad
+    return sheet
 
 
 def print_pdf(design, assets, dest):
@@ -906,10 +1041,21 @@ def print_pdf(design, assets, dest):
     fmt = FORMATS[design["format"]]
     w,h = [round(mm*300/25.4) for mm in fmt["mm"]]
     bleed = round(3*300/25.4)
-    a,b = front(design,assets,w,h), inside(design,w,h)
-    back_img = back(design, w, h)
+    a = front(design,assets,w,h)
+    back_img = back(design, w, h, assets=assets)
     pages=[]
-    pairs = [(back_img,a),(Image.new("RGB",(w,h),"#fffdf7"),b)] if fmt["folded"] else [(a,),(b,)]
+    if design.get("template") == "birthday_fullbleed":
+        # inside spread is landscape (two portrait pages); split it into
+        # real halves instead of squeezing it into one portrait panel
+        inner = inside(design, w * 2, assets=assets).convert("RGB")
+        iw, ih = inner.size
+        halves = [inner.crop((0, 0, iw // 2, ih)), inner.crop((iw // 2, 0, iw, ih))]
+        halves = [p.resize((w, h), Image.Resampling.LANCZOS) if p.size != (w, h) else p
+                  for p in halves]
+        pairs = [(back_img,a), tuple(halves)]
+    else:
+        b = inside(design,w,h,assets=assets)
+        pairs = [(back_img,a),(Image.new("RGB",(w,h),"#fffdf7"),b)] if fmt["folded"] else [(a,),(b,)]
     for panels in pairs:
         spread=Image.new("RGB",(w*len(panels),h),"#fffdf7")
         for i,panel in enumerate(panels):

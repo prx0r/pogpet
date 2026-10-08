@@ -153,6 +153,14 @@ def _owner_denied(owner: str):
             return None
         if u:
             return _err("API key does not match this owner", 403)
+        with db.connect() as c:
+            a = db.get_agent_by_key(c, key)
+        # Delegated agents act as their parent (grants enforced per route);
+        # revoked or foreign agents get nothing.
+        if a and a["status"] == "active" and a["parent_handle"] == owner:
+            return None
+        if a:
+            return _err("agent key does not match this owner", 403)
         return _err("unknown API key", 401)
     sig = _owner_sig()
     if config.verify_owner(owner, sig):
@@ -1907,9 +1915,24 @@ def login():
         pogs = db.pogs_for(c, u["handle"])
         credits = db.credit_status(c, u["handle"],
                                    datetime.now(timezone.utc).date().isoformat())
+    claimed = {}
+    claim = (b.get("claim_owner") or "").strip()
+    if claim and claim != u["handle"]:
+        denied = _owner_denied(claim)
+        if denied is not None:
+            return denied
+        with card_api.ownership_lock, db.connect() as c:
+            if c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND status IN ('queued','running') LIMIT 1", (claim,)).fetchone():
+                return _err("Your card is still rendering. Finish the render, then sign in again.", 409)
+            claimed = db.claim_assets(c, claim, u["handle"])
+        try:
+            storage.claim_owner(claim, u["handle"], preserve_photos=True)
+        except Exception:
+            pass
     _auth_rate_reset("login", f"{ip}:{handle.lower()}")
     return jsonify({"ok": True, "handle": u["handle"],
                     "display_name": u["display_name"], "api_key": u["api_key"],
+                    "claimed_from": claim or None, "claimed": claimed,
                     "active_mesh_id": prof.get("active_mesh_id", ""),
                     "pogs": len(pogs), "credits": credits})
 
@@ -5391,6 +5414,49 @@ def creative_catalog():
     ))
 
 
+@app.get("/api/creative/catalog/preview")
+def creative_catalog_preview():
+    """One rail tile with the viewer's photo already applied (the Moonpig
+    shelf): template look + headline + example caption composited over the
+    given photo. Content-cached; ghosts stay client-side on any failure."""
+    from backend.renderers import composite2d as _c2d
+    owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    tid = (request.args.get("template_id") or "").strip()[:80]
+    pid = (request.args.get("photo_id") or "").strip()[:80]
+    item = _ccatalog.by_id().get(tid)
+    if not item:
+        return _err("unknown template", 404)
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM photos WHERE id=? AND owner=?",
+                        (pid, owner)).fetchone()
+    if row is None:
+        return _err("photo not found", 404)
+    try:
+        import hashlib as _hl
+        key = _hl.sha256(f"{tid}|{dict(row).get('r2_key', '')}".encode()).hexdigest()[:24]
+        dest = config.DATA / "catalog-previews" / f"{tid}-{key}.jpg"
+        if not dest.is_file():
+            from backend import pipeline as _pipe
+            photo_path = str(_pipe._local_photo(dict(row)))
+            img = _c2d.render_card(
+                photo_path=photo_path,
+                headline=str(item.get("label") or tid),
+                subheadline=str(item.get("example_caption") or "")[:90],
+                style_id=str(item.get("style") or "generic"))
+            # style geometry is authored at print scale — downscale for tiles
+            img = img.resize((600, 840), _c2d.Image.Resampling.LANCZOS)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            img.save(dest, "JPEG", quality=75)
+    except Exception as e:  # noqa: BLE001 — rail tiles degrade to ghosts
+        return _err(f"preview failed: {str(e)[:120]}", 500)
+    res = send_file(dest, mimetype="image/jpeg", max_age=86400)
+    res.headers["Cache-Control"] = "public, max-age=86400"
+    return res
+
+
 @app.get("/api/creative/duel")
 def creative_duel():
     """Two comics, pick the funnier one. Trains the ComedyJudge: every
@@ -6282,9 +6348,11 @@ def main() -> None:
     db.init()
     card_api.init()
     config.ensure_dirs()
+    from backend import logscrub as _logscrub
+    _logscrub.install("werkzeug")
     threading.Thread(target=_worker, daemon=True, name="figg-worker").start()
     print(f"figgsite backend  http://127.0.0.1:{config.API_TOKEN and 8798}")
-    print(f"  token   : {config.API_TOKEN}")
+    print("  token   : set (never printed — see .token, 0600)")
     print(f"  meshy   : {'STUB (set MESHY_API_KEY for live)' if meshy.is_stub() else 'LIVE'}")
     print(f"  r2      : {config.R2_BUCKET} via rclone remote")
     print(f"  products: {', '.join(config.PRODUCTS)}")

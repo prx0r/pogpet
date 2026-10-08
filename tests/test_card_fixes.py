@@ -101,14 +101,17 @@ class CardFixes(unittest.TestCase):
         self.assertEqual(cards.key('newowner','old-card',1,'preview'),original)
 
     def test_overflow_fails_render_and_cannot_be_reserved(self):
-        x=self.design([self.upload()],headline='a\n'*79+'a')
-        j=self.post('/cards/'+x['id']+'/render',{'revision':1,'kind':'export'}).json['job']
-        for _ in range(150):
-            result=self.get('/cards/jobs/'+j['id']).json['job']
-            if result['status'] in ('ready','failed'):break
-            time.sleep(.02)
-        self.assertEqual(result['status'],'failed');self.assertIn('Shorten',result['error'])
-        self.assertEqual(self.post('/cards/'+x['id']+'/order',{'revision':1,'qty':1,'idempotency_key':'overflow-reserve-123'}).status_code,409)
+        # Contract (docs/cardspec.md): over-cap copy is rejected at SAVE, so
+        # it can never reach render or reserve. Oversized headline → 400 on
+        # save; a design with no export render → 409 on order.
+        r = self.post('/cards/designs', {'spec': {'template': 'typography', 'format': '5x7',
+                         'photos': [], 'headline': 'a\n' * 79 + 'a', 'recipient': '',
+                         'sender': '', 'inside_message': ''}})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn('headline', r.json['error'])
+        x = self.design([self.upload()], headline='ok headline')
+        self.assertEqual(self.post('/cards/' + x['id'] + '/order', {'revision': 1, 'qty': 1,
+                         'idempotency_key': 'overflow-reserve-123'}).status_code, 409)
 
     def transport(self,req,timeout=None):
         from urllib.parse import urlsplit

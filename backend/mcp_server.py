@@ -441,9 +441,55 @@ async def oddhobb_status(creative_id: str='', api_key: str='') -> str:
     return _j(await _call('GET', f'/api/oddhobb/status/{creative_id}', api_key=api_key))
 
 
-async def oddhobb_buy(creative_id: str='', revision: int=1, owner: str='', product: str='greeting_card', qty: int=1, api_key: str='') -> str:
-    """Reserve a QC-passed revision. No card charge from this endpoint."""
-    return _j(await _call('POST', '/api/oddhobb/buy', {'creative_id': creative_id, 'revision': revision, 'owner': owner, 'product': product, 'qty': qty}, api_key=api_key))
+async def oddhobb_buy(creative_id: str='', design_id: str = "", revision: int=1,
+                      owner: str='', product: str='greeting_card', qty: int=1,
+                      idempotency_key: str = "", api_key: str = "",
+                      owner_sig: str = "", ctx=None) -> list:
+    """Buy this exact finished thing. Card path (design_id): pins the
+    revision, requires a signer, returns a Shopify checkout URL — money
+    moves only at Shopify, never here. Creative path (creative_id):
+    reserves a QC-passed revision, no charge."""
+    from mcp.types import TextContent
+    who = _resolve_owner(owner, api_key, ctx)
+    key_arg = api_key or _bearer_key(ctx)
+    if design_id:
+        cur = await _call("GET", "/api/cards/designs/" + design_id +
+                          "?owner=" + who, api_key=key_arg, owner_sig=owner_sig)
+        if not cur.get("ok"):
+            return [TextContent(type="text", text=_j(cur))]
+        spec = ((cur.get("design") or {}).get("spec")) or {}
+        rev = int(revision or (cur.get("design") or {}).get("revision", 1))
+        if not str(spec.get("sender") or "").strip():
+            nm = str(spec.get("recipient") or "them")
+            return [TextContent(type="text", text=_j(_env(
+                status="needs_input",
+                summary=f"Who signs the card for {nm}?",
+                requires_action={"type": "signature", "design_id": design_id,
+                                 "message": "Tell me who signs, then say buy again."},
+                next_actions=[])))]
+        qty_n = max(1, min(int(qty or 1), 20))
+        out = await _call("POST", f"/api/cards/{design_id}/checkout",
+                          {"owner": who, "revision": rev, "qty": qty_n,
+                           "idempotency_key": idempotency_key or f"buy-{design_id}-r{rev}-q{qty_n}"},
+                          api_key=key_arg, owner_sig=owner_sig)
+        if not out.get("ok"):
+            return [TextContent(type="text", text=_j(out))]
+        cents = ((out.get("product") or {}).get("price_cents")
+                 or (out.get("order") or {}).get("price_cents") or 799) * 1
+        label = ((out.get("product") or {}).get("name")
+                 or "Personalised 5×7 Greeting Card")
+        return [TextContent(type="text", text=_j(_env(
+            status="checkout_ready", id=design_id, summary=f"{label} — pay to print.",
+            price_cents=cents, next_actions=[],
+            extra={"design_id": design_id, "revision": rev,
+                   "checkout_url": out.get("checkout_url", ""),
+                   "product_url": out.get("product_url", out.get("card_url", "")),
+                   "product": label})))]
+    if not creative_id:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "pass design_id (card) or creative_id"}))]
+    out = await _call('POST', '/api/oddhobb/buy', {'creative_id': creative_id, 'revision': revision, 'owner': who, 'product': product, 'qty': qty}, api_key=key_arg)
+    return [TextContent(type="text", text=_j(out))]
 
 
 async def oddhobb_providers(owner: str='', api_key: str='') -> str:
@@ -468,20 +514,43 @@ async def oddhobb_make_card(subject_id: str = "", occasion: str = "birthday",
                             vibe: str = "playful_balloons", tone: str = "funny",
                             message_hint: str = "", signature: str = "",
                             owner: str = "", api_key: str = "",
-                            owner_sig: str = "") -> list:
-    """Make a canonical birthday card in ONE call. Resolves the 4 best photos,
-    writes bounded copy from the profile (or your hint), saves revision 1,
-    renders front/inside/back/4-up + print PDF. Returns previews, proof_url,
-    and a contact sheet. The agent supplies photos-by-choice + words only."""
+                            owner_sig: str = "", template: str = "birthday_4photo",
+                            front_art_url: str = "", inside_art_url: str = "") -> list:
+    """Make a birthday card in ONE call. Canonical (birthday_4photo): resolves
+    the 4 best SOLO photos, writes bounded copy, saves revision 1, renders
+    views + print PDF. Fullbleed (birthday_fullbleed): needs front_art_url —
+    without it returns art_required (409, never a silent collage); with it,
+    attaches art + copy in the same call. Relationship label (Dad) for live
+    headlines, never the full name."""
     from mcp.types import TextContent
     from backend import cards as _cards
     if not signature.strip():
-        return [TextContent(type="text", text=_j({"ok": False, "error": "signature required \u2014 ask the human who signs the card (never default to the recipient)"}))]
+        return [TextContent(type="text", text=_j({"ok": False, "error": "signature required — ask the human who signs the card (never default to the recipient)"}))]
+    if (template or "") == "birthday_fullbleed" and not (front_art_url or "").strip():
+        return [TextContent(type="text", text=_j({"ok": False, "http_status": 409,
+                             "error": "art_required — fullbleed needs front art: call oddhobb_attach_card_art "
+                                      "(or pass front_art_url here); never fall back to a collage silently",
+                             "template": "birthday_fullbleed"}))]
     people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
                          api_key=api_key, owner_sig=owner_sig)
     sub = _find_subject(people, "", subject_id)
     if not sub:
         return [TextContent(type="text", text=_j({"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
+    if (template or "") == "birthday_fullbleed":
+        # fullbleed branch: copy + attached art, one call. Relationship label
+        # on live text (Dad), never the subject's full name.
+        label = _cards.display_label(sub.get("name", ""), sub.get("relationship", ""))
+        prof = {"name": label, "relationship": sub.get("relationship", ""),
+                "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
+        lines = _cards.message_lines(prof, tone)
+        message = (message_hint.strip()[:240] if message_hint.strip()
+                   else (lines[0]["text"][:240] if lines else ""))
+        title = f"Happy Birthday, {label}!"[:40]
+        return await oddhobb_attach_card_art(
+            front_art_url=front_art_url, inside_art_url=inside_art_url,
+            headline=title, recipient=label, sender=signature.strip()[:40],
+            inside_message=message, headline_baked=True, art_source="make_card",
+            prompt="", owner=owner, api_key=api_key, owner_sig=owner_sig)
     prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
             "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
     pids: list[str] = []
@@ -496,8 +565,8 @@ async def oddhobb_make_card(subject_id: str = "", occasion: str = "birthday",
             if aid and aid not in seen:
                 seen.add(aid)
                 pids.append(aid)
-            if len(pids) == 4:
-                break
+        # solo portraits first: group photos confuse single-recipient cards
+        pids = _cards.solo_first(owner or "anon", pids)[:4]
     except Exception:  # noqa: BLE001
         pids = []
     if len(pids) < 4:
@@ -505,9 +574,26 @@ async def oddhobb_make_card(subject_id: str = "", occasion: str = "birthday",
     name = sub.get("name") or "them"
     short = str(name).split()[0] if str(name).split() else name
     title = f"Happy Birthday, {short}!"[:40]
-    lines = _cards.message_lines(prof, tone)
-    message = (message_hint.strip()[:240] if message_hint.strip()
-               else (lines[0]["text"][:240] if lines else ""))
+    # Copy that is actually written, not manufactured: the caller's hint
+    # first (the calling agent is itself a model with the profile in hand),
+    # then a server-side model when configured, then template lines openly
+    # flagged as fallback so nobody mistakes them for writing.
+    copy_source = "template-fallback"
+    if message_hint.strip():
+        message = message_hint.strip()[:240]
+        copy_source = "caller-hint"
+    else:
+        import asyncio as _aio2
+        try:
+            llm_line = await _aio2.to_thread(_cards.generate_copy_llm, prof, tone)
+        except Exception:
+            llm_line = None
+        if llm_line:
+            message = llm_line[:240]
+            copy_source = "server-llm"
+        else:
+            lines = _cards.message_lines(prof, tone)
+            message = (lines[0]["text"][:240] if lines else "")
     if not signature.strip():
         return [TextContent(type="text", text=_j({"ok": False, "error": "signature required — ask the human who signs the card (never default to the recipient)"}))]
     sig = signature.strip()[:40]
@@ -521,11 +607,29 @@ async def oddhobb_make_card(subject_id: str = "", occasion: str = "birthday",
     if not saved.get("ok"):
         return [TextContent(type="text", text=_j(saved))]
     d = saved["design"]
+    # Generative title zone filled inline when a key exists — the normal
+    # path generates, never punts to a second tool. Any failure keeps the
+    # serif fallback and says why.
+    title_note = "serif-fallback"
+    tkey = await _maybe_title_art(title, vibe or "playful_balloons",
+                                  owner or "anon", d["id"], api_key, owner_sig)
+    if tkey:
+        upd = await _call("POST", "/api/cards/designs",
+                          {"owner": owner, "id": d["id"],
+                           "expected_revision": d["revision"],
+                           "spec": {**d.get("spec", {}), "title_art_key": tkey}},
+                          api_key=api_key, owner_sig=owner_sig)
+        if upd.get("ok"):
+            d = upd["design"]
+            title_note = "generated"
+        else:
+            title_note = "generate-ok-save-failed"
     bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key, owner_sig=owner_sig)
     exp = await _call("POST", f"/api/cards/{d['id']}/render",
                       {"owner": owner, "revision": d["revision"], "kind": "export"}, api_key=api_key, owner_sig=owner_sig)
     body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
             "template_id": "birthday_4photo",
+            "copy_source": copy_source, "title_art": title_note,
             "previews": {**(bundle.get("views") or {}),
                          "print_pdf": f"/api/cards/{d['id']}/r{d['revision']}/export"},
             "proof_url": saved.get("proof_url", ""),
@@ -538,6 +642,185 @@ async def oddhobb_make_card(subject_id: str = "", occasion: str = "birthday",
     except Exception as e:  # noqa: BLE001
         body["contact_error"] = str(e)[:150]
         return [TextContent(type="text", text=_j(body))]
+
+
+async def oddhobb_deal_cards(person: str = "", subject_id: str = "",
+                             occasion: str = "birthday", tone: str = "funny",
+                             signature: str = "", owner: str = "", api_key: str = "",
+                             owner_sig: str = "") -> list:
+    """Deal four varied buyable cards in ONE call: distinct templates across
+    the birthday set (photo-count aware) with distinct copy angles, all saved
+    as revision 1 with views + proof_urls. The human opens the proofs, picks
+    one, edits it, buys it. Templates are the variety engine — reuse is the
+    point. Illustrated (fullbleed) variety unlocks with a provider key;
+    today the deal is the photo line."""
+    from mcp.types import TextContent
+    from backend import cards as _cards
+    if not signature.strip():
+        return [TextContent(type="text", text=_j({"ok": False, "error": "signature required — ask the human who signs the cards (never default to the recipient)"}))]
+    people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
+                         api_key=api_key, owner_sig=owner_sig)
+    sub = _find_subject(people, person, subject_id)
+    if not sub:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
+    label = _cards.display_label(sub.get("name", ""), sub.get("relationship", ""))
+    pids: list[str] = []
+    try:
+        from backend import subject_assets as _sa
+        res = _sa.resolve(sub.get("id", ""), owner or "anon")
+        ranked = sorted((res.get("body_candidates") or []) + (res.get("face_candidates") or []),
+                        key=lambda c: float(c.get("quality", c.get("face_quality", 0))), reverse=True)
+        seen: set[str] = set()
+        for c in ranked:
+            aid = str(c.get("asset_id") or "")
+            if aid and aid not in seen:
+                seen.add(aid)
+                pids.append(aid)
+        pids = _cards.solo_first(owner or "anon", pids)[:8]
+    except Exception:  # noqa: BLE001
+        pids = []
+    if not pids:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "need at least 1 confirmed photo — upload one and I'll deal four"}))]
+    ladder = [("birthday_4photo", 4, 4), ("birthday_wall", 2, 5),
+              ("birthday_arch", 1, 1), ("birthday_news", 1, 1),
+              ("birthday_gold", 1, 1), ("birthday_dots", 1, 3),
+              ("portrait", 1, 1), ("typography", 0, 0)]
+    picks = [(tid, lo, hi) for tid, lo, hi in ladder if len(pids) >= lo][:4]
+    tones: list[str] = []
+    for t in [tone or "funny", "warm", "dry", "funny"]:
+        if t not in tones:
+            tones.append(t)
+    sig = signature.strip()[:40]
+    title = f"Happy Birthday, {label}!"[:40]
+    prof = {"name": label, "relationship": sub.get("relationship", ""),
+            "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
+    cards_out = []
+    for i, (tid, lo, hi) in enumerate(picks):
+        t = tones[i % len(tones)]
+        lines = _cards.message_lines(prof, t)
+        message = (lines[i % len(lines)]["text"][:240] if lines else "")
+        if tid == "typography":
+            use_pids: list[str] = []
+        elif tid == "birthday_4photo":
+            use_pids = pids[:4]
+        elif tid in ("birthday_wall", "birthday_dots"):
+            use_pids = pids[:min(len(pids), hi)]
+        else:
+            use_pids = pids[:1]
+        spec = {"template": tid, "format": "5x7",
+                "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                            "focus": [0.5, 0.5], "cutout": ""} for pid in use_pids],
+                "headline": title, "recipient": label, "sender": sig,
+                "inside_message": message, "title_vibe": "playful_balloons"}
+        saved = await _call("POST", "/api/cards/designs",
+                            {"owner": owner, "spec": spec}, api_key=api_key, owner_sig=owner_sig)
+        if not saved.get("ok"):
+            continue
+        d = saved["design"]
+        bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key, owner_sig=owner_sig)
+        cards_out.append({"design_id": d["id"], "revision": d["revision"],
+                          "template_id": tid, "tone": t, "headline": title,
+                          "message": message, "proof_url": saved.get("proof_url", ""),
+                          "views": bundle.get("views", {}),
+                          "render_error": bundle.get("error", "")})
+    if not cards_out:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "could not deal any card — check photos and try again"}))]
+    return [TextContent(type="text", text=_j(
+        {"ok": True, "cards": cards_out,
+         "hint": "Send the human the four proof_urls. They pick one, tweak it via oddhobb_edit_card_copy, buy via oddhobb_checkout_card."}))]
+
+
+async def oddhobb_attach_card_art(design_id: str = "", front_art_url: str = "",
+                                  inside_art_url: str = "", back_art_url: str = "",
+                                  headline: str = "", recipient: str = "",
+                                  sender: str = "", inside_message: str = "",
+                                  headline_baked: bool = True, art_source: str = "",
+                                  prompt: str = "", owner: str = "", api_key: str = "",
+                                  owner_sig: str = "") -> list:
+    """Pin third-party/generated art to a NEW fullbleed revision (creates the
+    design when design_id is empty). Server-side fetch + aspect/size/face
+    validation, then preview + spread auto-render. Returns views, proof_url,
+    and a triptych image. Attach never mutates — edits mint revisions."""
+    from mcp.types import TextContent
+    if not (front_art_url or "").strip():
+        return [TextContent(type="text", text=_j({"ok": False, "http_status": 400,
+                             "error": "front_art_url is required"}))]
+    saved = await _call("POST", "/api/cards/attach-art",
+                        {"owner": owner, "design_id": design_id,
+                         "front_art_url": front_art_url,
+                         "inside_art_url": inside_art_url,
+                         "back_art_url": back_art_url,
+                         "headline": headline, "recipient": recipient,
+                         "sender": sender, "inside_message": inside_message,
+                         "headline_baked": bool(headline_baked),
+                         "art_source": art_source, "prompt": prompt},
+                        api_key=api_key, owner_sig=owner_sig)
+    if not saved.get("ok"):
+        return [TextContent(type="text", text=_j(saved))]
+    d = saved["design"]
+    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key, owner_sig=owner_sig)
+    exp = await _call("POST", f"/api/cards/{d['id']}/render",
+                      {"owner": owner, "revision": d["revision"], "kind": "export"}, api_key=api_key, owner_sig=owner_sig)
+    body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
+            "template_id": "birthday_fullbleed",
+            "previews": {**(bundle.get("views") or {}),
+                         "print_pdf": f"/api/cards/{d['id']}/r{d['revision']}/export"},
+            "proof_url": saved.get("proof_url", ""),
+            "warnings": saved.get("warnings", []),
+            "export": (exp.get("job") or {}).get("id", ""),
+            "render_error": bundle.get("error", ""),
+            "hint": "Send the human the proof_url. Message/signature edits via oddhobb_edit_card_copy keep the art; sell via oddhobb_checkout_card."}
+    try:
+        return [TextContent(type="text", text=_j(body)),
+                _contact_block(owner, d["id"], d["revision"])]
+    except Exception as e:  # noqa: BLE001
+        body["contact_error"] = str(e)[:150]
+        return [TextContent(type="text", text=_j(body))]
+
+
+async def _maybe_title_art(headline: str, vibe: str, owner: str,
+                             design_id: str, api_key: str = "",
+                             owner_sig: str = "") -> str | None:
+    """Attempt generative title art inline. Returns a storage key or None.
+    Contract enforced downstream by cards.fit_title_art (exact 930×320 RGBA
+    with real transparency) — opaque or malformed output is rejected and the
+    card keeps serif. Never raises; every failure path is silent fallback."""
+    import os as _os
+    if not _os.environ.get("FAL_KEY"):
+        return None
+    try:
+        from backend.card_scenes import title_prompt, TITLE_VIBES
+        from backend import cards as _cards
+        v = vibe if vibe in TITLE_VIBES else "playful_balloons"
+        from backend.creative.providers import fal as _fal
+        rid = _fal._submit("fal-ai/flux/dev",
+                           {"prompt": title_prompt(headline, v),
+                            "image_size": "landscape_4_3", "num_images": 1},
+                           _os.environ["FAL_KEY"])
+        res = _fal._result("fal-ai/flux/dev", rid, _os.environ["FAL_KEY"])
+        imgs = ((res.get("response") or res).get("images") or [])
+        if not imgs:
+            return None
+        import urllib.request as _url
+        from pathlib import Path as _P
+        from PIL import Image as _I
+        tmp, _ = _url.urlretrieve(imgs[0]["url"])
+        try:
+            fitted = _cards.fit_title_art(_I.open(_P(tmp)))
+        finally:
+            _P(tmp).unlink(missing_ok=True)
+        if fitted is None:
+            return None
+        _fal.log_spend(owner=owner, adapter="fal.title_art",
+                       endpoint="fal-ai/flux/dev", est_cost_usd=0.025,
+                       request_id=rid)
+        key = f"owners/{_cards.storage._slug(owner)}/cards/{design_id}/title-art.png"
+        dest = _cards.cached(key)
+        fitted.save(dest, "PNG")
+        _cards.storage.put(dest, key)
+        return key
+    except Exception:
+        return None
 
 
 async def oddhobb_regenerate_title_art(design_id: str, vibe: str = "",
@@ -574,20 +857,22 @@ async def oddhobb_regenerate_title_art(design_id: str, vibe: str = "",
             return _j({"ok": False, "error": f"fal produced no image: {str(res)[:150]}"})
         import urllib.request as _url
         from backend import cards as _cards
-        r2key = f"tmp/title-{design_id}-r{rev}.png"
         tmp, _ = _url.urlretrieve(imgs[0]["url"])
         from pathlib import Path as _P
-        from backend import r2presign as _r2
-        rk = _r2.put_temp(_P(tmp))
+        from PIL import Image as _I
         try:
-            from PIL import Image as _I
-            _I.open(_P(tmp)).convert("RGBA").save(_P(tmp), "PNG")
-            _cards.storage.put(_P(tmp), f"owners/{_cards.storage._slug(owner or 'anon')}/cards/{design_id}/title-art.png")
+            fitted = _cards.fit_title_art(_I.open(_P(tmp)))
         finally:
-            _r2.delete(rk)
+            _P(tmp).unlink(missing_ok=True)
+        if fitted is None:
+            return _j({"ok": False, "http_status": 422,
+                       "error": "fal output rejected by the title contract (needs real transparency at 930×320) — serif stands"})
         _fal.log_spend(owner=owner or "anon", adapter="fal.title_art",
                        endpoint="fal-ai/flux/dev", est_cost_usd=0.025, request_id=rid)
         key = f"owners/{_cards.storage._slug(owner or 'anon')}/cards/{design_id}/title-art.png"
+        dest = _cards.cached(key)
+        fitted.save(dest, "PNG")
+        _cards.storage.put(dest, key)
         saved = await _call("POST", "/api/cards/designs",
                             {"owner": owner, "id": design_id, "expected_revision": rev,
                              "spec": {**spec, "title_art_key": key, "title_vibe": v}}, api_key=api_key, owner_sig=owner_sig)
@@ -601,7 +886,9 @@ async def oddhobb_edit_card_copy(design_id: str, owner: str = "", headline: str 
                                  api_key: str = "",
                                  owner_sig: str = "") -> str:
     """Edit canonical copy (headline ≤40, message ≤240, signature ≤40) → new
-    revision. Empty fields keep their current values."""
+    revision. Empty fields keep their current values. Renders the new
+    revision (preview + spread + export) so checkout can follow at once —
+    art is untouched, only words move."""
     cur = await _call("GET", "/api/cards/designs/" + design_id +
                       "?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig)
     if not cur.get("ok"):
@@ -619,9 +906,23 @@ async def oddhobb_edit_card_copy(design_id: str, owner: str = "", headline: str 
         spec["inside"] = inner
     if signature.strip():
         spec["sender"] = signature.strip()[:40]
-    return _j(await _call("POST", "/api/cards/designs",
-                         {"owner": owner, "id": design_id,
-                          "expected_revision": d.get("revision", 1), "spec": spec}, api_key=api_key, owner_sig=owner_sig))
+    saved = await _call("POST", "/api/cards/designs",
+                        {"owner": owner, "id": design_id,
+                         "expected_revision": d.get("revision", 1), "spec": spec}, api_key=api_key, owner_sig=owner_sig)
+    if not saved.get("ok"):
+        return _j(saved)
+    nd = saved["design"]
+    jobs = []
+    for kind in ("preview", "spread", "export"):
+        r = await _call("POST", f"/api/cards/{nd['id']}/render",
+                        {"owner": owner, "revision": nd["revision"], "kind": kind},
+                        api_key=api_key, owner_sig=owner_sig)
+        jobs.append((r.get("job") or {}).get("id", ""))
+    out = dict(saved)
+    out["render_jobs"] = jobs
+    out["hint"] = ("New revision rendered — proof_url shows it; "
+                   "oddhobb_checkout_card when ready.")
+    return _j(out)
 
 
 async def oddhobb_checkout_card(design_id: str, revision: int, owner: str = "",
@@ -633,6 +934,591 @@ async def oddhobb_checkout_card(design_id: str, revision: int, owner: str = "",
     return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
                          {"owner": owner, "revision": revision, "qty": qty,
                           "idempotency_key": idempotency_key or f"canonical-{design_id}-r{revision}"}, api_key=api_key, owner_sig=owner_sig))
+
+
+async def oddhobb_checkout_card(design_id: str, revision: int, owner: str = "",
+                                qty: int = 1, idempotency_key: str = "",
+                                api_key: str = "",
+                                owner_sig: str = "") -> str:
+    """Pin a canonical revision and buy it (£7.99 → Shopify draft). 409s when
+    that revision has no passing export render — render first, then pay."""
+    return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
+                         {"owner": owner, "revision": revision, "qty": qty,
+                          "idempotency_key": idempotency_key or f"canonical-{design_id}-r{revision}"}, api_key=api_key, owner_sig=owner_sig))
+
+
+# ── canonical six: intent in, finished products out ───────────────────
+# People, make, change, get, add_media, buy. No layout, no fonts, no jobs,
+# no providers, no capsules. Backend operations stay internal; the agent
+# supplies person + request and receives finished, buyable things.
+# Auth args stay accepted but optional: connection Bearer wins, then
+# explicit api_key, then anon. The agent never needs to reason about them.
+
+def _bearer_key(ctx=None) -> str:
+    """API key from the MCP connection itself (Authorization header),
+    if the framework exposes it. Best-effort: "" when unavailable."""
+    try:
+        rc = getattr(ctx, "request_context", None)
+        req = getattr(rc, "request", None) if rc is not None else None
+        if req is None:
+            sess = getattr(rc, "session", None) if rc is not None else None
+            req = getattr(sess, "_request", None) if sess is not None else None
+        headers = getattr(req, "headers", {}) or {}
+        auth = headers.get("authorization", "") or headers.get("Authorization", "")
+        if auth.lower().startswith("bearer "):
+            return auth[7:].strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _resolve_owner(owner: str = "", api_key: str = "", ctx=None) -> str:
+    """Who is calling. Explicit owner wins (back-compat); else the key
+    holder — user handle, or the PARENT handle for delegated agent keys
+    (agents act as their customer); else anon."""
+    if (owner or "").strip():
+        return owner.strip()[:80]
+    key = (api_key or "").strip() or _bearer_key(ctx)
+    if not key:
+        return "anon"
+    try:
+        from backend import db as _db
+        with _db.connect() as c:
+            u = _db.get_user_by_api_key(c, key)
+            if u:
+                return u["handle"]
+            a = _db.get_agent_by_key(c, key)
+            if a and a["status"] == "active":
+                return a["parent_handle"]
+    except Exception:
+        pass
+    return "anon"
+
+
+def _env(*, status="ready", id="", summary="", artifacts=None,
+         price_cents=None, next_actions=None, requires_action=None,
+         extra=None) -> dict:
+    """Canonical public envelope. Stable keys; legacy callers keep working
+    because their fields ride along inside extra."""
+    d: dict = {"ok": True, "status": status, "id": id, "summary": summary,
+               "artifacts": artifacts or [],
+               "next_actions": next_actions or ["change", "buy"]}
+    if price_cents is not None:
+        d["price"] = {"amount_cents": price_cents, "currency": "GBP"}
+    if requires_action is not None:
+        d["requires_action"] = requires_action
+    if extra:
+        d.update(extra)
+    return d
+
+
+def _artifact_list(design_id: str, rev: int, owner: str) -> list:
+    from backend import config as _cfg
+    base = (_cfg.PUBLIC_BASE or "https://oddhobb.com").rstrip("/")
+    acct = f"?owner={owner}"
+    return [
+        {"kind": "front", "url": f"{base}/backend/api/cards/{design_id}/r{rev}/preview{acct}"},
+        {"kind": "inside", "url": f"{base}/backend/api/cards/{design_id}/r{rev}/inside{acct}"},
+        {"kind": "back", "url": f"{base}/backend/api/cards/{design_id}/r{rev}/back{acct}"},
+    ]
+
+
+async def oddhobb_recommend(person: str = "", subject_id: str = "",
+                            occasion: str = "birthday", budget_cents: int = 0,
+                            vibe: str = "", tone: str = "funny",
+                            signature: str = "", owner: str = "",
+                            api_key: str = "", owner_sig: str = "") -> list:
+    """Rank published recipes for a person and compile the top three into
+    finished products (saved revisions + preview renders + proof_urls).
+    Without a signature the ideas return uncompiled (preview_status
+    needs-signature) — the signer is asked once, never defaulted."""
+    from mcp.types import TextContent
+    from backend.recipes import matcher as _rmatch
+    from backend.recipes import registry as _rreg
+    from backend.recipes import compiler as _comp
+    people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
+                         api_key=api_key, owner_sig=owner_sig)
+    sub = _find_subject(people, person, subject_id)
+    if not sub:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
+    prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
+            "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
+    subject = {"id": sub.get("id", ""), **prof}
+    try:
+        from backend import subject_assets as _sa
+        pool = _sa.resolve(sub.get("id", ""), owner or "anon")
+        nphotos = len({str(c.get("asset_id") or "") for c in
+                       (pool.get("body_candidates") or []) + (pool.get("face_candidates") or [])
+                       if c.get("asset_id")})
+    except Exception:
+        nphotos = 0
+    brief = _comp.build_brief(subject=subject, occasion=occasion, vibe=vibe,
+                              photo_count=nphotos)
+    matches = _rmatch.match(brief, _rreg.published(), limit=5)
+    if not matches:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "no published recipe fits — upload photos first",
+             "brief": {"occasion": brief["occasion"], "photo_count": nphotos}}))]
+    recs = []
+    do_compile = bool(signature.strip())
+    for m in matches[:3]:
+        if not do_compile:
+            recs.append({"idea_id": f"idea_{m['id']}", "recipe": m["id"],
+                         "version": m["version"], "score": m["score"],
+                         "why": "; ".join(m["reasons"]),
+                         "price_cents": m["price_cents"],
+                         "preview_status": "needs-signature"})
+            continue
+        c = await asyncio.to_thread(
+            _comp.compile, owner or "anon", m["id"], subject=subject,
+            occasion=occasion, vibe=vibe, tone=tone, message_hint="",
+            signature=signature)
+        if not c.get("ok"):
+            continue
+        d = c["design"]
+        recs.append({"idea_id": f"idea_{m['id']}", "recipe": m["id"],
+                     "version": m["version"], "score": m["score"],
+                     "why": "; ".join(m["reasons"]),
+                     "price_cents": m["price_cents"],
+                     "design_id": d["id"], "revision": d["revision"],
+                     "copy_source": c.get("copy_source", ""),
+                     "proof_url": c.get("proof_url", ""),
+                     "preview_status": "ready"})
+    return [TextContent(type="text", text=_j(
+        {"ok": True, "ideas": recs,
+         "hint": "Send the human the proof_urls. oddhobb_make realizes one fully; "
+                 "oddhobb_variants deals more; oddhobb_checkout_card buys."}))]
+
+
+async def oddhobb_make(subject_id: str = "", person: str = "",
+                        request: str = "", product_type: str = "greeting_card",
+                        budget_cents: int = 0, count: int = 4,
+                        owner: str = "", api_key: str = "",
+                        owner_sig: str = "", ctx=None) -> list:
+    """Make finished personalised things: brief, rank, compile, render, QC.
+    Returns ready options with views — never idea IDs, never template names.
+    Unsigned previews are fine; the signer is asked once, at buy time."""
+    from mcp.types import TextContent
+    from backend.recipes import matcher as _rmatch
+    from backend.recipes import registry as _rreg
+    from backend.recipes import compiler as _comp
+    who = _resolve_owner(owner, api_key, ctx)
+    key_arg = api_key or _bearer_key(ctx)
+    if (product_type or "greeting_card") != "greeting_card":
+        return [TextContent(type="text", text=_j(_env(
+            status="needs_input", summary="Only greeting cards so far.",
+            requires_action={"type": "change_request",
+                             "message": "I make greeting cards — try 'birthday card for Dad'."},
+            next_actions=[])))]
+    people = await _call("GET", "/api/oddhobb/people?owner=" + who,
+                         api_key=key_arg, owner_sig=owner_sig)
+    sub = _find_subject(people, person, subject_id)
+    if not sub:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
+    rq = str(request or "")
+    rl = rq.lower()
+    occasion = "birthday"
+    for o in ("christmas", "valentine", "anniversary", "graduation",
+              "retirement", "new_baby", "new baby"):
+        if o in rl:
+            occasion = o.replace(" ", "_")
+            break
+    tone = "funny"
+    for t in ("dry", "warm", "roast", "mean", "savage", "short", "sweet"):
+        if t in rl:
+            tone = "dry" if t in ("mean", "savage", "roast") else t
+            break
+    prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
+            "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
+    subject = {"id": sub.get("id", ""), **prof}
+    try:
+        from backend import subject_assets as _sa
+        pool = _sa.resolve(sub.get("id", ""), who)
+        nphotos = len({str(c.get("asset_id") or "") for c in
+                       (pool.get("body_candidates") or []) + (pool.get("face_candidates") or [])
+                       if c.get("asset_id")})
+    except Exception:
+        nphotos = 0
+    brief = _comp.build_brief(subject=subject, occasion=occasion,
+                              vibe=rq[:200], photo_count=nphotos)
+    matches = _rmatch.match(brief, _rreg.published(), limit=5)
+    if not matches:
+        return [TextContent(type="text", text=_j(_env(
+            status="needs_input",
+            summary=f"I need photos of {prof.get('name') or 'them'} first.",
+            requires_action={"type": "add_media", "subject_id": sub.get("id", ""),
+                             "message": f"I need a few clear photos to make these — add {4 - nphotos} more."},
+            next_actions=[])))]
+    want = max(1, min(int(count or 4), 4))
+    tones = []
+    for t in [tone, "warm", "dry", "funny"]:
+        if t not in tones:
+            tones.append(t)
+    options = []
+    for i in range(want):
+        m = matches[i % len(matches)]
+        c = await asyncio.to_thread(
+            _comp.compile, who, m["id"], subject=subject, occasion=occasion,
+            vibe=rq[:200], tone=tones[i % len(tones)], message_hint="",
+            signature="", variation=i)
+        if not c.get("ok"):
+            continue
+        d = c["design"]
+        bundle = await _card_spread_bundle(d["id"], d["revision"], who,
+                                           api_key=key_arg, owner_sig=owner_sig)
+        views = bundle.get("views_abs") or bundle.get("views") or {}
+        options.append({
+            "id": d["id"], "creation_id": d["id"], "recipe": m["id"],
+            "name": (d.get("spec") or {}).get("headline", ""),
+            "price_cents": m["price_cents"],
+            "views": {k: views.get(k, "") for k in ("front", "inside", "back")},
+            "proof_url": c.get("proof_url", ""),
+        })
+        if bundle.get("error"):
+            options[-1]["render_note"] = bundle["error"]
+    if not options:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "could not compile — check photos and try again"}))]
+    first = options[0]
+    return [TextContent(type="text", text=_j(_env(
+        status="ready", id=first["id"],
+        summary=f"Made {len(options)} for {(prof.get('name') or 'them')} — pick one.",
+        price_cents=first["price_cents"],
+        next_actions=["change", "buy"],
+        extra={"options": options,
+               "design_id": first["id"],
+               "proof_url": first.get("proof_url", "")})))]
+
+
+async def oddhobb_variants(design_id: str = "", idea_id: str = "",
+                           vibe: str = "", tone: str = "funny",
+                           signature: str = "", n: int = 3,
+                           owner: str = "", api_key: str = "",
+                           owner_sig: str = "") -> list:
+    """More like this / change vibe: recompile the same recipe with new
+    tones, copy, and photo slices. Returns fresh finished designs."""
+    from mcp.types import TextContent
+    from backend.recipes import compiler as _comp
+    if not signature.strip():
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "signature required — ask the human who signs the cards"}))]
+    if design_id:
+        cur = await _call("GET", "/api/cards/designs/" + design_id +
+                          "?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig)
+        if not cur.get("ok"):
+            return [TextContent(type="text", text=_j(cur))]
+        spec = ((cur.get("design") or {}).get("spec")) or {}
+        recipe_id = spec.get("recipe_id") or "birthday_four_photos_party_title_v1"
+        # original star: first photo slot with a confirmed subject wins
+        subject_id = ""
+        try:
+            from backend import db as _db
+            first_pid = ((spec.get("photos") or [{}])[0] or {}).get("photo_id", "")
+            if first_pid:
+                with _db.connect() as c:
+                    hit = c.execute(
+                        "SELECT subject_id FROM photo_subjects WHERE photo_id=? "
+                        "AND confirmed=1 LIMIT 1", (first_pid,)).fetchone()
+                    subject_id = dict(hit)["subject_id"] if hit else ""
+        except Exception:
+            subject_id = ""
+    elif (idea_id or "").startswith("idea_"):
+        recipe_id = idea_id[5:]
+        subject_id = ""
+    else:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "pass design_id or idea_id"}))]
+    people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
+                         api_key=api_key, owner_sig=owner_sig)
+    subs = ((people.get("people") or []) if isinstance(people, dict) else [])
+    by_id = {((s.get("subject") or {}).get("id")): s for s in subs}
+    target = by_id.get(subject_id, {})
+    if not target and subs:
+        target = subs[0]
+    if not (target.get("subject") or {}).get("id"):
+        return [TextContent(type="text", text=_j({"ok": False, "error": "no subject to vary — check oddhobb_people first"}))]
+    ts = target.get("subject") or {}
+    tp = (target.get("profile") or {}).get("profile", {})
+    subject = {"id": ts.get("id", ""),
+               "name": tp.get("name", ts.get("name", "")),
+               "relationship": tp.get("relationship", ts.get("relationship", "")),
+               "interests": tp.get("interests", []),
+               "memories": tp.get("memories", [])}
+    tones = []
+    for t in [tone or "funny", "warm", "dry", "funny"]:
+        if t not in tones:
+            tones.append(t)
+    out = []
+    for i in range(max(1, min(int(n or 3), 5))):
+        c = await asyncio.to_thread(
+            _comp.compile, owner or "anon", recipe_id, subject=subject,
+            occasion="birthday", vibe=vibe or tones[i % len(tones)],
+            tone=tones[i % len(tones)], message_hint="",
+            signature=signature, variation=i + 1)
+        if not c.get("ok"):
+            continue
+        d = c["design"]
+        out.append({"design_id": d["id"], "revision": d["revision"],
+                    "tone": tones[i % len(tones)],
+                    "copy_source": c.get("copy_source", ""),
+                    "proof_url": c.get("proof_url", "")})
+    if not out:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "could not vary — check photos and try again"}))]
+    return [TextContent(type="text", text=_j(
+        {"ok": True, "variants": out,
+         "hint": "Send the human the proof_urls; oddhobb_checkout_card buys."}))]
+
+
+async def oddhobb_get(design_id: str, revision: int = 0, owner: str = "",
+                      api_key: str = "", owner_sig: str = "") -> list:
+    """Status + final artifacts for one card: faces, triptych, print PDF,
+    proof URL, checkout readiness. Read-only."""
+    from mcp.types import TextContent
+    if revision:
+        spath = f"/api/cards/{design_id}/scene?revision={revision}&owner=" + (owner or "anon")
+    else:
+        spath = f"/api/cards/{design_id}/scene?owner=" + (owner or "anon")
+    scene = await _call("GET", spath, api_key=api_key, owner_sig=owner_sig)
+    if not scene.get("ok"):
+        return [TextContent(type="text", text=_j(scene))]
+    sc = scene.get("scene") or {}
+    rev = sc.get("revision", 0)
+    base = f"/api/cards/{design_id}/r{rev}"
+    return [TextContent(type="text", text=_j(
+        {"ok": True, "design_id": design_id, "revision": rev,
+         "artifacts": {"front": f"{base}/preview", "inside": f"{base}/inside",
+                       "back": f"{base}/back", "triptych": f"{base}/triptych",
+                       "print_pdf": f"{base}/export"},
+         "proof_url": scene.get("proof_url", ""),
+         "outputs": (sc.get("outputs") or {}),
+         "hint": "oddhobb_checkout_card buys this revision."}))]
+
+
+
+_TONE_WORDS = {
+    "funny": "funny", "funnier": "funny", "hilarious": "funny",
+    "dry": "dry", "drier": "dry", "deadpan": "dry", "sarcastic": "dry",
+    "warm": "warm", "sweet": "warm", "sweeter": "warm", "kind": "warm",
+    "roast": "dry", "mean": "dry", "meaner": "dry", "savage": "dry",
+    "short": "short", "shorter": "short", "brief": "short",
+}
+_VIBE_WORDS = ("golf", "football", "christmas", "dog", "cat", "fishing",
+               "music", "retro", "classy", "cute", "silly", "posh")
+
+
+async def oddhobb_change(design_id: str = "", instruction: str = "",
+                         owner: str = "", api_key: str = "",
+                         owner_sig: str = "", ctx=None) -> list:
+    """Change a finished card with plain words ("less cheesy, more golf").
+    New immutable revision, affected ingredients re-rendered. No fonts, no
+    coordinates, no crop arrays — intent in, finished revision out."""
+    from mcp.types import TextContent
+    who = _resolve_owner(owner, api_key, ctx)
+    key_arg = api_key or _bearer_key(ctx)
+    if not design_id:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "pass design_id (creation_id) of the card to change"}))]
+    cur = await _call("GET", "/api/cards/designs/" + design_id +
+                      "?owner=" + who, api_key=key_arg, owner_sig=owner_sig)
+    if not cur.get("ok"):
+        return [TextContent(type="text", text=_j(cur))]
+    d = cur["design"]
+    spec = dict(d.get("spec") or {})
+    words = str(instruction or "").lower()
+    changed = []
+    # tone + vibe from human words
+    new_tone = ""
+    for w, t in _TONE_WORDS.items():
+        if w in words:
+            new_tone = t
+            break
+    vibes = [v for v in _VIBE_WORDS if v in words]
+    # photo switch?
+    new_pids = None
+    if any(w in words for w in ("different photo", "different pictures", "other photo",
+                                "other pictures", "more golf", "use more")):
+        try:
+            from backend import subject_assets as _sa
+            from backend import cards as _cards
+            first = ((spec.get("photos") or [{}])[0] or {}).get("photo_id", "")
+            owner_of = who
+            subj = ""
+            if first:
+                from backend import db as _db
+                with _db.connect() as c:
+                    hit = c.execute(
+                        "SELECT subject_id FROM photo_subjects WHERE photo_id=? "
+                        "AND confirmed=1 LIMIT 1", (first,)).fetchone()
+                    subj = dict(hit)["subject_id"] if hit else ""
+            if subj:
+                res = _sa.resolve(subj, owner_of)
+                pool = [str(c.get("asset_id") or "") for c in
+                        (res.get("body_candidates") or []) + (res.get("face_candidates") or [])
+                        if c.get("asset_id")]
+                pool = _cards.solo_first(owner_of, list(dict.fromkeys(pool)))
+                cur_ids = [s.get("photo_id") for s in (spec.get("photos") or [])]
+                fresh = [p for p in pool if p not in cur_ids] + \
+                        [p for p in pool if p in cur_ids]
+                if fresh[:len(cur_ids)] != cur_ids:
+                    new_pids = fresh[:len(cur_ids)]
+                    changed.append("photo selection")
+        except Exception:
+            new_pids = None
+    # quoted text becomes the new copy verbatim ("headline should say X")
+    import re as _re
+    quoted = _re.findall(r'"([^"]{1,240})"', str(instruction or ""))
+    new_spec = dict(spec)
+    if new_pids:
+        new_spec["photos"] = [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                               "focus": [0.5, 0.5], "cutout": ""}
+                              for pid in new_pids]
+    if quoted:
+        new_spec["headline"] = quoted[0][:40]
+        changed.append("front title")
+    if new_tone and new_tone != str((spec.get("inside") or {}).get("_tone", "")):
+        try:
+            from backend import cards as _cards
+            from backend import subjects as _subs
+            from backend import db as _db2
+            prof = {"name": spec.get("recipient", ""), "interests": [],
+                    "memories": []}
+            try:
+                with _db2.connect() as c2:
+                    _first = (new_spec.get("photos") or [{}])[0] or {}
+                    hit2 = c2.execute(
+                        "SELECT subject_id FROM photo_subjects WHERE photo_id=? "
+                        "AND confirmed=1 LIMIT 1",
+                        (_first.get("photo_id", ""),)).fetchone()
+                    if hit2:
+                        pr = _subs.profile_for(
+                            c2, who, dict(hit2)["subject_id"])
+                        prof = {"name": (pr.get("subject") or {}).get("name", ""),
+                                "relationship": "",
+                                "interests": ((pr.get("profile") or {}).get("profile", {}) or {}).get("interests", []),
+                                "memories": []}
+            except Exception:
+                pass
+            lines = _cards.message_lines(prof, new_tone)
+            if lines:
+                new_spec["inside_message"] = lines[0]["text"][:240]
+                inner = dict(new_spec.get("inside") or {})
+                right = dict(inner.get("right") or {})
+                right["message"] = lines[0]["text"][:240]
+                inner["right"] = right
+                new_spec["inside"] = inner
+                changed.append("inside copy")
+        except Exception:
+            pass
+    if vibes:
+        changed.append("vibe: " + ", ".join(vibes))
+    saved = await _call("POST", "/api/cards/designs",
+                        {"owner": who, "id": design_id,
+                         "expected_revision": d.get("revision", 1),
+                         "spec": new_spec},
+                        api_key=key_arg, owner_sig=owner_sig)
+    if not saved.get("ok"):
+        return [TextContent(type="text", text=_j(saved))]
+    nd = saved["design"]
+    bundle = await _card_spread_bundle(nd["id"], nd["revision"], who,
+                                       api_key=key_arg, owner_sig=owner_sig)
+    views = bundle.get("views_abs") or bundle.get("views") or {}
+    if not changed:
+        changed = ["revision (no visible change detected)"]
+    return [TextContent(type="text", text=_j(_env(
+        status="ready", id=nd["id"],
+        summary=f"Changed {nd['id'][:4]}: {', '.join(changed)}.",
+        price_cents=799,
+        next_actions=["change", "buy"],
+        extra={"design_id": nd["id"], "revision": nd["revision"],
+               "changed": changed,
+               "artifacts": [
+                   {"kind": "front", "url": views.get("front", "")},
+                   {"kind": "inside", "url": views.get("inside", "")},
+                   {"kind": "back", "url": views.get("back", "")}],
+               "proof_url": saved.get("proof_url", "")})))]
+
+
+async def oddhobb_add_media(subject_id: str = "", person: str = "",
+                            photo_url: str = "", slot_id: str = "",
+                            owner: str = "", api_key: str = "",
+                            owner_sig: str = "", ctx=None) -> list:
+    """Add a photo to a person from a URL (upload it, tag it confirmed).
+    The escape hatch for agent-assisted generation: hand back a slot's
+    requirements, the agent generates with its own provider, OddHobb takes
+    the pixels from here. Slot art never reaches print unvalidated."""
+    from mcp.types import TextContent
+    who = _resolve_owner(owner, api_key, ctx)
+    key_arg = api_key or _bearer_key(ctx)
+    if not (photo_url or "").strip():
+        return [TextContent(type="text", text=_j(_env(
+            status="needs_input", summary="No photo to add.",
+            requires_action={"type": "add_media",
+                             "message": "Give me a photo URL and whose it is."},
+            next_actions=[])))]
+    people = await _call("GET", "/api/oddhobb/people?owner=" + who,
+                         api_key=key_arg, owner_sig=owner_sig)
+    sub = _find_subject(people, person, subject_id)
+    if not sub:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
+    import urllib.request as _url
+    import urllib.error as _urlerr
+    try:
+        req = _url.Request((photo_url or "").strip(),
+                           headers={"User-Agent": "OddHobb-add-media/1.0"})
+        with _url.urlopen(req, timeout=60) as res:
+            ctype = (res.headers.get("Content-Type") or "").lower()
+            data = res.read(15 * 1024 * 1024 + 1)
+    except Exception as e:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": f"could not fetch photo: {str(e)[:120]}"}))]
+    if len(data) > 15 * 1024 * 1024 or \
+            not any(t in ctype for t in ("image/png", "image/jpeg", "image/webp", "image/jpg")):
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": "photo must be PNG/JPEG/WebP, 15 MB or smaller"}))]
+    import io as _io
+    import time as _time
+    import uuid as _uuid
+    from backend import config as _cfg
+    from backend import db as _db
+    from backend import storage as _storage
+    pid = "pho_" + _uuid.uuid4().hex[:24]
+    try:
+        from PIL import Image as _I
+        with _I.open(_io.BytesIO(data)) as im:
+            rgb = im.convert("RGB")
+            w, h = rgb.size
+        dest = _cfg.DATA / "photos" / f"{pid}.jpg"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        rgb.save(dest, "JPEG", quality=90)
+        import hashlib as _hl
+        sha = _hl.sha256(data).hexdigest()
+        skey = f"owners/{_storage._slug(who)}/photos/{pid}.jpg"
+        _storage.put(dest, skey)
+        with _db.connect() as c:
+            c.execute("INSERT INTO photos (id,owner,sha256,r2_key,mime,width,height,bytes,orig_name,created_at,person,source)"
+                      " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                      (pid, who, sha, skey, "image/jpeg", w, h, len(data),
+                       "agent-upload.jpg", _time.time(),
+                       sub.get("name", ""), "agent-media"))
+            c.commit()
+        from backend import subjects as _subs
+        with _db.connect() as c:
+            _subs.link_photo(c, pid, sub["id"], confirmed=True,
+                             provenance="agent-media")
+            c.commit()
+    except Exception as e:
+        return [TextContent(type="text", text=_j(
+            {"ok": False, "error": f"could not store photo: {str(e)[:150]}"}))]
+    note = f" Tagged to {sub.get('name') or sub['id']}."
+    if slot_id:
+        note += f" Offered for slot {slot_id} — it still needs attach-art validation before print."
+    return [TextContent(type="text", text=_j(_env(
+        status="ready", id=pid, summary=f"Photo added.{note}",
+        next_actions=["make"],
+        extra={"photo_id": pid, "subject_id": sub["id"],
+               "slot_id": slot_id or ""})))]
 
 
 async def oddhobb_capture_start(subject_id: str='', owner: str='', api_key: str='') -> str:
@@ -868,11 +1754,20 @@ async def _card_spread_bundle(design_id: str, revision: int, owner: str,
                               api_key: str, timeout_s: int = 90,
                               owner_sig: str = "") -> dict:
     """Render spread for a frozen revision and return views + proof_url.
-    Raises CardError-shaped dicts as values (never throws)."""
+    Raises CardError-shaped dicts as values (never throws). A busy queue
+    (429) retries with backoff instead of failing the demo on a burst."""
     import asyncio as _aio
-    r = await _call("POST", f"/api/cards/{design_id}/render",
-                    {"owner": owner, "revision": revision, "kind": "spread"}, api_key=api_key,
-                    owner_sig=owner_sig)
+    r: dict = {}
+    for attempt in range(5):
+        r = await _call("POST", f"/api/cards/{design_id}/render",
+                        {"owner": owner, "revision": revision, "kind": "spread"}, api_key=api_key,
+                        owner_sig=owner_sig)
+        if isinstance(r, dict) and r.get("ok"):
+            break
+        err = str((r.get("error") if isinstance(r, dict) else r) or "")
+        if "busy" not in err.lower() or attempt == 4:
+            break
+        await _aio.sleep(3 + attempt * 3)
     job = (r.get("job") or {}) if isinstance(r, dict) else {}
     if not (isinstance(r, dict) and r.get("ok")):
         return {"ok": False, "error": str((r.get("error") if isinstance(r, dict) else r) or "spread render refused")}
@@ -885,7 +1780,11 @@ async def _card_spread_bundle(design_id: str, revision: int, owner: str,
         if j.get("status") == "ready":
             from backend import cards as _cards
             from backend import config as _cfg
-            views = j.get("urls") or {}
+            views = dict(j.get("urls") or {})
+            # triptych needs only preview singles, so it is ready whenever
+            # the spread is — expose it without a second render round-trip.
+            views.setdefault("triptych",
+                             f"/api/cards/{design_id}/r{revision}/triptych")
             base = (_cfg.PUBLIC_BASE or "https://oddhobb.com").rstrip("/")
             views_abs = {k: f"{base}/backend{v}?owner={owner or 'anon'}"
                          for k, v in views.items()}
@@ -899,11 +1798,18 @@ async def _card_spread_bundle(design_id: str, revision: int, owner: str,
 
 
 def _contact_block(owner: str, design_id: str, revision: int):
-    """2×2 contact-sheet JPEG as an MCP image block (agents see the card)."""
+    """Surface-first glance as an MCP image block (agents see the card).
+
+    Fixed triptych — front | inside | back at one height — so the cover is
+    never a miniature in a collage. Falls back to the legacy 2×2 sheet when
+    only a spread render exists without preview singles."""
     import base64 as _b64
     from mcp.types import ImageContent
     from backend import cards as _cards
-    path = _cards.contact_sheet(owner or "anon", design_id, revision)
+    try:
+        path = _cards.triptych_sheet(owner or "anon", design_id, revision)
+    except Exception:
+        path = _cards.contact_sheet(owner or "anon", design_id, revision)
     return ImageContent(type="image", data=_b64.b64encode(path.read_bytes()).decode(),
                         mimeType="image/jpeg")
 
@@ -1212,6 +2118,32 @@ async def figg_card_for_person(person: str, occasion: str = "birthday",
         return [TextContent(type="text", text=_j(body))]
 
 
+async def figg_card_gallery(owner: str = "", subject_id: str = "",
+                              photo_ids: str = "", api_key: str = "",
+                              owner_sig: str = "") -> str:
+    """Display the site's ready-made cards — templates already wearing this
+    owner's photos. Scope to the active person (subject_id) or an explicit
+    selection (photo_ids, comma-separated, user- or AI-picked). This is the
+    Moonpig shelf: display from pre-vetted templates, never generate."""
+    import urllib.parse as _up
+    qs = _up.urlencode({k: v for k, v in
+                        (("owner", owner), ("subject_id", subject_id),
+                         ("photo_ids", photo_ids)) if v})
+    return _j(await _call("GET", "/api/cards/gallery" + ("?" + qs if qs else ""),
+                         None, api_key=api_key, owner_sig=owner_sig))
+
+
+async def figg_card_reroll(design_id: str, owner: str = "", subject_id: str = "",
+                           api_key: str = "", owner_sig: str = "") -> list:
+    """Same template, different images: rotate one gallery card to the next
+    photo set. Returns the new design pointers; the gallery shows it."""
+    from mcp.types import TextContent
+    saved = await _call("POST", f"/api/cards/{design_id}/reroll",
+                        {"owner": owner, "subject_id": subject_id},
+                        api_key=api_key, owner_sig=owner_sig)
+    return [TextContent(type="text", text=_j(saved))]
+
+
 async def figg_blender_make(line: str, text: str, owner: str = "") -> str:
     """Use Blender on our farm box: emboss text onto the line's master via
     its adapter, get back a watertight STL URL. For remote agents (ChatGPT)
@@ -1514,7 +2446,8 @@ TOOL_AREAS: dict[str, list] = {
                   figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve,
                   figg_card_checkout, figg_card_templates, figg_card_fonts,
                   figg_card_edit, figg_card_variants, figg_card_messages,
-                  figg_card_create, figg_card_update, figg_card_for_person],
+                  figg_card_create, figg_card_update, figg_card_for_person,
+                  figg_card_gallery, figg_card_reroll],
     "design":    [figg_blueprints, figg_design_validate, figg_design_base,
                   figg_constraints,
                   figg_design_save, figg_design_order, figg_blender_make],
@@ -1539,45 +2472,29 @@ TOOL_AREAS: dict[str, list] = {
     "oddhobb":   [oddhobb_people, oddhobb_ideas, oddhobb_create,
                   oddhobb_render, oddhobb_status, oddhobb_buy,
                   oddhobb_providers, oddhobb_capsule,
-                  oddhobb_make_card, oddhobb_regenerate_title_art,
+                  oddhobb_make_card, oddhobb_attach_card_art,
+                  oddhobb_deal_cards,
+                  oddhobb_recommend, oddhobb_make, oddhobb_variants,
+                  oddhobb_get, oddhobb_change, oddhobb_add_media,
+                  oddhobb_regenerate_title_art,
                   oddhobb_edit_card_copy, oddhobb_checkout_card,
                   oddhobb_capture_start, oddhobb_capture_mark,
                   oddhobb_capture_finish, oddhobb_review, oddhobb_revise,
                   oddhobb_joke_ideas, oddhobb_joke_render, oddhobb_joke_pick],
 }
 
-# ── public tier: any agent, no token ─────────────────────────────────────
-# Names here are the ONLY tools registered when PUBLIC_MCP=1. Reads plus
-# self-serve identity (create account → own API key → keyed writes over REST
-# or the gated MCP). Anything that spends (Meshy, video credits, our LLM key,
-# Blender CPU, orders) stays on the token-gated server.
+# ── public tier: intent in, finished products out ──────────────────────
+# Six tools. Everything else (composition machinery, providers, capsules,
+# joke/style/mesh/shop/flow internals, identity) needs the caller's own
+# key on the full tier. An agent that can only see these six cannot wander
+# into layout, fonts, jobs, or suppliers — by construction, not by docs.
 PUBLIC_TOOLS = frozenset({
-    "figg_tools",
-    "figg_create_account", "figg_login",
-    "figg_catalog", "figg_products", "figg_concepts", "figg_quote",
-    "figg_check_sku", "figg_product_assets", "figg_studio_props",
-    "figg_studio_combos", "figg_product_personalise", "figg_gift_pack",
-    "figg_supplier_quote",
-    "figg_blueprints", "figg_design_validate", "figg_design_base",
-    "figg_constraints",
-    "figg_design_save", "figg_design_order",
-    "figg_flow", "figg_playbook", "figg_quick_map",
-    "figg_card_library", "figg_card_templates",
-    "figg_card_save", "figg_card_render", "figg_card_scene", "figg_card_job",
-    "figg_card_fonts", "figg_card_messages",
-    "figg_card_create", "figg_card_update", "figg_card_for_person",
-    "figg_mesh_status", "figg_measure",
-    "figg_styles", "figg_install_style",
-    "figg_acts", "figg_rooms",
-    "figg_companygraph",
-    "figg_creative_catalog", "figg_creative_templates", "figg_creative_brief",
-    "figg_creative_match", "figg_creative_revision",
-    "oddhobb_people", "oddhobb_ideas", "oddhobb_create",
-    "oddhobb_render", "oddhobb_status", "oddhobb_buy",
-    "oddhobb_providers", "oddhobb_capsule",
-    "oddhobb_make_card", "oddhobb_edit_card_copy",
-    "oddhobb_review", "oddhobb_revise",
-    "oddhobb_joke_ideas", "oddhobb_joke_pick",
+    "oddhobb_people",
+    "oddhobb_make",
+    "oddhobb_change",
+    "oddhobb_get",
+    "oddhobb_add_media",
+    "oddhobb_buy",
 })
 
 if os.environ.get("PUBLIC_MCP") == "1":
@@ -1600,12 +2517,17 @@ async def figg_tools() -> str:
 for _fns in list(TOOL_AREAS.values()):
     for _fn in _fns:
         mcp.tool(meta=TOOL_META.get(_fn.__name__))(_fn)
-mcp.tool()(figg_tools)
+if os.environ.get("PUBLIC_MCP") != "1":
+    # self-description lives on the keyed tier only — the public surface
+    # is exactly the six, discoverable via tools/list, nothing more.
+    mcp.tool()(figg_tools)
 
 
 async def main() -> None:
     if os.environ.get("MCP_HTTP"):
         print(f"fogg MCP (streamable http) on http://127.0.0.1:{PORT}/mcp", file=sys.stderr)
+        from backend import logscrub as _logscrub
+        _logscrub.install("uvicorn.access", "uvicorn.error")
         # Local only: the bridge proxies /mcp with a token gate. Never
         # expose this directly — its tools call the API with the service token.
         await mcp.run_streamable_http_async(host="127.0.0.1", port=PORT)

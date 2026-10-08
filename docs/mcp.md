@@ -1,15 +1,31 @@
 # MCP — agents (ChatGPT / Claude / Muse)
 
-> Public tier (no token): `https://mcp.oddhobb.com/mcp` — 47 safe tools
-> (reads + self-serve identity + reserve-only design + style adoption +
-> card save/preview).
-> Full tier: same URL `?token=<bridge-token>` (75 tools, incl. agent
-> credentials: `figg_mint_agent` / `figg_my_agents` / `figg_revoke_agent`).
+> Public tier (no token): `https://mcp.oddhobb.com/mcp` — exactly six
+> intent tools: `oddhobb_people`, `oddhobb_make`, `oddhobb_change`,
+> `oddhobb_get`, `oddhobb_add_media`, `oddhobb_buy`. No layout, no fonts,
+> no jobs, no providers, no capsules — intent in, finished products out.
+> Full tier: same URL `?token=<bridge-token>` or your own API key (all
+> machinery + per-customer scoping).
 > Local: `MCP_HTTP=1 python3 -m backend.mcp_server` on `:8799` (127.0.0.1);
 > public: `PUBLIC_MCP=1 MCP_PORT=8800 MCP_HTTP=1 python3 -m backend.mcp_server`.
 > Tools: `pi/.pi/extensions/figgsite.ts` + `backend/mcp_server.py`
 > (`PUBLIC_TOOLS` allowlist; tiers pinned by `tests/test_mcp_tiers.py`).
 > Rules: `AGENTS.md` · money: `docs/meshy.md` · custom: `docs/studio-custom.md`.
+
+## The canonical six (agent product API)
+
+```
+oddhobb_people                           — who can I make things for?
+oddhobb_make                             — finished options for person + request
+oddhobb_change                           — change this: plain words, new revision
+oddhobb_get                              — status + front/inside/back artifacts
+oddhobb_add_media                        — add a photo URL to a person
+oddhobb_buy                              — checkout URL for the pinned revision
+```
+
+Every tool returns `status` (`ready` or `needs_input`), `summary`,
+`artifacts`, `price`, and `next_actions`. Auth args are accepted but
+optional — connection Bearer wins, then explicit key, then anon.
 
 ## What an agent can do (full chain)
 

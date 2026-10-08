@@ -35,17 +35,34 @@
         var slide=node('div',undefined,'swiper-slide');var b=button('',function(){if(swiper)swiper.slideTo(i);commit(s.id);},'friend');
         b.setAttribute('role','option');b.setAttribute('aria-selected',String(selected===s.id));b.setAttribute('aria-label',s.name);b.dataset.subjectId=s.id;
         var photos=subjectPhotos(s.id),photo=photos[0]||data.photos.find(function(p){return p.subjects.some(function(l){return l.subject_id===s.id;});});
-        if(photo){var img=node('img');var link=photo.subjects.find(function(l){return l.subject_id===s.id&&l.face_id;});img.src=host.asset(photo.thumbnail_url+(link?'&face_id='+encodeURIComponent(link.face_id):''));img.alt='';img.loading='lazy';b.append(img);}else b.append(node('span',s.kind==='pet'?'🐾':s.name.slice(0,1),'friend-initial'));
+        if(photo){var img=node('img');var link=photo.subjects.find(function(l){return l.subject_id===s.id&&l.face_id;});var thumb=photo.thumbnail_url||"";img.src=host.asset(thumb+(link?'&face_id='+encodeURIComponent(link.face_id):''));img.alt='';img.loading='lazy';b.append(img);}else b.append(node('span',s.kind==='pet'?'🐾':s.name.slice(0,1),'friend-initial'));
         b.append(node('span',s.name,'friend-name'));slide.append(b);wrap.append(slide);
       });
-      if(!data.subjects.length){friends.append(node('p','Add a friend, upload photos, then confirm who appears in them.','studio-empty'));
+      if(!data.subjects.length){
+        var signedIn = false;
+        try { signedIn = !!(localStorage.getItem("pogpet.apikey") || ""); } catch (e) {}
+        friends.append(node("p", signedIn
+          ? "No family yet — add them below, then upload photos and confirm faces."
+          : "Browsing the demo shelf — your family lives in your account.",
+          "studio-empty"));
+        if (signedIn) {
+          var addBtn = button("Add family", function () { createFriend().catch(function () {}); }, "");
+          addBtn.type = "button";
+          friends.append(addBtn);
+        } else {
+          var inBtn = button("Sign in to see your family", function () {
+            window.OddHobbRouter.navigate("/account");
+          }, "");
+          inBtn.type = "button";
+          friends.append(inBtn);
+        }
         // demo friend: Nibble with her original photo, so the page is never empty
         host.get('/studio/demo').then(function(dd){
           if(!dd||!dd.ok||!dd.demo||data.subjects.length)return;
           var card=node('button','Demo: meet '+dd.demo.name+' — our sample friend, ready to try the shelf.','friend');
           card.type='button';
           if(dd.demo.photo&&dd.demo.photo.url){var im=node('img');im.src=host.asset(dd.demo.photo.url);im.alt=dd.demo.name+' original photo';im.loading='lazy';im.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:50%';card.prepend(im);}
-          card.onclick=function(){window.OddHobbRouter.navigate('/products');};
+          card.onclick=function(){window.OddHobbRouter.navigate('/cards');};
           friends.append(card);
         }).catch(function(){});return;}
       if(window.Swiper){
@@ -105,7 +122,7 @@
       if(filter==='activities')photos=photos.filter(function(p){return p.tags.includes('activity');});
       filters.querySelectorAll('button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.filter===filter));});
       grid.replaceChildren();grid.className='studio-photo-grid';
-      photos.forEach(function(p){var b=button('',function(){editPhoto(p).catch(error);},'studio-photo');b.disabled=working;var im=node('img');im.src=host.asset(p.thumbnail_url);im.alt=p.orig_name||'Uploaded photo';im.loading='lazy';b.append(im,node('span',(p.favourite?'★ ':'')+p.orig_name,'studio-photo-caption'));grid.append(b);});
+      photos.forEach(function(p){var b=button('',function(){editPhoto(p).catch(error);},'studio-photo');b.disabled=working;var im=node('img');var thumb=(p.thumbnail_url||p.url||'');if(!thumb){b.disabled=true;}else{im.src=host.asset(thumb);}im.alt=p.orig_name||'Uploaded photo';im.loading='lazy';b.append(im,node('span',(p.favourite?'★ ':'')+p.orig_name,'studio-photo-caption'));grid.append(b);});
       if(!photos.length)grid.append(node('p',filter==='review'?'All detected faces are reviewed.':s?'No matching photos yet. Add photos or open Review faces to assign '+s.name+'.':'Upload photos, then name the faces you recognise.','studio-empty'));
       status.textContent=photos.length+' photos'+(s?' featuring '+s.name:'');
     }
@@ -114,7 +131,7 @@
       var view=dialog('Add family');var label=node('label','Name');var field=node('input');field.maxLength=60;label.append(field);var kind=node('select');kind.append(new Option('Person','person'),new Option('Pet','pet'));var msg=node('p');var save=button('Add family',async function(){save.disabled=true;try{var result=await host.post('/studio/subjects',{name:field.value,kind:kind.value});view.dialog.close();await refresh(result.subject.id);window.OddHobbRouter.navigate('/studio/people/'+result.subject.id);}catch(e){msg.textContent=e.message;save.disabled=false;}});view.box.append(label,kind,save,msg);field.focus();
     }
     async function editPhoto(p){
-      var view=dialog('Who’s in this photo?'),imgWrap=node('div',undefined,'studio-photo-inspect'),im=node('img');im.src=host.asset(p.thumbnail_url);im.alt=p.orig_name;imgWrap.append(im);view.box.append(imgWrap);
+      var view=dialog('Who’s in this photo?'),imgWrap=node('div',undefined,'studio-photo-inspect'),im=node('img');var full=(p.thumbnail_url||p.url||'');if(full)im.src=host.asset(full);im.alt=p.orig_name;imgWrap.append(im);view.box.append(imgWrap);
       var selectors=[],checks=[],faces=p.faces.length?p.faces:[{id:'',box:null}];
       faces.forEach(function(f,i){
         if(f.box){var mark=node('span',String(i+1),'studio-face-box');mark.style.left=(f.box[0]*100)+'%';mark.style.top=(f.box[1]*100)+'%';mark.style.width=(f.box[2]*100)+'%';mark.style.height=(f.box[3]*100)+'%';imgWrap.append(mark);}
@@ -143,14 +160,16 @@
     }
     var jobs=new Map();
     function findFaces(bitmap){
-      if(!worker){worker=new Worker('/js/face-worker.js?v=studio-2');worker.onmessage=function(e){var job=jobs.get(e.data.id);if(job){jobs.delete(e.data.id);clearTimeout(job.timer);e.data.error?job.reject(Error(e.data.error)):job.resolve(e.data.faces);}};worker.onerror=function(){jobs.forEach(function(j){clearTimeout(j.timer);j.reject(Error('Face detection unavailable. Assign people manually in Review faces.'));});jobs.clear();worker.terminate();worker=null;};}
+      if(!worker){worker=new Worker('/js/face-worker.js?v=studio-3');worker.onmessage=function(e){var job=jobs.get(e.data.id);if(job){jobs.delete(e.data.id);clearTimeout(job.timer);e.data.error?job.reject(Error(e.data.error)):job.resolve(e.data.faces);}};worker.onerror=function(){jobs.forEach(function(j){clearTimeout(j.timer);j.reject(Error('Face detection unavailable. Assign people manually in Review faces.'));});jobs.clear();worker.terminate();worker=null;};}
       return new Promise(function(resolve,reject){var id=++workerId;var timer=setTimeout(function(){jobs.delete(id);if(worker){worker.terminate();worker=null;}reject(Error('Face detection timed out. You can still assign people manually.'));},45000);jobs.set(id,{resolve:resolve,reject:reject,timer:timer});worker.postMessage({id:id,bitmap:bitmap},[bitmap]);});
     }
     async function detectPending(){
       var wasWorking=working;working=true;available(loaded);paintPhotos();try{await host.ready();if(!loaded)await refresh();
         var pending=data.photos.filter(function(p){return p.detection_status==='pending';});
-        for(var p of pending){status.textContent='Finding faces in '+p.orig_name+'…';var response=await fetch(host.asset(p.url));if(!response.ok)throw Error('Photo could not be loaded.');var bitmap=await createImageBitmap(await response.blob());var faces=await findFaces(bitmap);await host.post('/studio/photos/'+p.id,{faces:faces});}
+        var failed=[];
+        for(var p of pending){try{status.textContent='Finding faces in '+p.orig_name+'…';var response=await fetch(host.asset(p.url));if(!response.ok)throw Error('Photo could not be loaded.');var bitmap=await createImageBitmap(await response.blob());var faces=await findFaces(bitmap);await host.post('/studio/photos/'+p.id,{faces:faces});}catch(e){failed.push(p.orig_name);}}
         await refresh();filter='review';paintPhotos();
+        if(failed.length)status.textContent='Faces found except: '+failed.join(', ')+'. Assign those manually in Review faces.';
       }finally{working=wasWorking;available(loaded);paintPhotos();}
     }
     input.onchange=async function(){var files=Array.from(input.files);input.value='';var failure=null;working=true;available(loaded);paintPhotos();try{

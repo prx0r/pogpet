@@ -27,9 +27,12 @@ def compose(design: dict, assets: dict,
     W, H = spec["horizontalResolution"], spec["verticalResolution"]
     pw = W // 4
     f = front(design, assets, pw, H).convert("RGB")
-    inner = inside(design, pw * 2, H).convert("RGB")
+    inner = inside(design, pw * 2, assets=assets).convert("RGB")
+    if inner.height != H:
+        # rounding between the SKU sheet and the 10:7 spread — sub-pixel fit
+        inner = inner.resize((pw * 2, H), Image.Resampling.LANCZOS)
     from backend.card_scenes import back as back_panel
-    back = back_panel(design, pw, H).convert("RGB")
+    back = back_panel(design, pw, H, assets=assets).convert("RGB")
     panels = {"back": back, "front": f,
               "inside_left": inner.crop((0, 0, pw, H)),
               "inside_right": inner.crop((pw, 0, pw * 2, H))}

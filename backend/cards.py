@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request, send_file
-from PIL import Image
+from PIL import Image, ImageOps
 
 from . import card_scenes as scenes, config, db, storage
 
@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS card_orders (
  idempotency_key TEXT NOT NULL, created_at REAL NOT NULL,
  UNIQUE(owner,idempotency_key));
 """
-_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="card-render")
-_slots = threading.BoundedSemaphore(6)
+_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="card-render")
+_slots = threading.BoundedSemaphore(8)
 ownership_lock = threading.RLock()
 
 
@@ -183,8 +183,9 @@ def proof_url_for(did: str) -> str:
 
 
 def contact_sheet(owner, did, rev, *, width: int = 720):
-    """2×2 JPEG of the four spread faces — one picture agents can actually
-    see. Requires a ready spread render."""
+    """Legacy 2×2 JPEG of the four spread faces — kept for the listing view.
+    The default glance agents and humans see is now triptych_sheet (front |
+    inside | back at one height), where no surface is a miniature."""
     parts = []
     for part in SPREAD_PARTS:
         with Image.open(local_asset(key(owner, did, rev, "spread-" + part.replace("_", "-")))) as im:
@@ -202,6 +203,393 @@ def contact_sheet(owner, did, rev, *, width: int = 720):
     dest.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(dest, "JPEG", quality=80)
     return dest
+
+
+# ── generative title zones: render contract, not wishes ──────────────
+# A title asset is exact 930×320 RGBA with real transparency. Anything
+# else is REJECTED (None) and the card falls back to house serif — a bad
+# title is the fallback, never a fudge. Exactness is enforced here at
+# composition time; no diffusion model can promise exact pixels.
+TITLE_ART_SIZE = (930, 320)
+
+
+def fit_title_art(img):
+    """Enforce the title contract. Returns exact-size RGBA or None."""
+    try:
+        art = img.convert("RGBA")
+    except Exception:
+        return None
+    fitted = ImageOps.fit(art, TITLE_ART_SIZE, method=Image.Resampling.LANCZOS,
+                          centering=(0.5, 0.5))
+    if fitted.size != TITLE_ART_SIZE:
+        return None
+    alpha = list(fitted.getchannel("A").getdata())
+    n = len(alpha)
+    transparent = sum(1 for v in alpha if v < 128) / max(1, n)
+    if transparent < 0.05:
+        return None  # effectively opaque — would smother the cover
+    return fitted
+
+
+def generate_copy_llm(profile: dict, tone: str = "funny"):
+    """Best-effort server-side inside line from real profile facts.
+    Returns (message | None). No key → None. Never raises — the caller
+    falls back to caller-supplied hint text, then to template lines."""
+    import os as _os
+    import json as _json
+    import urllib.request as _ul
+    key = _os.environ.get("OPENROUTER_API_KEY", "")
+    if not key:
+        return None
+    try:
+        prof = dict(profile or {})
+        facts = {k: prof.get(k) for k in
+                 ("name", "relationship", "interests", "memories",
+                  "personality", "nicknames") if prof.get(k)}
+        model = _os.environ.get("OPENROUTER_COPY_MODEL", "openai/gpt-4o-mini")
+        payload = _json.dumps({
+            "model": model,
+            "max_tokens": 80,
+            "temperature": 0.9,
+            "messages": [
+                {"role": "system",
+                 "content": ("Write ONE birthday-card inside line (max 200 characters) "
+                             "from these recipient facts. Dry and affectionate, never cruel, "
+                             "never generic. Reply with only the line, no quotes.")},
+                {"role": "user", "content": _json.dumps(facts)[:800]},
+            ],
+        }).encode()
+        req = _ul.Request("https://openrouter.ai/api/v1/chat/completions",
+                          data=payload,
+                          headers={"Authorization": f"Bearer {key}",
+                                   "Content-Type": "application/json",
+                                   "HTTP-Referer": "https://oddhobb.com",
+                                   "X-Title": "OddHobb cards"},
+                          method="POST")
+        with _ul.urlopen(req, timeout=60) as res:
+            data = _json.loads(res.read().decode() or "{}")
+        text = (((data.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
+        text = str(text).strip().strip("\"'")[:240]
+        return text or None
+    except Exception:
+        return None
+
+
+def triptych_sheet(owner, did, rev, *, height: int = 1008):
+    """Fixed 3-panel preview: front | inside spread | back at one height.
+
+    Surface-first glance for agents and humans — the front renders full-size
+    as its own surface, never a subpanel in a collage. Prefers the preview
+    singles (front/inside/back); falls back to spread faces when only a
+    spread render exists. Requires preview OR spread ready, else 409."""
+    from backend import card_scenes as _scenes
+    try:
+        with Image.open(local_asset(key(owner, did, rev, "preview"))) as im:
+            front_img = im.convert("RGB")
+        with Image.open(local_asset(key(owner, did, rev, "inside"))) as im:
+            inside_img = im.convert("RGB")
+    except Exception:
+        with Image.open(local_asset(key(owner, did, rev, "spread-front"))) as im:
+            front_img = im.convert("RGB")
+        with Image.open(local_asset(key(owner, did, rev, "spread-inside-left"))) as im:
+            left = im.convert("RGB")
+        with Image.open(local_asset(key(owner, did, rev, "spread-inside-right"))) as im:
+            right = im.convert("RGB")
+        inside_img = Image.new("RGB", (left.width + right.width, max(left.height, right.height)), "#fffdf7")
+        inside_img.paste(left, (0, 0))
+        inside_img.paste(right, (left.width, 0))
+    try:
+        with Image.open(local_asset(key(owner, did, rev, "back"))) as im:
+            back_img = im.convert("RGB")
+    except Exception:
+        with Image.open(local_asset(key(owner, did, rev, "spread-back"))) as im:
+            back_img = im.convert("RGB")
+    sheet = _scenes.triptych(front_img, inside_img, back_img, height=height)
+    dest = config.DATA / "cards" / "cache" / f"triptych-{did}-r{rev}.jpg"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(dest, "JPEG", quality=82)
+    return dest
+
+
+# ── attach-art: third-party / generated art into fullbleed revisions ──
+# Faces are validated (aspect + size + face presence), stored under the
+# design's owner namespace, and pinned to a NEW revision — attach never
+# mutates. Art is normalized to PNG on store (lossless render input);
+# print upscaling happens at render time against the live SKU spec.
+ART_FACE_SPECS = {
+    "front": {"aspect": (5, 7), "face": True},
+    "inside": {"aspect": (10, 7), "face": False},
+    "back": {"aspect": (5, 7), "face": False},
+}
+ART_MAX_BYTES = 15 * 1024 * 1024
+ART_MIN_SHORT_EDGE = 800
+ART_ASPECT_TOL = 0.02
+
+_face_detector = None
+_face_detector_ok = None
+
+
+def _face_detector_get():
+    """YuNet DNN face detector (assets/face/*.onnx, CPU). None when cv2 or
+    the model file is unavailable — callers degrade to heuristics + warning."""
+    global _face_detector, _face_detector_ok
+    if _face_detector_ok is not None:
+        return _face_detector
+    try:
+        import cv2 as _cv2
+        p = config.ROOT / "assets" / "face" / "face_detection_yunet_2023mar.onnx"
+        if not p.is_file():
+            raise OSError("no yunet model")
+        _face_detector = _cv2.FaceDetectorYN_create(str(p), "", (320, 320))
+    except Exception:
+        _face_detector = None
+    _face_detector_ok = _face_detector is not None
+    return _face_detector
+
+
+def fetch_art_bytes(url: str) -> bytes:
+    """Fetch attached art server-side. Short-lived presigned links are copied
+    into our own storage immediately by the caller."""
+    import urllib.request as _ul
+    if not isinstance(url, str) or not url.startswith("https://") or len(url) > 2000:
+        raise CardError("art URL must be an https link", 400)
+    try:
+        req = _ul.Request(url, headers={"User-Agent": "OddHobb-attach/1.0"})
+        with _ul.urlopen(req, timeout=60) as res:
+            ctype = (res.headers.get("Content-Type") or "").lower()
+            if not any(t in ctype for t in ("image/png", "image/jpeg", "image/webp", "image/jpg")):
+                raise CardError(f"art must be PNG/JPEG/WebP (got {ctype or 'unknown type'})", 400)
+            data = res.read(ART_MAX_BYTES + 1)
+    except CardError:
+        raise
+    except Exception as e:
+        raise CardError(f"could not fetch art: {str(e)[:120]}", 502) from None
+    if len(data) > ART_MAX_BYTES:
+        raise CardError("art must be 15 MB or smaller", 400)
+    if not data:
+        raise CardError("art URL returned no bytes", 400)
+    head = data[:12]
+    if head[:8] != b"\x89PNG\r\n\x1a\n" and head[:2] != b"\xff\xd8" and \
+            not (head[:4] == b"RIFF" and data[8:12] == b"WEBP"):
+        raise CardError("art bytes are not PNG/JPEG/WebP", 400)
+    return data
+
+
+def validate_art_image(data: bytes, face: str):
+    """Check size + aspect for one card face. Returns (PIL RGB image,
+    warnings). Blocks (400) on unreadable, too-small, or wrong-aspect art."""
+    spec = ART_FACE_SPECS[face]
+    try:
+        with Image.open(io.BytesIO(data)) as im:
+            img = im.convert("RGB")
+    except Exception:
+        raise CardError(f"{face} art is unreadable", 400) from None
+    if min(img.size) < ART_MIN_SHORT_EDGE:
+        raise CardError(f"{face} art is {img.width}x{img.height} — need 800px on the short edge", 400)
+    aw, ah = spec["aspect"]
+    want = aw / ah
+    got = img.width / img.height
+    if abs(got - want) / want > ART_ASPECT_TOL:
+        raise CardError(f"{face} art is {img.width}x{img.height} — need {aw}:{ah} aspect (±2%)", 400)
+    return img, []
+
+
+def face_presence(img) -> tuple[bool, str, str]:
+    """Tiered face gate for attached front art. (found, detail, warning).
+    YuNet hit → found. Miss on a near-flat image → no face (caller blocks).
+    Miss on textured art → unconfirmed warning (illustrated faces routinely
+    miss detection — warn, never block, per the attach contract)."""
+    gray = img.convert("L")
+    small = gray.copy()
+    small.thumbnail((480, 480), Image.Resampling.LANCZOS)
+    det = _face_detector_get()
+    if det is not None:
+        try:
+            import cv2 as _cv2
+            import numpy as _np
+            rgb = _np.asarray(img.convert("RGB"))
+            bgr = _cv2.cvtColor(rgb, _cv2.COLOR_RGB2BGR)
+            h, w = bgr.shape[:2]
+            det.setInputSize((w, h))
+            _n, faces = det.detect(bgr)
+            hits = [f for f in (faces or []) if float(f[-1]) >= 0.5]
+            if hits:
+                return True, f"{len(hits)} face(s)", ""
+        except Exception:
+            pass
+    import statistics as _st
+    px = list(small.getdata())
+    sd = _st.pstdev(px) if len(px) > 1 else 0.0
+    if sd < 8.0:
+        return False, "near-flat image", ""
+    if det is None:
+        return False, "no detector available", "face_unconfirmed: no detector on this box — eye-QA the likeness"
+    return False, "no detector hit on textured art", \
+        "face_unconfirmed: illustrated faces miss detection — eye-QA the likeness"
+
+
+def attach_art(owner, did, blobs, *, copy, headline_baked=True,
+               art_source="", prompt=""):
+    """Pin attached art to a NEW fullbleed revision (create the design when
+    did is empty). blobs: {face: PIL image}. copy: headline/recipient/sender/
+    inside_message. Returns (record, warnings, jobs)."""
+    import time as _time
+    if not isinstance(copy, dict):
+        raise CardError("copy must be headline/recipient/sender/inside_message", 400)
+    warnings: list[str] = []
+    stored: dict[str, str] = {}
+    with db.connect() as c:
+        c.execute("BEGIN IMMEDIATE")
+        if did:
+            d = c.execute("SELECT * FROM card_designs WHERE id=?", (did,)).fetchone()
+            if d is None or d["owner"] != owner:
+                raise CardError("Card not found", 404)
+            base = json.loads(c.execute(
+                "SELECT spec FROM card_revisions WHERE design_id=? AND revision=?",
+                (did, d["latest"])).fetchone()["spec"])
+            if base.get("template") != "birthday_fullbleed":
+                raise CardError("attach-art is fullbleed only", 400)
+            rev = d["latest"] + 1
+        else:
+            did = "card_" + uuid.uuid4().hex
+            t = _time.time()
+            base = {"template": "birthday_fullbleed", "format": "5x7", "photos": [],
+                    "headline": str(copy.get("headline") or "Happy Birthday!"),
+                    "recipient": str(copy.get("recipient") or ""),
+                    "sender": str(copy.get("sender") or ""),
+                    "inside_message": str(copy.get("inside_message") or "")}
+            c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",
+                      (did, owner, 0, t, t, owner, "rest"))
+            rev = 1
+        # store art bytes first so validate() sees resolvable keys
+        for face, img in blobs.items():
+            dest = cached(f"owners/{storage._slug(owner)}/cards/{did}/r{rev}/art-{face}.png")
+            img.save(dest, "PNG")
+            skey = f"owners/{storage._slug(owner)}/cards/{did}/r{rev}/art-{face}.png"
+            storage.put(dest, skey)
+            stored[face] = skey
+        new_spec = dict(base)
+        for face, skey in stored.items():
+            new_spec[{"front": "front_art_key", "inside": "inside_art_key",
+                      "back": "back_art_key"}[face]] = skey
+        if "front_art_key" not in new_spec or not new_spec.get("front_art_key"):
+            raise CardError("Fullbleed needs front art — attach art first (art_required)")
+        new_spec["headline_baked"] = bool(headline_baked)
+        new_spec["art_source"] = str(art_source or "")[:40]
+        new_spec["prompt"] = str(prompt or "")[:2000]
+        for k in ("headline", "recipient", "sender", "inside_message"):
+            if k in copy and isinstance(copy[k], str):
+                new_spec[k] = copy[k]
+        spec = validate(owner, new_spec)
+        # effective print DPI warning (soft): art below ~200dpi prints soft
+        try:
+            fw, _fh = blobs["front"].size if "front" in blobs else (0, 0)
+            from backend import prodigi as _prodigi
+            area = _prodigi.print_area(CARD_PRODIGI_SKU)
+            pw = int(area.get("horizontalResolution") or 0)
+            if fw and pw and (fw / (pw / 4)) < 0.66:
+                warnings.append("Front art is low-resolution for 300dpi print — it will render but may print soft. Regenerate larger.")
+        except Exception:
+            pass
+        c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
+                  (did, rev, json_dump(spec), _time.time()))
+        c.execute("UPDATE card_designs SET latest=?,updated_at=? WHERE id=?",
+                  (rev, _time.time(), did))
+        c.commit()
+    jobs = []
+    for kind in ("preview", "spread", "export"):
+        try:
+            jobs.append(job_payload(enqueue(owner, did, rev, kind)))
+        except CardError:
+            pass
+    return record(owner, did, rev), warnings, jobs
+
+
+def backfill_gallery_headlines(owner=None, limit=200):
+    """One-off: personalize auto-created gallery designs still carrying
+    template boilerplate. Only touches latest revisions with empty
+    sender+message (never user-edited cards) and mints a NEW revision per
+    fix. Returns [(did, old_rev, new_rev)]."""
+    from backend import subjects as _sub
+    out = []
+    with db.connect() as c:
+        owners = [owner] if owner else [
+            r["owner"] for r in c.execute("SELECT DISTINCT owner FROM card_designs")]
+    for ow in owners:
+        with db.connect() as c:
+            rows = c.execute("SELECT id,latest FROM card_designs WHERE owner=?",
+                             (ow,)).fetchall()
+        for r in rows:
+            if len(out) >= limit:
+                return out
+            try:
+                rec = record(ow, r["id"], r["latest"])
+            except CardError:
+                continue
+            spec = rec["spec"]
+            tpl = scenes.TEMPLATES.get(spec.get("template") or "")
+            if not tpl or (spec.get("template") or "") not in scenes.BIRTHDAY_TEMPLATES:
+                continue
+            if spec.get("headline") != tpl["headline"]:
+                continue
+            if (spec.get("sender") or "") != "" or (spec.get("inside_message") or "") != "":
+                continue
+            photos = spec.get("photos") or []
+            if not photos:
+                continue
+            with db.connect() as c2:
+                hit = _sub.profile_for_photo(c2, ow, photos[0]["photo_id"])
+            name = (hit.get("subject") or {}).get("name", "") if hit else ""
+            short = str(name).split()[0] if str(name).split() else ""
+            if not short:
+                continue
+            new_spec = dict(spec)
+            new_spec["headline"] = f"Happy Birthday, {short}!"[:60]
+            new_spec["recipient"] = name
+            try:
+                fspec = validate(ow, new_spec)
+            except CardError:
+                continue
+            import time as _time
+            with db.connect() as c3:
+                c3.execute("BEGIN IMMEDIATE")
+                cur = c3.execute("SELECT latest FROM card_designs WHERE id=?",
+                                 (r["id"],)).fetchone()
+                if cur is None or cur["latest"] != rec["revision"]:
+                    continue  # someone else moved it; skip, don't clobber
+                nrev = rec["revision"] + 1
+                c3.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
+                           (r["id"], nrev, json_dump(fspec), _time.time()))
+                c3.execute("UPDATE card_designs SET latest=?,updated_at=? WHERE id=?",
+                           (nrev, _time.time(), r["id"]))
+                c3.commit()
+            try:
+                enqueue(ow, r["id"], nrev, "preview")
+            except CardError:
+                pass
+            out.append((r["id"], rec["revision"], nrev))
+    return out
+
+
+# Relationship → what the card actually calls them. The profile stores
+# "father"/"mother"; the card says "Dad"/"Mum". Never title() the raw value
+# ("Father!") — that reads like a court summons, not a birthday card.
+RELATIONSHIP_LABELS = {
+    "father": "Dad", "dad": "Dad", "daddy": "Dad", "pa": "Dad", "pop": "Dad",
+    "mother": "Mum", "mum": "Mum", "mom": "Mum", "mummy": "Mum", "ma": "Mum",
+    "grandfather": "Grandad", "grandad": "Grandad", "grandpa": "Grandad",
+    "grandmother": "Grandma", "grandma": "Grandma", "granny": "Granny",
+    "nan": "Nan", "nanna": "Nanna",
+}
+
+
+def display_label(name: str = "", relationship: str = "") -> str:
+    """Card-safe name: relationship word first, else first name, else them."""
+    rel = str(relationship or "").strip().lower()
+    if rel in RELATIONSHIP_LABELS:
+        return RELATIONSHIP_LABELS[rel]
+    short = str(name or "").split()
+    return short[0] if short else "them"
 
 
 def message_lines(profile: dict, tone: str = "funny") -> list[dict]:
@@ -340,6 +728,40 @@ def validate(owner,b):
         if tkey and (not isinstance(tkey, str) or len(tkey) > 200):
             raise CardError("title_art_key must be a short storage key")
         spec["title_art_key"] = tkey if isinstance(tkey, str) else ""
+    if tid == "birthday_fullbleed":
+        # fullbleed product: attached art + bounded copy. Same tight caps;
+        # front art is mandatory (attach-art first), other faces optional.
+        if len(spec["headline"]) > 40:
+            raise CardError("Fullbleed headline max 40 characters")
+        if len(spec["inside"]["right"]["message"]) > 240:
+            raise CardError("Fullbleed inside message max 240 characters")
+        if len(spec["sender"]) > 40:
+            raise CardError("Fullbleed signature max 40 characters")
+        for akey in ("front_art_key", "inside_art_key", "back_art_key"):
+            aval = b.get(akey, "")
+            if aval and (not isinstance(aval, str) or len(aval) > 200):
+                raise CardError(f"{akey} must be a short storage key")
+            spec[akey] = aval if isinstance(aval, str) else ""
+        if not spec["front_art_key"]:
+            raise CardError("Fullbleed needs front art — attach art first (art_required)")
+        hb = b.get("headline_baked", True)
+        if not isinstance(hb, bool):
+            raise CardError("headline_baked must be true or false")
+        spec["headline_baked"] = hb
+        src = b.get("art_source", "")
+        if not isinstance(src, str) or len(src) > 40:
+            raise CardError("art_source must be text up to 40 characters")
+        spec["art_source"] = src.strip()
+        pr = b.get("prompt", "")
+        if not isinstance(pr, str) or len(pr) > 2000:
+            raise CardError("prompt must be text up to 2000 characters")
+        spec["prompt"] = pr
+    # Recipe provenance passes through untouched: which published recipe
+    # (and version) compiled this revision. Renderer never reads it.
+    if isinstance(b.get("recipe_id"), str) and b["recipe_id"][:80]:
+        spec["recipe_id"] = b["recipe_id"][:80]
+        if isinstance(b.get("recipe_version"), int):
+            spec["recipe_version"] = b["recipe_version"]
     return spec
 
 
@@ -408,7 +830,7 @@ def record(owner,did,revision=None):
 
 
 def key(owner,did,rev,kind):
-    names={"preview":"front.png","inside":"inside.png","export":"print.pdf","motion":"scene.mp4","spread":"spread-front.png",
+    names={"preview":"front.png","inside":"inside.png","back":"back.png","export":"print.pdf","motion":"scene.mp4","spread":"spread-front.png",
            "spread-front":"spread-front.png","spread-inside-left":"spread-inside-left.png",
            "spread-inside-right":"spread-inside-right.png","spread-back":"spread-back.png"}
     with db.connect() as c:
@@ -442,6 +864,12 @@ def assets(owner,spec):
         k=cutout(owner,slot["cutout"],slot["photo_id"])["asset_key"] if slot["cutout"] else p["r2_key"]
         with Image.open(local_asset(k)) as im:
             result[slot["photo_id"]]=im.convert("RGBA")
+    # fullbleed attached art rides alongside photo assets under reserved keys
+    for skey, rkey in (("front_art_key","__front_art__"),("inside_art_key","__inside_art__"),
+                       ("back_art_key","__back_art__")):
+        if spec.get(skey):
+            with Image.open(local_asset(spec[skey])) as im:
+                result[rkey]=im.convert("RGBA")
     return result
 
 
@@ -461,14 +889,17 @@ def render_job(jid):
             scenes.front(spec,aa).save(temp,"PNG")
             inside_path=cached(key(owner,did,rev,"inside"))
             # double width so each inside half reads at full size
-            scenes.inside(spec,width=1440).save(inside_path,"PNG")
+            scenes.inside(spec,width=1440,assets=aa).save(inside_path,"PNG")
             storage.put(inside_path,key(owner,did,rev,"inside"))
+            back_path=cached(key(owner,did,rev,"back"))
+            scenes.back(spec,assets=aa).save(back_path,"PNG")
+            storage.put(back_path,key(owner,did,rev,"back"))
         elif kind=="spread":
             # Four agent-showable faces: front, inside halves, back.
             parts={"front":scenes.front(spec,aa),
-                   "inside_left":scenes.inside_half(spec,"left"),
-                   "inside_right":scenes.inside_half(spec,"right"),
-                   "back":scenes.back(spec)}
+                   "inside_left":scenes.inside_half(spec,"left",assets=aa),
+                   "inside_right":scenes.inside_half(spec,"right",assets=aa),
+                   "back":scenes.back(spec,assets=aa)}
             for part,img in parts.items():
                 pk=key(owner,did,rev,"spread-"+part.replace("_","-"))
                 dest=cached(pk)
@@ -531,6 +962,22 @@ def crop_keeps_face(crop, faces) -> bool:
     return False
 
 
+def solo_first(owner, pids: list) -> list:
+    """Prefer solo portraits for single-recipient cards: exactly 1 detected
+    face first, undetected next (stable order kept), group shots last."""
+    counts: dict = {}
+    with db.connect() as c:
+        for pid in pids:
+            try:
+                row = c.execute("SELECT COUNT(*) n FROM photo_faces WHERE photo_id=?",
+                                (pid,)).fetchone()
+                counts[pid] = int(dict(row)["n"]) if row else -1
+            except Exception:
+                counts[pid] = -1
+    return sorted(pids, key=lambda p: (0 if counts.get(p) == 1 else
+                                       (2 if (counts.get(p, -1) or 0) > 1 else 1)))
+
+
 def gate(owner, did, rev) -> dict:
     """Reviewer gate before any render: frozen spec re-validated (photos may
     have been deleted since save), every slot keeps a detected face where
@@ -566,10 +1013,34 @@ def enqueue(owner,did,rev,kind):
 def job_payload(row):
     base={"id":row["id"],"design_id":row["design_id"],"revision":row["revision"],"kind":row["kind"],"status":row["status"],"error":row["error"],"url":f"/api/cards/{row['design_id']}/r{row['revision']}/{row['kind']}" if row["status"]=="ready" and row["kind"]!="spread" else ""}
     if row["kind"]=="spread":
-        base["urls"]={p:f"/api/cards/{row['design_id']}/r{row['revision']}/spread/{p}" for p in SPREAD_PARTS} if row["status"]=="ready" else {}
+        surf = f"/api/cards/{row['design_id']}/r{row['revision']}"
+        urls = {p: f"{surf}/spread/{p}" for p in SPREAD_PARTS} if row["status"]=="ready" else {}
         if row["status"]=="ready":
-            base["urls"]["listing"]=f"/api/cards/{row['design_id']}/r{row['revision']}/listing"
+            urls["listing"]=f"{surf}/listing"
+            urls["triptych"]=f"{surf}/triptych"
+            # the full inside spread as one surface (needs preview ready;
+            # 409s until then, same as any ungated face URL)
+            urls["inside"]=f"{surf}/inside"
+        base["urls"]=urls
     return base
+
+
+def _permit(perm: str):
+    """Grant gate for delegated agent keys. No key → existing behaviour
+    unchanged (anon flows keep working). User keys → full rights. Agent
+    keys → need the grant; revoked/unknown → denied. Returns None when
+    allowed, else a (json, code) denial."""
+    key = request.headers.get("X-API-Key", "").strip() or \
+        request.args.get("api_key", "").strip()
+    if not key:
+        return None
+    with db.connect() as c:
+        if db.get_user_by_api_key(c, key):
+            return None
+        a = db.get_agent_by_key(c, key)
+        if a and a["status"] == "active" and perm in db.agent_perms(a):
+            return None
+    return jsonify(ok=False, error=f"this agent key lacks the {perm} grant"), 403
 
 
 def register(app,owner_denied):
@@ -582,7 +1053,16 @@ def register(app,owner_denied):
             raise CardError("Expected a JSON object")
         owner=str(request.args.get("owner") or b.get("owner") or "anon").strip()[:80]
         request.card_owner=owner
-        return owner_denied(owner)
+        denied = owner_denied(owner)
+        if denied is not None:
+            return denied
+        # GETs read, POSTs create, order/checkout spend. Keyless callers keep
+        # existing behaviour; keyed agents need the matching grant.
+        if request.method == "POST":
+            perm = "cards:order" if request.path.endswith(("/order", "/checkout")) else "cards:create"
+        else:
+            perm = "cards:read"
+        return _permit(perm)
 
     @bp.errorhandler(CardError)
     def card_error(e):
@@ -742,23 +1222,93 @@ def register(app,owner_denied):
                                 "buy_hint": "Done means a product_url the human can buy from. "
                                             "POST /backend/api/cards/<id>/checkout returns checkout_url; a preview alone is not done."})
 
+    @bp.post("/api/cards/attach-art")
+    def attach_art_route():
+        """Pin third-party/generated art to a NEW fullbleed revision (creates
+        the design when design_id is empty). Auto-enqueues preview + spread so
+        views land without a second call."""
+        owner = request.card_owner
+        b = request.get_json() or {}
+        urls = {f: b.get(f"{f}_art_url") or "" for f in ("front", "inside", "back")}
+        if not urls["front"]:
+            raise CardError("front_art_url is required", 400)
+        blobs: dict = {}
+        warnings: list[str] = []
+        for face, url in urls.items():
+            if not url:
+                continue
+            img, _w = validate_art_image(fetch_art_bytes(url), face)
+            blobs[face] = img
+        found, detail, warn = face_presence(blobs["front"])
+        if not found and not warn:
+            raise CardError(f"Front art shows no face ({detail}) — use a portrait composition", 400)
+        if warn:
+            warnings.append(warn)
+        rec, attach_warnings, jobs = attach_art(
+            owner, str(b.get("design_id") or ""),
+            blobs,
+            copy={k: b.get(k, "") for k in ("headline", "recipient", "sender", "inside_message")},
+            headline_baked=b.get("headline_baked", True),
+            art_source=str(b.get("art_source") or ""),
+            prompt=str(b.get("prompt") or ""))
+        warnings += attach_warnings
+        return jsonify(ok=True, design=rec, warnings=warnings,
+                       jobs=[{k: j[k] for k in ("id", "kind", "status")} for j in jobs],
+                       card_url=card_url_for(rec["id"], rec["revision"]),
+                       proof_url=proof_url_for(rec["id"]),
+                       product=card_price(), mcp_status=mcp_status())
+
     @bp.get("/api/cards/gallery")
     def gallery():
         """Ready-made cards from your uploaded images — no forms.
 
-        Latest photos × flagship 1-photo templates, auto-composed with
-        profile-aware headlines. Designs are created once and reused;
-        previews render lazily (bounded per call). Tapping a card previews,
+        Templates already wearing your photos (Moonpig shelf, not a blank
+        form): ?subject_id= scopes to the active person's confirmed photos,
+        ?photo_ids= uses an explicit user/AI selection. Unscoped = latest
+        photos. Designs are created once and reused; previews render lazily
+        (bounded per call). Tapping a card previews,
         motion-plays, or reserves it — the editor below stays for tinkerers.
         """
-        import datetime as _dt
         owner = request.card_owner
+        subject_id = (request.args.get("subject_id") or "").strip()[:80]
+        want_pids = [p.strip()[:80] for p in
+                     (request.args.get("photo_ids") or "").split(",") if p.strip()][:8]
+        scope: dict = {"subject_id": subject_id, "photo_ids": []}
         with db.connect() as c:
-            photos = [dict(r) for r in c.execute(
-                "SELECT * FROM photos WHERE owner=? ORDER BY created_at DESC LIMIT 3",
-                (owner,)).fetchall()]
+            if want_pids:
+                # explicit selection (user-picked or AI-picked): keep owned, keep order
+                rows = c.execute(
+                    "SELECT id FROM photos WHERE owner=?", (owner,)).fetchall()
+                owned = {r["id"] for r in rows}
+                pids = [p for p in want_pids if p in owned]
+                photos = []
+                for pid in pids:
+                    r = c.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
+                    if r:
+                        photos.append(dict(r))
+                scope["photo_ids"] = [p["id"] for p in photos]
+            elif subject_id:
+                # active person: confirmed tags only, newest first
+                s = c.execute("SELECT * FROM studio_subjects WHERE id=?", (subject_id,)).fetchone()
+                if s is None or dict(s).get("owner") != owner:
+                    raise CardError("Unknown person — pick them in Studio first", 404)
+                photos = [dict(r) for r in c.execute(
+                    "SELECT p.* FROM photos p JOIN photo_subjects ps ON ps.photo_id=p.id"
+                    " WHERE p.owner=? AND ps.subject_id=? AND ps.confirmed=1"
+                    " ORDER BY p.created_at DESC LIMIT 6", (owner, subject_id)).fetchall()]
+                scope["subject_id"] = subject_id
+                scope["photo_ids"] = [p["id"] for p in photos]
+            else:
+                photos = [dict(r) for r in c.execute(
+                    "SELECT * FROM photos WHERE owner=? ORDER BY created_at DESC LIMIT 3",
+                    (owner,)).fetchall()]
+        if photos:
+            # solos lead: group shots still qualify, but a Dad card should
+            # open on Dad, not the crowd he was standing in
+            order = solo_first(owner, [p["id"] for p in photos])
+            photos.sort(key=lambda p: order.index(p["id"]))
         if not photos:
-            return jsonify(ok=True, items=[], empty=True)
+            return jsonify(ok=True, items=[], empty=True, scope=scope)
         with db.connect() as c:
             known = {}
             for r in c.execute("SELECT id,latest FROM card_designs WHERE owner=?", (owner,)).fetchall():
@@ -773,16 +1323,12 @@ def register(app,owner_denied):
         # subject_profile (cardgen §1). A person needs no mesh for cards.
         # Legacy mesh-keyed profiles remain as fallback for unmigrated rows.
         who = {}
-        bdays = {}
         with db.connect() as c:
             from backend import subjects as _sub
             for p in photos:
                 hit = _sub.profile_for_photo(c, owner, p["id"])
-                prof = (hit.get("profile") or {}).get("profile", {})
                 if hit and (hit.get("subject") or {}).get("name"):
                     who[p["id"]] = hit["subject"]["name"]
-                    if prof.get("birthday") or (hit.get("profile") or {}).get("birthday"):
-                        bdays[p["id"]] = prof.get("birthday") or hit["profile"]["birthday"]
                     continue
                 m = c.execute("SELECT id FROM meshes WHERE photo_id=? ORDER BY created_at DESC LIMIT 1",
                               (p["id"],)).fetchone()
@@ -790,88 +1336,23 @@ def register(app,owner_denied):
                     prof = db.get_subject_profile(c, owner, m["id"])
                     if prof.get("name"):
                         who[p["id"]] = prof["name"]
-                    if prof.get("birthday"):
-                        bdays[p["id"]] = prof["birthday"]
-
-        def birthday_soon(mmdd: str, days: int = 45) -> bool:
-            try:
-                today = _dt.date.today()
-                nxt = _dt.date(today.year, int(mmdd[:2]), int(mmdd[3:5]))
-                if nxt < today:
-                    nxt = _dt.date(today.year + 1, int(mmdd[:2]), int(mmdd[3:5]))
-                return 0 <= (nxt - today).days <= days
-            except (ValueError, IndexError):
-                return False
 
         items, enqueued = [], 0
-        for p in photos:
-            name = who.get(p["id"], "")
-            for tid in scenes.BIRTHDAY_TEMPLATES:
-                tpl = scenes.TEMPLATES[tid]
-                if len([p["id"]]) < tpl["min_photos"]:
-                    continue
-                headline = tpl["headline"]
-                if name and bdays.get(p["id"]) \
-                        and birthday_soon(bdays[p["id"]]):
-                    headline = f"Happy Birthday, {name}!"
-                key = (tid, (p["id"],))
-                if key in known:
-                    did, rev = known[key]
-                else:
-                    spec = validate(owner, {
-                        "template": tid, "format": "5x7",
-                        "headline": headline, "recipient": name,
-                        "sender": "", "inside_message": "",
-                        "photos": [{"photo_id": p["id"], "crop": [0, 0, 1, 1],
-                                    "focus": [0.5, 0.5], "cutout": ""}]})
-                    did, rev = "card_" + uuid.uuid4().hex, 1
-                    t = time.time()
-                    with db.connect() as c:
-                        c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",
-                                  (did, owner, rev, t, t, owner, "ui"))
-                        c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
-                                  (did, rev, json_dump(spec), t))
-                        c.commit()
-                    known[key] = (did, rev)
-                with db.connect() as c:
-                    job = c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='preview' AND status IN ('queued','running','ready') ORDER BY created_at DESC LIMIT 1",
-                                    (owner, did, rev)).fetchone()
-                url, status = "", "missing"
-                if job:
-                    status = job["status"]
-                    if status == "ready":
-                        url = f"/api/cards/{did}/r{rev}/preview"
-                elif enqueued < 6:
-                    try:
-                        enqueue(owner, did, rev, "preview")
-                        enqueued += 1
-                        status = "queued"
-                    except CardError:
-                        pass
-                items.append({
-                    "design_id": did, "revision": rev, "template": tid,
-                    "template_label": tpl["label"], "headline": headline,
-                    "recipient": name, "format": "5x7",
-                    "price_cents": card_price()["price_cents"],
-                    "price": card_price()["price"],
-                    "price_grade": "FIXED",
-                    "card_url": card_url_for(did, rev),
-                    "proof_url": proof_url_for(did),
-                    "photo": {"id": p["id"], "orig_name": p.get("orig_name") or "Photo",
-                              "url": f"/api/cards/photos/{p['id']}/image"},
-                    "preview_url": url, "preview_status": status,
-                })
-        if len(photos) >= 2:
-            # the wall: first photos together on one birthday card
-            tid = "birthday_wall"
-            tpl = scenes.TEMPLATES[tid]
-            pids = tuple(p["id"] for p in photos[:3])
-            key = (tid, pids)
-            name = who.get(photos[0]["id"], "")
-            headline = tpl["headline"]
-            if name and bdays.get(photos[0]["id"]) \
-                    and birthday_soon(bdays[photos[0]["id"]]):
-                headline = f"Happy Birthday, {name}!"
+        # Canonical shelf: exactly one product (birthday_4photo) wearing
+        # the first four photos. Archived templates never mint here.
+        need_photos = max(0, 4 - len(photos))
+        tid = "birthday_4photo"
+        tpl = scenes.TEMPLATES[tid]
+        if len(photos) >= 4:
+            use = photos[:4]
+            name = ""
+            for p in use:
+                if who.get(p["id"]):
+                    name = who[p["id"]]
+                    break
+            short = str(name).split()[0] if str(name).split() else ""
+            headline = f"Happy Birthday, {short}!" if short else tpl["headline"]
+            key = (tid, tuple(p["id"] for p in use))
             if key in known:
                 did, rev = known[key]
             else:
@@ -879,8 +1360,8 @@ def register(app,owner_denied):
                     "template": tid, "format": "5x7",
                     "headline": headline, "recipient": name,
                     "sender": "", "inside_message": "",
-                    "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
-                                "focus": [0.5, 0.5], "cutout": ""} for pid in pids]})
+                    "photos": [{"photo_id": p["id"], "crop": [0, 0, 1, 1],
+                                "focus": [0.5, 0.5], "cutout": ""} for p in use]})
                 did, rev = "card_" + uuid.uuid4().hex, 1
                 t = time.time()
                 with db.connect() as c:
@@ -890,10 +1371,10 @@ def register(app,owner_denied):
                               (did, rev, json_dump(spec), t))
                     c.commit()
                 known[key] = (did, rev)
-            url, status = "", "missing"
             with db.connect() as c:
                 job = c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='preview' AND status IN ('queued','running','ready') ORDER BY created_at DESC LIMIT 1",
                                 (owner, did, rev)).fetchone()
+            url, status = "", "missing"
             if job:
                 status = job["status"]
                 if status == "ready":
@@ -901,6 +1382,7 @@ def register(app,owner_denied):
             elif enqueued < 6:
                 try:
                     enqueue(owner, did, rev, "preview")
+                    enqueued += 1
                     status = "queued"
                 except CardError:
                     pass
@@ -913,15 +1395,125 @@ def register(app,owner_denied):
                 "price_grade": "FIXED",
                 "card_url": card_url_for(did, rev),
                 "proof_url": proof_url_for(did),
-                "photo": {"id": photos[0]["id"],
-                          "orig_name": photos[0].get("orig_name") or "Photo",
-                          "url": f"/api/cards/photos/{photos[0]['id']}/image"},
+                "photo": {"id": use[0]["id"], "orig_name": use[0].get("orig_name") or "Photo",
+                          "url": f"/api/cards/photos/{use[0]['id']}/image"},
+                "photos": [{"id": p["id"], "url": f"/api/cards/photos/{p['id']}/image"}
+                           for p in use],
                 "preview_url": url, "preview_status": status,
             })
-        return jsonify(ok=True, items=items, product=card_price(),
+        return jsonify(ok=True, items=items, need_photos=need_photos, product=card_price(),
+                       scope=scope,
                        mcp_status=mcp_status(),
                        buy_hint="Done means a product_url the human can buy from — "
                                 "POST /backend/api/cards/<id>/checkout for checkout_url. Preview alone is not done.")
+
+    @bp.post("/api/cards/<did>/reroll")
+    def reroll(did):
+        """Same template, different images: rotate the photo set to the next
+        disjoint (or least-overlapping) confirmed photos. Fullbleed has no
+        photo slots — attach new art instead. Returns the new design pointers;
+        the gallery picks it up on refresh."""
+        import time as _time
+        import uuid as _uuid
+        owner = request.card_owner
+        b = request.get_json() or {}
+        subject_id = str(b.get("subject_id") or "").strip()[:80]
+        rec = record(owner, did)
+        spec = rec["spec"]
+        tid = spec.get("template", "")
+        tpl = scenes.TEMPLATES.get(tid, {})
+        cur = [s["photo_id"] for s in spec.get("photos", [])]
+        if not cur:
+            raise CardError("This card has no photo slots — attach new art instead", 400)
+        with db.connect() as c:
+            if subject_id:
+                s = c.execute("SELECT * FROM studio_subjects WHERE id=?", (subject_id,)).fetchone()
+                if s is None or dict(s).get("owner") != owner:
+                    raise CardError("Unknown person — pick them in Studio first", 404)
+                pool = [r["id"] for r in c.execute(
+                    "SELECT p.id FROM photos p JOIN photo_subjects ps ON ps.photo_id=p.id"
+                    " WHERE p.owner=? AND ps.subject_id=? AND ps.confirmed=1"
+                    " ORDER BY p.created_at DESC", (owner, subject_id)).fetchall()]
+            else:
+                pool = [r["id"] for r in c.execute(
+                    "SELECT id FROM photos WHERE owner=? ORDER BY created_at DESC",
+                    (owner,)).fetchall()]
+        fresh = [p for p in pool if p not in cur]
+        need = len(cur)
+        if len(fresh) < need:
+            # allow minimal overlap rather than refuse, but say so
+            fresh += [p for p in pool if p not in fresh]
+        if len(fresh) < need:
+            raise CardError("Not enough other photos — upload more or select them", 400)
+        new_pids = fresh[:need]
+        new_spec = dict(spec)
+        new_spec["photos"] = [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                               "focus": [0.5, 0.5], "cutout": ""} for pid in new_pids]
+        if request.headers.get("X-MCP", "") == "1":
+            via = "mcp"
+        else:
+            via = "ui"
+        spec = validate(owner, new_spec)
+        ndid = "card_" + _uuid.uuid4().hex
+        t = _time.time()
+        with db.connect() as c:
+            c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",
+                      (ndid, owner, 1, t, t, owner, via))
+            c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
+                      (ndid, 1, json_dump(spec), t))
+            c.commit()
+        try:
+            job = job_payload(enqueue(owner, ndid, 1, "preview"))
+        except CardError:
+            job = {"status": "not_rendered"}
+        return jsonify(ok=True, design=record(owner, ndid, 1),
+                       rotated={"from": cur, "to": new_pids},
+                       preview_status=job.get("status", ""),
+                       card_url=card_url_for(ndid, 1),
+                       proof_url=proof_url_for(ndid),
+                       product=card_price(), mcp_status=mcp_status())
+
+    @bp.get("/api/cards/shelf")
+    def shelf():
+        """Your finished cards as assets: every saved design with its order
+        state and the exact images that went into it (photo ids + urls +
+        year). The personal-style baseline the future for-you reads from."""
+        import datetime as _dt
+        owner = request.card_owner
+        items = []
+        with db.connect() as c:
+            designs = [dict(r) for r in c.execute(
+                "SELECT * FROM card_designs WHERE owner=? ORDER BY updated_at DESC LIMIT 100",
+                (owner,)).fetchall()]
+            orders = {}
+            for o in c.execute("SELECT * FROM card_orders WHERE owner=?", (owner,)).fetchall():
+                orders.setdefault(o["design_id"], []).append(dict(o))
+        for d in designs:
+            try:
+                rec = record(owner, d["id"], d["latest"])
+            except CardError:
+                continue
+            sp = rec["spec"]
+            pids = [s["photo_id"] for s in sp.get("photos", [])]
+            year = _dt.date.fromtimestamp(d["created_at"]).year
+            olist = orders.get(d["id"], [])
+            o = olist[-1] if olist else None
+            items.append({
+                "design_id": d["id"], "revision": rec["revision"],
+                "template": sp.get("template", ""), "headline": sp.get("headline", ""),
+                "recipient": sp.get("recipient", ""), "year": year,
+                "via": d.get("via", ""),
+                "photo_ids": pids,
+                "photos": [{"id": pid,
+                            "url": f"/api/cards/photos/{pid}/image"} for pid in pids],
+                "order": ({"id": o["id"], "status": o["status"],
+                           "price_cents": o["price_cents"],
+                           "checkout_url": o.get("checkout_url", "")} if o else None),
+                "card_url": card_url_for(d["id"], rec["revision"]),
+                "proof_url": proof_url_for(d["id"]),
+            })
+        return jsonify(ok=True, items=items, count=len(items),
+                       product=card_price(), mcp_status=mcp_status())
 
     @bp.get("/api/cards/designs/<did>")
     def get_design(did):
@@ -982,16 +1574,26 @@ def register(app,owner_denied):
     def artwork(did,rev,kind):
         owner=request.card_owner;record(owner,did,rev)
         if kind=="back":
-            # brand back as its own face (needs the spread render)
+            # brand back as its own surface: preview render saves it, older
+            # revisions fall back to the spread face
             with db.connect() as c:
-                ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='spread' AND status='ready'",(owner,did,rev)).fetchone()
-            if not ready:
-                raise CardError("Back is not ready — render kind spread first",409)
-            p=local_asset(key(owner,did,rev,"spread-back"))
+                ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='preview' AND status='ready'",(owner,did,rev)).fetchone()
+                spread=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='spread' AND status='ready'",(owner,did,rev)).fetchone()
+            if ready:
+                try:
+                    p=local_asset(key(owner,did,rev,"back"))
+                except Exception:
+                    if not spread:
+                        raise CardError("Back is not ready — render kind preview first",409)
+                    p=local_asset(key(owner,did,rev,"spread-back"))
+            elif spread:
+                p=local_asset(key(owner,did,rev,"spread-back"))
+            else:
+                raise CardError("Back is not ready — render kind preview first",409)
             res=send_file(p,mimetype="image/png",max_age=0)
             res.headers["Cache-Control"]="private, no-store";return res
         if kind not in ("preview","inside","export","motion"):
-            raise CardError("Unknown artwork — kinds: preview, inside, back, export, motion; faces: r<rev>/spread/<front|inside_left|inside_right|back>",404)
+            raise CardError("Unknown artwork — kinds: preview, inside, back, export, motion, triptych; faces: r<rev>/spread/<front|inside_left|inside_right|back>",404)
         jobkind="preview" if kind=="inside" else kind
         with db.connect() as c:
             ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind=? AND status='ready'",(owner,did,rev,jobkind)).fetchone()
@@ -1024,6 +1626,25 @@ def register(app,owner_denied):
         if not ready:
             raise CardError("Listing is not ready — render kind spread first",409)
         p=contact_sheet(owner,did,rev)
+        res=send_file(p,mimetype="image/jpeg",max_age=0)
+        res.headers["Cache-Control"]="private, no-store";return res
+
+    @bp.get("/api/cards/<did>/r<int:rev>/triptych")
+    def triptych(did,rev):
+        """Fixed 3-panel preview: front | inside spread | back at one height.
+
+        The default glance — every surface full-size, never a miniature in a
+        collage. Computed on demand from the preview singles (or spread
+        faces); needs preview OR spread ready."""
+        owner=request.card_owner;record(owner,did,rev)
+        with db.connect() as c:
+            ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind IN ('preview','spread') AND status='ready'",(owner,did,rev)).fetchone()
+        if not ready:
+            raise CardError("Preview is not ready — render kind preview first",409)
+        try:
+            p=triptych_sheet(owner,did,rev)
+        except Exception:
+            raise CardError("Preview is not ready — render kind preview first",409)
         res=send_file(p,mimetype="image/jpeg",max_age=0)
         res.headers["Cache-Control"]="private, no-store";return res
 

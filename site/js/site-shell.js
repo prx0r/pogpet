@@ -19,7 +19,7 @@
       if(!handle||!password){pwMsg.textContent='Handle + password needed.';return;}
       pwMsg.textContent='Signing in…';pwIn.disabled=pwUp.disabled=true;
       var body={handle:handle,password:password};
-      if(mode==='signup'&&window.__FIGG_ANON_OWNER)body.claim_owner=window.__FIGG_ANON_OWNER;
+      if(window.__FIGG_ANON_OWNER)body.claim_owner=window.__FIGG_ANON_OWNER;
       fetch('/backend/api/accounts'+(mode==='signup'?'':'/login'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(d){
         pwIn.disabled=pwUp.disabled=false;
         if(!d.ok){pwMsg.textContent=d.error||'Failed.';return;}

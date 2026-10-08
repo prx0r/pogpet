@@ -311,7 +311,73 @@
     "/backend/api/cards/gallery": {
       "get": {
         "operationId": "cardGallery",
-        "summary": "Ready-made cards from uploads",
+        "summary": "Ready-made cards: templates already wearing your photos. subject_id scopes to the active person, photo_ids uses an explicit selection.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "photo_ids",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/cards/{id}/reroll": {
+      "post": {
+        "operationId": "cardReroll",
+        "summary": "Same template, different images: rotate one card to the next photo set.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/cards/shelf": {
+      "get": {
+        "operationId": "cardShelf",
+        "summary": "Finished cards as assets: every design with order state and the exact images used.",
         "parameters": [
           {
             "in": "query",
@@ -411,7 +477,48 @@
     "/backend/api/cards/{id}/r{rev}/listing": {
       "get": {
         "operationId": "cardListing",
-        "summary": "Fixed 2x2 listing collage (front, inside halves, back) — the fourth deterministic view",
+        "summary": "Fixed 2x2 listing collage (front, inside halves, back) — legacy secondary view",
+        "parameters": [
+          {"in": "path", "name": "id", "required": true, "schema": {"type": "string"}},
+          {"in": "path", "name": "rev", "required": true, "schema": {"type": "integer"}},
+          {"in": "query", "name": "owner", "schema": {"type": "string"}},
+          {"in": "query", "name": "token", "schema": {"type": "string"}}
+        ]
+      }
+    },
+    "/backend/api/cards/attach-art": {
+      "post": {
+        "operationId": "cardAttachArt",
+        "summary": "Pin third-party/generated art to a NEW fullbleed revision (creates the design when design_id is empty). Validates aspect/size/face, auto-enqueues preview+spread+export.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "design_id": {"type": "string"},
+                  "front_art_url": {"type": "string"},
+                  "inside_art_url": {"type": "string"},
+                  "back_art_url": {"type": "string"},
+                  "headline": {"type": "string"},
+                  "recipient": {"type": "string"},
+                  "sender": {"type": "string"},
+                  "inside_message": {"type": "string"},
+                  "headline_baked": {"type": "boolean"},
+                  "art_source": {"type": "string"},
+                  "prompt": {"type": "string"},
+                  "owner": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"200": {"description": "new revision + jobs + card_url/proof_url"}}
+      }
+    },
+    "/backend/api/cards/{id}/r{rev}/triptych": {      "get": {
+        "operationId": "cardTriptych",
+        "summary": "Fixed 3-panel preview (front | inside spread | back, one height) — the default glance",
         "parameters": [
           {"in": "path", "name": "id", "required": true, "schema": {"type": "string"}},
           {"in": "path", "name": "rev", "required": true, "schema": {"type": "integer"}},

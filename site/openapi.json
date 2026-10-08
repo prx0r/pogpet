@@ -408,6 +408,18 @@
         "responses": {"200": {"description": "async job; spread jobs return urls for 4 faces"}}
       }
     },
+    "/backend/api/cards/{id}/r{rev}/listing": {
+      "get": {
+        "operationId": "cardListing",
+        "summary": "Fixed 2x2 listing collage (front, inside halves, back) — the fourth deterministic view",
+        "parameters": [
+          {"in": "path", "name": "id", "required": true, "schema": {"type": "string"}},
+          {"in": "path", "name": "rev", "required": true, "schema": {"type": "integer"}},
+          {"in": "query", "name": "owner", "schema": {"type": "string"}},
+          {"in": "query", "name": "token", "schema": {"type": "string"}}
+        ]
+      }
+    },
     "/backend/api/cards/fonts": {
       "get": {
         "operationId": "cardFonts",

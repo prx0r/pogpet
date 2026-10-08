@@ -262,10 +262,11 @@ def test_spread_flow_mocked():
                 break
             time.sleep(0.5)
         urls = s["outputs"]["spread"]["urls"]
-        assert set(urls) == {"front", "inside_left", "inside_right", "back"}
-        for part in urls:
+        assert set(urls) == {"front", "inside_left", "inside_right", "back", "listing"}
+        for part in ("front", "inside_left", "inside_right", "back"):
             r = c.get(f"/api/cards/{did}/r{rev}/spread/{part}?owner=anon&token=test-token")
             assert (r.status_code, r.content_type) == (200, "image/png"), part
+        assert urls["listing"].endswith(f"/r{rev}/listing")
     finally:
         from backend import db
         with db.connect() as conn:
@@ -570,3 +571,56 @@ def test_portrait_carries_artwork():
             if sum(abs(a - b) for a, b in zip(p, plain)) > 60:
                 diff += 1
     assert diff / n > 0.15, "balloon corner must carry illustration"
+
+
+def test_schema_caps_reject():
+    from backend import cards as C
+    base = {"template": "typography", "format": "5x7", "photos": [],
+            "recipient": "", "sender": "", "inside_message": "x"}
+    try:
+        C.validate("anon", {**base, "headline": "H" * 61})
+    except C.CardError as e:
+        assert "60" in str(e)
+    else:
+        raise AssertionError("61-char headline must be rejected")
+    try:
+        C.validate("anon", {**base, "headline": "Hi",
+                             "inside_message": "M" * 501})
+    except C.CardError as e:
+        assert "500" in str(e)
+    else:
+        raise AssertionError("501-char message must be rejected")
+
+
+def test_listing_view():
+    import time
+    from backend import config
+    config.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+    c = S.app.test_client()
+    spec = {"template": "typography", "format": "5x7", "photos": [],
+            "headline": "Listing test", "recipient": "", "sender": "Me",
+            "inside_message": "hi"}
+    d = c.post("/api/cards/designs?owner=anon&token=test-token",
+               json={"owner": "anon", "spec": spec}).get_json()
+    did, rev = d["design"]["id"], d["design"]["revision"]
+    try:
+        assert c.get(f"/api/cards/{did}/r{rev}/listing?owner=anon&token=test-token").status_code == 409
+        c.post(f"/api/cards/{did}/render?owner=anon&token=test-token",
+               json={"owner": "anon", "revision": rev, "kind": "spread"})
+        for _ in range(30):
+            s = c.get(f"/api/cards/{did}/scene?owner=anon&revision={rev}&token=test-token").get_json()["scene"]
+            if s["outputs"]["spread"]["status"] == "ready":
+                break
+            time.sleep(0.5)
+        assert "listing" in s["outputs"]["spread"]["urls"]
+        r = c.get(f"/api/cards/{did}/r{rev}/listing?owner=anon&token=test-token")
+        assert (r.status_code, r.content_type) == (200, "image/jpeg")
+    finally:
+        from backend import db
+        with db.connect() as conn:
+            conn.execute("DELETE FROM card_jobs WHERE design_id=?", (did,))
+            conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did,))
+            conn.execute("DELETE FROM card_designs WHERE id=?", (did,))
+            conn.commit()

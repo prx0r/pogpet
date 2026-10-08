@@ -298,7 +298,7 @@ def validate(owner,b):
                 raise CardError("Crop changed. Remove the cutout or cut it out again.")
         slots.append({"photo_id":pid,"crop":box,"focus":focus,"cutout":cid})
     spec={"template":tid,"template_version":scenes.VERSION,"format":b.get("format","5x7"),"photos":slots}
-    for field,limit,default in [("headline",160,tpl["headline"]),("recipient",60,""),("sender",100,""),("inside_message",1200,"")]:
+    for field,limit,default in [("headline",60,tpl["headline"]),("recipient",60,""),("sender",80,""),("inside_message",500,"")]:
         value=b.get(field,default)
         if not isinstance(value,str) or len(value)>limit:
             raise CardError(f"{field} must be text up to {limit} characters")
@@ -363,7 +363,7 @@ def _validate_inside(inside, legacy_message):
         if k not in ("left", "right"):
             raise CardError(f"Inside has no panel {k!r} — panels: left, right")
     right = _validate_panel(inside.get("right"), text_field="message",
-                            text_limit=1200, default_font="inter")
+                            text_limit=500, default_font="inter")
     if not right["message"]:
         right["message"] = legacy_message
     left = _validate_panel(inside.get("left"), text_field="text",
@@ -543,6 +543,8 @@ def job_payload(row):
     base={"id":row["id"],"design_id":row["design_id"],"revision":row["revision"],"kind":row["kind"],"status":row["status"],"error":row["error"],"url":f"/api/cards/{row['design_id']}/r{row['revision']}/{row['kind']}" if row["status"]=="ready" and row["kind"]!="spread" else ""}
     if row["kind"]=="spread":
         base["urls"]={p:f"/api/cards/{row['design_id']}/r{row['revision']}/spread/{p}" for p in SPREAD_PARTS} if row["status"]=="ready" else {}
+        if row["status"]=="ready":
+            base["urls"]["listing"]=f"/api/cards/{row['design_id']}/r{row['revision']}/listing"
     return base
 
 
@@ -924,6 +926,19 @@ def register(app,owner_denied):
             raise CardError("Spread is not ready — render kind spread first",409)
         p=local_asset(key(owner,did,rev,"spread-"+part.replace("_","-")))
         res=send_file(p,mimetype="image/png",max_age=0)
+        res.headers["Cache-Control"]="private, no-store";return res
+
+    @bp.get("/api/cards/<did>/r<int:rev>/listing")
+    def listing(did,rev):
+        """Fixed 2×2 listing collage (front, inside halves, back) — the
+        fourth deterministic view agents hand to humans next to Buy."""
+        owner=request.card_owner;record(owner,did,rev)
+        with db.connect() as c:
+            ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='spread' AND status='ready'",(owner,did,rev)).fetchone()
+        if not ready:
+            raise CardError("Listing is not ready — render kind spread first",409)
+        p=contact_sheet(owner,did,rev)
+        res=send_file(p,mimetype="image/jpeg",max_age=0)
         res.headers["Cache-Control"]="private, no-store";return res
 
     @bp.post("/api/cards/<did>/order")

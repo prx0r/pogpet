@@ -25,7 +25,22 @@ TEMPLATES = {
     "awards": {"label": "Lifetime achievement", "headline": "A lifetime of being a legend.", "max_photos": 1, "min_photos": 1, "motion": "award reveal + confetti", "bg": "#24222d", "ink": "#fff9e7", "accent": "#e5ba62"},
     "christmas": {"label": "The Christmas cast", "headline": "Merry Christmas", "max_photos": 5, "min_photos": 1, "motion": "snowfall + photo reveals", "bg": "#18382d", "ink": "#fff9e7", "accent": "#e6bd78"},
     "typography": {"label": "Say it properly", "headline": "You're one of a kind.", "max_photos": 0, "min_photos": 0, "motion": "title reveal", "bg": "#f4d651", "ink": "#22221d", "accent": "#22221d"},
+    # ── the birthday five: locked product templates. Agent chooses photos +
+    # text only — fonts are fixed per template (see "fonts"), enforced in save.
+    "birthday_arch": {"label": "Birthday arch", "headline": "Happy birthday, legend.", "max_photos": 1, "min_photos": 1, "motion": "photo reveal", "bg": "#faf3e7", "ink": "#22221d", "accent": "#b34a30", "fonts": {"headline": "fraunces", "body": "courier"}},
+    "birthday_dots": {"label": "Birthday dots", "headline": "Hip hip hooray!", "max_photos": 3, "min_photos": 1, "motion": "dot reveal", "bg": "#fdfdf8", "ink": "#1d1d22", "accent": "#3056b3", "fonts": {"headline": "inter_bold", "body": "inter"}},
+    "birthday_news": {"label": "Birthday newsflash", "headline": "Local legend in birthday shocker.", "max_photos": 1, "min_photos": 1, "motion": "news reveal + moving ticker", "bg": "#14202e", "ink": "#ffffff", "accent": "#d43a2f", "fonts": {"headline": "inter_bold", "body": "courier"}},
+    "birthday_gold": {"label": "Birthday gold", "headline": "Another year, more legend.", "max_photos": 1, "min_photos": 1, "motion": "champion reveal + confetti", "bg": "#1d1a16", "ink": "#fff6e3", "accent": "#d9a441", "fonts": {"headline": "fraunces", "body": "inter"}},
+    "birthday_wall": {"label": "Birthday wall", "headline": "Our favourite person.", "max_photos": 5, "min_photos": 2, "motion": "wall reveals", "bg": "#f6efe3", "ink": "#26221c", "accent": "#2e6b4f", "fonts": {"headline": "fraunces", "body": "courier"}},
 }
+
+# Birthday product set: the only templates the agent offers for birthdays.
+BIRTHDAY_TEMPLATES = ("birthday_arch", "birthday_dots", "birthday_news",
+                      "birthday_gold", "birthday_wall")
+# Composition sharing: birthday covers reuse proven layouts with their own
+# palettes, art and mastheads (one composition codebase, five products).
+BIRTHDAY_COMP = {"birthday_arch": "portrait", "birthday_news": "breaking_news",
+                 "birthday_gold": "game_winner"}
 
 # ── design contracts (same reusable format as STUDIO_LINES) ─────────────
 # domain "paper": locked = print truths a designer must not move; envelope =
@@ -92,6 +107,51 @@ CARD_DESIGN_CONTRACTS = {
         "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
         "formats": ["A6", "5x7", "A5"],
         "cost_target_cents": {"A6": 120, "5x7": 200, "A5": 280},
+        "verify": [],
+    },
+    "birthday_arch": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1 photo exactly in the arch slot",
+                   "fonts fixed: fraunces headline, courier inside — agent chooses photos + text only"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["5x7"],
+        "cost_target_cents": {"5x7": 200},
+        "verify": [],
+    },
+    "birthday_dots": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1–3 photos in dot circles",
+                   "fonts fixed: inter_bold headline, inter inside — agent chooses photos + text only"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["5x7"],
+        "cost_target_cents": {"5x7": 200},
+        "verify": [],
+    },
+    "birthday_news": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1 photo exactly in the frame slot",
+                   "ticker zone reserved at foot", "fonts fixed: inter_bold headline, courier inside"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["5x7"],
+        "cost_target_cents": {"5x7": 200},
+        "verify": [],
+    },
+    "birthday_gold": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "1 photo exactly in the medallion",
+                   "fonts fixed: fraunces headline, inter inside — agent chooses photos + text only"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["5x7"],
+        "cost_target_cents": {"5x7": 200},
+        "verify": [],
+    },
+    "birthday_wall": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "2–5 photos in the wall grid, order preserved",
+                   "fonts fixed: fraunces headline, courier inside — agent chooses photos + text only"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["5x7"],
+        "cost_target_cents": {"5x7": 200},
         "verify": [],
     },
 }
@@ -201,6 +261,8 @@ def font_for(font_id, size, bold=False):
 CARD_ART = {
     "portrait": [("colored-balloons-191040-800.png", (0.02, 0.035, 0.30, 0.20)),
                  ("birthday-cake-3-304095-800.png", (0.74, 0.045, 0.22, 0.15))],
+    "birthday_arch": [("balloon-border-3024-800.png", (0.05, 0.035, 0.90, 0.10)),
+                      ("birthday-cake-296924-800.png", (0.74, 0.045, 0.22, 0.15))],
 }
 _ART_CACHE: dict = {}
 
@@ -326,7 +388,8 @@ def cropped(img, box):
 
 
 MASTHEAD = {"breaking_news": "BREAKING NEWS", "game_winner": "THE GAME WINNER",
-            "awards": "LIFETIME ACHIEVEMENT", "christmas": "THE CHRISTMAS CAST"}
+            "awards": "LIFETIME ACHIEVEMENT", "christmas": "THE CHRISTMAS CAST",
+            "birthday_news": "HAPPY BIRTHDAY", "birthday_gold": "HIP HIP HOORAY"}
 
 
 def _tile(slot, assets, size, progress, i):
@@ -450,13 +513,14 @@ def front(design, assets, width=720, height=None, progress=1.0):
     slots = design["photos"]
     count = len(slots)
     tid = design["template"]
+    comp = BIRTHDAY_COMP.get(tid, tid)
     hfont = design.get("headline_font") or "fraunces"
 
     d.rectangle((w*.04, h*.03, w*.96, h*.97), outline=accent, width=max(1, w//180))
 
-    if tid == "portrait" and count:
-        # illustrated birthday cover: balloons + cake around an arch photo slot
-        for name, box in CARD_ART.get("portrait", []):
+    if comp == "portrait" and count:
+        # illustrated birthday cover: art around an arch photo slot
+        for name, box in CARD_ART.get(tid, []):
             _sticker(card, name, box)
         _scatter(d, w, h, 26, 7, [accent, "#e5ba62", ink], (0.06, 0.045, 0.88, 0.05))
         _frames(card, d, design, assets, [(0.16, 0.11, 0.68, 0.50)],
@@ -470,10 +534,10 @@ def front(design, assets, width=720, height=None, progress=1.0):
         text_block(d, design["sender"], (w*.08, h*.885, w*.84, h*.03), ink, w*.021)
         return card.convert("RGB")
 
-    if tid == "breaking_news":
+    if comp == "breaking_news":
         # broadcast card: red masthead, framed photo, cream headline band
         d.rectangle((w*.04, h*.03, w*.96, h*.13), fill=accent)
-        text_block(d, "BREAKING NEWS", (w*.08, h*.055, w*.84, h*.06),
+        text_block(d, MASTHEAD.get(tid, "BREAKING NEWS"), (w*.08, h*.055, w*.84, h*.06),
                    "#ffffff", w*.038, bold=True)
         if count:
             _frames(card, d, design, assets, [(0.12, 0.17, 0.76, 0.40)],
@@ -497,7 +561,7 @@ def front(design, assets, width=720, height=None, progress=1.0):
             d.text((w*.08, h*.915), "OFFICIAL • VERIFIED • LIVE", font=f, fill="white")
         return card.convert("RGB")
 
-    if tid in ("game_winner", "awards"):
+    if comp in ("game_winner", "awards"):
         # medallion card: gold-ringed circle on confetti, cream headline band
         _scatter(d, w, h, 40, 21, [accent, "#ffffff", ink], (0.05, 0.04, 0.90, 0.90), 0.010)
         title = MASTHEAD.get(tid)
@@ -557,6 +621,44 @@ def front(design, assets, width=720, height=None, progress=1.0):
         if progress > .15:
             text_block(d, design["headline"], (w*.08, h*.645, w*.84, h*.12),
                        "#fff9e7", w*.052, bold=True, font_id=hfont)
+        text_block(d, design["recipient"], (w*.08, h*.775, w*.84, h*.04),
+                   accent, w*.028, bold=True, role="hand")
+        text_block(d, design["sender"], (w*.08, h*.875, w*.84, h*.03), ink, w*.021)
+        return card.convert("RGB")
+
+    if tid == "birthday_dots" and count:
+        # dot field: 1–3 circle slots on scattered dots, bold headline band
+        _scatter(d, w, h, 60, 42, [accent, "#e08a3c", "#3cb35e"],
+                 (0.05, 0.04, 0.90, 0.55), 0.014)
+        n = min(count, 3)
+        gw = 0.84 / n
+        boxes = [(0.08 + i * gw + gw * 0.1, 0.16, gw * 0.8, 0.34) for i in range(n)]
+        _frames(card, d, design, assets, boxes, shape="circle",
+                border=0.007, border_fill=accent, progress=progress)
+        d.rectangle((w*.04, h*.58, w*.96, h*.80), fill=ink)
+        if progress > .15:
+            text_block(d, design["headline"], (w*.08, h*.605, w*.84, h*.14),
+                       "#ffffff", w*.055, bold=True, font_id=hfont)
+        text_block(d, design["recipient"], (w*.08, h*.83, w*.84, h*.05),
+                   accent, w*.03, bold=True, role="hand")
+        text_block(d, design["sender"], (w*.08, h*.895, w*.84, h*.03), ink, w*.021)
+        return card.convert("RGB")
+
+    if tid == "birthday_wall" and count:
+        # photo wall: 2–5 white-bordered frames over a solid headline band
+        n = min(max(count, 2), 5)
+        cols = 2
+        rows = math.ceil(n / cols)
+        gap = 0.03
+        cw, ch = (0.84 - gap * (cols - 1)) / cols, 0.44 / rows
+        boxes = [(0.08 + (i % cols) * (cw + gap), 0.07 + (i // cols) * (ch + gap), cw, ch)
+                 for i in range(n)]
+        _frames(card, d, design, assets, boxes, shape="round",
+                border=0.005, border_fill="#ffffff", progress=progress)
+        d.rectangle((w*.04, h*.60, w*.96, h*.82), fill=ink)
+        if progress > .15:
+            text_block(d, design["headline"], (w*.08, h*.625, w*.84, h*.12),
+                       "#fffdf7", w*.05, bold=True, font_id=hfont)
         text_block(d, design["recipient"], (w*.08, h*.775, w*.84, h*.04),
                    accent, w*.028, bold=True, role="hand")
         text_block(d, design["sender"], (w*.08, h*.875, w*.84, h*.03), ink, w*.021)

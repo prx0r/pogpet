@@ -75,7 +75,7 @@ def test_mcp_checkout_registered_and_gated():
     assert "figg_card_checkout" not in M.PUBLIC_TOOLS
     assert "Done means a product_url" in (M.figg_card_checkout.__doc__ or "")
     assert "Done means a product_url" in (M.figg_card_save.__doc__ or "")
-    assert M.MCP_VERSION == "1.10.0"
+    assert M.MCP_VERSION == "1.11.0"
 
 
 def test_bridge_logs_cf_ray():
@@ -624,3 +624,37 @@ def test_listing_view():
             conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did,))
             conn.execute("DELETE FROM card_designs WHERE id=?", (did,))
             conn.commit()
+
+
+def test_birthday_five_locked():
+    """The birthday five render 1–5 photos with caller fonts overridden."""
+    import hashlib
+    from backend import cards as C
+    from backend.card_scenes import front, BIRTHDAY_TEMPLATES
+    assert len(BIRTHDAY_TEMPLATES) == 5
+    owner = "hark-dad-a7a5cc"
+    pids = ["pho_676d794af4d945d38439", "pho_6779ec37a1e84d3fa086",
+            "pho_31f9b76e88ac4512875b"]
+    counts = {"birthday_arch": (1, 1), "birthday_dots": (1, 3),
+              "birthday_news": (1, 1), "birthday_gold": (1, 1),
+              "birthday_wall": (2, 5)}
+    for tid in BIRTHDAY_TEMPLATES:
+        lo, hi = counts[tid]
+        for n in range(lo, min(hi, 3) + 1):
+            photos = [{"photo_id": p, "crop": [0, 0, 1, 1],
+                       "focus": [0.5, 0.5], "cutout": ""} for p in pids[:n]]
+            spec = C.validate(owner, {"template": tid, "format": "5x7",
+                                      "photos": photos, "headline": "Happy Birthday!",
+                                      "recipient": "Dad", "sender": "Me",
+                                      "inside_message": "x",
+                                      "headline_font": "caveat",
+                                      "inside": {"right": {"message": "x", "font": "caveat"}}})
+            locked = {"birthday_arch": ("fraunces", "courier"),
+                      "birthday_dots": ("inter_bold", "inter"),
+                      "birthday_news": ("inter_bold", "courier"),
+                      "birthday_gold": ("fraunces", "inter"),
+                      "birthday_wall": ("fraunces", "courier")}[tid]
+            assert (spec["headline_font"], spec["inside"]["right"]["font"]) == locked, tid
+            a = front(spec, C.assets(owner, spec), 360)
+            b = front(spec, C.assets(owner, spec), 360)
+            assert hashlib.md5(a.tobytes()).hexdigest() == hashlib.md5(b.tobytes()).hexdigest()

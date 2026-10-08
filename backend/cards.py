@@ -307,15 +307,23 @@ def validate(owner,b):
         raise CardError("No wordmark on the front — brand lives on the back only")
     if not spec["headline"]:
         raise CardError("Add a headline")
-    # front headline font: registry id only (controlled custom, like coats)
+    # front headline font: registry id only (controlled custom, like coats).
+    # Birthday product templates lock their fonts — the agent chooses photos
+    # + text only; caller values are overridden, never rejected, never honoured.
     hfont = b.get("headline_font", "fraunces")
     if not isinstance(hfont, str) or hfont not in scenes.CARD_FONT_IDS:
         raise CardError(f"headline_font must be one of {list(scenes.CARD_FONT_IDS)}")
+    locked = (tpl.get("fonts") or {})
+    if isinstance(locked, dict) and locked.get("headline") in scenes.CARD_FONT_IDS:
+        hfont = locked["headline"]
     spec["headline_font"] = hfont
     # inside panels: right message + optional left note, each with
     # font/size/colour/align from closed enums. Legacy inside_message feeds
-    # right.message so old revisions keep rendering.
+    # right.message so old revisions keep rendering. Locked templates also
+    # fix the inside body font.
     spec["inside"] = _validate_inside(b.get("inside"), spec["inside_message"])
+    if isinstance(locked, dict) and locked.get("body") in scenes.CARD_FONT_IDS:
+        spec["inside"]["right"]["font"] = locked["body"]
     return spec
 
 
@@ -696,6 +704,9 @@ def register(app,owner_denied):
                 c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",(did,rev,json_dump(spec),t))
             c.commit()
         warnings=[]
+        locked = (scenes.TEMPLATES.get(spec["template"], {}).get("fonts") or {})
+        if isinstance(locked, dict) and locked:
+            warnings.append(f"Fonts are template-locked ({locked.get('headline')}/{locked.get('body')}) — you choose photos + text only.")
         count=len(spec["photos"])
         cols=1 if count<=1 else 2
         rows=max(1,math.ceil(count/cols))
@@ -728,7 +739,7 @@ def register(app,owner_denied):
         owner = request.card_owner
         with db.connect() as c:
             photos = [dict(r) for r in c.execute(
-                "SELECT * FROM photos WHERE owner=? ORDER BY created_at DESC LIMIT 4",
+                "SELECT * FROM photos WHERE owner=? ORDER BY created_at DESC LIMIT 3",
                 (owner,)).fetchall()]
         if not photos:
             return jsonify(ok=True, items=[], empty=True)
@@ -779,10 +790,12 @@ def register(app,owner_denied):
         items, enqueued = [], 0
         for p in photos:
             name = who.get(p["id"], "")
-            for tid in ("portrait", "breaking_news", "christmas"):
+            for tid in scenes.BIRTHDAY_TEMPLATES:
                 tpl = scenes.TEMPLATES[tid]
+                if len([p["id"]]) < tpl["min_photos"]:
+                    continue
                 headline = tpl["headline"]
-                if name and tid == "portrait" and bdays.get(p["id"]) \
+                if name and bdays.get(p["id"]) \
                         and birthday_soon(bdays[p["id"]]):
                     headline = f"Happy Birthday, {name}!"
                 key = (tid, (p["id"],))
@@ -832,6 +845,63 @@ def register(app,owner_denied):
                               "url": f"/api/cards/photos/{p['id']}/image"},
                     "preview_url": url, "preview_status": status,
                 })
+        if len(photos) >= 2:
+            # the wall: first photos together on one birthday card
+            tid = "birthday_wall"
+            tpl = scenes.TEMPLATES[tid]
+            pids = tuple(p["id"] for p in photos[:3])
+            key = (tid, pids)
+            name = who.get(photos[0]["id"], "")
+            headline = tpl["headline"]
+            if name and bdays.get(photos[0]["id"]) \
+                    and birthday_soon(bdays[photos[0]["id"]]):
+                headline = f"Happy Birthday, {name}!"
+            if key in known:
+                did, rev = known[key]
+            else:
+                spec = validate(owner, {
+                    "template": tid, "format": "5x7",
+                    "headline": headline, "recipient": name,
+                    "sender": "", "inside_message": "",
+                    "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                                "focus": [0.5, 0.5], "cutout": ""} for pid in pids]})
+                did, rev = "card_" + uuid.uuid4().hex, 1
+                t = time.time()
+                with db.connect() as c:
+                    c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",
+                              (did, owner, rev, t, t, owner, "ui"))
+                    c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
+                              (did, rev, json_dump(spec), t))
+                    c.commit()
+                known[key] = (did, rev)
+            url, status = "", "missing"
+            with db.connect() as c:
+                job = c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='preview' AND status IN ('queued','running','ready') ORDER BY created_at DESC LIMIT 1",
+                                (owner, did, rev)).fetchone()
+            if job:
+                status = job["status"]
+                if status == "ready":
+                    url = f"/api/cards/{did}/r{rev}/preview"
+            elif enqueued < 6:
+                try:
+                    enqueue(owner, did, rev, "preview")
+                    status = "queued"
+                except CardError:
+                    pass
+            items.append({
+                "design_id": did, "revision": rev, "template": tid,
+                "template_label": tpl["label"], "headline": headline,
+                "recipient": name, "format": "5x7",
+                "price_cents": card_price()["price_cents"],
+                "price": card_price()["price"],
+                "price_grade": "FIXED",
+                "card_url": card_url_for(did, rev),
+                "proof_url": proof_url_for(did),
+                "photo": {"id": photos[0]["id"],
+                          "orig_name": photos[0].get("orig_name") or "Photo",
+                          "url": f"/api/cards/photos/{photos[0]['id']}/image"},
+                "preview_url": url, "preview_status": status,
+            })
         return jsonify(ok=True, items=items, product=card_price(),
                        mcp_status=mcp_status(),
                        buy_hint="Done means a product_url the human can buy from — "

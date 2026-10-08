@@ -30,7 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
-MCP_VERSION = "1.10.0"
+MCP_VERSION = "1.11.0"
 
 
 def _service_token() -> str:
@@ -960,7 +960,7 @@ async def figg_card_for_person(person: str, occasion: str = "birthday",
     if not photo_id:
         return [TextContent(type="text", text=_j({"ok": False, "error": "no photos for this owner — upload one first"}))]
     occasion = (occasion or "birthday").lower()
-    template = {"christmas": "christmas"}.get(occasion, "portrait")
+    template = {"christmas": "christmas"}.get(occasion, "birthday_arch")
     name = sub.get("name") or person
     headline = f"{_OCCASION_TITLES.get(occasion, 'Hello')}, {name}!"[:60]
     lines = _cards.message_lines(prof, tone)

@@ -40,16 +40,20 @@ Anything outside the schema — layout, fonts by file, sizes, colours by
 hex, panel counts, logo placement — is rejected. Fonts are registry ids
 (`figg_card_fonts`), colours are `ink|soft|accent`, sizes are `S|M|L`.
 
-## The three locked product templates
+## The five locked birthday templates
 
-| ID | Front | Inside left | Inside right | Back |
-|---|---|---|---|---|
-| `portrait` | arch photo slot in CC0 birthday art, serif headline band, name byline | blank | message + signature | brand mark only |
-| `breaking_news` | red masthead, framed photo slot, flat headline band, ticker foot | blank | message + signature | brand mark only |
-| `game_winner` | gold-ring medallion photo slot on confetti, headline band | blank | message + signature | brand mark only |
+| ID | Photos | Front | Inside left | Inside right | Back | Locked fonts |
+|---|---|---|---|---|---|---|
+| `birthday_arch` | 1, arch slot in balloon art | balloons + cake art, serif headline band, name byline | blank | message + signature | brand mark only | fraunces / courier |
+| `birthday_dots` | 1–3, circle slots on a dot field | dot pattern, bold headline band | blank | message + signature | brand mark only | inter_bold / inter |
+| `birthday_news` | 1, framed slot under masthead | red masthead, photo frame, flat headline band, ticker foot | blank | message + signature | brand mark only | inter_bold / courier |
+| `birthday_gold` | 1, medallion slot on confetti | gold-ring portrait, serif headline band | blank | message + signature | brand mark only | fraunces / inter |
+| `birthday_wall` | 2–5, white-borderedgrid | photo wall, solid headline band | blank | message + signature | brand mark only | fraunces / courier |
 
-The other four templates (`awards`, `christmas`, `family`, `typography`)
-keep rendering but are not product picks — the agent offers the three.
+The agent chooses photos + text only. Font inputs are overridden with the
+template pair (a warning says so). The older templates (`portrait`,
+`breaking_news`, `game_winner`, `awards`, `christmas`, `family`,
+`typography`) keep rendering but are not product picks.
 
 ## Renderer contract (deterministic, no AI)
 

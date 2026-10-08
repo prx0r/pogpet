@@ -30,7 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
-MCP_VERSION = "1.6.1"
+MCP_VERSION = "1.7.0"
 
 
 def _service_token() -> str:
@@ -796,6 +796,109 @@ async def figg_card_templates(owner: str = "", api_key: str = "") -> str:
     return _j(await _call("GET", "/api/cards/templates?owner=" + (owner or "anon"), api_key=api_key))
 
 
+async def figg_card_fonts(owner: str = "", api_key: str = "") -> str:
+    """Curated card fonts clustered by vibe + occasion: match the brief's tone
+    and occasion to vibes/occasions, keep the slot's use_for role (headline /
+    name / body / accent). Fall back to frances headlines + inter body.
+    Registry ids only — buyers pick an id, never a file."""
+    return _j(await _call("GET", "/api/cards/fonts?owner=" + (owner or "anon"), api_key=api_key))
+
+
+_EDIT_FIELDS = {
+    "front": {"headline", "headline_font", "recipient", "sender"},
+    "inside_left": {"text", "font", "size", "colour", "align", "mode"},
+    "inside_right": {"message", "font", "size", "colour", "align"},
+}
+
+
+async def figg_card_edit(design_id: str, panel: str, field: str, value: str,
+                         owner: str = "", api_key: str = "") -> str:
+    """Edit one panel field → new immutable revision + fresh card_url.
+    Panel: front | inside_left | inside_right. Front fields: headline,
+    headline_font, recipient, sender. Inside fields: message/text, font,
+    size (S/M/L), colour (ink/soft/accent), align (center/left), mode.
+    Fonts must be registry ids from figg_card_fonts. Checkout always buys
+    the revision you're looking at."""
+    if panel not in _EDIT_FIELDS or field not in _EDIT_FIELDS[panel]:
+        return _j({"ok": False,
+                   "error": f"panel must be front|inside_left|inside_right with fields {sorted({k: sorted(v) for k, v in _EDIT_FIELDS.items()}.get(panel, []))}"})
+    cur = await _call("GET", "/api/cards/designs/" + design_id +
+                      "?owner=" + (owner or "anon"), api_key=api_key)
+    if not cur.get("ok"):
+        return _j(cur)
+    spec = (cur.get("design") or {}).get("spec") or {}
+    rev = (cur.get("design") or {}).get("revision", 1)
+    if panel == "front":
+        spec[field] = value
+    else:
+        side = "left" if panel == "inside_left" else "right"
+        inner = spec.get("inside") or {}
+        part = dict(inner.get(side) or {})
+        part[field if field != "message" or side == "right" else "text"] = value
+        inner[side] = part
+        spec["inside"] = inner
+    return _j(await _call("POST", "/api/cards/designs",
+                         {"owner": owner, "id": design_id,
+                          "expected_revision": rev, "spec": spec},
+                         api_key=api_key))
+
+
+async def figg_card_variants(design_id: str, n: int = 3, owner: str = "",
+                              api_key: str = "") -> str:
+    """Same photo + words on N other templates → N new designs with card_urls.
+    The design strip: show them side by side, human picks one, then edit and
+    buy that revision. n is 2-5; only photo-count-compatible templates qualify."""
+    n = max(2, min(5, int(n or 3)))
+    cur = await _call("GET", "/api/cards/designs/" + design_id +
+                      "?owner=" + (owner or "anon"), api_key=api_key)
+    if not cur.get("ok"):
+        return _j(cur)
+    spec = (cur.get("design") or {}).get("spec") or {}
+    rev = (cur.get("design") or {}).get("revision", 1)
+    tpl = await _call("GET", "/api/cards/templates?owner=" + (owner or "anon"),
+                      api_key=api_key)
+    templates = tpl.get("templates") or []
+    count = len(spec.get("photos") or [])
+    cands = [t for t in templates
+             if t.get("id") != spec.get("template")
+             and t.get("min_photos", 0) <= count <= t.get("max_photos", 99)][:n]
+    out = []
+    for t in cands:
+        trial = dict(spec, template=t["id"])
+        saved = await _call("POST", "/api/cards/designs",
+                            {"owner": owner, "spec": trial}, api_key=api_key)
+        if saved.get("ok"):
+            d = saved["design"]
+            out.append({"template": t["id"], "label": t.get("label", t["id"]),
+                        "design_id": d["id"], "revision": d["revision"],
+                        "card_url": saved.get("card_url", "")})
+    return _j({"ok": True, "variants": out,
+               "hint": "Show the card_urls side by side; edit + buy the picked revision."})
+
+
+async def figg_card_messages(person: str = "", tone: str = "funny",
+                             owner: str = "", subject_id: str = "",
+                             api_key: str = "") -> str:
+    """Smart-text v1: funny/warm/short inside lines built from the subject's
+    profile (name, interests, memories). Each line cites its source fact.
+    Deterministic starting points to edit together — a preview alone is not done."""
+    from backend import cards as _cards
+    people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
+                         api_key=api_key)
+    prof: dict = {}
+    for p in (people.get("people") or people.get("subjects") or []):
+        if not isinstance(p, dict):
+            continue
+        if (subject_id and p.get("id") == subject_id) or \
+           (person and str(p.get("name", "")).lower() == person.lower()):
+            prof = p.get("profile") or p
+            break
+    if not prof and person:
+        prof = {"name": person}
+    return _j({"ok": True, "tone": tone,
+               "lines": _cards.message_lines(prof if isinstance(prof, dict) else {}, tone)})
+
+
 async def figg_video_share(video_id: str) -> str:
     """One-click share link for a clip (?ref=). Prompt + script already live
     on the row, so shared sets replay. Signup with the ref installs free
@@ -979,7 +1082,8 @@ TOOL_META: dict[str, dict] = {
 TOOL_AREAS: dict[str, list] = {
     "cards":     [figg_card_library, figg_card_save, figg_card_render,
                   figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve,
-                  figg_card_checkout, figg_card_templates],
+                  figg_card_checkout, figg_card_templates, figg_card_fonts,
+                  figg_card_edit, figg_card_variants, figg_card_messages],
     "design":    [figg_blueprints, figg_design_validate, figg_design_base,
                   figg_constraints,
                   figg_design_save, figg_design_order, figg_blender_make],
@@ -1027,6 +1131,7 @@ PUBLIC_TOOLS = frozenset({
     "figg_flow", "figg_playbook", "figg_quick_map",
     "figg_card_library", "figg_card_templates",
     "figg_card_save", "figg_card_render", "figg_card_scene", "figg_card_job",
+    "figg_card_fonts", "figg_card_messages",
     "figg_mesh_status", "figg_measure",
     "figg_styles", "figg_install_style",
     "figg_acts", "figg_rooms",

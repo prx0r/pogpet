@@ -176,6 +176,39 @@ def card_url_for(did: str, rev: int | None = None) -> str:
     return f"{base}/cards/{did}"
 
 
+def message_lines(profile: dict, tone: str = "funny") -> list[dict]:
+    """Smart-text v1 (deterministic): inside lines built from a subject
+    profile's name/interests/memories. Each line cites its source fact so
+    agents can show their work. Tone: funny|warm|short."""
+    profile = profile or {}
+    name = str(profile.get("name") or "them")
+    interests = [str(x) for x in (profile.get("interests") or []) if isinstance(x, str)][:4]
+    memories = [str(x) for x in (profile.get("memories") or []) if isinstance(x, str)][:4]
+    rel = str(profile.get("relationship") or "")
+    first = interests[0] if interests else "the things they're obsessed with"
+    mem = memories[0] if memories else ""
+    who = name if name != "them" else ("Dad" if rel == "dad" else "them")
+    if tone == "warm":
+        lines = [
+            (f"To {who} — thank you for every bit of it.", "relationship"),
+            (f"For all the {first} years and counting.", "interest:" + first),
+        ]
+        if mem:
+            lines.append((f"Still thinking about {mem}.", "memory"))
+    elif tone == "short":
+        lines = [(f"Happy birthday, {who}!", "name"),
+                 (f"Have the best {first} day.", "interest:" + first)]
+    else:  # funny
+        lines = [
+            (f"Happy birthday to the person who took {first} far too seriously.", "interest:" + first),
+            (f"Another year older. Still the reigning {first} champion, allegedly.", "interest:" + first),
+        ]
+        if mem:
+            lines.append((f"In honour of the time {mem} — never forget.", "memory"))
+        lines.append((f"Officially a legend. Unofficially, still {who}.", "name"))
+    return [{"text": t[:400], "source": s} for t, s in lines[:4]]
+
+
 def validate(owner,b):
     if not isinstance(b,dict):
         raise CardError("Expected a card design object")
@@ -223,7 +256,61 @@ def validate(owner,b):
         raise CardError("No wordmark on the front — brand lives on the back only")
     if not spec["headline"]:
         raise CardError("Add a headline")
+    # front headline font: registry id only (controlled custom, like coats)
+    hfont = b.get("headline_font", "fraunces")
+    if not isinstance(hfont, str) or hfont not in scenes.CARD_FONT_IDS:
+        raise CardError(f"headline_font must be one of {list(scenes.CARD_FONT_IDS)}")
+    spec["headline_font"] = hfont
+    # inside panels: right message + optional left note, each with
+    # font/size/colour/align from closed enums. Legacy inside_message feeds
+    # right.message so old revisions keep rendering.
+    spec["inside"] = _validate_inside(b.get("inside"), spec["inside_message"])
     return spec
+
+
+def _validate_panel(panel, *, text_field, text_limit, default_font):
+    panel = panel or {}
+    if not isinstance(panel, dict):
+        raise CardError("Inside panels must be objects")
+    out = {}
+    mode = panel.get("mode", "blank" if text_field != "message" else "message")
+    if mode not in ("blank", "message"):
+        raise CardError("Inside panel mode must be blank or message")
+    out["mode"] = mode
+    text = panel.get(text_field, "")
+    if not isinstance(text, str) or len(text) > text_limit:
+        raise CardError(f"Inside {text_field} must be text up to {text_limit} characters")
+    out[text_field] = text.strip()
+    font = panel.get("font", default_font)
+    if not isinstance(font, str) or font not in scenes.CARD_FONT_IDS:
+        raise CardError(f"Inside font must be one of {list(scenes.CARD_FONT_IDS)}")
+    out["font"] = font
+    size = panel.get("size", "M")
+    if size not in scenes.CARD_SIZES:
+        raise CardError(f"Inside size must be one of {list(scenes.CARD_SIZES)}")
+    out["size"] = size
+    colour = panel.get("colour", "ink")
+    if colour not in scenes.CARD_COLOURS:
+        raise CardError(f"Inside colour must be one of {list(scenes.CARD_COLOURS)}")
+    out["colour"] = colour
+    align = panel.get("align", "center")
+    if align not in scenes.CARD_ALIGN:
+        raise CardError(f"Inside align must be one of {list(scenes.CARD_ALIGN)}")
+    out["align"] = align
+    return out
+
+
+def _validate_inside(inside, legacy_message):
+    inside = inside or {}
+    if not isinstance(inside, dict):
+        raise CardError("Inside must be an object with left/right panels")
+    right = _validate_panel(inside.get("right"), text_field="message",
+                            text_limit=1200, default_font="inter")
+    if not right["message"]:
+        right["message"] = legacy_message
+    left = _validate_panel(inside.get("left"), text_field="text",
+                           text_limit=160, default_font="inter")
+    return {"left": left, "right": right}
 
 
 def record(owner,did,revision=None):
@@ -355,6 +442,17 @@ def register(app,owner_denied):
                                "buy_hint": "POST /backend/api/cards/<id>/checkout returns checkout_url — done means a product_url the human can buy from; a preview alone is not done."},
                       mcp_status=mcp_status(),
                       mcp_hint="If degraded, prefer waiting — REST works but is off the main road.")
+
+    @bp.get("/api/cards/fonts")
+    def fonts():
+        """Curated font registry for agents: pick by vibe + occasion, keep
+        the slot's use_for role. Fall back to frances headlines + inter body."""
+        return jsonify(ok=True, fonts=scenes.CARD_FONTS,
+                       sizes=scenes.CARD_SIZES, colours=scenes.CARD_COLOURS,
+                       aligns=scenes.CARD_ALIGN,
+                       how="Match brief tone+occasion to vibes/occasions; "
+                           "headlines use use_for=headline, inside body uses body.",
+                       mcp_status=mcp_status())
 
     @bp.get("/api/cards/photos")
     def photos():

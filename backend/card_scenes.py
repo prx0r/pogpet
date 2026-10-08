@@ -127,6 +127,90 @@ def get_font(role, size, bold=False):
     return ImageFont.load_default()
 
 
+# ── curated font registry (controlled custom, like coats) ──────────
+# Buyers pick an id, never a file. Every file here is OFL,
+# commercial-print-safe (see assets/fonts/OFL-NOTES.md). The renderer owns
+# geometry; the registry owns taste. No free-form font inputs exist.
+CARD_FONTS = {
+    "fraunces": {"label": "Literary serif",
+                 "mood": "warm, editorial headlines",
+                 "vibes": ["warm", "proud", "romantic", "editorial"],
+                 "occasions": ["birthday", "anniversary", "mothers_day",
+                               "fathers_day", "retirement", "christmas"],
+                 "use_for": ["headline"],
+                 "file": "Fraunces-SemiBold.ttf"},
+    "caveat": {"label": "Handwritten",
+               "mood": "names, signatures, short affectionate accents",
+               "vibes": ["playful", "affectionate", "personal"],
+               "occasions": ["birthday", "valentines", "mothers_day",
+                             "fathers_day", "anniversary", "general"],
+               "use_for": ["name", "headline", "accent"],
+               "file": "Caveat-SemiBold.ttf"},
+    "inter": {"label": "Clean sans", "mood": "clear body copy",
+              "vibes": ["sincere", "modern", "calm"],
+              "occasions": ["general", "graduation", "new_baby",
+                            "retirement", "mothers_day"],
+              "use_for": ["body"],
+              "file": "Inter-Regular.ttf"},
+    "inter_bold": {"label": "Bold sans", "mood": "confident headlines",
+                   "vibes": ["bold", "celebratory", "funny-loud"],
+                   "occasions": ["birthday", "graduation", "retirement",
+                                 "fathers_day"],
+                   "use_for": ["headline"],
+                   "file": "Inter-Bold.ttf"},
+    "courier": {"label": "Typewriter",
+                "mood": "typed-letter inside messages",
+                "vibes": ["nostalgic", "sincere", "dry-funny"],
+                "occasions": ["fathers_day", "birthday", "christmas",
+                              "anniversary", "general"],
+                "use_for": ["body"],
+                "file": "CourierPrime-Regular.ttf"},
+}
+CARD_FONT_IDS = tuple(CARD_FONTS)
+# size scale (multiplier on the panel base size) — S/M/L, never free points
+CARD_SIZES = {"S": 0.8, "M": 1.0, "L": 1.25}
+# semantic colours, resolved per template so contrast always holds
+CARD_COLOURS = ("ink", "soft", "accent")
+CARD_ALIGN = ("center", "left")
+
+
+def font_for(font_id, size, bold=False):
+    """Resolve a registry font id to a PIL font. Unknown ids fall back to
+    Inter (sans) — never fail a render on taste."""
+    from pathlib import Path as _P
+    spec = CARD_FONTS.get(font_id) or {}
+    fname = spec.get("file") or "Inter-Regular.ttf"
+    if bold and fname == "Inter-Regular.ttf":
+        fname = "Inter-Bold.ttf"
+    if bold and fname == "CourierPrime-Regular.ttf":
+        fname = "CourierPrime-Bold.ttf"
+    here = _P(__file__).resolve().parent.parent / "assets" / "fonts"
+    for base in (here / fname,
+                 "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"):
+        try:
+            return ImageFont.truetype(str(base), max(8, int(size)))
+        except OSError:
+            pass
+    return ImageFont.load_default()
+
+
+def _luminance(hexcol):
+    hexcol = hexcol.lstrip("#")
+    r, g, b = (int(hexcol[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def ink_for(design, which="ink"):
+    """Semantic colour → hex against this template's palette, so contrast
+    always holds on light and dark stocks alike."""
+    tpl = TEMPLATES[design["template"]]
+    if which == "accent":
+        return tpl["accent"]
+    if which == "soft":
+        return "#55554d" if _luminance(tpl["bg"]) > 0.5 else "#cfcabb"
+    return tpl["ink"]
+
+
 def back(design, width=720, height=None):
     """Canonical back: brand mark, tagline, URL, quiet margins. The renderer
     owns it — never AI, never blank."""
@@ -149,12 +233,13 @@ class TextOverflow(ValueError):
 
 
 def text_block(draw, text, box, colour, size, *, bold=False, align="center",
-               role="sans"):
-    """Wrap and shrink to fit the entire text; never silently clip a headline."""
+               role="sans", font_id=None):
+    """Wrap and shrink to fit the entire text; never silently clip a headline.
+    font_id (registry) wins over role when given."""
     x, y, w, h = box
     fitted=False
     for fs in range(max(8,int(size)), 7, -1):
-        f = get_font(role, fs, bold)
+        f = font_for(font_id, fs, bold) if font_id else get_font(role, fs, bold)
         lines = []
         for paragraph in str(text).split("\n"):
             line = ""
@@ -270,7 +355,8 @@ def front(design, assets, width=720, height=None, progress=1.0):
             card.alpha_composite(tile, (px, py))
     hy = h*.70 if count else h*.30
     if progress > .15:
-        text_block(d, design["headline"], (w*.08, hy, w*.84, h*.15 if count else h*.35), ink, w*.065, bold=True, role="display")
+        text_block(d, design["headline"], (w*.08, hy, w*.84, h*.15 if count else h*.35), ink, w*.065, bold=True, role="display",
+                   font_id=design.get("headline_font") or "fraunces")
     text_block(d, design["recipient"], (w*.08, h*.87, w*.84, h*.04), accent, w*.029, bold=True, role="hand")
     text_block(d, design["sender"], (w*.08, h*.925, w*.84, h*.025), ink, w*.021)
     if design["template"] in ("awards", "game_winner") and progress < 1:
@@ -292,14 +378,52 @@ def front(design, assets, width=720, height=None, progress=1.0):
     return card.convert("RGB")
 
 
+def _panel_style(panel: dict, default_font: str) -> tuple:
+    """(font_id, scale, colour_name, align) with safe defaults."""
+    panel = panel or {}
+    font = panel.get("font") if panel.get("font") in CARD_FONT_IDS else default_font
+    size = panel.get("size") if panel.get("size") in CARD_SIZES else "M"
+    colour = panel.get("colour") if panel.get("colour") in CARD_COLOURS else "ink"
+    align = panel.get("align") if panel.get("align") in CARD_ALIGN else "center"
+    return font, CARD_SIZES[size], colour, align
+
+
 def inside(design, width=720, height=None):
+    """Folded inside spread, double-panel wide: left half then right half.
+    Left defaults blank (quiet stock); right carries the message + sender.
+    Per-panel font/size/colour/align ride in design["inside"]."""
     fmt = FORMATS[design["format"]]
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
     img = Image.new("RGB", (width, height), "#fffdf7")
     d = ImageDraw.Draw(img)
-    text_block(d, design["inside_message"], (width*.12,height*.28,width*.76,height*.45), "#22221d", width*.04)
-    text_block(d, design["sender"], (width*.12,height*.80,width*.76,height*.10), "#55554d", width*.025)
+    hw = width / 2
+    inner = design.get("inside") or {}
+    # right: the message (legacy inside_message feeds it)
+    right = inner.get("right") or {}
+    rfont, rscale, rcolour, ralign = _panel_style(right, "inter")
+    rmsg = right.get("message", design.get("inside_message", ""))
+    text_block(d, rmsg, (hw + width*.06, height*.24, width*.38, height*.44),
+               ink_for(design, rcolour), width*.04*rscale, align=ralign,
+               font_id=rfont)
+    text_block(d, design.get("sender", ""), (hw + width*.06, height*.78, width*.38, height*.10),
+               ink_for(design, "soft"), width*.025, font_id="caveat")
+    # left: blank, or a short secondary note
+    left = inner.get("left") or {}
+    if (left.get("mode") or "blank") == "message" and left.get("text"):
+        lfont, lscale, lcolour, lalign = _panel_style(left, "inter")
+        text_block(d, left["text"], (width*.06, height*.24, width*.38, height*.44),
+                   ink_for(design, lcolour), width*.036*lscale, align=lalign,
+                   font_id=lfont)
     return img
+
+
+def inside_half(design, half="right", width=720, height=None):
+    """One inside half as its own PNG (agent-showable panels)."""
+    fmt = FORMATS[design["format"]]
+    height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
+    full = inside(design, width * 2, height)
+    return full.crop((0, 0, width, height) if half == "left"
+                     else (width, 0, width * 2, height))
 
 
 def print_pdf(design, assets, dest):

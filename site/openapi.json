@@ -390,7 +390,7 @@
     "/backend/api/cards/{id}/render": {
       "post": {
         "operationId": "cardRender",
-        "summary": "Render preview/export/motion for a frozen revision (same rules as MCP)",
+        "summary": "Render preview/spread/export/motion for a frozen revision (spread = 4 showable faces)",
         "requestBody": {
           "content": {
             "application/json": {
@@ -398,14 +398,24 @@
                 "type": "object",
                 "properties": {
                   "revision": {"type": "integer"},
-                  "kind": {"type": "string", "enum": ["preview", "export", "motion"]},
+                  "kind": {"type": "string", "enum": ["preview", "spread", "export", "motion"]},
                   "owner": {"type": "string"}
                 }
               }
             }
           }
         },
-        "responses": {"200": {"description": "async job; same revision drives paper + MP4"}}
+        "responses": {"200": {"description": "async job; spread jobs return urls for 4 faces"}}
+      }
+    },
+    "/backend/api/cards/fonts": {
+      "get": {
+        "operationId": "cardFonts",
+        "summary": "Curated font registry clustered by vibe + occasion (ids only)",
+        "parameters": [
+          {"in": "query", "name": "owner", "schema": {"type": "string"}},
+          {"in": "query", "name": "token", "schema": {"type": "string"}}
+        ]
       }
     },
     "/backend/api/cards/{id}/order": {

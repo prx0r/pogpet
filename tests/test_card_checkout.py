@@ -233,3 +233,42 @@ def test_save_checkout_flow_mocked():
                     conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did_c,))
                     conn.execute("DELETE FROM card_designs WHERE id=?", (did_c,))
             conn.commit()
+
+
+def test_spread_flow_mocked():
+    import time
+    from backend import config
+    config.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+    c = S.app.test_client()
+    spec = {"template": "typography", "format": "5x7", "photos": [],
+            "headline": "Spread faces", "recipient": "", "sender": "Me",
+            "inside_message": "hi", "headline_font": "courier",
+            "inside": {"right": {"message": "hi", "font": "courier"},
+                       "left": {"mode": "blank"}}}
+    d = c.post("/api/cards/designs?owner=anon&token=test-token",
+               json={"owner": "anon", "spec": spec}).get_json()
+    assert d["design"]["spec"]["headline_font"] == "courier"
+    did, rev = d["design"]["id"], d["design"]["revision"]
+    try:
+        j = c.post(f"/api/cards/{did}/render?owner=anon&token=test-token",
+                   json={"owner": "anon", "revision": rev, "kind": "spread"}).get_json()
+        assert j["job"]["kind"] == "spread"
+        for _ in range(30):
+            s = c.get(f"/api/cards/{did}/scene?owner=anon&revision={rev}&token=test-token").get_json()["scene"]
+            if s["outputs"]["spread"]["status"] == "ready":
+                break
+            time.sleep(0.5)
+        urls = s["outputs"]["spread"]["urls"]
+        assert set(urls) == {"front", "inside_left", "inside_right", "back"}
+        for part in urls:
+            r = c.get(f"/api/cards/{did}/r{rev}/spread/{part}?owner=anon&token=test-token")
+            assert (r.status_code, r.content_type) == (200, "image/png"), part
+    finally:
+        from backend import db
+        with db.connect() as conn:
+            conn.execute("DELETE FROM card_jobs WHERE design_id=?", (did,))
+            conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did,))
+            conn.execute("DELETE FROM card_designs WHERE id=?", (did,))
+            conn.commit()

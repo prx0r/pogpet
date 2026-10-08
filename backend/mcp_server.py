@@ -658,11 +658,12 @@ async def figg_card_save(spec: dict, owner: str = "", design_id: str = "",
 
 async def figg_card_render(design_id: str, revision: int, kind: str = "preview",
                            owner: str = "", api_key: str = "") -> str:
-    """Render saved card preview/export/motion. Returns async job; same revision drives paper and MP4.
-    Public tier: preview only (free CPU). Export/motion need the bridge token."""
-    if os.environ.get("PUBLIC_MCP") == "1" and kind != "preview":
+    """Render saved card preview/spread/export/motion. Returns async job; same revision drives paper and MP4.
+    Spread returns all four faces (front, inside halves, back) as showable PNGs.
+    Public tier: preview + spread (free CPU). Export/motion need the bridge token."""
+    if os.environ.get("PUBLIC_MCP") == "1" and kind not in ("preview", "spread"):
         return _j({"ok": False,
-                   "error": "public tier renders previews only — export/motion need the bridge token"})
+                   "error": "public tier renders preview/spread only — export/motion need the bridge token"})
     return _j(await _call("POST", f"/api/cards/{design_id}/render",
                          {"owner": owner, "revision": revision, "kind": kind}, api_key=api_key))
 

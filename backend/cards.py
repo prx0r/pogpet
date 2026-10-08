@@ -326,12 +326,17 @@ def record(owner,did,revision=None):
 
 
 def key(owner,did,rev,kind):
-    names={"preview":"front.png","inside":"inside.png","export":"print.pdf","motion":"scene.mp4"}
+    names={"preview":"front.png","inside":"inside.png","export":"print.pdf","motion":"scene.mp4","spread":"spread-front.png",
+           "spread-front":"spread-front.png","spread-inside-left":"spread-inside-left.png",
+           "spread-inside-right":"spread-inside-right.png","spread-back":"spread-back.png"}
     with db.connect() as c:
         row=c.execute("SELECT storage_owner FROM card_designs WHERE id=?",(did,)).fetchone()
     if row is None:
         raise CardError("Card not found",404)
     return f"owners/{storage._slug(row[0])}/cards/{did}/r{rev}/{names[kind]}"
+
+
+SPREAD_PARTS=("front","inside_left","inside_right","back")
 
 
 def cached(k):
@@ -375,12 +380,31 @@ def render_job(jid):
             inside_path=cached(key(owner,did,rev,"inside"))
             scenes.inside(spec).save(inside_path,"PNG")
             storage.put(inside_path,key(owner,did,rev,"inside"))
+        elif kind=="spread":
+            # Four agent-showable faces: front, inside halves, back.
+            parts={"front":scenes.front(spec,aa),
+                   "inside_left":scenes.inside_half(spec,"left"),
+                   "inside_right":scenes.inside_half(spec,"right"),
+                   "back":scenes.back(spec)}
+            for part,img in parts.items():
+                pk=key(owner,did,rev,"spread-"+part.replace("_","-"))
+                dest=cached(pk)
+                tmp=dest.with_name(dest.stem+"-"+jid+dest.suffix)
+                img.convert("RGB").save(tmp,"PNG")
+                storage.put(tmp,pk)
+                tmp.replace(dest)
+                tmp.unlink(missing_ok=True)
+            temp=None
         elif kind=="export":
             scenes.print_pdf(spec,aa,temp)
-        else:
+        elif kind=="motion":
             scenes.motion(spec,aa,temp)
-        storage.put(temp,key(owner,did,rev,kind))
-        temp.replace(dest)
+        else:
+            # spread saved its four faces above; nothing single to publish
+            temp=None
+        if temp is not None:
+            storage.put(temp,key(owner,did,rev,kind))
+            temp.replace(dest)
         with db.connect() as c:
             c.execute("UPDATE card_jobs SET status='ready',error='' WHERE id=?",(jid,));c.commit()
     except Exception as e:
@@ -393,7 +417,7 @@ def render_job(jid):
 
 
 def enqueue(owner,did,rev,kind):
-    if not isinstance(kind,str) or kind not in ("preview","export","motion"):
+    if not isinstance(kind,str) or kind not in ("preview","export","motion","spread"):
         raise CardError("Unknown render kind")
     with ownership_lock,db.connect() as c:
         record(owner,did,rev)
@@ -412,7 +436,10 @@ def enqueue(owner,did,rev,kind):
 
 
 def job_payload(row):
-    return {"id":row["id"],"design_id":row["design_id"],"revision":row["revision"],"kind":row["kind"],"status":row["status"],"error":row["error"],"url":f"/api/cards/{row['design_id']}/r{row['revision']}/{row['kind']}" if row["status"]=="ready" else ""}
+    base={"id":row["id"],"design_id":row["design_id"],"revision":row["revision"],"kind":row["kind"],"status":row["status"],"error":row["error"],"url":f"/api/cards/{row['design_id']}/r{row['revision']}/{row['kind']}" if row["status"]=="ready" and row["kind"]!="spread" else ""}
+    if row["kind"]=="spread":
+        base["urls"]={p:f"/api/cards/{row['design_id']}/r{row['revision']}/spread/{p}" for p in SPREAD_PARTS} if row["status"]=="ready" else {}
+    return base
 
 
 def register(app,owner_denied):
@@ -724,6 +751,7 @@ def register(app,owner_denied):
         with db.connect() as c:
             rows=c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? ORDER BY created_at",(owner,did,rev)).fetchall()
         outputs={kind:{"status":"not_rendered","url":""} for kind in ("preview","export","motion")}
+        outputs["spread"]={"status":"not_rendered","urls":{}}
         for row in rows:
             outputs[row["kind"]]=job_payload(row)
         return jsonify(ok=True,scene={
@@ -766,6 +794,19 @@ def register(app,owner_denied):
             raise CardError("Artwork is not ready",409)
         p=local_asset(key(owner,did,rev,kind))
         res=send_file(p,mimetype={"preview":"image/png","inside":"image/png","export":"application/pdf","motion":"video/mp4"}[kind],as_attachment=kind=="export",download_name=f"{did}-r{rev}.{p.suffix[1:]}",max_age=0)
+        res.headers["Cache-Control"]="private, no-store";return res
+
+    @bp.get("/api/cards/<did>/r<int:rev>/spread/<part>")
+    def spread_part(did,rev,part):
+        owner=request.card_owner;record(owner,did,rev)
+        if part not in SPREAD_PARTS:
+            raise CardError("Unknown spread face",404)
+        with db.connect() as c:
+            ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='spread' AND status='ready'",(owner,did,rev)).fetchone()
+        if not ready:
+            raise CardError("Spread is not ready — render kind spread first",409)
+        p=local_asset(key(owner,did,rev,"spread-"+part.replace("_","-")))
+        res=send_file(p,mimetype="image/png",max_age=0)
         res.headers["Cache-Control"]="private, no-store";return res
 
     @bp.post("/api/cards/<did>/order")

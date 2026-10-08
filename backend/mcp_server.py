@@ -30,7 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
-MCP_VERSION = "1.5.0"
+MCP_VERSION = "1.6.0"
 
 
 def _service_token() -> str:
@@ -71,6 +71,10 @@ async def _call(method: str, path: str, body: dict | None = None,
         req = urllib.request.Request(url, data=data, method=method)
         if data:
             req.add_header("Content-Type", "application/json")
+        # Transport stamp: Flask trusts X-MCP only with the service token
+        # (direct 127.0.0.1 call, never via the bridge — the bridge strips
+        # X-MCP, so REST/browser cannot spoof via=mcp).
+        req.add_header("X-MCP", "1")
         caller = (api_key or "").strip() or _key()
         if caller:
             req.add_header("X-API-Key", caller)
@@ -412,9 +416,9 @@ async def figg_creative_revision(project_id: str = "", template_id: str = "",
 # ── six high-level agent tools: the whole product behind six names ─────
 # Muse/ChatGPT never name providers; each fans out to figg_* machinery.
 
-async def oddhobb_people(owner: str = "") -> str:
-    """Whose world is this: subjects + profile facts for an owner."""
-    return _j(await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon")))
+async def oddhobb_people(owner: str = "", api_key: str = "") -> str:
+    """Whose world is this: subjects + profile facts for an owner. Pass your own api_key (from figg_create_account/figg_login) to act as you — otherwise reads land as anon."""
+    return _j(await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"), api_key=api_key))
 
 
 async def oddhobb_ideas(person: str = "", occasion: str = "general", request: str = "",
@@ -628,74 +632,74 @@ async def figg_fullchain_personalise_order(line: str, coat: str = "none",
     return _j({"ok": bool((order or {}).get("ok")), "personalise": pers, "order": order})
 
 
-async def figg_card_library(owner: str = "") -> str:
-    """Photo library + card scenes. Photo cards need no mesh or Meshy spend."""
+async def figg_card_library(owner: str = "", api_key: str = "") -> str:
+    """Photo library + card scenes. Photo cards need no mesh or Meshy spend. Pass api_key to see your own photos (anon sees the shared demo shelf only)."""
     import urllib.parse
     q = urllib.parse.quote(owner)
-    return _j({"photos": await _call("GET", "/api/cards/photos?owner=" + q),
-               "scenes": await _call("GET", "/api/cards/templates?owner=" + q),
-               "designs": await _call("GET", "/api/cards/designs?owner=" + q)})
+    return _j({"photos": await _call("GET", "/api/cards/photos?owner=" + q, api_key=api_key),
+               "scenes": await _call("GET", "/api/cards/templates?owner=" + q, api_key=api_key),
+               "designs": await _call("GET", "/api/cards/designs?owner=" + q, api_key=api_key)})
 
 
 async def figg_card_save(spec: dict, owner: str = "", design_id: str = "",
-                         expected_revision: int = 0) -> str:
+                         expected_revision: int = 0, api_key: str = "") -> str:
     """Save a card scene: template, format, photos[{photo_id,crop,focus,cutout}], headline, recipient, sender, inside_message.
     Stamped via=mcp. Same validators as REST/UI (brand locks + no wordmark run in save).
     Done means a product_url the human can buy from — POST checkout next. A preview alone is not done."""
     body = {"owner": owner, "spec": spec, "via": "mcp"}
     if design_id:
         body.update(id=design_id, expected_revision=expected_revision)
-    return _j(await _call("POST", "/api/cards/designs", body))
+    return _j(await _call("POST", "/api/cards/designs", body, api_key=api_key))
 
 
 async def figg_card_render(design_id: str, revision: int, kind: str = "preview",
-                           owner: str = "") -> str:
+                           owner: str = "", api_key: str = "") -> str:
     """Render saved card preview/export/motion. Returns async job; same revision drives paper and MP4.
     Public tier: preview only (free CPU). Export/motion need the bridge token."""
     if os.environ.get("PUBLIC_MCP") == "1" and kind != "preview":
         return _j({"ok": False,
                    "error": "public tier renders previews only — export/motion need the bridge token"})
     return _j(await _call("POST", f"/api/cards/{design_id}/render",
-                         {"owner": owner, "revision": revision, "kind": kind}))
+                         {"owner": owner, "revision": revision, "kind": kind}, api_key=api_key))
 
 
-async def figg_card_scene(design_id: str, owner: str = "", revision: int = 0) -> str:
+async def figg_card_scene(design_id: str, owner: str = "", revision: int = 0, api_key: str = "") -> str:
     """Get the shared card/video scene manifest and available output capabilities."""
     import urllib.parse
     path="/api/cards/"+urllib.parse.quote(design_id,safe="")+"/scene?owner="+urllib.parse.quote(owner)
     if revision:
         path+="&revision="+str(revision)
-    return _j(await _call("GET",path))
+    return _j(await _call("GET",path, api_key=api_key))
 
 
-async def figg_card_job(job_id: str, owner: str = "") -> str:
+async def figg_card_job(job_id: str, owner: str = "", api_key: str = "") -> str:
     """Check card render job status; ready results include owner-gated download URLs."""
     import urllib.parse
-    return _j(await _call("GET", f"/api/cards/jobs/{job_id}?owner=" + urllib.parse.quote(owner)))
+    return _j(await _call("GET", f"/api/cards/jobs/{job_id}?owner=" + urllib.parse.quote(owner), api_key=api_key))
 
 
-async def figg_card_cutout(photo_id: str, crop: list[float], owner: str = "") -> str:
+async def figg_card_cutout(photo_id: str, crop: list[float], owner: str = "", api_key: str = "") -> str:
     """Remove background after explicitly cropping the subject in a group photo. No face recognition or generative upscale."""
-    return _j(await _call("POST", "/api/cards/cutouts", {"owner": owner, "photo_id": photo_id, "crop": crop}))
+    return _j(await _call("POST", "/api/cards/cutouts", {"owner": owner, "photo_id": photo_id, "crop": crop}, api_key=api_key))
 
 
 async def figg_card_reserve(design_id: str, revision: int, idempotency_key: str,
-                            qty: int = 1, owner: str = "") -> str:
+                            qty: int = 1, owner: str = "", api_key: str = "") -> str:
     """Reserve a real card (£7.99 FIXED) with approved export. Show price first.
     Reserve-only — no payment. To sell: figg_card_checkout for Shopify checkout_url.
     Done means a product_url the human can buy from; a preview alone is not done."""
     return _j(await _call("POST", f"/api/cards/{design_id}/order",
-                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}))
+                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}, api_key=api_key))
 
 
 async def figg_card_checkout(design_id: str, revision: int, idempotency_key: str,
-                             qty: int = 1, owner: str = "") -> str:
+                             qty: int = 1, owner: str = "", api_key: str = "") -> str:
     """Buy a card (£7.99): freeze revision → Shopify draft → checkout_url.
     Returns product_url (OddHobb page agents hand over, never a PNG) + checkout_url
     (Shopify payment). Shopify owns payment; Prodigi prints on orders/paid only.
     Done means a product_url the human can buy from. A preview alone is not done."""
     return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
-                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}))
+                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}, api_key=api_key))
 
 
 async def figg_blueprints(owner: str = "") -> str:
@@ -782,10 +786,10 @@ async def figg_blender_make(line: str, text: str, owner: str = "") -> str:
                          {"owner": owner, "line": line, "text": text}))
 
 
-async def figg_card_templates(owner: str = "") -> str:
+async def figg_card_templates(owner: str = "", api_key: str = "") -> str:
     """Card templates with their paper design contracts: locked print truths
     (bleed, DPI, photo counts), envelope trims, stock, rough print costs."""
-    return _j(await _call("GET", "/api/cards/templates?owner=" + (owner or "anon")))
+    return _j(await _call("GET", "/api/cards/templates?owner=" + (owner or "anon"), api_key=api_key))
 
 
 async def figg_video_share(video_id: str) -> str:

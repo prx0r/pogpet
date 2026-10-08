@@ -352,7 +352,7 @@ def register(app,owner_denied):
     def templates():
         return jsonify(ok=True,version=scenes.VERSION,templates=[{"id":k,**v} for k,v in scenes.TEMPLATES.items()],formats=scenes.FORMATS,motion_available=__import__('shutil').which("ffmpeg") is not None,
                       product={**card_price(),
-                               "buy_hint": "POST /api/cards/<id>/checkout returns checkout_url — done means a product_url the human can buy from; a preview alone is not done."},
+                               "buy_hint": "POST /backend/api/cards/<id>/checkout returns checkout_url — done means a product_url the human can buy from; a preview alone is not done."},
                       mcp_status=mcp_status(),
                       mcp_hint="If degraded, prefer waiting — REST works but is off the main road.")
 
@@ -361,7 +361,13 @@ def register(app,owner_denied):
         owner=request.card_owner
         with db.connect() as c:
             rows=c.execute("SELECT id,orig_name,width,height,person FROM photos WHERE owner=? ORDER BY created_at DESC LIMIT 200",(owner,)).fetchall()
-        return jsonify(ok=True,photos=[{**dict(p),"url":f"/api/cards/photos/{p['id']}/image"} for p in rows])
+        # anon is the shared demo shelf (seeded Dolphin + sample-dog/Nibble) —
+        # strictly owner-scoped, never another live owner's photos. Named
+        # owners see only their own uploads.
+        demo = (owner == "anon")
+        return jsonify(ok=True,demo=demo,
+                       demo_note="Shared demo shelf — sign in (POST /backend/api/session) for your own photos." if demo else "",
+                       photos=[{**dict(p),"url":f"/api/cards/photos/{p['id']}/image"} for p in rows])
 
     @bp.get("/api/cards/photos/<pid>/image")
     def image(pid):
@@ -426,9 +432,15 @@ def register(app,owner_denied):
                            mcp_hint="If degraded, prefer waiting — REST works but is off the main road.")
         b=request.get_json() or {}
         did=str(b.get("id") or "card_"+uuid.uuid4().hex)
-        via=str(b.get("via") or "").strip().lower()[:10]
-        if via not in ("mcp", "rest", "ui"):
-            via = "rest"
+        # Source stamp is transport-derived, not caller-claimed: X-MCP only
+        # arrives with the service token on direct MCP→Flask calls (the
+        # bridge strips it, so REST/browser cannot spoof via=mcp).
+        if request.headers.get("X-MCP", "") == "1":
+            via = "mcp"
+        else:
+            via=str(b.get("via") or "").strip().lower()[:10]
+            if via not in ("ui", "rest"):
+                via = "rest"
         with db.connect() as c:
             c.execute("BEGIN IMMEDIATE")
             spec=validate(owner,b.get("spec",{}))
@@ -469,7 +481,7 @@ def register(app,owner_denied):
                        card_url=card_url_for(did, rev),
                        product={**card_price(),
                                 "buy_hint": "Done means a product_url the human can buy from. "
-                                            "POST /api/cards/<id>/checkout returns checkout_url; a preview alone is not done."})
+                                            "POST /backend/api/cards/<id>/checkout returns checkout_url; a preview alone is not done."})
 
     @bp.get("/api/cards/gallery")
     def gallery():
@@ -590,7 +602,7 @@ def register(app,owner_denied):
         return jsonify(ok=True, items=items, product=card_price(),
                        mcp_status=mcp_status(),
                        buy_hint="Done means a product_url the human can buy from — "
-                                "POST /api/cards/<id>/checkout for checkout_url. Preview alone is not done.")
+                                "POST /backend/api/cards/<id>/checkout for checkout_url. Preview alone is not done.")
 
     @bp.get("/api/cards/designs/<did>")
     def get_design(did):
@@ -690,11 +702,11 @@ def register(app,owner_denied):
         prodigi: dict = {"attempted": False}
         if fulfil:
             # P0 flaw closed: fulfil=true must NOT print before Shopify payment.
-            # Use POST /api/cards/<id>/checkout → Shopify invoiceUrl → paid
+            # Use POST /backend/api/cards/<id>/checkout → Shopify invoiceUrl → paid
             # webhook → Prodigi. Direct Prodigi is gated for internal tests only.
             import os as _os
             if _os.environ.get("ALLOW_DIRECT_PRODIGI", "") != "1":
-                raise CardError("Direct fulfil is disabled — use POST /api/cards/<id>/checkout "
+                raise CardError("Direct fulfil is disabled — use POST /backend/api/cards/<id>/checkout "
                                 "for Shopify payment first (Prodigi runs on orders/paid only).", 410)
             from backend import config as _cfg
             fmt = spec.get("format", "5x7")
@@ -737,7 +749,7 @@ def register(app,owner_denied):
                        product=card_price(),
                        mcp_status=mcp_status(),
                        prodigi=prodigi,
-                       hint=("Card reserved at £7.99 — use POST /api/cards/<id>/checkout "
+                       hint=("Card reserved at £7.99 — use POST /backend/api/cards/<id>/checkout "
                              "for the Shopify payment link. Prodigi runs on orders/paid only.")
                        if not fulfil else "Sent to Prodigi print (internal path only).")
 
@@ -763,6 +775,8 @@ def register(app,owner_denied):
         rec = record(owner,did,rev)
         spec = rec["spec"]
         validate(owner,spec)
+        if spec.get("format", "5x7") != "5x7":
+            raise CardError("P0 sells the 5×7 folded card only (£7.99) — re-save as 5x7", 400)
         with db.connect() as c:
             old=c.execute("SELECT * FROM card_orders WHERE owner=? AND idempotency_key=?",
                           (owner,idem)).fetchone()

@@ -41,10 +41,11 @@ def test_fulfil_gates(tmp_path, monkeypatch):
     monkeypatch.delitem(C.PRODIGI_PRODUCTS["greeting_card"], "sku", raising=False)
     try:
         r = c.post(f"/api/cards/{did}/order?token=test-token", json=base)
-        assert r.status_code == 409, r.get_data(as_text=True)[:200]  # no SKU
+        assert r.status_code == 410, r.get_data(as_text=True)[:200]  # direct fulfil gated (use checkout)
     finally:
         C.PRODIGI_PRODUCTS["greeting_card"]["sku"] = "CLASSIC-GRE-FEDR-7X5-BLA"
     monkeypatch.setitem(C.PRODIGI_PRODUCTS["greeting_card"], "sku", "TEST-SKU")
+    monkeypatch.setenv("ALLOW_DIRECT_PRODIGI", "1")
     try:
         r2 = c.post(f"/api/cards/{did}/order?token=test-token",
                     json={**base, "idempotency_key": "k-1234567891",
@@ -52,6 +53,7 @@ def test_fulfil_gates(tmp_path, monkeypatch):
         assert r2.status_code == 400  # address required next
     finally:
         C.PRODIGI_PRODUCTS["greeting_card"].pop("sku", None)
+        monkeypatch.delenv("ALLOW_DIRECT_PRODIGI", raising=False)
 
 
 def test_fulfil_happy_path_mocked(tmp_path, monkeypatch):
@@ -69,6 +71,7 @@ def test_fulfil_happy_path_mocked(tmp_path, monkeypatch):
     monkeypatch.setattr(R2, "put_temp", lambda local, key=None: "tmp/test.pdf")
     monkeypatch.setattr(R2, "presigned_url",
                         lambda key, expires_s=86400: "https://r2.test/tmp/test.pdf")
+    monkeypatch.setenv("ALLOW_DIRECT_PRODIGI", "1")
     try:
         r = c.post(f"/api/cards/{did}/order?token=test-token",
                    json={"owner": "fam", "owner_sig": sig, "qty": 1,
@@ -84,6 +87,7 @@ def test_fulfil_happy_path_mocked(tmp_path, monkeypatch):
         assert d["prodigi"]["ok"] is True
     finally:
         C.PRODIGI_PRODUCTS["greeting_card"].pop("sku", None)
+        monkeypatch.delenv("ALLOW_DIRECT_PRODIGI", raising=False)
 
 
 def test_prodigi_validation_no_network():

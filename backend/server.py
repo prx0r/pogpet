@@ -157,7 +157,9 @@ def _owner_denied(owner: str):
     if owner == "anon":
         return None
     return _err(
-        "owner_sig required for this owner — POST /api/session first", 403)
+        "owner_sig required for this owner — POST /api/session first "
+        "(via bridge: POST /backend/api/session), then pass your api_key "
+        "(X-API-Key header or MCP api_key arg)", 403)
 
 
 @app.post("/api/session")
@@ -3904,7 +3906,17 @@ def mcp_health():
     import socket
     import time as _time
     from backend import mcp_server as _mcp
-    tools = sum(len(v) for v in _mcp.TOOL_AREAS.values()) + 1
+    tools_full = sum(len(v) for v in _mcp.TOOL_AREAS.values()) + 1
+    # Public tier allowlist lives on the same module: recompute without
+    # reimporting (import-time filter when PUBLIC_MCP=1). Agents on the
+    # tokenless tier see tools_public, not tools_full — don't quote full.
+    try:
+        _public = set(getattr(_mcp, "PUBLIC_TOOLS", set()))
+        tools_public = sum(1 for v in _mcp.TOOL_AREAS.values()
+                           for fn in v if fn.__name__ in _public)
+    except Exception:
+        tools_public = 0
+    tools = tools_full
     version = getattr(_mcp, "MCP_VERSION", "unversioned")
 
     def _uptime(pattern: str):
@@ -3935,11 +3947,15 @@ def mcp_health():
         except OSError:
             ports[str(port)] = "closed"
     return jsonify(ok=True, version=version, tools=tools,
+                   tools_full=tools_full, tools_public=tools_public,
                    uptime_s=mcp_uptime_s, flask_uptime_s=flask_uptime_s,
                    ports=ports,
+                   tiers={"full": {"port": 8799, "tools": tools_full},
+                          "public": {"port": 8800, "tools": tools_public}},
                    degraded=ports.get("8799") != "open",
                    cf_ray_log="~/.figg_mcp_proxy.log (bridge logs cf_ray on every 502)",
-                   hint="Handshake first: GET this. If degraded, prefer waiting — "
+                   hint="Handshake first: GET this. tools_full needs the bridge token; "
+                        "tokenless callers see tools_public only. If degraded, prefer waiting — "
                         "REST works but is off the main road (see mcp_status).")
 
 

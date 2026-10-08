@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 VERSION = 1
 FORMATS = {
     "A6": {"label": "A6 postcard", "mm": [105, 148], "folded": False, "price_cents": 500},
-    "5x7": {"label": "5 × 7 folded card", "mm": [127, 177.8], "folded": True, "price_cents": 1000},
+    "5x7": {"label": "5 × 7 folded card", "mm": [127, 177.8], "folded": True, "price_cents": 799},
     "A5": {"label": "A5 folded card", "mm": [148, 210], "folded": True, "price_cents": 1500},
 }
 TEMPLATES = {

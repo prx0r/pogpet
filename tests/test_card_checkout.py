@@ -74,13 +74,84 @@ def test_mcp_checkout_registered_and_gated():
     assert "figg_card_checkout" not in M.PUBLIC_TOOLS
     assert "Done means a product_url" in (M.figg_card_checkout.__doc__ or "")
     assert "Done means a product_url" in (M.figg_card_save.__doc__ or "")
-    assert M.MCP_VERSION == "1.5.0"
+    assert M.MCP_VERSION == "1.6.0"
 
 
 def test_bridge_logs_cf_ray():
     src = open("bridge/llm_bridge.py").read()
     assert "cf_ray" in src.lower()
     assert "MCP_PORT_FALLBACK" in src or "8800" in src
+
+
+def test_formats_price_consistent():
+    from backend import card_scenes as scenes
+    assert scenes.FORMATS["5x7"]["price_cents"] == 799
+    assert C.card_price()["price_cents"] == 799
+
+
+def test_via_spoof_rejected():
+    """Body via=mcp without the X-MCP transport header stamps rest, not mcp."""
+    from backend import config
+    config.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+    c = S.app.test_client()
+    spec = {"template": "typography", "format": "5x7", "photos": [],
+            "headline": "Spoof test", "recipient": "", "sender": "", "inside_message": "x"}
+    r = c.post("/api/cards/designs?owner=anon&token=test-token",
+               json={"owner": "anon", "spec": spec, "via": "mcp"})
+    assert r.status_code == 200
+    assert r.get_json()["design"]["via"] == "rest"
+    # cleanup
+    from backend import db
+    did = r.get_json()["design"]["id"]
+    with db.connect() as conn:
+        conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did,))
+        conn.execute("DELETE FROM card_designs WHERE id=?", (did,))
+        conn.commit()
+
+
+def test_via_mcp_transport():
+    """X-MCP header (MCP→Flask direct, bridge strips it) stamps mcp."""
+    from backend import config
+    config.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+    c = S.app.test_client()
+    spec = {"template": "typography", "format": "5x7", "photos": [],
+            "headline": "Transport test", "recipient": "", "sender": "", "inside_message": "x"}
+    r = c.post("/api/cards/designs?owner=anon&token=test-token",
+               json={"owner": "anon", "spec": spec},
+               headers={"X-MCP": "1"})
+    assert r.status_code == 200
+    assert r.get_json()["design"]["via"] == "mcp"
+    from backend import db
+    did = r.get_json()["design"]["id"]
+    with db.connect() as conn:
+        conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did,))
+        conn.execute("DELETE FROM card_designs WHERE id=?", (did,))
+        conn.commit()
+
+
+def test_health_tiers():
+    from backend import config
+    config.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+    c = S.app.test_client()
+    r = c.get("/api/mcp/health?token=test-token")
+    d = r.get_json()
+    assert d["tools_full"] >= d["tools_public"] > 0
+    assert d["tiers"]["public"]["port"] == 8800
+    assert "tokenless" in d["hint"] or "public" in d["hint"].lower()
+
+
+def test_mcp_auth_passthrough():
+    import inspect
+    from backend import mcp_server as M
+    for name in ("figg_card_save", "figg_card_library", "figg_card_checkout",
+                 "figg_card_reserve", "oddhobb_people"):
+        assert "api_key" in inspect.signature(getattr(M, name)).parameters, name
 
 
 def test_save_checkout_flow_mocked():
@@ -109,7 +180,8 @@ def test_save_checkout_flow_mocked():
                    json={"owner": owner, "spec": spec, "via": "mcp"})
         assert r.status_code == 200, r.get_data(as_text=True)[:300]
         d = r.get_json()
-        assert d["via"] if False else d["design"]["via"] == "mcp"
+        # test client has no X-MCP transport header → rest (spoof-proof)
+        assert d["design"]["via"] == "rest"
         assert d["product"]["price_cents"] == 799
         assert d["mcp_status"] in ("live", "degraded", "unknown")
         assert "/cards/" in d["card_url"]

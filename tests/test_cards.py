@@ -121,7 +121,7 @@ class CardsJourney(unittest.TestCase):
         b={'revision':1,'qty':2,'idempotency_key':'same-checkout-attempt'}
         a=self.post('/cards/'+x['id']+'/order',b);self.assertEqual(a.status_code,200,a.json)
         second=self.post('/cards/'+x['id']+'/order',b);self.assertEqual(a.json['order']['id'],second.json['order']['id'])
-        self.assertEqual(a.json['order']['price_cents'],2000)
+        self.assertEqual(a.json['order']['price_cents'],1598)  # £7.99 x 2
         self.assertEqual(json.loads(a.json['order']['spec'])['template'],'typography')
         with db.connect() as c:
             self.assertEqual(c.execute('SELECT count(*) FROM orders').fetchone()[0],0)

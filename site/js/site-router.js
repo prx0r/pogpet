@@ -21,6 +21,8 @@
     if (m) return {tab:'studio',subjectId:m[1],path:p+u.search};
     m=p.match(/^\/(cards|videos|products)\/([\w-]+)$/);
     if (m) return {tab:m[1],id:m[2],path:p+u.search};
+    m=p.match(/^\/cards\/([\w-]+)\/r(\d+)$/);
+    if (m) return {tab:'cards',id:m[1],revision:parseInt(m[2],10),path:p+u.search};
     var tab=Object.keys(paths).find(function(k){return paths[k]===p;});
     return {tab:tab||'notfound',path:p+u.search,q:u.searchParams.get('q')||'',section:u.searchParams.get('section')||''};
   }

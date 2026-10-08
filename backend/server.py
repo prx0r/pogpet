@@ -3912,8 +3912,9 @@ def mcp_health():
     # tokenless tier see tools_public, not tools_full — don't quote full.
     try:
         _public = set(getattr(_mcp, "PUBLIC_TOOLS", set()))
+        # +1: figg_tools rides alongside every tier (self-describing library)
         tools_public = sum(1 for v in _mcp.TOOL_AREAS.values()
-                           for fn in v if fn.__name__ in _public)
+                           for fn in v if fn.__name__ in _public) + 1
     except Exception:
         tools_public = 0
     tools = tools_full

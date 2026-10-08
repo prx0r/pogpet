@@ -74,7 +74,7 @@ def test_mcp_checkout_registered_and_gated():
     assert "figg_card_checkout" not in M.PUBLIC_TOOLS
     assert "Done means a product_url" in (M.figg_card_checkout.__doc__ or "")
     assert "Done means a product_url" in (M.figg_card_save.__doc__ or "")
-    assert M.MCP_VERSION == "1.6.0"
+    assert M.MCP_VERSION == "1.6.1"
 
 
 def test_bridge_logs_cf_ray():

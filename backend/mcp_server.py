@@ -30,7 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
-MCP_VERSION = "1.6.0"
+MCP_VERSION = "1.6.1"
 
 
 def _service_token() -> str:
@@ -97,9 +97,13 @@ async def _call(method: str, path: str, body: dict | None = None,
         except urllib.error.HTTPError as e:
             raw = e.read().decode("utf-8", "replace")
             try:
-                return json.loads(raw)
+                d = json.loads(raw)
+                if isinstance(d, dict):
+                    d.setdefault("http_status", e.code)
+                    return d
+                return {"ok": False, "error": str(d)[:200], "http_status": e.code}
             except Exception:
-                return {"ok": False, "error": f"{e.code}: {raw[:200]}"}
+                return {"ok": False, "error": f"{e.code}: {raw[:200]}", "http_status": e.code}
         except Exception as e:
             return {"ok": False, "error": str(e)[:300]}
 

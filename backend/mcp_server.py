@@ -30,7 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
-MCP_VERSION = "1.9.0"
+MCP_VERSION = "1.10.0"
 
 
 def _service_token() -> str:
@@ -873,6 +873,143 @@ async def figg_constraints(line: str = "") -> str:
     return _j(await _call("GET", "/api/design/locks"))
 
 
+def _find_subject(people: dict, person: str, subject_id: str) -> dict:
+    """Match a person string to a subject by id, name, or relationship
+    (Dad finds the father profile). Returns {} when nobody matches."""
+    _REL_ALIASES = {"dad": {"dad", "daddy", "father", "papa", "pa"},
+                    "mum": {"mum", "mummy", "mother", "mama", "ma", "mom", "mommy"}}
+    want = (person or "").strip().lower()
+    want_rels = {want}
+    for canon, aliases in _REL_ALIASES.items():
+        if want in aliases:
+            want_rels = aliases | {canon}
+            break
+    for entry in (people.get("people") or people.get("subjects") or []):
+        if not isinstance(entry, dict):
+            continue
+        # people endpoint nests: {"subject": {...}, "profile": <row with parsed "profile">}
+        p = entry.get("subject") if isinstance(entry.get("subject"), dict) else entry
+        outer = entry.get("profile") if isinstance(entry.get("profile"), dict) else {}
+        deep = outer.get("profile") if isinstance(outer.get("profile"), dict) else {}
+        names = {str(p.get("name", "")).lower(), str(p.get("id", "")).lower(),
+                 str(deep.get("name", "") or outer.get("name", "")).lower()}
+        rels = {str(p.get("relationship", "")).lower(),
+                str(deep.get("relationship", "") or outer.get("relationship", "")).lower()}
+        if (subject_id and p.get("id") == subject_id) or \
+           (want and (want in names or (want_rels & rels) or
+                      any(want in n for n in names if n))):
+            return {"id": p.get("id", ""),
+                    "name": p.get("name") or deep.get("name") or outer.get("name", ""),
+                    "relationship": p.get("relationship") or deep.get("relationship") or outer.get("relationship", ""),
+                    "interests": p.get("interests") or deep.get("interests") or outer.get("interests") or [],
+                    "memories": p.get("memories") or deep.get("memories") or outer.get("memories") or []}
+    return {}
+
+
+_OCCASION_TITLES = {"birthday": "Happy Birthday", "christmas": "Merry Christmas",
+                    "fathers_day": "Happy Father's Day", "mothers_day": "Happy Mother's Day",
+                    "valentines": "Happy Valentine's", "anniversary": "Happy Anniversary",
+                    "graduation": "Congratulations", "retirement": "Happy Retirement",
+                    "new_baby": "Congratulations", "halloween": "Happy Halloween",
+                    "general": "You're one of a kind"}
+_TONE_VIBES = {"funny": ["funny-loud", "bold", "playful"], "dark": ["dry-funny", "bold"],
+               "warm": ["warm", "affectionate", "sincere"], "short": ["sincere", "calm"]}
+
+
+async def figg_card_for_person(person: str, occasion: str = "birthday",
+                               tone: str = "funny", owner: str = "",
+                               subject_id: str = "", api_key: str = "") -> list:
+    """Birthday card for Dad in ONE call — the agent makes zero creative
+    choices. Finds the subject, picks their best portrait, picks the template
+    by occasion, writes headline + inside from their profile, picks fonts by
+    vibe, saves, renders all four faces. Returns views + proof_url + a
+    contact-sheet image. Send the human the proof_url; Buy happens there."""
+    from mcp.types import TextContent
+    from backend import cards as _cards
+    people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
+                         api_key=api_key)
+    sub = _find_subject(people, person, subject_id)
+    if not sub:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "no subject match — check oddhobb_people first"}))]
+    prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
+            "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
+    # best portrait: confirmed faces first, then confirmed bodies (biggest
+    # file wins for print DPI), then recent uploads. face_id may be empty —
+    # user-confirmed whole-photo tags carry no detection boxes.
+    face_ids: list[str] = []
+    try:
+        from backend import subject_assets as _sa
+        res = _sa.resolve(sub.get("id", ""), owner or "anon")
+        cands = sorted(res.get("face_candidates") or [],
+                       key=lambda c: float(c.get("face_quality", 0)) * float(c.get("frontal", 0.5)),
+                       reverse=True)
+        face_ids = [str(c.get("asset_id") or "") for c in cands if c.get("asset_id")]
+        if not face_ids:
+            bodies = sorted(res.get("body_candidates") or [],
+                            key=lambda c: float(c.get("quality", 0)), reverse=True)
+            face_ids = [str(c.get("asset_id") or "") for c in bodies if c.get("asset_id")]
+    except Exception:  # noqa: BLE001 — fall back to recent photos
+        face_ids = []
+    photo_id = ""
+    if face_ids:
+        photo_id = face_ids[0]
+    else:
+        lib = await _call("GET", "/api/cards/photos?owner=" + (owner or "anon"), api_key=api_key)
+        pics = (lib.get("photos") or []) if isinstance(lib, dict) else []
+        photo_id = str((pics[0].get("id") if pics else "") or "")
+    if not photo_id:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "no photos for this owner — upload one first"}))]
+    occasion = (occasion or "birthday").lower()
+    template = {"christmas": "christmas"}.get(occasion, "portrait")
+    name = sub.get("name") or person
+    headline = f"{_OCCASION_TITLES.get(occasion, 'Hello')}, {name}!"[:60]
+    lines = _cards.message_lines(prof, tone)
+    inside = lines[0]["text"] if lines else ""
+    vibes = _TONE_VIBES.get(str(tone or "funny").lower(), _TONE_VIBES["funny"])
+    hfont, bfont = "fraunces", "inter"
+    try:
+        from backend.card_scenes import CARD_FONTS as _F
+        for fid, f in _F.items():
+            if "headline" in (f.get("use_for") or []) and any(v in (f.get("vibes") or []) for v in vibes):
+                hfont = fid
+                break
+        for fid, f in _F.items():
+            if "body" in (f.get("use_for") or []) and any(v in (f.get("vibes") or []) for v in vibes):
+                bfont = fid
+                break
+    except Exception:  # noqa: BLE001 — registry never breaks the card
+        pass
+    spec = {"template": template, "format": "5x7",
+            "photos": [{"photo_id": photo_id, "crop": [0, 0, 1, 1],
+                        "focus": [0.5, 0.5], "cutout": ""}],
+            "headline": headline, "recipient": name, "sender": "",
+            "inside_message": inside, "headline_font": hfont,
+            "inside": {"right": {"message": inside, "font": bfont},
+                       "left": {"mode": "blank"}}}
+    saved = await _call("POST", "/api/cards/designs",
+                        {"owner": owner, "spec": spec}, api_key=api_key)
+    if not saved.get("ok"):
+        return [TextContent(type="text", text=_j(saved))]
+    d = saved["design"]
+    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key)
+    body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
+            "chosen": {"subject": sub.get("name"), "photo_id": photo_id,
+                       "template": template, "headline_font": hfont,
+                       "inside_font": bfont, "inside_source": (lines[0].get("source") if lines else "")},
+            "card_url": saved.get("card_url", ""),
+            "proof_url": saved.get("proof_url", ""),
+            "product": saved.get("product", {}),
+            "views": bundle.get("views", {}),
+            "render_error": bundle.get("error", ""),
+            "hint": "Send the human the proof_url. Tweak via figg_card_update, sell via figg_card_checkout."}
+    try:
+        return [TextContent(type="text", text=_j(body)),
+                _contact_block(owner, d["id"], d["revision"])]
+    except Exception as e:  # noqa: BLE001
+        body["contact_error"] = str(e)[:150]
+        return [TextContent(type="text", text=_j(body))]
+
+
 async def figg_blender_make(line: str, text: str, owner: str = "") -> str:
     """Use Blender on our farm box: emboss text onto the line's master via
     its adapter, get back a watertight STL URL. For remote agents (ChatGPT)
@@ -978,24 +1115,7 @@ async def figg_card_messages(person: str = "", tone: str = "funny",
     from backend import cards as _cards
     people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
                          api_key=api_key)
-    prof: dict = {}
-    want = person.strip().lower()
-    for p in (people.get("people") or people.get("subjects") or []):
-        if not isinstance(p, dict):
-            continue
-        names = {str(p.get("name", "")).lower(), str(p.get("id", "")).lower(),
-                 str((p.get("profile") or {}).get("name", "")).lower()}
-        rels = {str(p.get("relationship", "")).lower(),
-                str((p.get("profile") or {}).get("relationship", "")).lower()}
-        if (subject_id and p.get("id") == subject_id) or \
-           (want and (want in names or want in rels or
-                     any(want in n for n in names if n))):
-            raw = p.get("profile") or {}
-            prof = {"name": p.get("name") or raw.get("name", ""),
-                    "relationship": p.get("relationship") or raw.get("relationship", ""),
-                    "interests": p.get("interests") or raw.get("interests") or [],
-                    "memories": p.get("memories") or raw.get("memories") or []}
-            break
+    prof = _find_subject(people, person, subject_id)
     if not prof and person:
         prof = {"name": person}
     return _j({"ok": True, "tone": tone,
@@ -1187,7 +1307,7 @@ TOOL_AREAS: dict[str, list] = {
                   figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve,
                   figg_card_checkout, figg_card_templates, figg_card_fonts,
                   figg_card_edit, figg_card_variants, figg_card_messages,
-                  figg_card_create, figg_card_update],
+                  figg_card_create, figg_card_update, figg_card_for_person],
     "design":    [figg_blueprints, figg_design_validate, figg_design_base,
                   figg_constraints,
                   figg_design_save, figg_design_order, figg_blender_make],
@@ -1236,7 +1356,7 @@ PUBLIC_TOOLS = frozenset({
     "figg_card_library", "figg_card_templates",
     "figg_card_save", "figg_card_render", "figg_card_scene", "figg_card_job",
     "figg_card_fonts", "figg_card_messages",
-    "figg_card_create", "figg_card_update",
+    "figg_card_create", "figg_card_update", "figg_card_for_person",
     "figg_mesh_status", "figg_measure",
     "figg_styles", "figg_install_style",
     "figg_acts", "figg_rooms",

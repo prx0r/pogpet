@@ -5634,7 +5634,8 @@ def _render_revision(owner: str, project_id: str, revision: int,
             (manifest.get("layout") or {}).get("panels")):
         beats = manifest.get("beats") or ["setup", "escalation", "reversal", "payoff"]
         caps = [str(cp.get(f"panel_{i + 1}", "")) for i in range(len(beats))]
-        master, gaps = _c2d.render_panels(manifest, contract, panels=caps, palette=pal)
+        master, gaps = _c2d.render_panels(manifest, contract, panels=caps,
+                                          palette=pal, photo_path=photo_path)
     else:
         master, gaps = _c2d.render_from_manifest(
             manifest, contract, photo_path=photo_path, copy=cp, palette=pal)

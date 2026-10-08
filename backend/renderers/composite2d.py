@@ -67,6 +67,11 @@ def render_from_manifest(manifest: dict, contract: dict, *,
     gaps: list[str] = []
     img = Image.new("RGB", (pw, ph), pal["bg"])
     d = ImageDraw.Draw(img)
+    # designed backdrop: accent footer band + hairline frame, so the cover
+    # reads as artwork with or without a photo slotted in
+    band_h = max(8, ph // 28)
+    d.rectangle([0, ph - band_h, pw, ph], fill=pal["accent"])
+    d.rectangle([24, 24, pw - 24, ph - 24], outline=pal["accent"], width=max(3, pw // 400))
 
     def region(key: str) -> tuple[int, int, int, int]:
         fx0, fy0, fx1, fy1 = lay.get(key, [0, 0, 1, 1])
@@ -74,7 +79,16 @@ def render_from_manifest(manifest: dict, contract: dict, *,
 
     if photo_path and Path(photo_path).exists():
         x0, y0, x1, y1 = region("photo")
-        img.paste(_place(Image.open(photo_path), (x0, y0, x1, y1)), (x0, y0))
+        ph = Image.open(photo_path).convert("RGB")
+        ph = ImageOps.fit(ph, (x1 - x0, y1 - y0), Image.Resampling.LANCZOS,
+                          centering=(.5, .35))
+        mask = Image.new("L", ph.size, 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, ph.width, ph.height],
+                                               radius=min(ph.size) // 10, fill=255)
+        img.paste(ph, (x0, y0), mask)
+        d.rounded_rectangle([x0 - 6, y0 - 6, x1 + 6, y1 + 6],
+                            radius=min(x1 - x0, y1 - y0) // 10,
+                            outline=pal["accent"], width=max(3, pw // 400))
     else:
         gaps.append("photo region empty — no subject asset")
 
@@ -233,9 +247,12 @@ def _render_style(d, img, style_id, photo_path, headline, subheadline, w, h):
 
 
 def render_panels(manifest: dict, contract: dict, *,
-                  panels: list, palette: dict | None = None):
+                  panels: list, palette: dict | None = None,
+                  photo_path: str | None = None):
     """Comic strip: N captioned panels stacked (setup/escalation/reversal/payoff).
-    Deterministic boxes + real type, same QC discipline as single cards."""
+    Deterministic boxes + real type, same QC discipline as single cards.
+    The star photo opens panel 1 (portrait box); without it the strip is
+    captions on art-directed panels — never bare wireframes."""
     pal = palette or {"bg": "#ffffff", "ink": "#141414", "accent": "#8a6a2f"}
     n = max(1, int((manifest.get("layout") or {}).get("panels", len(panels) or 1)))
     caps = [str(c or "")[:80] for c in list(panels)[:n]]
@@ -247,22 +264,32 @@ def render_panels(manifest: dict, contract: dict, *,
     d = ImageDraw.Draw(img)
     gutter, top = 24, 24
     ph_each = (ph - top * 2 - gutter * (n - 1)) // n
+    have_photo = bool(photo_path and Path(photo_path).exists())
     for i, text in enumerate(caps):
         y0 = top + i * (ph_each + gutter)
-        d.rectangle([24, y0, pw - 24, y0 + ph_each], outline=pal["ink"], width=4)
+        d.rectangle([24, y0, pw - 24, y0 + ph_each], fill="#fdfbf6",
+                    outline=pal["ink"], width=4)
+        d.rectangle([24, y0, pw - 24, y0 + 14], fill=pal["accent"])
+        tx = 60
+        if i == 0 and have_photo:
+            pw_ = min(300, (pw - 120) // 3)
+            _photo_box(img, photo_path, (60, y0 + 30, pw_, ph_each - 60))
+            tx = 60 + pw_ + 40
         size = 44
         font = _font(size)
         while size > 16:
             bb = d.textbbox((0, 0), text, font=font)
-            if bb[2] - bb[0] <= pw - 120:
+            if bb[2] - bb[0] <= pw - tx - 60:
                 break
             size -= 4
             font = _font(size)
         bb = d.textbbox((0, 0), text, font=font)
-        if text and bb[2] - bb[0] > pw - 120:
+        if text and bb[2] - bb[0] > pw - tx - 60:
             gaps.append("panel %d caption overflows" % (i + 1))
         elif text:
-            d.text((60, y0 + 30), text, font=font, fill=pal["ink"])
+            d.text((tx, y0 + 40), text, font=font, fill=pal["ink"])
         d.text((pw - 140, y0 + ph_each - 50), "%d/%d" % (i + 1, n),
                font=_font(28), fill=pal["accent"])
+    if not have_photo and not any(caps):
+        gaps.append("strip is blank — no captions and no star photo")
     return img, gaps

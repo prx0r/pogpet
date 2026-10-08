@@ -7,6 +7,7 @@ from backend import config
 def _client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "API_TOKEN", "test-token")
     monkeypatch.setattr(config, "DATA", tmp_path)
+    monkeypatch.setattr(config, "DB_PATH", tmp_path / "figg.db")
     S.config.API_TOKEN = "test-token"
     return S.app.test_client()
 

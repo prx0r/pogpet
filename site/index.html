@@ -1173,12 +1173,12 @@
   <section class="panel white" data-panel="studio" id="panel-studio" aria-label="Studio">
     <div class="panel__inner wide">
       <div class="store-head" style="margin:0 0 10px">
-        <div class="studio-heading"><h2 style="font-size:22px;margin:0">Your friends</h2><button class="oc-button" id="studio-add-friend" type="button">Add friend</button></div>
+        <div class="studio-heading"><h2 style="font-size:22px;margin:0">Your family</h2><button class="oc-button" id="studio-add-friend" type="button">Add family</button></div>
         <p style="margin:4px 0 0;color:#777;font-size:13px">Swipe through your people &amp; pets — everything below follows them.</p>
       </div>
 
       <!-- friends conveyor: tactile swipe strip, drives the whole page -->
-      <div class="friends" id="friends" role="listbox" aria-label="Friends"></div>
+      <div class="friends" id="friends" role="listbox" aria-label="Family"></div>
 
       <h2 id="studio-mesh-title">Meshes</h2><p id="studio-mesh-empty" class="studio-empty" hidden>No meshes for this friend yet. Choose one of their photos to create a character.</p><div id="studio-unassigned-meshes"></div>
       <div class="stv" id="stv" hidden>
@@ -1870,7 +1870,7 @@
       if (/dad|father/i.test(l)) { b.relationship = 'dad'; b.recipient = 'Dad'; }
       if (/mum|mom|mother/i.test(l)) { b.relationship = 'mum'; b.recipient = 'Mum'; }
       if (/husband|partner|boyfriend/i.test(l)) { b.relationship = 'partner'; b.recipient = 'Partner'; }
-      if (/friend/i.test(l)) { b.relationship = 'friend'; b.recipient = 'Friend'; }
+      if (/friend/i.test(l)) { b.relationship = 'family'; b.recipient = 'Family'; }
       if (/dog|cat|pet/i.test(l)) { b.relationship = 'pet'; }
       if (/birthday/i.test(l)) b.occasion = 'birthday';
       if (/christmas/i.test(l)) b.occasion = 'christmas';
@@ -3340,7 +3340,7 @@
       var head = document.createElement("div");
       head.className = "qk-label";
       head.style.marginTop = "0";
-      head.textContent = "Meet " + demo.name + " — try the shelf with our demo friend";
+      head.textContent = "Meet " + demo.name + " — try the shelf with our demo family member";
       grid.appendChild(head);
       if (demo.photo && demo.photo.url) {
         var im = document.createElement("img");
@@ -3384,7 +3384,7 @@
       var head = document.createElement("div");
       head.className = "qk-label";
       head.style.marginTop = "0";
-      head.textContent = who ? "For " + who + " — derived from your friend" : "For your star";
+      head.textContent = who ? "For " + who + " — derived from your family" : "For your star";
       grid.appendChild(head);
       gifts.slice(0, 6).forEach(function (g) {
         var it = itemById(g.line);

@@ -123,7 +123,15 @@ def register(app, owner_denied):
         owner = request.studio_owner
         with db.connect() as c:
             _legacy(c, owner)
-            subjects = [dict(r) for r in c.execute('SELECT * FROM studio_subjects WHERE owner=? ORDER BY created_at,id', (owner,))]
+            from backend import subjects as _subjects
+            subjects = []
+            for r in c.execute('SELECT * FROM studio_subjects WHERE owner=? ORDER BY created_at,id', (owner,)):
+                s = dict(r)
+                full = _subjects.profile_for(c, owner, s["id"])
+                s["relationship"] = full.get("relationship", "")
+                s["birthday"] = full.get("birthday", "")
+                s["interests"] = (full.get("profile", {}) or {}).get("interests", [])
+                subjects.append(s)
             photos = []
             for row in c.execute('SELECT * FROM photos WHERE owner=? ORDER BY created_at DESC LIMIT 500', (owner,)):
                 p = dict(row); pid = p['id']
@@ -145,6 +153,30 @@ def register(app, owner_denied):
                 meshes.append(m)
             selected = c.execute('SELECT * FROM studio_selection WHERE owner=?', (owner,)).fetchone()
         return jsonify(ok=True, subjects=subjects, photos=photos, meshes=meshes, selection=dict(selected) if selected else {})
+
+    @bp.get('/api/studio/subjects')
+    def subjects_list():
+        """Readable family list: every subject with relationship, birthday,
+        interests and photo count. Agents read this; humans see the Studio tab."""
+        from backend import subjects as _subjects
+        owner = request.studio_owner
+        with db.connect() as c:
+            out = []
+            for row in c.execute('SELECT * FROM studio_subjects WHERE owner=? ORDER BY created_at,id',
+                                 (owner,)):
+                s = dict(row)
+                full = _subjects.profile_for(c, owner, s["id"])
+                prof = full.get("profile", {})
+                n = c.execute('SELECT COUNT(DISTINCT photo_id) FROM photo_subjects WHERE subject_id=?',
+                              (s["id"],)).fetchone()[0]
+                out.append({"id": s["id"], "name": s["name"], "kind": s.get("kind", "person"),
+                            "relationship": full.get("relationship", ""),
+                            "birthday": full.get("birthday", ""),
+                            "interests": prof.get("interests", []),
+                            "profile": {k: v for k, v in prof.items()
+                                        if k in ("notes", "facts", "style")},
+                            "photos": n})
+        return jsonify(ok=True, subjects=out)
 
     @bp.post('/api/studio/subjects')
     def subject():

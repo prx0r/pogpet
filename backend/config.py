@@ -88,7 +88,25 @@ OWNER_SIGNING_SECRET = os.environ.get("OWNER_SIGNING_SECRET", "")
 def owner_secret() -> str:
     if OWNER_SIGNING_SECRET:
         return OWNER_SIGNING_SECRET
-    return "owner-sig:" + (API_TOKEN or secrets.token_hex(16))
+    if API_TOKEN:
+        return "owner-sig:" + API_TOKEN
+    # last resort: persist a stable secret locally so every process agrees.
+    # (A random-per-call secret would make sign/verify never match.)
+    try:
+        p = DATA / ".owner_secret"
+        if p.is_file() and len(p.read_text().strip()) >= 16:
+            return p.read_text().strip()[:64]
+        import secrets as _secrets
+        s = _secrets.token_hex(32)
+        DATA.mkdir(parents=True, exist_ok=True)
+        p.write_text(s)
+        try:
+            p.chmod(0o600)
+        except OSError:
+            pass
+        return s
+    except OSError:
+        return "owner-sig:ephemeral"
 
 
 def sign_owner(owner: str) -> str:
@@ -1398,7 +1416,7 @@ SCENES: dict[str, str] = {
 # price_cents is EST (cents) — no live Prodigi key on this box, so these are
 # placeholders to confirm against the dashboard before anything is listed.
 PRODIGI_PRODUCTS: dict[str, dict] = {
-    "greeting_card": {"label": "Greeting Card",   "price_cents": 799,  "sku_note": "Fine Art / Classic 5x7",   "shape": "card",   "free": False},
+    "greeting_card": {"label": "Greeting Card",   "price_cents": 799,  "sku": "CLASSIC-GRE-FEDR-7X5-BLA", "sku_note": "Classic 5x7 portrait, 127x178mm, verified live",   "shape": "card",   "free": False},
     "postcard":      {"label": "Postcard",        "price_cents": 399,  "sku_note": "A6 postcard",              "shape": "postcard", "free": False},
     "sticker":       {"label": "Sticker Sheet",   "price_cents": 499,  "sku_note": "kiss-cut sheet",           "shape": "sticker", "free": False},
     "framed_print":  {"label": "Framed Print",    "price_cents": 2499, "sku_note": "framed / canvas / metal",  "shape": "print",  "free": False},

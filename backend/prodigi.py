@@ -43,12 +43,17 @@ def api_key() -> str:
     return ""
 
 
+def _base() -> str:
+    import os as _os
+    return (_os.environ.get("PRODIGI_BASE") or BASE).rstrip("/")
+
+
 def _call(method: str, path: str, body: dict | None = None, timeout: int = 25) -> dict:
     key = api_key()
     if not key:
         raise ProdigiError("no PRODIGI_API_KEY in .env")
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(BASE + path, data=data, method=method)
+    req = urllib.request.Request(_base() + path, data=data, method=method)
     req.add_header("X-API-Key", key)
     req.add_header("User-Agent", UA)
     if data:
@@ -119,3 +124,74 @@ def to_cents(amount: float, unit: str) -> int:
     is a flat, clearly-labelled conversion rather than a silent guess."""
     rate = 1.27 if str(unit).upper() == "GBP" else 1.0
     return int(round(amount * rate * 100))
+
+
+def print_area(sku: str) -> dict:
+    """Live print-area spec for a SKU, cached per SKU. The renderer rejects
+    anything that doesn't match these exact pixels — supplier-safe, not
+    'probably 5x7'."""
+    cache = config.DATA / "prodigi_templates.json"
+    try:
+        saved = json.loads(cache.read_text()) if cache.is_file() else {}
+    except ValueError:
+        saved = {}
+    if sku in saved and isinstance(saved[sku], dict) \
+            and saved[sku].get("horizontalResolution"):
+        return saved[sku]
+    d = _call("GET", f"/v4.0/products/{sku}")
+    variants = (d.get("product") or {}).get("variants") or []
+    sizes = {}
+    for v in variants:
+        if isinstance(v, dict) and v.get("printAreaSizes"):
+            sizes = v["printAreaSizes"]
+            break
+    if not sizes or "default" not in sizes:
+        raise ProdigiError(f"no default print area for {sku}")
+    spec = {"sku": sku,
+            "horizontalResolution": int(sizes["default"]["horizontalResolution"]),
+            "verticalResolution": int(sizes["default"]["verticalResolution"])}
+    saved[sku] = spec
+    try:
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(saved, indent=2))
+    except OSError:
+        pass
+    return spec
+
+
+def create_order(sku: str, copies: int, asset_url: str, recipient: dict,
+                 shipping_method: str = "Standard",
+                 currency: str = "GBP") -> dict:
+    """Place a real print order. SPENDS REAL MONEY — callers gate on explicit
+    fulfil + configured SKU. Returns Prodigi order id + status."""
+    for k in ("name", "line1", "town", "postcode", "country"):
+        if not str((recipient or {}).get(k) or "").strip():
+            raise ProdigiError(f"recipient.{k} is required")
+    body = {
+        "shippingMethod": shipping_method,
+        "currencyCode": currency,
+        "recipient": {
+            "name": recipient["name"][:60],
+            "address": {
+                "line1": recipient["line1"][:100],
+                "line2": str(recipient.get("line2") or "")[:100],
+                "postalOrZipCode": recipient["postcode"][:20],
+                "countryCode": recipient["country"][:2].upper(),
+                "townOrCity": recipient["town"][:60],
+            },
+        },
+        "items": [{
+            "sku": sku,
+            "copies": max(1, int(copies)),
+            "assets": [{"printArea": "default", "url": asset_url}],
+        }],
+    }
+    if recipient.get("email"):
+        body["recipient"]["email"] = str(recipient["email"])[:120]
+    d = _call("POST", "/v4.0/orders", body)
+    order = d.get("order") or {}
+    if not order.get("id"):
+        raise ProdigiError(str(d.get("failures") or d)[:300])
+    return {"ok": True, "id": order.get("id"),
+            "status": order.get("status", {}).get("stage", "received"),
+            "sku": sku, "copies": copies}

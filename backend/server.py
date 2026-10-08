@@ -3379,6 +3379,40 @@ def studio_props():
     })
 
 
+@app.get("/api/cards/copy/<card_id>")
+def card_copy(card_id: str):
+    """Person-aware card copy. The catalog defaults are pet-flavoured
+    ("[pet name] says woof"); pass name + kind and the copy comes back
+    for a person instead of a pet."""
+    cards = config.PERSONAL_CARDS or {}
+    if card_id not in cards:
+        return _err("unknown card — valid ids: " + ", ".join(sorted(cards)), 404)
+    name = (request.args.get("name") or "").strip()[:60]
+    kind = (request.args.get("kind") or "pet").strip().lower()
+    out = dict(cards[card_id])
+    if kind == "person":
+        who = name or "them"
+        subs = {
+            "[pet name] says woof": f"with love, {who}",
+            "[pet name]": who,
+            " says woof": "",
+        }
+        for k in ("message", "sub", "blurb"):
+            if isinstance(out.get(k), str):
+                for old, new in subs.items():
+                    out[k] = out[k].replace(old, new)
+        for k in ("label", "etsy_title"):
+            if isinstance(out.get(k), str):
+                out[k] = out[k].replace("Dog ", "").replace("Pet ", "").replace("  ", " ").strip()
+        if isinstance(out.get("tags"), list):
+            out["tags"] = [t.replace("dog ", "").replace("pet ", "").strip() or t for t in out["tags"]]
+    elif name:
+        for k in ("message", "sub", "blurb"):
+            if isinstance(out.get(k), str):
+                out[k] = out[k].replace("[pet name]", name)
+    return jsonify(ok=True, id=card_id, kind=kind, name=name, card=out)
+
+
 @app.get("/api/etsy/listings")
 def etsy_listings():
     """Etsy-ready listing packs (title, tags, sizes, materials, photo slots)."""

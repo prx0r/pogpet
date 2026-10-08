@@ -6,6 +6,7 @@ from backend.creative import art
 def _client(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "API_TOKEN", "test-token")
     monkeypatch.setattr(config, "DATA", tmp_path)
+    monkeypatch.setattr(config, "DB_PATH", tmp_path / "figg.db")
     S.config.API_TOKEN = "test-token"
     return S.app.test_client()
 
@@ -41,6 +42,7 @@ def test_art_endpoints(tmp_path, monkeypatch):
 
 def test_plates_offline(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DATA", tmp_path)
+    monkeypatch.setattr(config, "DB_PATH", tmp_path / "figg.db")
     p = art.text_plate("DAY 1", ["Focus group worried.", "Government rebrands."],
                        "Did you try Friendly Computer?")
     assert p.exists() and p.stat().st_size > 1000

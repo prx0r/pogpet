@@ -59,6 +59,8 @@ def init():
         c.executescript(SCHEMA)
         if "storage_owner" not in {r[1] for r in c.execute("PRAGMA table_info(card_designs)")}:
             c.execute("ALTER TABLE card_designs ADD COLUMN storage_owner TEXT NOT NULL DEFAULT ''")
+        if "prodigi_ref" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
+            c.execute("ALTER TABLE card_orders ADD COLUMN prodigi_ref TEXT NOT NULL DEFAULT ''")
         c.execute("UPDATE card_designs SET storage_owner=owner WHERE storage_owner=''")
         c.execute("UPDATE card_jobs SET status='failed',error='Render interrupted. Retry this revision.' WHERE status IN ('queued','running')")
         c.commit()
@@ -574,9 +576,48 @@ def register(app,owner_denied):
                 raise CardError("Export the saved artwork before reserving this card",409)
             oid="ord_card_"+uuid.uuid4().hex
             price=scenes.FORMATS[spec["format"]]["price_cents"]*qty
-            c.execute("INSERT INTO card_orders VALUES (?,?,?,?,?,?,?,?,?,?,?)",(oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"pending_checkout",idem,time.time()))
+            c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",(oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"pending_checkout",idem,time.time()))
             c.commit()
             result=dict(c.execute("SELECT * FROM card_orders WHERE id=?",(oid,)).fetchone())
-        return jsonify(ok=True,order=result,currency="GBP",price_grade="EST",hint="Card reserved. No charge. Supplier checkout is not connected.")
+        fulfil = bool(b.get("fulfil"))
+        prodigi: dict = {"attempted": False}
+        if fulfil:
+            from backend import config as _cfg
+            fmt = spec.get("format", "5x7")
+            product = {"5x7": "greeting_card", "A6": "postcard"}.get(fmt, "greeting_card")
+            prod = (_cfg.PRODIGI_PRODUCTS.get(product) or {})
+            if not prod.get("sku"):
+                raise CardError(f"no Prodigi SKU configured for {product} — pull it from the Prodigi dashboard first", 409)
+            recipient = b.get("recipient") or {}
+            if not isinstance(recipient, dict) or not all(
+                    str(recipient.get(k) or "").strip()
+                    for k in ("name", "line1", "town", "postcode", "country")):
+                raise CardError("fulfil needs recipient {name, line1, town, postcode, country}", 400)
+            from backend import prodigi as _prodigi
+            from backend import card_print as _print
+            from backend import r2presign as _r2
+            spec_full = record(owner, did, rev)["spec"]
+            aa = assets(owner, spec_full)
+            single = _print.compose(spec_full, aa)
+            gaps = _print.preflight(single)
+            if gaps:
+                raise CardError("print file failed preflight: " + "; ".join(gaps), 500)
+            r2key = _r2.put_temp(single)
+            try:
+                asset_url = _r2.presigned_url(r2key)
+            except Exception as e:
+                _r2.delete(r2key)
+                raise CardError(f"asset delivery failed: {str(e)[:200]}", 502) from None
+            try:
+                placed = _prodigi.create_order(prod["sku"], qty, asset_url, recipient)
+            except Exception as e:
+                raise CardError(f"Prodigi refused: {str(e)[:200]}", 502) from None
+            with db.connect() as c:
+                c.execute("UPDATE card_orders SET status='fulfilled', prodigi_ref=? WHERE id=?",
+                          (placed["id"], oid))
+                c.commit()
+                result = dict(c.execute("SELECT * FROM card_orders WHERE id=?", (oid,)).fetchone())
+            prodigi = {"attempted": True, "ok": True, **placed}
+        return jsonify(ok=True,order=result,currency="GBP",price_grade="EST",prodigi=prodigi,hint="Card reserved. No charge. Supplier checkout is not connected." if not fulfil else "Sent to Prodigi print.")
 
     app.register_blueprint(bp)

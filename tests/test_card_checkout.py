@@ -272,3 +272,89 @@ def test_spread_flow_mocked():
             conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did,))
             conn.execute("DELETE FROM card_designs WHERE id=?", (did,))
             conn.commit()
+
+
+
+def test_inside_ink_readable_on_cream():
+    """White front ink must never leak onto cream inside paper (dark-card bug)."""
+    from backend.card_scenes import ink_for
+    from backend import cards as C
+    owner = "hark-dad-a7a5cc"
+    pid = "pho_676d794af4d945d38439"
+    for tid in ("breaking_news", "awards", "portrait", "christmas",
+                "game_winner", "family"):
+        tpl_min = {"breaking_news": 1, "awards": 1, "portrait": 1,
+                   "christmas": 1, "game_winner": 1, "family": 1}[tid]
+        photos = [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                   "focus": [0.5, 0.5], "cutout": ""}] * tpl_min
+        s = C.validate(owner, {"template": tid, "format": "5x7", "photos": photos,
+                               "headline": "Hi", "recipient": "", "sender": "Me",
+                               "inside_message": "Happy birthday"})
+        for which in ("ink", "soft", "accent"):
+            col = ink_for(s, which)
+            lum = sum(int(col.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)) / 3 / 255
+            assert lum < 0.6, (tid, which, col)
+
+
+def test_crop_changes_front():
+    """A crop box must visibly change the cover (no silent full-frame)."""
+    import hashlib
+    from backend import cards as C
+    from backend.card_scenes import front
+    owner = "hark-dad-a7a5cc"
+    pid = "pho_676d794af4d945d38439"
+    base = {"template": "portrait", "format": "5x7", "headline": "Hi Dad",
+            "recipient": "Dad", "sender": "Me", "inside_message": "x"}
+    outs = []
+    for crop in ([0, 0, 1, 1], [0.3, 0.3, 0.667, 0.7]):
+        spec = C.validate(owner, {**base, "photos": [
+            {"photo_id": pid, "crop": crop, "focus": [0.5, 0.5], "cutout": ""}]})
+        assert spec["photos"][0]["crop"][0] == float(crop[0])
+        outs.append(hashlib.md5(front(spec, C.assets(owner, spec), 360).tobytes()).hexdigest())
+    assert outs[0] != outs[1]
+
+
+def test_all_templates_render():
+    """All seven covers render with and without photos, deterministically."""
+    import hashlib
+    from backend import cards as C
+    from backend.card_scenes import front
+    owner = "hark-dad-a7a5cc"
+    pid = "pho_676d794af4d945d38439"
+    counts = {"portrait": 1, "breaking_news": 1, "game_winner": 1, "awards": 1,
+              "christmas": 1, "family": 3, "typography": 0}
+    for tid, n in counts.items():
+        photos = [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                   "focus": [0.5, 0.5], "cutout": ""}] * n
+        spec = C.validate(owner, {"template": tid, "format": "5x7", "photos": photos,
+                                  "headline": "Happy Birthday, legend.",
+                                  "recipient": "Dad", "sender": "Me",
+                                  "inside_message": "Love you"})
+        aa = C.assets(owner, spec)
+        a = hashlib.md5(front(spec, aa, 360).tobytes()).hexdigest()
+        b = hashlib.md5(front(spec, aa, 360).tobytes()).hexdigest()
+        assert a == b, tid
+
+
+def test_strict_inside_keys():
+    from backend import cards as C
+    try:
+        C.validate("anon", {"template": "typography", "format": "5x7", "photos": [],
+                            "headline": "Hi", "recipient": "", "sender": "",
+                            "inside_message": "x",
+                            "inside": {"font": "inter"}})
+    except C.CardError as e:
+        assert "panel" in str(e) and "left" in str(e)
+    else:
+        raise AssertionError("flat font keys must be rejected")
+
+
+def test_messages_match_relationship_and_tone():
+    from backend.cards import message_lines
+    prof = {"name": "Chris Prior", "relationship": "father", "interests": ["golf"]}
+    funny = message_lines(prof, "funny")
+    assert any("golf" in l["text"] for l in funny)
+    dark = message_lines(prof, "dark")
+    assert dark and not any("obsessed with" in l["text"] for l in dark)
+    empty = message_lines({}, "funny")
+    assert empty and not any("obsessed with" in l["text"] for l in empty)

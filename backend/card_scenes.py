@@ -200,14 +200,21 @@ def _luminance(hexcol):
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
-def ink_for(design, which="ink"):
-    """Semantic colour → hex against this template's palette, so contrast
-    always holds on light and dark stocks alike."""
+def ink_for(design, which="ink", *, paper="#fffdf7"):
+    """Semantic colour → hex. On the card front the reference is the
+    template palette; on inside paper (always light cream) ink must stay
+    dark no matter how light the front ink is (white front ink on cream
+    paper is invisible — the dark-card bug)."""
     tpl = TEMPLATES[design["template"]]
     if which == "accent":
+        # gold accents vanish on cream — deepen them there
+        if paper == "#fffdf7" and _luminance(tpl["accent"]) > 0.6:
+            return "#8a6a2f"
         return tpl["accent"]
     if which == "soft":
-        return "#55554d" if _luminance(tpl["bg"]) > 0.5 else "#cfcabb"
+        return "#55554d" if _luminance(paper) > 0.5 else "#cfcabb"
+    if paper == "#fffdf7" and _luminance(tpl["ink"]) > 0.7:
+        return "#22221d"
     return tpl["ink"]
 
 
@@ -281,7 +288,6 @@ def cropped(img, box):
 
 MASTHEAD = {"breaking_news": "BREAKING NEWS", "game_winner": "THE GAME WINNER",
             "awards": "LIFETIME ACHIEVEMENT", "christmas": "THE CHRISTMAS CAST"}
-FULLBLEED = {"portrait"}
 
 
 def _tile(slot, assets, size, progress, i):
@@ -302,48 +308,222 @@ def _tile(slot, assets, size, progress, i):
     return tile, reveal
 
 
+def _scatter(draw, w, h, n, seed, colors, box, size=0.012):
+    """Seeded confetti/dots inside a relative box — deterministic per design."""
+    import random as _r
+    rng = _r.Random(seed)
+    x0, y0, bw, bh = box
+    for i in range(n):
+        cx, cy = x0 + rng.random() * bw, y0 + rng.random() * bh
+        r = max(2, round(w * size * (0.6 + rng.random() * 0.8)))
+        draw.ellipse((w * cx - r, h * cy - r, w * cx + r, h * cy + r),
+                     fill=colors[i % len(colors)])
+
+
+def _shape_mask(size, shape):
+    """L-mode mask: arch | circle | round | rect."""
+    from PIL import Image as _I
+    sw, sh = size
+    mask = _I.new("L", size, 0)
+    md = ImageDraw.Draw(mask)
+    if shape == "circle":
+        md.ellipse((0, 0, sw, sh), fill=255)
+    elif shape == "arch":
+        md.rectangle((0, sh // 3, sw, sh), fill=255)
+        md.ellipse((0, 0, sw, sh * 2 // 3), fill=255)
+    elif shape == "round":
+        r = min(sw, sh) // 8
+        md.rounded_rectangle((0, 0, sw, sh), radius=r, fill=255)
+    else:
+        md.rectangle((0, 0, sw, sh), fill=255)
+    return mask
+
+
+def _photo_zone(slot, assets, size, *, shape="round", border=0,
+                border_fill="#ffffff", progress=1.0, seed=0):
+    """A photo slotted into a designed frame: masked shape + border ring.
+    Crop/focus/cutout all honoured — the zone shows the crop, never raw full-frame."""
+    sw, sh = max(1, round(size[0])), max(1, round(size[1]))
+    reveal = max(0.0, min(1.0, progress * 2.2 - seed * .13))
+    if reveal <= 0:
+        return None, 0.0
+    src = assets[slot["photo_id"]].copy()
+    if not slot.get("cutout"):
+        src = cropped(src, slot["crop"])
+    if slot.get("cutout"):
+        src.thumbnail((sw, sh), Image.Resampling.LANCZOS)
+        tile = Image.new("RGBA", (sw, sh))
+        tile.alpha_composite(src, ((sw - src.width) // 2, sh - src.height))
+    else:
+        tile = ImageOps.fit(src, (sw, sh), method=Image.Resampling.LANCZOS,
+                            centering=tuple(slot["focus"]))
+    tile.putalpha(Image.composite(tile.getchannel("A"),
+                                  Image.new("L", tile.size, 0),
+                                  _shape_mask((sw, sh), shape)))
+    tile.putalpha(tile.getchannel("A").point(lambda v: round(v * reveal)))
+    if border:
+        ring = Image.new("RGBA", (sw + border * 2, sh + border * 2), (0, 0, 0, 0))
+        bd = ImageDraw.Draw(ring)
+        if shape == "circle":
+            bd.ellipse((0, 0, ring.width, ring.height), fill=border_fill)
+        elif shape == "arch":
+            bd.rectangle((0, ring.height // 3, ring.width, ring.height), fill=border_fill)
+            bd.ellipse((0, 0, ring.width, ring.height * 2 // 3), fill=border_fill)
+        elif shape == "round":
+            bd.rounded_rectangle((0, 0, ring.width, ring.height),
+                                 radius=min(ring.size) // 8, fill=border_fill)
+        else:
+            bd.rectangle((0, 0, ring.width, ring.height), fill=border_fill)
+        ring.alpha_composite(tile, (border, border))
+        return ring, reveal
+    return tile, reveal
+
+
+def _frames(card, draw, design, assets, boxes, *, shape="round", border=0,
+            border_fill="#ffffff", progress=1.0):
+    """Slot each photo into its designed box. Boxes are relative (x,y,w,h)."""
+    w, h = card.size
+    for i, (slot, box) in enumerate(zip(design["photos"], boxes)):
+        tile, reveal = _photo_zone(slot, assets,
+                                   (box[2] * w, box[3] * h), shape=shape,
+                                   border=max(0, round(border * w)),
+                                   border_fill=border_fill,
+                                   progress=progress, seed=i)
+        if tile is None:
+            continue
+        tw, th = tile.size
+        px = round(box[0] * w + (box[2] * w - tw) / 2 + (1 - reveal) * h * .02)
+        py = round(box[1] * h + (1 - reveal) * h * .025)
+        card.alpha_composite(tile, (px, py))
+
+
 def front(design, assets, width=720, height=None, progress=1.0):
+    """Designed covers: every template is a real composition — masked photo
+    zones slotted into graphics, type in flat zones that never sit on faces.
+    Same signature in/out so print, motion, gallery and MCP keep working."""
     fmt = FORMATS[design["format"]]
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
     tpl = TEMPLATES[design["template"]]
     card = Image.new("RGBA", (width, height), tpl["bg"])
     d = ImageDraw.Draw(card)
     w, h = width, height
-    accent, ink = tpl["accent"], tpl["ink"]
+    accent, ink, bg = tpl["accent"], tpl["ink"], tpl["bg"]
     slots = design["photos"]
     count = len(slots)
     tid = design["template"]
-
-    if tid in FULLBLEED and count:
-        # full-bleed photo, scrim, overlaid type — no frame, no masthead
-        src = assets[slots[0]["photo_id"]].copy()
-        if not slots[0].get("cutout"):
-            src = cropped(src, slots[0]["crop"])
-        bg = ImageOps.fit(src, (w, h), method=Image.Resampling.LANCZOS,
-                          centering=tuple(slots[0]["focus"]))
-        card.alpha_composite(bg.convert("RGBA"))
-        d = ImageDraw.Draw(card, "RGBA")
-        for y in range(int(h * .62), h):
-            a = round(200 * (y - h * .62) / (h * .38))
-            d.rectangle((0, y, w, y + 1), fill=(10, 10, 12, a))
-        if progress > .15:
-            text_block(d, design["headline"], (w * .08, h * .72, w * .84, h * .12),
-                       "#fff9e7", w * .07, bold=True, role="display")
-        text_block(d, design["recipient"], (w * .08, h * .87, w * .84, h * .05),
-                   "#e5ba62", w * .032, bold=True, role="hand")
-        return card.convert("RGB")
+    hfont = design.get("headline_font") or "fraunces"
 
     d.rectangle((w*.04, h*.03, w*.96, h*.97), outline=accent, width=max(1, w//180))
-    title = MASTHEAD.get(tid)
-    top = h*.16
-    if title:
-        if tid == "breaking_news":
-            d.rectangle((w*.04, h*.03, w*.96, h*.13), fill=accent)
-        text_block(d, title, (w*.08, h*.06, w*.84, h*.06), ink, w*.035, bold=True)
-    else:
-        top = h*.08
+
+    if tid == "portrait" and count:
+        # arch portrait under a confetti strip, serif headline on flat cream
+        _scatter(d, w, h, 26, 7, [accent, "#e5ba62", ink], (0.06, 0.045, 0.88, 0.05))
+        _frames(card, d, design, assets, [(0.16, 0.11, 0.68, 0.50)],
+                shape="arch", border=0.008, border_fill="#ffffff",
+                progress=progress)
+        if progress > .15:
+            text_block(d, design["headline"], (w*.08, h*.65, w*.84, h*.14),
+                       ink, w*.062, bold=True, font_id=hfont)
+        text_block(d, design["recipient"], (w*.08, h*.82, w*.84, h*.05),
+                   accent, w*.03, bold=True, role="hand")
+        text_block(d, design["sender"], (w*.08, h*.885, w*.84, h*.03), ink, w*.021)
+        return card.convert("RGB")
+
+    if tid == "breaking_news":
+        # broadcast card: red masthead, framed photo, cream headline band
+        d.rectangle((w*.04, h*.03, w*.96, h*.13), fill=accent)
+        text_block(d, "BREAKING NEWS", (w*.08, h*.055, w*.84, h*.06),
+                   "#ffffff", w*.038, bold=True)
+        if count:
+            _frames(card, d, design, assets, [(0.12, 0.17, 0.76, 0.40)],
+                    shape="round", border=0.006, border_fill="#ffffff",
+                    progress=progress)
+        if progress > .15:
+            text_block(d, design["headline"], (w*.08, h*.60, w*.84, h*.14),
+                       "#ffffff", w*.058, bold=True, font_id=hfont)
+        text_block(d, design["recipient"], (w*.08, h*.77, w*.84, h*.05),
+                   accent, w*.03, bold=True, role="hand")
+        text_block(d, design["sender"], (w*.08, h*.83, w*.84, h*.03), ink, w*.021)
+        d.rectangle((w*.04, h*.90, w*.96, h*.97), fill=accent)
+        if progress < 1:
+            ticker = "OFFICIAL: " + (design["recipient"] or "A LEGEND") + " • "
+            f = font(w*.018, True)
+            tw = max(1, d.textlength(ticker, font=f))
+            for x in range(-round(progress*tw), w+round(tw), round(tw)):
+                d.text((x, h*.915), ticker, font=f, fill="white")
+        else:
+            f = font(w*.018, True)
+            d.text((w*.08, h*.915), "OFFICIAL • VERIFIED • LIVE", font=f, fill="white")
+        return card.convert("RGB")
+
+    if tid in ("game_winner", "awards"):
+        # medallion card: gold-ringed circle on confetti, cream headline band
+        _scatter(d, w, h, 40, 21, [accent, "#ffffff", ink], (0.05, 0.04, 0.90, 0.90), 0.010)
+        title = MASTHEAD.get(tid)
+        if title:
+            text_block(d, title, (w*.08, h*.05, w*.84, h*.06), ink, w*.032, bold=True)
+        if count:
+            _frames(card, d, design, assets, [(0.24, 0.13, 0.52, 0.42)],
+                    shape="circle", border=0.012, border_fill=accent,
+                    progress=progress)
+        if progress > .15:
+            text_block(d, design["headline"], (w*.08, h*.60, w*.84, h*.14),
+                       ink, w*.058, bold=True, font_id=hfont)
+        text_block(d, design["recipient"], (w*.08, h*.77, w*.84, h*.05),
+                   accent, w*.03, bold=True, role="hand")
+        text_block(d, design["sender"], (w*.08, h*.83, w*.84, h*.03), ink, w*.021)
+        return card.convert("RGB")
+
+    if tid == "christmas":
+        # ornament row: gold-rimmed baubles on snow, gold serif below
+        for i in range(45):
+            px, py = (i*127) % w, (i*97 + round(progress*h)) % h
+            d.ellipse((px, py, px+w*.005, py+w*.005), fill="#ffffff")
+        if count:
+            n = min(count, 5)
+            if n == 1:
+                boxes = [(0.28, 0.10, 0.44, 0.36)]
+            else:
+                gw = 0.80 / n
+                boxes = [(0.10 + i*gw + gw*0.08, 0.12, gw*0.84, 0.30) for i in range(n)]
+            _frames(card, d, design, assets, boxes[:n],
+                    shape="circle", border=0.008, border_fill="#e6bd78",
+                    progress=progress)
+            d.rectangle((w*.48, h*.045, w*.52, h*.10), fill="#e6bd78")
+        if progress > .15:
+            text_block(d, design["headline"], (w*.08, h*.50 if count else h*.30, w*.84, h*.16),
+                       "#fff9e7", w*.06, bold=True, font_id=hfont)
+        text_block(d, design["recipient"], (w*.08, h*.70 if count else h*.60, w*.84, h*.05),
+                   "#e6bd78", w*.03, bold=True, role="hand")
+        text_block(d, "THE CHRISTMAS CAST", (w*.08, h*.055, w*.84, h*.05),
+                   "#e6bd78", w*.03, bold=True)
+        text_block(d, design["sender"], (w*.08, h*.78, w*.84, h*.03), "#fff9e7", w*.021)
+        return card.convert("RGB")
+
+    if tid == "family":
+        # framed grid on warm stock with a solid headline band
+        if count:
+            n = min(count, 5)
+            cols = 2 if n > 1 else 1
+            rows = math.ceil(n / cols)
+            gap = 0.03
+            cw, ch = (0.84 - gap*(cols-1)) / cols, 0.46 / rows
+            boxes = [(0.08 + (i % cols)*(cw+gap), 0.09 + (i//cols)*(ch+gap), cw, ch)
+                     for i in range(n)]
+            _frames(card, d, design, assets, boxes, shape="round",
+                    border=0.005, border_fill="#ffffff", progress=progress)
+        d.rectangle((w*.04, h*.62, w*.96, h*.84), fill=ink)
+        if progress > .15:
+            text_block(d, design["headline"], (w*.08, h*.645, w*.84, h*.12),
+                       "#fff9e7", w*.052, bold=True, font_id=hfont)
+        text_block(d, design["recipient"], (w*.08, h*.775, w*.84, h*.04),
+                   accent, w*.028, bold=True, role="hand")
+        text_block(d, design["sender"], (w*.08, h*.875, w*.84, h*.03), ink, w*.021)
+        return card.convert("RGB")
+
+    # typography + fallback: full-bleed type poster (no photos by design)
     if count:
-        gap, x0, y0 = w*.025, w*.08, top
+        gap, x0, y0 = w*.025, w*.08, h*.08
         cols = 1 if count == 1 else 2
         rows = math.ceil(count / cols)
         sw, sh = (w*.84 - gap*(cols-1))/cols, (h*.60-gap*(rows-1))/rows
@@ -355,26 +535,9 @@ def front(design, assets, width=720, height=None, progress=1.0):
             card.alpha_composite(tile, (px, py))
     hy = h*.70 if count else h*.30
     if progress > .15:
-        text_block(d, design["headline"], (w*.08, hy, w*.84, h*.15 if count else h*.35), ink, w*.065, bold=True, role="display",
-                   font_id=design.get("headline_font") or "fraunces")
+        text_block(d, design["headline"], (w*.08, hy, w*.84, h*.15 if count else h*.35), ink, w*.065, bold=True, font_id=hfont)
     text_block(d, design["recipient"], (w*.08, h*.87, w*.84, h*.04), accent, w*.029, bold=True, role="hand")
     text_block(d, design["sender"], (w*.08, h*.925, w*.84, h*.025), ink, w*.021)
-    if design["template"] in ("awards", "game_winner") and progress < 1:
-        for i in range(32):
-            px = ((i*137)%w)
-            py = ((i*83 + round(progress*h*1.8))%h)
-            d.rectangle((px,py,px+max(2,w*.006),py+max(4,h*.009)), fill=accent)
-    if design["template"] == "christmas":
-        for i in range(45):
-            px, py = (i*127)%w, (i*97+round(progress*h))%h
-            d.ellipse((px,py,px+w*.005,py+w*.005), fill="#ffffff")
-    if design["template"] == "breaking_news" and progress < 1:
-        d.rectangle((w*.04,h*.97-w*.04,w*.96,h*.97), fill=accent)
-        ticker = "OFFICIAL: " + (design["recipient"] or "A LEGEND") + " • "
-        f = font(w*.018, True)
-        tw = max(1, d.textlength(ticker, font=f))
-        for x in range(-round(progress*tw), w+round(tw), round(tw)):
-            d.text((x,h*.97-w*.035),ticker,font=f,fill="white")
     return card.convert("RGB")
 
 

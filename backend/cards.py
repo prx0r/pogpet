@@ -179,34 +179,57 @@ def card_url_for(did: str, rev: int | None = None) -> str:
 def message_lines(profile: dict, tone: str = "funny") -> list[dict]:
     """Smart-text v1 (deterministic): inside lines built from a subject
     profile's name/interests/memories. Each line cites its source fact so
-    agents can show their work. Tone: funny|warm|short."""
+    agents can show their work. Tones: funny (dry aliases too), warm, short.
+    No interests → occasion-generic lines, never placeholder-sounding filler."""
     profile = profile or {}
+    tone = str(tone or "funny").lower()
+    if tone in ("dark", "dry", "sarcastic"):
+        tone = "dry"
+    elif tone in ("sentimental", "sweet", "warm"):
+        tone = "warm"
+    elif tone in ("short", "brief"):
+        tone = "short"
+    else:
+        tone = "funny"
     name = str(profile.get("name") or "them")
     interests = [str(x) for x in (profile.get("interests") or []) if isinstance(x, str)][:4]
     memories = [str(x) for x in (profile.get("memories") or []) if isinstance(x, str)][:4]
     rel = str(profile.get("relationship") or "")
-    first = interests[0] if interests else "the things they're obsessed with"
-    mem = memories[0] if memories else ""
     who = name if name != "them" else ("Dad" if rel == "dad" else "them")
+    out: list[dict] = []
     if tone == "warm":
-        lines = [
+        out = [
             (f"To {who} — thank you for every bit of it.", "relationship"),
-            (f"For all the {first} years and counting.", "interest:" + first),
+            (f"Hope your birthday is as lovely as you are.", "occasion"),
         ]
-        if mem:
-            lines.append((f"Still thinking about {mem}.", "memory"))
+        if interests:
+            out.insert(1, (f"For all the {interests[0]} years and counting.", "interest:" + interests[0]))
+        if memories:
+            out.append((f"Still thinking about {memories[0]}.", "memory"))
     elif tone == "short":
-        lines = [(f"Happy birthday, {who}!", "name"),
-                 (f"Have the best {first} day.", "interest:" + first)]
+        out = [(f"Happy birthday, {who}!", "name"),
+               (f"Have a brilliant day.", "occasion")]
+    elif tone == "dry":
+        out = [(f"Happy birthday. I kept the receipt for the present.", "occasion"),
+               (f"Another year older. The warranty has officially expired.", "occasion")]
+        if interests:
+            out.append((f"In lieu of a gift, enjoy this card about {interests[0]}.", "interest:" + interests[0]))
     else:  # funny
-        lines = [
-            (f"Happy birthday to the person who took {first} far too seriously.", "interest:" + first),
-            (f"Another year older. Still the reigning {first} champion, allegedly.", "interest:" + first),
-        ]
-        if mem:
-            lines.append((f"In honour of the time {mem} — never forget.", "memory"))
-        lines.append((f"Officially a legend. Unofficially, still {who}.", "name"))
-    return [{"text": t[:400], "source": s} for t, s in lines[:4]]
+        if interests:
+            first = interests[0]
+            out = [
+                (f"Happy birthday to the person who took {first} far too seriously.", "interest:" + first),
+                (f"Another year older. Still the reigning {first} champion, allegedly.", "interest:" + first),
+            ]
+        else:
+            out = [
+                (f"Happy birthday, {who} — officially a legend for the day.", "name"),
+                (f"Make a wish. Something realistic this time.", "occasion"),
+            ]
+        if memories:
+            out.append((f"In honour of the time {memories[0]} — never forget.", "memory"))
+        out.append((f"Officially a legend. Unofficially, still {who}.", "name"))
+    return [{"text": t[:400], "source": s} for t, s in out[:4]]
 
 
 def validate(owner,b):
@@ -272,6 +295,10 @@ def _validate_panel(panel, *, text_field, text_limit, default_font):
     panel = panel or {}
     if not isinstance(panel, dict):
         raise CardError("Inside panels must be objects")
+    allowed = {"mode", text_field, "font", "size", "colour", "align"}
+    for k in panel:
+        if k not in allowed:
+            raise CardError(f"Inside panel has no field {k!r} — allowed: {sorted(allowed)}")
     out = {}
     mode = panel.get("mode", "blank" if text_field != "message" else "message")
     if mode not in ("blank", "message"):
@@ -304,6 +331,9 @@ def _validate_inside(inside, legacy_message):
     inside = inside or {}
     if not isinstance(inside, dict):
         raise CardError("Inside must be an object with left/right panels")
+    for k in inside:
+        if k not in ("left", "right"):
+            raise CardError(f"Inside has no panel {k!r} — panels: left, right")
     right = _validate_panel(inside.get("right"), text_field="message",
                             text_limit=1200, default_font="inter")
     if not right["message"]:
@@ -378,7 +408,8 @@ def render_job(jid):
         if kind=="preview":
             scenes.front(spec,aa).save(temp,"PNG")
             inside_path=cached(key(owner,did,rev,"inside"))
-            scenes.inside(spec).save(inside_path,"PNG")
+            # double width so each inside half reads at full size
+            scenes.inside(spec,width=1440).save(inside_path,"PNG")
             storage.put(inside_path,key(owner,did,rev,"inside"))
         elif kind=="spread":
             # Four agent-showable faces: front, inside halves, back.
@@ -785,8 +816,17 @@ def register(app,owner_denied):
     @bp.get("/api/cards/<did>/r<int:rev>/<kind>")
     def artwork(did,rev,kind):
         owner=request.card_owner;record(owner,did,rev)
+        if kind=="back":
+            # brand back as its own face (needs the spread render)
+            with db.connect() as c:
+                ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='spread' AND status='ready'",(owner,did,rev)).fetchone()
+            if not ready:
+                raise CardError("Back is not ready — render kind spread first",409)
+            p=local_asset(key(owner,did,rev,"spread-back"))
+            res=send_file(p,mimetype="image/png",max_age=0)
+            res.headers["Cache-Control"]="private, no-store";return res
         if kind not in ("preview","inside","export","motion"):
-            raise CardError("Unknown artwork",404)
+            raise CardError("Unknown artwork — kinds: preview, inside, back, export, motion; faces: r<rev>/spread/<front|inside_left|inside_right|back>",404)
         jobkind="preview" if kind=="inside" else kind
         with db.connect() as c:
             ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind=? AND status='ready'",(owner,did,rev,jobkind)).fetchone()

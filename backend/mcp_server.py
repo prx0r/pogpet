@@ -887,12 +887,22 @@ async def figg_card_messages(person: str = "", tone: str = "funny",
     people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
                          api_key=api_key)
     prof: dict = {}
+    want = person.strip().lower()
     for p in (people.get("people") or people.get("subjects") or []):
         if not isinstance(p, dict):
             continue
+        names = {str(p.get("name", "")).lower(), str(p.get("id", "")).lower(),
+                 str((p.get("profile") or {}).get("name", "")).lower()}
+        rels = {str(p.get("relationship", "")).lower(),
+                str((p.get("profile") or {}).get("relationship", "")).lower()}
         if (subject_id and p.get("id") == subject_id) or \
-           (person and str(p.get("name", "")).lower() == person.lower()):
-            prof = p.get("profile") or p
+           (want and (want in names or want in rels or
+                     any(want in n for n in names if n))):
+            raw = p.get("profile") or {}
+            prof = {"name": p.get("name") or raw.get("name", ""),
+                    "relationship": p.get("relationship") or raw.get("relationship", ""),
+                    "interests": p.get("interests") or raw.get("interests") or [],
+                    "memories": p.get("memories") or raw.get("memories") or []}
             break
     if not prof and person:
         prof = {"name": person}

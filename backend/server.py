@@ -5508,6 +5508,8 @@ def creative_match():
     brief = body.get("brief") or {}
     if not brief and body.get("subject_id"):
         return _err("pass a brief (POST /api/creative/brief first)", 400)
+    if brief and not brief.get("occasion"):
+        return _err("brief has no occasion — rebuild it via POST /api/creative/brief", 400)
     _creative_tables()
     reg = _ctmpl.load_all()
     return jsonify({"ok": True, "matches": _matcher.match(

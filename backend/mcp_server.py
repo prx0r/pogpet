@@ -30,7 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
-MCP_VERSION = "1.7.0"
+MCP_VERSION = "1.8.0"
 
 
 def _service_token() -> str:
@@ -369,52 +369,42 @@ async def figg_companygraph() -> str:
     return _j(await _call("GET", "/api/companygraph"))
 
 
-async def figg_creative_templates() -> str:
+async def figg_creative_templates(api_key: str='') -> str:
     """Versioned executable card/scene templates: taxonomy, typed slots and renderers."""
-    return _j(await _call("GET", "/api/creative/templates"))
+    return _j(await _call('GET', '/api/creative/templates', api_key=api_key))
 
 
-async def figg_creative_catalog(style: str = "", occasion: str = "",
-                                audience: str = "", tone: str = "",
-                                q: str = "") -> str:
+async def figg_creative_catalog(style: str='', occasion: str='', audience: str='', tone: str='', q: str='', api_key: str='') -> str:
     """Browse the same viral-format library customers see on oddhobb.com.
     Filter by occasion, recipient, tone/style, or free-text meme intent."""
     import urllib.parse
-    params = {"style": style, "occasion": occasion, "audience": audience,
-              "tone": tone, "q": q}
+    params = {'style': style, 'occasion': occasion, 'audience': audience, 'tone': tone, 'q': q}
     qs = urllib.parse.urlencode({k: v for k, v in params.items() if v})
-    return _j(await _call("GET", "/api/creative/catalog" + (("?" + qs) if qs else "")))
+    return _j(await _call('GET', '/api/creative/catalog' + ('?' + qs if qs else ''), api_key=api_key))
 
 
-async def figg_creative_brief(subject_id: str = "", name: str = "", owner: str = "",
-                              occasion: str = "general", tone: str = "funny",
-                              budget_cents: int = 0, request: str = "") -> str:
+async def figg_creative_brief(subject_id: str='', name: str='', owner: str='', occasion: str='general', tone: str='funny', budget_cents: int=0, request: str='', api_key: str='') -> str:
     """Compile the creative brief from the person graph: occasion + recipient
     facts + available assets + ask. Goes to the matcher, never a renderer."""
-    return _j(await _call("POST", "/api/creative/brief", {
-        "subject_id": subject_id, "name": name, "owner": owner,
-        "occasion": occasion, "tone": tone, "budget_cents": budget_cents,
-        "request": request}))
+    return _j(await _call('POST', '/api/creative/brief', {'subject_id': subject_id, 'name': name, 'owner': owner, 'occasion': occasion, 'tone': tone, 'budget_cents': budget_cents, 'request': request}, api_key=api_key))
 
 
-async def figg_creative_match(brief: dict | None = None, limit: int = 5) -> str:
+async def figg_creative_match(brief: dict | None=None, limit: int=5, api_key: str='') -> str:
     """Deterministic template ranking: eligibility filter + weighted score +
-    reasons. Pass the brief from figg_creative_brief."""
-    return _j(await _call("POST", "/api/creative/match",
-                         {"brief": brief or {}, "limit": limit}))
+    reasons. Pass the brief from figg_creative_brief. Refuses error-shaped or
+    occasion-less briefs instead of ranking garbage."""
+    b = dict(brief or {})
+    if isinstance(b.get('brief'), dict):
+        b = dict(b['brief'])
+    if b.get('ok') is False or not b.get('occasion'):
+        return _j({'ok': False, 'error': 'brief failed or has no occasion — fix figg_creative_brief first (it returns the error), never match on it'})
+    return _j(await _call('POST', '/api/creative/match', {'brief': b, 'limit': limit}, api_key=api_key))
 
 
-async def figg_creative_revision(project_id: str = "", template_id: str = "",
-                                 owner: str = "", subject_id: str = "",
-                                 fields: dict | None = None,
-                                 subjects: list | None = None,
-                                 brief: dict | None = None) -> str:
+async def figg_creative_revision(project_id: str='', template_id: str='', owner: str='', subject_id: str='', fields: dict | None=None, subjects: list | None=None, brief: dict | None=None, api_key: str='') -> str:
     """Fill template fields and freeze an immutable revision. Copy QC enforced
     (overflow/missing); geometry stays in the template. Edits = new revisions."""
-    return _j(await _call("POST", "/api/creative/revisions", {
-        "project_id": project_id, "template_id": template_id, "owner": owner,
-        "subject_id": subject_id, "fields": fields or {},
-        "subjects": subjects or [], "brief": brief or {}}))
+    return _j(await _call('POST', '/api/creative/revisions', {'project_id': project_id, 'template_id': template_id, 'owner': owner, 'subject_id': subject_id, 'fields': fields or {}, 'subjects': subjects or [], 'brief': brief or {}}, api_key=api_key))
 
 
 # ── six high-level agent tools: the whole product behind six names ─────
@@ -425,94 +415,70 @@ async def oddhobb_people(owner: str = "", api_key: str = "") -> str:
     return _j(await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"), api_key=api_key))
 
 
-async def oddhobb_ideas(person: str = "", occasion: str = "general", request: str = "",
-                        owner: str = "", subject_id: str = "", context: list | None = None,
-                        tone: str = "funny", budget_cents: int = 0) -> str:
+async def oddhobb_ideas(person: str='', occasion: str='general', request: str='', owner: str='', subject_id: str='', context: list | None=None, tone: str='funny', budget_cents: int=0, api_key: str='') -> str:
     """Person + occasion + request (+ your relevant agent_memory context facts)
     → ranked creative ideas with reasons. Send facts, never whole memories."""
-    return _j(await _call("POST", "/api/oddhobb/ideas", {
-        "person": person, "occasion": occasion, "request": request, "owner": owner,
-        "subject_id": subject_id, "context": context or [], "tone": tone,
-        "budget_cents": budget_cents}))
+    return _j(await _call('POST', '/api/oddhobb/ideas', {'person': person, 'occasion': occasion, 'request': request, 'owner': owner, 'subject_id': subject_id, 'context': context or [], 'tone': tone, 'budget_cents': budget_cents}, api_key=api_key))
 
 
-async def oddhobb_create(idea_id: str = "", owner: str = "", subject_id: str = "",
-                         person: str = "", overrides: dict | None = None,
-                         brief: dict | None = None) -> str:
+async def oddhobb_create(idea_id: str='', owner: str='', subject_id: str='', person: str='', overrides: dict | None=None, brief: dict | None=None, api_key: str='') -> str:
     """Idea → frozen creative revision. Fifteen ops, one call."""
-    return _j(await _call("POST", "/api/oddhobb/create", {
-        "idea_id": idea_id, "owner": owner, "subject_id": subject_id,
-        "person": person, "overrides": overrides or {}, "brief": brief or {}}))
+    return _j(await _call('POST', '/api/oddhobb/create', {'idea_id': idea_id, 'owner': owner, 'subject_id': subject_id, 'person': person, 'overrides': overrides or {}, 'brief': brief or {}}, api_key=api_key))
 
 
-async def oddhobb_render(creative_id: str = "", revision: int = 1,
-                         owner: str = "", outputs: list | None = None,
-                         policy: str = "free", routes: dict | None = None) -> str:
+async def oddhobb_render(creative_id: str='', revision: int=1, owner: str='', outputs: list | None=None, policy: str='free', routes: dict | None=None, api_key: str='') -> str:
     """Realize a revision: preview now (free); photoreal/video/lipsync route
     through the vault on use-mine/best/specific, staged with reasons otherwise."""
-    return _j(await _call("POST", "/api/oddhobb/render", {
-        "creative_id": creative_id, "revision": revision, "owner": owner,
-        "outputs": outputs or ["preview"], "policy": policy,
-        "routes": routes or {}}))
+    return _j(await _call('POST', '/api/oddhobb/render', {'creative_id': creative_id, 'revision': revision, 'owner': owner, 'outputs': outputs or ['preview'], 'policy': policy, 'routes': routes or {}}, api_key=api_key))
 
 
-async def oddhobb_status(creative_id: str = "") -> str:
+async def oddhobb_status(creative_id: str='', api_key: str='') -> str:
     """Creative status: latest revision + artifacts with QC state."""
-    return _j(await _call("GET", f"/api/oddhobb/status/{creative_id}"))
+    return _j(await _call('GET', f'/api/oddhobb/status/{creative_id}', api_key=api_key))
 
 
-async def oddhobb_buy(creative_id: str = "", revision: int = 1, owner: str = "",
-                      product: str = "greeting_card", qty: int = 1) -> str:
+async def oddhobb_buy(creative_id: str='', revision: int=1, owner: str='', product: str='greeting_card', qty: int=1, api_key: str='') -> str:
     """Reserve a QC-passed revision. No card charge from this endpoint."""
-    return _j(await _call("POST", "/api/oddhobb/buy", {
-        "creative_id": creative_id, "revision": revision, "owner": owner,
-        "product": product, "qty": qty}))
+    return _j(await _call('POST', '/api/oddhobb/buy', {'creative_id': creative_id, 'revision': revision, 'owner': owner, 'product': product, 'qty': qty}, api_key=api_key))
 
 
-async def oddhobb_providers(owner: str = "") -> str:
+async def oddhobb_providers(owner: str='', api_key: str='') -> str:
     """Which creative providers are on for this owner: {free: true, fal: …}.
     Secrets are never visible — capabilities only. Policies: free/use-mine/best/specific."""
-    return _j(await _call("GET", "/api/providers?owner=" + (owner or "anon")))
+    return _j(await _call('GET', '/api/providers?owner=' + (owner or 'anon'), api_key=api_key))
 
 
-async def oddhobb_capsule(subject_id: str = "", owner: str = "") -> str:
+async def oddhobb_capsule(subject_id: str='', owner: str='', api_key: str='') -> str:
     """Person Capsule: identity/voice/behaviour/spatial/knowledge/provenance
     for a subject. Input to every template."""
-    return _j(await _call("GET", f"/api/capsule/{subject_id}?owner=" + (owner or "anon")))
+    return _j(await _call('GET', f'/api/capsule/{subject_id}?owner=' + (owner or 'anon'), api_key=api_key))
 
 
-async def oddhobb_capture_start(subject_id: str = "", owner: str = "") -> str:
+async def oddhobb_capture_start(subject_id: str='', owner: str='', api_key: str='') -> str:
     """Begin a guided person capture; returns the capture script."""
-    return _j(await _call("POST", "/api/capture/start",
-                         {"subject_id": subject_id, "owner": owner}))
+    return _j(await _call('POST', '/api/capture/start', {'subject_id': subject_id, 'owner': owner}, api_key=api_key))
 
 
-async def oddhobb_capture_mark(capture_id: str = "", kind: str = "note",
-                               note: str = "") -> str:
+async def oddhobb_capture_mark(capture_id: str='', kind: str='note', note: str='', api_key: str='') -> str:
     """Timestamp a capture moment (oddhobb.capture_mark)."""
-    return _j(await _call("POST", "/api/capture/mark",
-                         {"capture_id": capture_id, "kind": kind, "note": note}))
+    return _j(await _call('POST', '/api/capture/mark', {'capture_id': capture_id, 'kind': kind, 'note': note}, api_key=api_key))
 
 
-async def oddhobb_capture_finish(capture_id: str = "", owner: str = "") -> str:
+async def oddhobb_capture_finish(capture_id: str='', owner: str='', api_key: str='') -> str:
     """Close a capture → mannerism manifest lands on the subject profile."""
-    return _j(await _call("POST", "/api/capture/finish",
-                         {"capture_id": capture_id, "owner": owner}))
+    return _j(await _call('POST', '/api/capture/finish', {'capture_id': capture_id, 'owner': owner}, api_key=api_key))
 
 
-async def oddhobb_review(artifact_id: str = "") -> str:
+async def oddhobb_review(artifact_id: str='', api_key: str='') -> str:
     """Agent eyes: verdict + scores + concrete fix ops for a render. $0.
     Feed it artifact ids from render/status, apply fixes via oddhobb_revise."""
-    return _j(await _call("POST", "/api/creative/review", {"artifact_id": artifact_id}))
+    return _j(await _call('POST', '/api/creative/review', {'artifact_id': artifact_id}, api_key=api_key))
 
 
-async def oddhobb_revise(project_id: str = "", revision: int = 0, owner: str = "",
-                         ops: dict | None = None, render: bool = False) -> str:
+async def oddhobb_revise(project_id: str='', revision: int=0, owner: str='', ops: dict | None=None, render: bool=False, api_key: str='') -> str:
     """Agent hands: ops {copy, mood (happier/funnier/warmer/classier), voice,
     act} → new immutable revision, optionally rendered. The 'make them happier' loop."""
-    return _j(await _call("POST", "/api/creative/revise", {
-        "project_id": project_id, "revision": revision, "owner": owner,
-        "ops": ops or {}, "render": render}))
+    return _j(await _call('POST', '/api/creative/revise', {'project_id': project_id, 'revision': revision, 'owner': owner, 'ops': ops or {}, 'render': render}, api_key=api_key))
 
 
 async def oddhobb_joke_ideas(person: str = "", occasion: str = "general",
@@ -647,7 +613,9 @@ async def figg_card_library(owner: str = "", api_key: str = "") -> str:
 
 async def figg_card_save(spec: dict, owner: str = "", design_id: str = "",
                          expected_revision: int = 0, api_key: str = "") -> str:
-    """Save a card scene: template, format, photos[{photo_id,crop,focus,cutout}], headline, recipient, sender, inside_message.
+    """Save a photo card: template, format, photos[{photo_id,crop,focus,cutout}], headline, recipient, sender, inside_message.
+    This is the photo-composition lane (your picture + type). For illustrated/designed covers
+    (movie_poster, comics, news parody) use figg_creative_brief → figg_creative_match → oddhobb_create instead.
     Stamped via=mcp. Same validators as REST/UI (brand locks + no wordmark run in save).
     Done means a product_url the human can buy from — POST checkout next. A preview alone is not done."""
     body = {"owner": owner, "spec": spec, "via": "mcp"}

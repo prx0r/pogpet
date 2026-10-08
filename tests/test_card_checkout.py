@@ -74,7 +74,7 @@ def test_mcp_checkout_registered_and_gated():
     assert "figg_card_checkout" not in M.PUBLIC_TOOLS
     assert "Done means a product_url" in (M.figg_card_checkout.__doc__ or "")
     assert "Done means a product_url" in (M.figg_card_save.__doc__ or "")
-    assert M.MCP_VERSION == "1.7.0"
+    assert M.MCP_VERSION == "1.8.0"
 
 
 def test_bridge_logs_cf_ray():
@@ -358,3 +358,51 @@ def test_messages_match_relationship_and_tone():
     assert dark and not any("obsessed with" in l["text"] for l in dark)
     empty = message_lines({}, "funny")
     assert empty and not any("obsessed with" in l["text"] for l in empty)
+
+
+
+def test_creative_tools_take_api_key():
+    import inspect
+    from backend import mcp_server as M
+    for n in ("figg_creative_brief", "figg_creative_catalog", "figg_creative_match",
+              "figg_creative_revision", "figg_creative_templates", "oddhobb_buy",
+              "oddhobb_capsule", "oddhobb_capture_finish", "oddhobb_capture_mark",
+              "oddhobb_capture_start", "oddhobb_create", "oddhobb_ideas",
+              "oddhobb_providers", "oddhobb_render", "oddhobb_review",
+              "oddhobb_revise", "oddhobb_status"):
+        assert "api_key" in inspect.signature(getattr(M, n)).parameters, n
+
+
+def test_match_refuses_bad_brief():
+    import asyncio, json
+    from backend import mcp_server as M
+    d = json.loads(asyncio.run(M.figg_creative_match(
+        {"ok": False, "error": "owner_sig required"})))
+    assert d["ok"] is False and "brief" in d["error"]
+    d2 = json.loads(asyncio.run(M.figg_creative_match({"recipient": {}})))
+    assert d2["ok"] is False
+
+
+def test_match_endpoint_rejects_occasionless_brief():
+    from backend import config
+    config.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+    c = S.app.test_client()
+    r = c.post("/api/creative/match?token=test-token",
+               json={"brief": {"recipient": {}}, "limit": 5})
+    assert r.status_code == 400, r.get_data(as_text=True)[:200]
+
+
+def test_memory_facts_steer_matcher():
+    from backend.creative.matcher import score
+    tpl = {"id": "golf_comic", "taxonomy": {"occasion": ["birthday", "general"],
+                                            "topics": ["sport"], "tone": ["ross"]},
+           "presentation": {"label": "golf day cartoon"}}
+    base = {"occasion": {"id": "birthday"}, "recipient": {},
+            "request": {"prompt": ""}, "available_assets": {}}
+    plain, _ = score(tpl, base)
+    mem = dict(base, agent_memory=[{"fact": "Dad loves golf and Tesla"}])
+    boosted, reasons = score(tpl, mem)
+    assert boosted > plain
+    assert any("memory" in r for r in reasons)

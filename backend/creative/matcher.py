@@ -107,9 +107,14 @@ def score(template: dict, brief: dict, *, seen: set[str] | None = None,
         pts += min(WEIGHTS["engagement"], eng)
         reasons.append("picked before")
     pts += WEIGHTS["cost"] * 0.5  # placeholder: print lanes cost alike
-    # buyer's actual words: lexical evidence against id/label/premise/caption
+    # buyer's actual words + agent memory facts: lexical evidence against
+    # id/label/premise/caption. Memory facts steer like the ask does.
     ask = str((brief.get("request") or {}).get("prompt") or "").lower().split()
-    ask = [w.strip(",.!?") for w in ask if len(w) > 3]
+    mems = []
+    for m in (brief.get("agent_memory") or []):
+        if isinstance(m, dict) and m.get("fact"):
+            mems += str(m["fact"]).lower().split()
+    ask = [w.strip(",.!?") for w in (ask + mems) if len(w) > 3]
     if ask:
         hay = " ".join([str(template.get("id") or ""),
                         str((template.get("presentation") or {}).get("label") or ""),
@@ -118,7 +123,9 @@ def score(template: dict, brief: dict, *, seen: set[str] | None = None,
         hits = sum(1 for w in ask if w in hay)
         if hits:
             pts += min(20, 4 * hits)
-            reasons.append(f"matches your words ({hits})")
+            src = "memory" if mems and any(w in hay for w in
+                                           [x.strip(",.!?") for x in mems if len(x) > 3]) else "words"
+            reasons.append(f"matches your {src} ({hits})")
     return round(pts, 1), reasons
 
 

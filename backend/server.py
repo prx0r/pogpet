@@ -5972,6 +5972,9 @@ def oddhobb_render():
                                    int(body.get("revision") or 1))
         if data.get("ok"):
             done["preview"] = data["artifact"]
+        else:
+            staged.append({"output": "preview", "status": "staged",
+                           "reason": "; ".join(data.get("gaps") or [data.get("error", "render refused")])[:300]})
     paid_wants = {"photoreal": "identity_image", "video": "video_scene",
                   "lipsync": "lip_sync"}
     for o in outputs:

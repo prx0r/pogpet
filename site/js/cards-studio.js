@@ -157,6 +157,6 @@
     if(window.OddHobbViralCards&&panel){
       try{window.OddHobbViralCards.mount(panel,host);}catch(e){}
     }
-    return {open:open,refresh:refresh,videos:videos,openDesign:openDesign};
+    return {open:open,refresh:refresh,videos:videos,openDesign:openDesign,showSpread:showSpread};
   };
 })();

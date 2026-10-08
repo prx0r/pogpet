@@ -176,6 +176,34 @@ def card_url_for(did: str, rev: int | None = None) -> str:
     return f"{base}/cards/{did}"
 
 
+def proof_url_for(did: str) -> str:
+    """One stable link per card — always shows the latest revision."""
+    base = (config.PUBLIC_BASE or "https://oddhobb.com").rstrip("/")
+    return f"{base}/proof/{did}"
+
+
+def contact_sheet(owner, did, rev, *, width: int = 720):
+    """2×2 JPEG of the four spread faces — one picture agents can actually
+    see. Requires a ready spread render."""
+    parts = []
+    for part in SPREAD_PARTS:
+        with Image.open(local_asset(key(owner, did, rev, "spread-" + part.replace("_", "-")))) as im:
+            parts.append(im.convert("RGB"))
+    w = max(1, width // 2)
+    cells = []
+    for im in parts:
+        r = w / im.width
+        cells.append(im.resize((w, round(im.height * r)), Image.Resampling.LANCZOS))
+    h = max(c.height for c in cells)
+    sheet = Image.new("RGB", (w * 2, h * 2), "#fffdf7")
+    for i, cell in enumerate(cells):
+        sheet.paste(cell, ((i % 2) * w, (i // 2) * h))
+    dest = config.DATA / "cards" / "cache" / f"contact-{did}-r{rev}.jpg"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    sheet.save(dest, "JPEG", quality=80)
+    return dest
+
+
 def message_lines(profile: dict, tone: str = "funny") -> list[dict]:
     """Smart-text v1 (deterministic): inside lines built from a subject
     profile's name/interests/memories. Each line cites its source fact so
@@ -447,11 +475,56 @@ def render_job(jid):
         _slots.release()
 
 
+def face_box(owner, pid):
+    """Detected face boxes for a photo (mediapipe provenance)."""
+    with db.connect() as c:
+        try:
+            rows = c.execute("SELECT box FROM photo_faces WHERE photo_id=?",
+                             (pid,)).fetchall()
+        except Exception:
+            return []
+    boxes = []
+    for r in rows:
+        try:
+            import json as _j
+            b = _j.loads(r["box"]) if isinstance(r["box"], str) else list(r["box"])
+            if len(b) == 4:
+                boxes.append([float(v) for v in b])
+        except (ValueError, TypeError):
+            continue
+    return boxes
+
+
+def crop_keeps_face(crop, faces) -> bool:
+    """True if the crop keeps at least half of any detected face's area."""
+    cx, cy, cw, ch = crop
+    for fx, fy, fw, fh in faces:
+        ix0, iy0 = max(cx, fx), max(cy, fy)
+        ix1, iy1 = min(cx + cw, fx + fw), min(cy + ch, fy + fh)
+        inter = max(0, ix1 - ix0) * max(0, iy1 - iy0)
+        if fw * fh > 0 and inter / (fw * fh) >= 0.5:
+            return True
+    return False
+
+
+def gate(owner, did, rev) -> dict:
+    """Reviewer gate before any render: frozen spec re-validated (photos may
+    have been deleted since save), every slot keeps a detected face where
+    faces exist. Raises CardError — renders never return ok:true on empties."""
+    spec = record(owner, did, rev)["spec"]
+    validate(owner, spec)  # photos still exist and belong to caller
+    for slot in spec["photos"]:
+        faces = face_box(owner, slot["photo_id"])
+        if faces and not crop_keeps_face(slot["crop"], faces):
+            raise CardError("Crop cuts out every detected face — widen the crop or pick another photo", 422)
+    return spec
+
+
 def enqueue(owner,did,rev,kind):
     if not isinstance(kind,str) or kind not in ("preview","export","motion","spread"):
         raise CardError("Unknown render kind")
     with ownership_lock,db.connect() as c:
-        record(owner,did,rev)
+        gate(owner,did,rev)
         old=c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind=? AND status IN ('queued','running','ready') ORDER BY created_at DESC LIMIT 1",(owner,did,rev,kind)).fetchone()
         if old:
             return dict(old)
@@ -635,6 +708,7 @@ def register(app,owner_denied):
                        mcp_status=mcp_status(),
                        mcp_hint="If degraded, prefer waiting — REST works but is off the main road.",
                        card_url=card_url_for(did, rev),
+                       proof_url=proof_url_for(did),
                        product={**card_price(),
                                 "buy_hint": "Done means a product_url the human can buy from. "
                                             "POST /backend/api/cards/<id>/checkout returns checkout_url; a preview alone is not done."})
@@ -751,6 +825,7 @@ def register(app,owner_denied):
                     "price": card_price()["price"],
                     "price_grade": "FIXED",
                     "card_url": card_url_for(did, rev),
+                    "proof_url": proof_url_for(did),
                     "photo": {"id": p["id"], "orig_name": p.get("orig_name") or "Photo",
                               "url": f"/api/cards/photos/{p['id']}/image"},
                     "preview_url": url, "preview_status": status,
@@ -764,6 +839,7 @@ def register(app,owner_denied):
     def get_design(did):
         rec = record(request.card_owner,did)
         return jsonify(ok=True,design=rec, card_url=card_url_for(did, rec["revision"]),
+                       proof_url=proof_url_for(did),
                        product=card_price(), mcp_status=mcp_status())
 
     @bp.get("/api/cards/<did>/scene")
@@ -793,7 +869,8 @@ def register(app,owner_denied):
             "capabilities":{"card":True,"video":__import__('shutil').which("ffmpeg") is not None,
                             "character_animation":False,"ar":False},
             "poster":{"kind":"preview","url":outputs["preview"]["url"]},
-        }, card_url=card_url_for(did, rev), product=card_price(),
+        }, card_url=card_url_for(did, rev),
+                       proof_url=proof_url_for(did), product=card_price(),
             mcp_status=mcp_status(),
             buy_hint="Done means a product_url the human can buy from — checkout, not preview.")
 
@@ -867,6 +944,7 @@ def register(app,owner_denied):
                     raise CardError("This order key was used for a different design",409)
                 return jsonify(ok=True,order=dict(old),reused=True,
                                card_url=card_url_for(did, rev),
+                       proof_url=proof_url_for(did),
                                product=card_price(), mcp_status=mcp_status(),
                                checkout_url=old["checkout_url"] if "checkout_url" in old.keys() else "")
             ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='export' AND status='ready'",(owner,did,rev)).fetchone()
@@ -925,6 +1003,7 @@ def register(app,owner_denied):
             prodigi = {"attempted": True, "ok": True, **placed}
         return jsonify(ok=True,order=result,currency="GBP",price_grade="FIXED",
                        card_url=card_url_for(did, rev),
+                       proof_url=proof_url_for(did),
                        product=card_price(),
                        mcp_status=mcp_status(),
                        prodigi=prodigi,
@@ -962,6 +1041,7 @@ def register(app,owner_denied):
             if old and old["checkout_url"]:
                 return jsonify(ok=True, order=dict(old), reused=True,
                                card_url=card_url_for(did, rev),
+                               proof_url=proof_url_for(did),
                                product_url=card_url_for(did, rev),
                                product=card_price(),
                                checkout_url=old["checkout_url"],
@@ -1018,6 +1098,7 @@ def register(app,owner_denied):
         return jsonify(ok=True, order=result,
                        product_id=CARD_PRODUCT_ID, product=card_price(),
                        product_url=card_url_for(did, rev),
+                       proof_url=proof_url_for(did),
                        card_url=card_url_for(did, rev),
                        checkout_url=checkout_url,
                        shopify_draft=draft,

@@ -30,7 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
-MCP_VERSION = "1.8.0"
+MCP_VERSION = "1.9.0"
 
 
 def _service_token() -> str:
@@ -403,7 +403,9 @@ async def figg_creative_match(brief: dict | None=None, limit: int=5, api_key: st
 
 async def figg_creative_revision(project_id: str='', template_id: str='', owner: str='', subject_id: str='', fields: dict | None=None, subjects: list | None=None, brief: dict | None=None, api_key: str='') -> str:
     """Fill template fields and freeze an immutable revision. Copy QC enforced
-    (overflow/missing); geometry stays in the template. Edits = new revisions."""
+    (overflow/missing); geometry stays in the template. Edits = new revisions.
+    Subject slots live in fields by slot id (fields.star = subject_id) — the
+    top-level subjects list does not fill slots."""
     return _j(await _call('POST', '/api/creative/revisions', {'project_id': project_id, 'template_id': template_id, 'owner': owner, 'subject_id': subject_id, 'fields': fields or {}, 'subjects': subjects or [], 'brief': brief or {}}, api_key=api_key))
 
 
@@ -673,6 +675,128 @@ async def figg_card_checkout(design_id: str, revision: int, idempotency_key: str
     Done means a product_url the human can buy from. A preview alone is not done."""
     return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
                          {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}, api_key=api_key))
+
+
+async def _card_spread_bundle(design_id: str, revision: int, owner: str,
+                              api_key: str, timeout_s: int = 90) -> dict:
+    """Render spread for a frozen revision and return views + proof_url.
+    Raises CardError-shaped dicts as values (never throws)."""
+    import asyncio as _aio
+    r = await _call("POST", f"/api/cards/{design_id}/render",
+                    {"owner": owner, "revision": revision, "kind": "spread"}, api_key=api_key)
+    job = (r.get("job") or {}) if isinstance(r, dict) else {}
+    if not (isinstance(r, dict) and r.get("ok")):
+        return {"ok": False, "error": str((r.get("error") if isinstance(r, dict) else r) or "spread render refused")}
+    jid = job.get("id", "")
+    for _ in range(max(1, timeout_s // 2)):
+        await _aio.sleep(2)
+        st = await _call("GET", f"/api/cards/jobs/{jid}?owner=" + (owner or "anon"), api_key=api_key)
+        j = st.get("job") or {}
+        if j.get("status") == "ready":
+            from backend import cards as _cards
+            return {"ok": True, "views": j.get("urls") or {},
+                    "proof_url": _cards.proof_url_for(design_id),
+                    "revision": revision, "design_id": design_id}
+        if j.get("status") == "failed":
+            return {"ok": False, "error": j.get("error") or "spread render failed",
+                    "http_status": 422}
+    return {"ok": False, "error": "spread render timed out — retry figg_card_job", "http_status": 504}
+
+
+def _contact_block(owner: str, design_id: str, revision: int):
+    """2×2 contact-sheet JPEG as an MCP image block (agents see the card)."""
+    import base64 as _b64
+    from mcp.types import ImageContent
+    from backend import cards as _cards
+    path = _cards.contact_sheet(owner or "anon", design_id, revision)
+    return ImageContent(type="image", data=_b64.b64encode(path.read_bytes()).decode(),
+                        mimeType="image/jpeg")
+
+
+async def figg_card_create(spec: dict, owner: str = "", api_key: str = "") -> list:
+    """Create a card AND see it: saves (new revision), renders all four faces,
+    and returns views + proof_url + a contact-sheet image in this result.
+    Send the human the proof_url (stable, always latest). Nothing is published
+    until figg_card_checkout pins a revision."""
+    from mcp.types import TextContent
+    saved = await _call("POST", "/api/cards/designs",
+                        {"owner": owner, "spec": spec}, api_key=api_key)
+    if not saved.get("ok"):
+        return [TextContent(type="text", text=_j(saved))]
+    d = saved["design"]
+    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key)
+    body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
+            "card_url": saved.get("card_url", ""),
+            "proof_url": saved.get("proof_url", ""),
+            "product": saved.get("product", {}),
+            "views": bundle.get("views", {}),
+            "render_error": bundle.get("error", "")}
+    try:
+        return [TextContent(type="text", text=_j(body)),
+                _contact_block(owner, d["id"], d["revision"])]
+    except Exception as e:  # noqa: BLE001 — views still valid without the sheet
+        body["contact_error"] = str(e)[:150]
+        return [TextContent(type="text", text=_j(body))]
+
+
+def _deep_merge(base: dict, patch: dict) -> dict:
+    out = dict(base)
+    for k, v in (patch or {}).items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = _deep_merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+
+def _spec_diff(old: dict, new: dict, path: str = "") -> list[str]:
+    changes = []
+    for k in sorted(set(old) | set(new)):
+        p = f"{path}.{k}" if path else str(k)
+        ov, nv = (old or {}).get(k), (new or {}).get(k)
+        if isinstance(ov, dict) and isinstance(nv, dict):
+            changes += _spec_diff(ov, nv, p)
+        elif ov != nv:
+            changes.append(f"{p}: {json.dumps(ov)[:60]} → {json.dumps(nv)[:60]}")
+    return changes
+
+
+async def figg_card_update(design_id: str, changes: dict, revision: int = 0,
+                           owner: str = "", api_key: str = "") -> list:
+    """Change a card (text, font, photo, crop): deep-merges changes onto the
+    revision's spec, mints a new revision, re-renders all faces. Returns the
+    diff ("r4: inside font is now Caveat") + fresh views + contact sheet.
+    The proof_url is unchanged and now shows the new revision."""
+    from mcp.types import TextContent
+    cur = await _call("GET", "/api/cards/designs/" + design_id +
+                      "?owner=" + (owner or "anon"), api_key=api_key)
+    if not cur.get("ok"):
+        return [TextContent(type="text", text=_j(cur))]
+    latest = (cur.get("design") or {}).get("revision", 1)
+    rev = revision or latest
+    full = await _call("GET", f"/api/cards/{design_id}/scene?owner=" + (owner or "anon") +
+                       f"&revision={rev}", api_key=api_key)
+    spec = ((full.get("scene") or {}).get("spec")) or ((cur.get("design") or {}).get("spec")) or {}
+    new_spec = _deep_merge(spec, changes or {})
+    saved = await _call("POST", "/api/cards/designs",
+                        {"owner": owner, "id": design_id,
+                         "expected_revision": latest, "spec": new_spec}, api_key=api_key)
+    if not saved.get("ok"):
+        return [TextContent(type="text", text=_j(saved))]
+    d = saved["design"]
+    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key)
+    body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
+            "diff": _spec_diff(spec, new_spec),
+            "card_url": saved.get("card_url", ""),
+            "proof_url": saved.get("proof_url", ""),
+            "views": bundle.get("views", {}),
+            "render_error": bundle.get("error", "")}
+    try:
+        return [TextContent(type="text", text=_j(body)),
+                _contact_block(owner, d["id"], d["revision"])]
+    except Exception as e:  # noqa: BLE001
+        body["contact_error"] = str(e)[:150]
+        return [TextContent(type="text", text=_j(body))]
 
 
 async def figg_blueprints(owner: str = "") -> str:
@@ -1062,7 +1186,8 @@ TOOL_AREAS: dict[str, list] = {
     "cards":     [figg_card_library, figg_card_save, figg_card_render,
                   figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve,
                   figg_card_checkout, figg_card_templates, figg_card_fonts,
-                  figg_card_edit, figg_card_variants, figg_card_messages],
+                  figg_card_edit, figg_card_variants, figg_card_messages,
+                  figg_card_create, figg_card_update],
     "design":    [figg_blueprints, figg_design_validate, figg_design_base,
                   figg_constraints,
                   figg_design_save, figg_design_order, figg_blender_make],
@@ -1111,6 +1236,7 @@ PUBLIC_TOOLS = frozenset({
     "figg_card_library", "figg_card_templates",
     "figg_card_save", "figg_card_render", "figg_card_scene", "figg_card_job",
     "figg_card_fonts", "figg_card_messages",
+    "figg_card_create", "figg_card_update",
     "figg_mesh_status", "figg_measure",
     "figg_styles", "figg_install_style",
     "figg_acts", "figg_rooms",

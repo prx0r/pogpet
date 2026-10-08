@@ -474,7 +474,9 @@ class Handler(BaseHTTPRequestHandler):
         if raw.startswith("/api/"):
             self._json({"success": False, "error": "GET not supported"}, 405)
             return
-        if re.fullmatch(r"/(?:studio(?:/people/[\w-]+)?|products(?:/[\w-]+)?|cards(?:/[\w-]+(?:/r\d+)?)?|videos(?:/[\w-]+)?|perform|search|cart|account|upload|shop|quick)/?", raw):
+        if re.fullmatch(r"/(?:studio(?:/people/[\w-]+)?|products(?:/[\w-]+)?|cards(?:/[\w-]+(?:/r\d+)?)?|videos(?:/[\w-]+)?|perform|search|cart|account|upload|shop|quick|proof/[\w-]+)/?", raw):
+            # Product + proof pages live in the SPA (site/index.html):
+            # /proof/<card_id> always shows the card's latest revision.
             # Products tab + per-line pages live in the SPA (site/index.html);
             # boot opens the products panel from the pathname. /products.html
             # (Etsy photo gallery file) does not match and still serves below.

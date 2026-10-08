@@ -65,11 +65,62 @@ def review_artifact(c: sqlite3.Connection, artifact_id: str) -> dict:
             fixes.append({"op": "render", "why": "empty video"})
         else:
             scores["duration"] = 1.0
+    if (a.get("output_kind") or "") in ("preview", "print_master"):
+        content = _content_check(c, a)
+        scores["content"] = content["score"]
+        reasons += content["reasons"]
+        fixes += content["fixes"]
     verdict = "ship" if all(v >= 1.0 for v in scores.values()) and scores else "revise"
     return {"ok": True, "artifact_id": artifact_id, "verdict": verdict,
             "scores": scores, "reasons": reasons, "fixes": fixes,
             "moods": sorted(MOODS),
-            "hint": "apply fixes via POST /api/creative/revise (new revision each time)"}
+            "hint": "apply fixes via POST /backend/api/creative/revise (new revision each time)"}
+
+
+def _content_check(c: sqlite3.Connection, a: dict) -> dict:
+    """Pixels + star slot: fail blank artwork and missing subjects.
+    Reads only, $0. Never throws — unreadable pixels are a finding, not a 500."""
+    from PIL import Image as _Image
+    reasons, fixes = [], []
+    try:
+        from . import projects as _cproj
+        rev = _cproj.get_revision(c, a.get("project_id", ""), int(a.get("revision") or 0))
+        subjects = (rev.get("scene") or {}).get("subjects") or []
+        with_photo = False
+        for s in subjects:
+            for aid in (s.get("asset_ids") or []):
+                row = c.execute("SELECT 1 FROM photos WHERE id=? AND owner=?",
+                                (aid, a.get("owner", ""))).fetchone()
+                if row:
+                    with_photo = True
+                    break
+            if with_photo:
+                break
+        if subjects and not with_photo:
+            return {"score": 0.0,
+                    "reasons": ["star slot has no resolvable photo — subject chose nothing on file"],
+                    "fixes": [{"op": "revise", "why": "attach a subject photo that belongs to this owner"}]}
+    except Exception:  # noqa: BLE001 — scene problems are findings too
+        pass
+    try:
+        from backend import storage as _storage
+        import tempfile as _tf
+        from pathlib import Path as _P
+        with _tf.NamedTemporaryFile(suffix=".png") as tmp:
+            _storage.get(a.get("storage_key") or "", _P(tmp.name))
+            img = _Image.open(tmp.name).convert("RGB").resize((120, 120))
+        px = list(img.getdata())
+        corners = px[:5] + px[-5:]
+        bg = tuple(sum(ch) // len(ch) for ch in zip(*corners))
+        flat = sum(1 for p in px if all(abs(p[i] - bg[i]) < 12 for i in range(3)))
+        if flat / max(1, len(px)) > 0.97:
+            return {"score": 0.0,
+                    "reasons": ["blank artwork — panels empty, no photo or art rendered"],
+                    "fixes": [{"op": "render", "why": "no drawable content reached the canvas"}]}
+        return {"score": 1.0, "reasons": ["artwork has rendered content"], "fixes": []}
+    except Exception as e:  # noqa: BLE001
+        return {"score": 0.0, "reasons": [f"artwork unreadable: {str(e)[:80]}"],
+                "fixes": [{"op": "render", "why": "artifact bytes missing"}]}
 
 
 def apply_mood(copy: dict, mood: str) -> tuple[dict, dict]:

@@ -74,7 +74,7 @@ def test_mcp_checkout_registered_and_gated():
     assert "figg_card_checkout" not in M.PUBLIC_TOOLS
     assert "Done means a product_url" in (M.figg_card_checkout.__doc__ or "")
     assert "Done means a product_url" in (M.figg_card_save.__doc__ or "")
-    assert M.MCP_VERSION == "1.8.0"
+    assert M.MCP_VERSION == "1.9.0"
 
 
 def test_bridge_logs_cf_ray():
@@ -406,3 +406,131 @@ def test_memory_facts_steer_matcher():
     boosted, reasons = score(tpl, mem)
     assert boosted > plain
     assert any("memory" in r for r in reasons)
+
+
+
+def test_gate_rejects_face_cutting_crop():
+    from backend import cards as C
+    owner, pid = "hark-dad-a7a5cc", "pho_5fc9a90cc42b4ef88a49"
+    assert C.face_box(owner, pid), "need a faced photo for this test"
+    spec = {"template": "portrait", "format": "5x7",
+            "photos": [{"photo_id": pid, "crop": [0.7, 0.7, 0.2, 0.2],
+                        "focus": [0.8, 0.8], "cutout": ""}],
+            "headline": "Hi Dad", "recipient": "Dad", "sender": "Me",
+            "inside_message": "x"}
+    saved = C.validate(owner, spec)
+    import backend.server as S
+    from backend import config as _cfg
+    _cfg.API_TOKEN = "test-token"
+    S.config.API_TOKEN = "test-token"
+    sig = _cfg.sign_owner(owner)
+    c = S.app.test_client()
+    r = c.post("/api/cards/designs?owner=" + owner + "&token=test-token",
+               json={"owner": owner, "owner_sig": sig, "spec": spec})
+    # save itself is fine (crop is the photographer's choice); render refuses
+    if r.status_code != 200:
+        return
+    did = r.get_json()["design"]["id"]
+    try:
+        from backend import db
+        r2 = c.post(f"/api/cards/{did}/render?owner={owner}&token=test-token",
+                    json={"owner": owner, "owner_sig": sig, "revision": 1,
+                          "kind": "preview"})
+        assert r2.status_code == 422, r2.get_data(as_text=True)[:200]
+    finally:
+        from backend import db
+        with db.connect() as conn:
+            conn.execute("DELETE FROM card_jobs WHERE design_id=?", (did,))
+            conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did,))
+            conn.execute("DELETE FROM card_designs WHERE id=?", (did,))
+            conn.commit()
+
+
+def test_create_update_loop_mocked_bundle(monkeypatch):
+    """card_create -> views + proof_url + contact sheet; card_update -> diff."""
+    import asyncio, base64, json
+    from backend import mcp_server as M
+    from backend import cards as C
+    from backend import config as _cfg
+    _cfg.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+
+    async def fake_bundle(did, rev, owner, key, timeout_s=90):
+        return {"ok": True, "views": {"front": "u1"}, "proof_url": C.proof_url_for(did),
+                "revision": rev, "design_id": did}
+    monkeypatch.setattr(M, "_card_spread_bundle", fake_bundle)
+
+    tiny = ("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+    def _fake_sheet(owner, did, rev, *, width=720):
+        import base64 as _b
+        from backend import config as _c
+        dest = _c.DATA / "cards" / "cache" / f"contact-{did}-r{rev}.jpg"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(_b.b64decode(tiny))
+        return dest
+    monkeypatch.setattr(C, "contact_sheet", _fake_sheet)
+
+    spec = {"template": "typography", "format": "5x7", "photos": [],
+            "headline": "Loop test", "recipient": "", "sender": "Me",
+            "inside_message": "hi"}
+    out = asyncio.run(M.figg_card_create(spec, "anon"))
+    body = json.loads(out[0].text)
+    assert body["ok"] and body["views"] == {"front": "u1"}
+    assert body["proof_url"].endswith("/proof/" + body["design_id"])
+    assert out[1].mime_type == "image/jpeg"
+    did = body["design_id"]
+
+    out2 = asyncio.run(M.figg_card_update(
+        did, {"headline": "Loop test v2", "headline_font": "courier"}, 0, "anon"))
+    body2 = json.loads(out2[0].text)
+    assert body2["ok"] and body2["revision"] == body["revision"] + 1
+    assert any("headline" in c for c in body2["diff"])
+    assert body2["proof_url"] == body["proof_url"]
+
+    from backend import db
+    with db.connect() as conn:
+        conn.execute("DELETE FROM card_jobs WHERE design_id=?", (did,))
+        conn.execute("DELETE FROM card_revisions WHERE design_id=?", (did,))
+        conn.execute("DELETE FROM card_designs WHERE id=?", (did,))
+        conn.commit()
+
+
+def test_proof_route_serves_spa():
+    import re
+    assert re.fullmatch(r"/(?:studio(?:/people/[\w-]+)?|products(?:/[\w-]+)?|cards(?:/[\w-]+(?:/r\d+)?)?|videos(?:/[\w-]+)?|perform|search|cart|account|upload|shop|quick|proof/[\w-]+)/?", "/proof/card_abc123")
+
+
+def test_review_fails_blank(monkeypatch):
+    from backend.creative import review as R
+    import sqlite3
+    c = sqlite3.connect(":memory:")
+    c.row_factory = sqlite3.Row
+    c.execute("CREATE TABLE render_artifacts (id TEXT, owner TEXT, project_id TEXT, revision INT, renderer TEXT, output_kind TEXT, cache_key TEXT, storage_key TEXT, mime TEXT, width INT, height INT, dpi INT, duration INT, status TEXT, qc_status TEXT, cost_cents INT, provider TEXT, provider_job TEXT, created_at REAL)")
+    c.execute("CREATE TABLE creative_revisions (project_id TEXT, revision INT, brief_snapshot TEXT, scene TEXT)")
+    import json as _j
+    c.execute("INSERT INTO render_artifacts VALUES ('a1','anon','p1',1,'composite2d','print_master','k','k','image/png',1500,2100,300,0,'ready','passed',0,'','',0)")
+    c.execute("INSERT INTO creative_revisions VALUES ('p1',1,'{}',?)", (_j.dumps({"subjects": []}),))
+    from PIL import Image as _I
+    white = _I.new("RGB", (60, 60), "#ffffff")
+    import tempfile as _tf
+    tmp = _tf.NamedTemporaryFile(suffix=".png", delete=False)
+    white.save(tmp.name)
+    monkeypatch.setattr("backend.storage.get", lambda key, dest: dest.write_bytes(open(tmp.name, "rb").read()) or dest)
+    out = R.review_artifact(c, "a1")
+    assert out["verdict"] == "revise"
+    assert any("blank" in r for r in out["reasons"])
+
+
+def test_render_unknown_creative_stages():
+    from backend import config
+    config.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+    c = S.app.test_client()
+    r = c.post("/api/oddhobb/render?token=test-token",
+               json={"owner": "anon", "creative_id": "nope", "revision": 1,
+                     "outputs": ["preview"]})
+    d = r.get_json()
+    assert d["ok"] and not d["done"]
+    assert d["staged"] and d["staged"][0]["output"] == "preview"

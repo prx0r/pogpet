@@ -324,6 +324,22 @@ def validate(owner,b):
     spec["inside"] = _validate_inside(b.get("inside"), spec["inside_message"])
     if isinstance(locked, dict) and locked.get("body") in scenes.CARD_FONT_IDS:
         spec["inside"]["right"]["font"] = locked["body"]
+    if tid == "birthday_4photo":
+        # canonical product caps (docs/cardspec.md §12): tighter than generic
+        if len(spec["headline"]) > 40:
+            raise CardError("Canonical headline max 40 characters")
+        if len(spec["inside"]["right"]["message"]) > 240:
+            raise CardError("Canonical inside message max 240 characters")
+        if len(spec["sender"]) > 40:
+            raise CardError("Canonical signature max 40 characters")
+        vibe = b.get("title_vibe", "playful_balloons")
+        if not isinstance(vibe, str) or vibe not in scenes.TITLE_VIBES:
+            raise CardError(f"title_vibe must be one of {list(scenes.TITLE_VIBES)}")
+        spec["title_vibe"] = vibe
+        tkey = b.get("title_art_key", "")
+        if tkey and (not isinstance(tkey, str) or len(tkey) > 200):
+            raise CardError("title_art_key must be a short storage key")
+        spec["title_art_key"] = tkey if isinstance(tkey, str) else ""
     return spec
 
 

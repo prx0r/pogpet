@@ -75,7 +75,7 @@ def test_mcp_checkout_registered_and_gated():
     assert "figg_card_checkout" not in M.PUBLIC_TOOLS
     assert "Done means a product_url" in (M.figg_card_checkout.__doc__ or "")
     assert "Done means a product_url" in (M.figg_card_save.__doc__ or "")
-    assert M.MCP_VERSION == "1.11.0"
+    assert M.MCP_VERSION == "1.12.0"
 
 
 def test_bridge_logs_cf_ray():
@@ -458,7 +458,7 @@ def test_create_update_loop_mocked_bundle(monkeypatch):
     import backend.server as S
     S.config.API_TOKEN = "test-token"
 
-    async def fake_bundle(did, rev, owner, key, timeout_s=90):
+    async def fake_bundle(did, rev, owner, key, timeout_s=90, owner_sig=""):
         return {"ok": True, "views": {"front": "u1"}, "proof_url": C.proof_url_for(did),
                 "revision": rev, "design_id": did}
     monkeypatch.setattr(M, "_card_spread_bundle", fake_bundle)
@@ -631,18 +631,21 @@ def test_birthday_five_locked():
     import hashlib
     from backend import cards as C
     from backend.card_scenes import front, BIRTHDAY_TEMPLATES
-    assert len(BIRTHDAY_TEMPLATES) == 5
+    assert set(BIRTHDAY_TEMPLATES) >= {"birthday_arch", "birthday_dots", "birthday_news",
+                                       "birthday_gold", "birthday_wall", "birthday_4photo"}
     owner = "hark-dad-a7a5cc"
     pids = ["pho_676d794af4d945d38439", "pho_6779ec37a1e84d3fa086",
             "pho_31f9b76e88ac4512875b"]
     counts = {"birthday_arch": (1, 1), "birthday_dots": (1, 3),
               "birthday_news": (1, 1), "birthday_gold": (1, 1),
-              "birthday_wall": (2, 5)}
+              "birthday_wall": (2, 5),
+              "birthday_4photo": (4, 4)}
+    pids4 = pids + pids[:1]
     for tid in BIRTHDAY_TEMPLATES:
         lo, hi = counts[tid]
-        for n in range(lo, min(hi, 3) + 1):
+        for n in range(lo, min(hi, 4) + 1):
             photos = [{"photo_id": p, "crop": [0, 0, 1, 1],
-                       "focus": [0.5, 0.5], "cutout": ""} for p in pids[:n]]
+                       "focus": [0.5, 0.5], "cutout": ""} for p in pids4[:n]]
             spec = C.validate(owner, {"template": tid, "format": "5x7",
                                       "photos": photos, "headline": "Happy Birthday!",
                                       "recipient": "Dad", "sender": "Me",
@@ -653,7 +656,8 @@ def test_birthday_five_locked():
                       "birthday_dots": ("inter_bold", "inter"),
                       "birthday_news": ("inter_bold", "courier"),
                       "birthday_gold": ("fraunces", "inter"),
-                      "birthday_wall": ("fraunces", "courier")}[tid]
+                      "birthday_wall": ("fraunces", "courier"),
+                      "birthday_4photo": ("fraunces", "inter")}[tid]
             assert (spec["headline_font"], spec["inside"]["right"]["font"]) == locked, tid
             a = front(spec, C.assets(owner, spec), 360)
             b = front(spec, C.assets(owner, spec), 360)
@@ -719,3 +723,30 @@ def test_backdrop_prompts_text_free():
     assert len(TEMPLATE_BACKDROPS) == 5
     for tid, scene in TEMPLATE_BACKDROPS.items():
         assert "no text" in plate_prompt(scene), tid
+
+
+def test_canonical_caps():
+    from backend import cards as C
+    base = {"template": "birthday_4photo", "format": "5x7",
+            "photos": [{"photo_id": "pho_676d794af4d945d38439", "crop": [0, 0, 1, 1],
+                        "focus": [0.5, 0.5], "cutout": ""}] * 4,
+            "headline": "Happy Birthday, Chris!", "recipient": "Chris",
+            "sender": "Ben & co", "inside_message": "hi", "title_vibe": "playful_balloons"}
+    with __import__("pytest").raises(C.CardError):
+        C.validate("hark-dad-a7a5cc", {**base, "headline": "H" * 41})
+    with __import__("pytest").raises(C.CardError):
+        C.validate("hark-dad-a7a5cc", {**base, "title_vibe": "yolo"})
+    with __import__("pytest").raises(C.CardError):
+        C.validate("hark-dad-a7a5cc", {**base, "photos": base["photos"][:3]})
+    s = C.validate("hark-dad-a7a5cc", base)
+    assert s["title_vibe"] == "playful_balloons" and s["title_art_key"] == ""
+
+
+def test_title_prompt_guarded():
+    from backend.card_scenes import title_prompt, TITLE_VIBES
+    assert len(TITLE_VIBES) == 8
+    p = title_prompt("Happy Birthday, Chris!", "playful_balloons")
+    assert "930x320" in p and "Transparent background only" in p
+    import pytest as _p
+    with _p.raises(ValueError):
+        title_prompt("Hi", "yolo")

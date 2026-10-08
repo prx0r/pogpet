@@ -30,7 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
-MCP_VERSION = "1.11.0"
+MCP_VERSION = "1.12.0"
 
 
 def _service_token() -> str:
@@ -57,7 +57,7 @@ mcp = MCPServer("oddhobb", instructions=(
 
 
 async def _call(method: str, path: str, body: dict | None = None,
-                api_key: str = "") -> dict:
+                api_key: str = "", owner_sig: str = "") -> dict:
     """Hit our own API with both the service token and the caller's key.
     api_key (a user's own key, e.g. fresh from Google sign-in) travels as
     X-API-Key so writes land under THEIR account, never the operator's."""
@@ -78,6 +78,8 @@ async def _call(method: str, path: str, body: dict | None = None,
         caller = (api_key or "").strip() or _key()
         if caller:
             req.add_header("X-API-Key", caller)
+        if (owner_sig or "").strip():
+            req.add_header("X-Owner-Sig", owner_sig.strip())
         figg_owner = os.environ.get("FIGG_OWNER", "").strip()
         owners = {figg_owner} | {o.strip() for o in
                                  os.environ.get("FIGG_OWNERS", "").split(",")}
@@ -417,15 +419,15 @@ async def oddhobb_people(owner: str = "", api_key: str = "") -> str:
     return _j(await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"), api_key=api_key))
 
 
-async def oddhobb_ideas(person: str='', occasion: str='general', request: str='', owner: str='', subject_id: str='', context: list | None=None, tone: str='funny', budget_cents: int=0, api_key: str='') -> str:
+async def oddhobb_ideas(person: str='', occasion: str='general', request: str='', owner: str='', subject_id: str='', context: list | None=None, tone: str='funny', budget_cents: int=0, api_key: str='', owner_sig: str='') -> str:
     """Person + occasion + request (+ your relevant agent_memory context facts)
     → ranked creative ideas with reasons. Send facts, never whole memories."""
-    return _j(await _call('POST', '/api/oddhobb/ideas', {'person': person, 'occasion': occasion, 'request': request, 'owner': owner, 'subject_id': subject_id, 'context': context or [], 'tone': tone, 'budget_cents': budget_cents}, api_key=api_key))
+    return _j(await _call('POST', '/api/oddhobb/ideas', {'person': person, 'occasion': occasion, 'request': request, 'owner': owner, 'subject_id': subject_id, 'context': context or [], 'tone': tone, 'budget_cents': budget_cents}, api_key=api_key, owner_sig=owner_sig))
 
 
-async def oddhobb_create(idea_id: str='', owner: str='', subject_id: str='', person: str='', overrides: dict | None=None, brief: dict | None=None, api_key: str='') -> str:
+async def oddhobb_create(idea_id: str='', owner: str='', subject_id: str='', person: str='', overrides: dict | None=None, brief: dict | None=None, api_key: str='', owner_sig: str='') -> str:
     """Idea → frozen creative revision. Fifteen ops, one call."""
-    return _j(await _call('POST', '/api/oddhobb/create', {'idea_id': idea_id, 'owner': owner, 'subject_id': subject_id, 'person': person, 'overrides': overrides or {}, 'brief': brief or {}}, api_key=api_key))
+    return _j(await _call('POST', '/api/oddhobb/create', {'idea_id': idea_id, 'owner': owner, 'subject_id': subject_id, 'person': person, 'overrides': overrides or {}, 'brief': brief or {}}, api_key=api_key, owner_sig=owner_sig))
 
 
 async def oddhobb_render(creative_id: str='', revision: int=1, owner: str='', outputs: list | None=None, policy: str='free', routes: dict | None=None, api_key: str='') -> str:
@@ -454,6 +456,179 @@ async def oddhobb_capsule(subject_id: str='', owner: str='', api_key: str='') ->
     """Person Capsule: identity/voice/behaviour/spatial/knowledge/provenance
     for a subject. Input to every template."""
     return _j(await _call('GET', f'/api/capsule/{subject_id}?owner=' + (owner or 'anon'), api_key=api_key))
+
+
+async def oddhobb_capsule(subject_id: str='', owner: str='', api_key: str='') -> str:
+    """Person Capsule: identity/voice/behaviour/spatial/knowledge/provenance
+    for a subject. Input to every template."""
+    return _j(await _call('GET', f'/api/capsule/{subject_id}?owner=' + (owner or 'anon'), api_key=api_key))
+
+
+async def oddhobb_make_card(subject_id: str = "", occasion: str = "birthday",
+                            vibe: str = "playful_balloons", tone: str = "funny",
+                            message_hint: str = "", signature: str = "",
+                            owner: str = "", api_key: str = "",
+                            owner_sig: str = "") -> list:
+    """Make a canonical birthday card in ONE call. Resolves the 4 best photos,
+    writes bounded copy from the profile (or your hint), saves revision 1,
+    renders front/inside/back/4-up + print PDF. Returns previews, proof_url,
+    and a contact sheet. The agent supplies photos-by-choice + words only."""
+    from mcp.types import TextContent
+    from backend import cards as _cards
+    people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
+                         api_key=api_key, owner_sig=owner_sig)
+    sub = _find_subject(people, "", subject_id)
+    if not sub:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
+    prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
+            "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
+    pids: list[str] = []
+    try:
+        from backend import subject_assets as _sa
+        res = _sa.resolve(sub.get("id", ""), owner or "anon")
+        ranked = sorted((res.get("body_candidates") or []) + (res.get("face_candidates") or []),
+                        key=lambda c: float(c.get("quality", c.get("face_quality", 0))), reverse=True)
+        seen: set[str] = set()
+        for c in ranked:
+            aid = str(c.get("asset_id") or "")
+            if aid and aid not in seen:
+                seen.add(aid)
+                pids.append(aid)
+            if len(pids) == 4:
+                break
+    except Exception:  # noqa: BLE001
+        pids = []
+    if len(pids) < 4:
+        return [TextContent(type="text", text=_j({"ok": False, "error": f"need 4 photos — only {len(pids)} confirmed"}) )]
+    name = sub.get("name") or "them"
+    title = f"Happy Birthday, {name}!"[:40]
+    lines = _cards.message_lines(prof, tone)
+    message = (message_hint.strip()[:240] if message_hint.strip()
+               else (lines[0]["text"][:240] if lines else ""))
+    sig = (signature.strip()[:40] if signature.strip()
+           else ("Love, " + name)[:40])
+    spec = {"template": "birthday_4photo", "format": "5x7",
+            "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                        "focus": [0.5, 0.5], "cutout": ""} for pid in pids],
+            "headline": title, "recipient": name, "sender": sig,
+            "inside_message": message, "title_vibe": vibe or "playful_balloons"}
+    saved = await _call("POST", "/api/cards/designs",
+                        {"owner": owner, "spec": spec}, api_key=api_key, owner_sig=owner_sig)
+    if not saved.get("ok"):
+        return [TextContent(type="text", text=_j(saved))]
+    d = saved["design"]
+    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key, owner_sig=owner_sig)
+    exp = await _call("POST", f"/api/cards/{d['id']}/render",
+                      {"owner": owner, "revision": d["revision"], "kind": "export"}, api_key=api_key, owner_sig=owner_sig)
+    body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
+            "template_id": "birthday_4photo",
+            "previews": {**(bundle.get("views") or {}),
+                         "print_pdf": f"/api/cards/{d['id']}/r{d['revision']}/export"},
+            "proof_url": saved.get("proof_url", ""),
+            "export": (exp.get("job") or {}).get("id", ""),
+            "render_error": bundle.get("error", ""),
+            "hint": "Send the human the proof_url. Tweak copy via oddhobb_edit_card_copy, art via oddhobb_regenerate_title_art, sell via oddhobb_checkout_card."}
+    try:
+        return [TextContent(type="text", text=_j(body)),
+                _contact_block(owner, d["id"], d["revision"])]
+    except Exception as e:  # noqa: BLE001
+        body["contact_error"] = str(e)[:150]
+        return [TextContent(type="text", text=_j(body))]
+
+
+async def oddhobb_regenerate_title_art(design_id: str, vibe: str = "",
+                                       owner: str = "", api_key: str = "",
+                                       owner_sig: str = "") -> str:
+    """Generate the title-art PNG for a canonical card (fal.ai, ask-first
+    spend logged to the fal ledger). Without FAL_KEY returns 503 honestly —
+    the house-serif fallback keeps rendering until art exists."""
+    import os as _os
+    if not _os.environ.get("FAL_KEY"):
+        return _j({"ok": False, "http_status": 503,
+                   "error": "FAL_KEY not configured — title renders in house serif until art is generated"})
+    cur = await _call("GET", "/api/cards/designs/" + design_id +
+                      "?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig)
+    if not cur.get("ok"):
+        return _j(cur)
+    spec = (cur.get("design") or {}).get("spec") or {}
+    rev = (cur.get("design") or {}).get("revision", 1)
+    if (spec.get("template") or "") != "birthday_4photo":
+        return _j({"ok": False, "error": "title art is canonical-template only"})
+    from backend.card_scenes import title_prompt, TITLE_VIBES
+    v = vibe or spec.get("title_vibe") or "playful_balloons"
+    if v not in TITLE_VIBES:
+        return _j({"ok": False, "error": f"vibe must be one of {list(TITLE_VIBES)}"})
+    try:
+        from backend.creative.providers import fal as _fal
+        rid = _fal._submit("fal-ai/flux/dev",
+                           {"prompt": title_prompt(spec.get("headline", ""), v),
+                            "image_size": "landscape_4_3", "num_images": 1},
+                           _os.environ["FAL_KEY"])
+        res = _fal._result("fal-ai/flux/dev", rid, _os.environ["FAL_KEY"])
+        imgs = ((res.get("response") or res).get("images") or [])
+        if not imgs:
+            return _j({"ok": False, "error": f"fal produced no image: {str(res)[:150]}"})
+        import urllib.request as _url
+        from backend import cards as _cards
+        r2key = f"tmp/title-{design_id}-r{rev}.png"
+        tmp, _ = _url.urlretrieve(imgs[0]["url"])
+        from pathlib import Path as _P
+        from backend import r2presign as _r2
+        rk = _r2.put_temp(_P(tmp))
+        try:
+            from PIL import Image as _I
+            _I.open(_P(tmp)).convert("RGBA").save(_P(tmp), "PNG")
+            _cards.storage.put(_P(tmp), f"owners/{_cards.storage._slug(owner or 'anon')}/cards/{design_id}/title-art.png")
+        finally:
+            _r2.delete(rk)
+        _fal.log_spend(owner=owner or "anon", adapter="fal.title_art",
+                       endpoint="fal-ai/flux/dev", est_cost_usd=0.025, request_id=rid)
+        key = f"owners/{_cards.storage._slug(owner or 'anon')}/cards/{design_id}/title-art.png"
+        saved = await _call("POST", "/api/cards/designs",
+                            {"owner": owner, "id": design_id, "expected_revision": rev,
+                             "spec": {**spec, "title_art_key": key, "title_vibe": v}}, api_key=api_key, owner_sig=owner_sig)
+        return _j({**saved, "title_request_id": rid})
+    except Exception as e:  # noqa: BLE001
+        return _j({"ok": False, "error": str(e)[:200]})
+
+
+async def oddhobb_edit_card_copy(design_id: str, owner: str = "", headline: str = "",
+                                 message: str = "", signature: str = "",
+                                 api_key: str = "",
+                                 owner_sig: str = "") -> str:
+    """Edit canonical copy (headline ≤40, message ≤240, signature ≤40) → new
+    revision. Empty fields keep their current values."""
+    cur = await _call("GET", "/api/cards/designs/" + design_id +
+                      "?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig)
+    if not cur.get("ok"):
+        return _j(cur)
+    d = cur["design"]
+    spec = dict(d.get("spec") or {})
+    if headline.strip():
+        spec["headline"] = headline.strip()[:40]
+    if message.strip():
+        spec["inside_message"] = message.strip()[:240]
+        inner = dict(spec.get("inside") or {})
+        right = dict(inner.get("right") or {})
+        right["message"] = message.strip()[:240]
+        inner["right"] = right
+        spec["inside"] = inner
+    if signature.strip():
+        spec["sender"] = signature.strip()[:40]
+    return _j(await _call("POST", "/api/cards/designs",
+                         {"owner": owner, "id": design_id,
+                          "expected_revision": d.get("revision", 1), "spec": spec}, api_key=api_key, owner_sig=owner_sig))
+
+
+async def oddhobb_checkout_card(design_id: str, revision: int, owner: str = "",
+                                qty: int = 1, idempotency_key: str = "",
+                                api_key: str = "",
+                                owner_sig: str = "") -> str:
+    """Pin a canonical revision and buy it (£7.99 → Shopify draft). 409s when
+    that revision has no passing export render — render first, then pay."""
+    return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
+                         {"owner": owner, "revision": revision, "qty": qty,
+                          "idempotency_key": idempotency_key or f"canonical-{design_id}-r{revision}"}, api_key=api_key, owner_sig=owner_sig))
 
 
 async def oddhobb_capture_start(subject_id: str='', owner: str='', api_key: str='') -> str:
@@ -604,17 +779,19 @@ async def figg_fullchain_personalise_order(line: str, coat: str = "none",
     return _j({"ok": bool((order or {}).get("ok")), "personalise": pers, "order": order})
 
 
-async def figg_card_library(owner: str = "", api_key: str = "") -> str:
+async def figg_card_library(owner: str = "", api_key: str = "",
+owner_sig: str = "") -> str:
     """Photo library + card scenes. Photo cards need no mesh or Meshy spend. Pass api_key to see your own photos (anon sees the shared demo shelf only)."""
     import urllib.parse
     q = urllib.parse.quote(owner)
-    return _j({"photos": await _call("GET", "/api/cards/photos?owner=" + q, api_key=api_key),
-               "scenes": await _call("GET", "/api/cards/templates?owner=" + q, api_key=api_key),
-               "designs": await _call("GET", "/api/cards/designs?owner=" + q, api_key=api_key)})
+    return _j({"photos": await _call("GET", "/api/cards/photos?owner=" + q, api_key=api_key, owner_sig=owner_sig),
+               "scenes": await _call("GET", "/api/cards/templates?owner=" + q, api_key=api_key, owner_sig=owner_sig),
+               "designs": await _call("GET", "/api/cards/designs?owner=" + q, api_key=api_key, owner_sig=owner_sig)})
 
 
 async def figg_card_save(spec: dict, owner: str = "", design_id: str = "",
-                         expected_revision: int = 0, api_key: str = "") -> str:
+                         expected_revision: int = 0, api_key: str = "",
+                         owner_sig: str = "") -> str:
     """Save a photo card: template, format, photos[{photo_id,crop,focus,cutout}], headline, recipient, sender, inside_message.
     This is the photo-composition lane (your picture + type). For illustrated/designed covers
     (movie_poster, comics, news parody) use figg_creative_brief → figg_creative_match → oddhobb_create instead.
@@ -623,11 +800,12 @@ async def figg_card_save(spec: dict, owner: str = "", design_id: str = "",
     body = {"owner": owner, "spec": spec, "via": "mcp"}
     if design_id:
         body.update(id=design_id, expected_revision=expected_revision)
-    return _j(await _call("POST", "/api/cards/designs", body, api_key=api_key))
+    return _j(await _call("POST", "/api/cards/designs", body, api_key=api_key, owner_sig=owner_sig))
 
 
 async def figg_card_render(design_id: str, revision: int, kind: str = "preview",
-                           owner: str = "", api_key: str = "") -> str:
+                           owner: str = "", api_key: str = "",
+                           owner_sig: str = "") -> str:
     """Render saved card preview/spread/export/motion. Returns async job; same revision drives paper and MP4.
     Spread returns all four faces (front, inside halves, back) as showable PNGs.
     Public tier: preview + spread (free CPU). Export/motion need the bridge token."""
@@ -635,62 +813,70 @@ async def figg_card_render(design_id: str, revision: int, kind: str = "preview",
         return _j({"ok": False,
                    "error": "public tier renders preview/spread only — export/motion need the bridge token"})
     return _j(await _call("POST", f"/api/cards/{design_id}/render",
-                         {"owner": owner, "revision": revision, "kind": kind}, api_key=api_key))
+                         {"owner": owner, "revision": revision, "kind": kind}, api_key=api_key, owner_sig=owner_sig))
 
 
-async def figg_card_scene(design_id: str, owner: str = "", revision: int = 0, api_key: str = "") -> str:
+async def figg_card_scene(design_id: str, owner: str = "", revision: int = 0, api_key: str = "",
+owner_sig: str = "") -> str:
     """Get the shared card/video scene manifest and available output capabilities."""
     import urllib.parse
     path="/api/cards/"+urllib.parse.quote(design_id,safe="")+"/scene?owner="+urllib.parse.quote(owner)
     if revision:
         path+="&revision="+str(revision)
-    return _j(await _call("GET",path, api_key=api_key))
+    return _j(await _call("GET",path, api_key=api_key, owner_sig=owner_sig))
 
 
-async def figg_card_job(job_id: str, owner: str = "", api_key: str = "") -> str:
+async def figg_card_job(job_id: str, owner: str = "", api_key: str = "",
+owner_sig: str = "") -> str:
     """Check card render job status; ready results include owner-gated download URLs."""
     import urllib.parse
-    return _j(await _call("GET", f"/api/cards/jobs/{job_id}?owner=" + urllib.parse.quote(owner), api_key=api_key))
+    return _j(await _call("GET", f"/api/cards/jobs/{job_id}?owner=" + urllib.parse.quote(owner), api_key=api_key, owner_sig=owner_sig))
 
 
-async def figg_card_cutout(photo_id: str, crop: list[float], owner: str = "", api_key: str = "") -> str:
+async def figg_card_cutout(photo_id: str, crop: list[float], owner: str = "", api_key: str = "",
+owner_sig: str = "") -> str:
     """Remove background after explicitly cropping the subject in a group photo. No face recognition or generative upscale."""
-    return _j(await _call("POST", "/api/cards/cutouts", {"owner": owner, "photo_id": photo_id, "crop": crop}, api_key=api_key))
+    return _j(await _call("POST", "/api/cards/cutouts", {"owner": owner, "photo_id": photo_id, "crop": crop}, api_key=api_key, owner_sig=owner_sig))
 
 
 async def figg_card_reserve(design_id: str, revision: int, idempotency_key: str,
-                            qty: int = 1, owner: str = "", api_key: str = "") -> str:
+                            qty: int = 1, owner: str = "", api_key: str = "",
+                            owner_sig: str = "") -> str:
     """Reserve a real card (£7.99 FIXED) with approved export. Show price first.
     Reserve-only — no payment. To sell: figg_card_checkout for Shopify checkout_url.
     Done means a product_url the human can buy from; a preview alone is not done."""
     return _j(await _call("POST", f"/api/cards/{design_id}/order",
-                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}, api_key=api_key))
+                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}, api_key=api_key, owner_sig=owner_sig))
 
 
 async def figg_card_checkout(design_id: str, revision: int, idempotency_key: str,
-                             qty: int = 1, owner: str = "", api_key: str = "") -> str:
+                             qty: int = 1, owner: str = "", api_key: str = "",
+                             owner_sig: str = "") -> str:
     """Buy a card (£7.99): freeze revision → Shopify draft → checkout_url.
     Returns product_url (OddHobb page agents hand over, never a PNG) + checkout_url
     (Shopify payment). Shopify owns payment; Prodigi prints on orders/paid only.
     Done means a product_url the human can buy from. A preview alone is not done."""
     return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
-                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}, api_key=api_key))
+                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}, api_key=api_key, owner_sig=owner_sig))
 
 
 async def _card_spread_bundle(design_id: str, revision: int, owner: str,
-                              api_key: str, timeout_s: int = 90) -> dict:
+                              api_key: str, timeout_s: int = 90,
+                              owner_sig: str = "") -> dict:
     """Render spread for a frozen revision and return views + proof_url.
     Raises CardError-shaped dicts as values (never throws)."""
     import asyncio as _aio
     r = await _call("POST", f"/api/cards/{design_id}/render",
-                    {"owner": owner, "revision": revision, "kind": "spread"}, api_key=api_key)
+                    {"owner": owner, "revision": revision, "kind": "spread"}, api_key=api_key,
+                    owner_sig=owner_sig)
     job = (r.get("job") or {}) if isinstance(r, dict) else {}
     if not (isinstance(r, dict) and r.get("ok")):
         return {"ok": False, "error": str((r.get("error") if isinstance(r, dict) else r) or "spread render refused")}
     jid = job.get("id", "")
     for _ in range(max(1, timeout_s // 2)):
         await _aio.sleep(2)
-        st = await _call("GET", f"/api/cards/jobs/{jid}?owner=" + (owner or "anon"), api_key=api_key)
+        st = await _call("GET", f"/api/cards/jobs/{jid}?owner=" + (owner or "anon"), api_key=api_key,
+                         owner_sig=owner_sig)
         j = st.get("job") or {}
         if j.get("status") == "ready":
             from backend import cards as _cards
@@ -713,18 +899,19 @@ def _contact_block(owner: str, design_id: str, revision: int):
                         mimeType="image/jpeg")
 
 
-async def figg_card_create(spec: dict, owner: str = "", api_key: str = "") -> list:
+async def figg_card_create(spec: dict, owner: str = "", api_key: str = "",
+owner_sig: str = "") -> list:
     """Create a card AND see it: saves (new revision), renders all four faces,
     and returns views + proof_url + a contact-sheet image in this result.
     Send the human the proof_url (stable, always latest). Nothing is published
     until figg_card_checkout pins a revision."""
     from mcp.types import TextContent
     saved = await _call("POST", "/api/cards/designs",
-                        {"owner": owner, "spec": spec}, api_key=api_key)
+                        {"owner": owner, "spec": spec}, api_key=api_key, owner_sig=owner_sig)
     if not saved.get("ok"):
         return [TextContent(type="text", text=_j(saved))]
     d = saved["design"]
-    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key)
+    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key, owner_sig=owner_sig)
     body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
             "card_url": saved.get("card_url", ""),
             "proof_url": saved.get("proof_url", ""),
@@ -762,29 +949,30 @@ def _spec_diff(old: dict, new: dict, path: str = "") -> list[str]:
 
 
 async def figg_card_update(design_id: str, changes: dict, revision: int = 0,
-                           owner: str = "", api_key: str = "") -> list:
+                           owner: str = "", api_key: str = "",
+                           owner_sig: str = "") -> list:
     """Change a card (text, font, photo, crop): deep-merges changes onto the
     revision's spec, mints a new revision, re-renders all faces. Returns the
     diff ("r4: inside font is now Caveat") + fresh views + contact sheet.
     The proof_url is unchanged and now shows the new revision."""
     from mcp.types import TextContent
     cur = await _call("GET", "/api/cards/designs/" + design_id +
-                      "?owner=" + (owner or "anon"), api_key=api_key)
+                      "?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig)
     if not cur.get("ok"):
         return [TextContent(type="text", text=_j(cur))]
     latest = (cur.get("design") or {}).get("revision", 1)
     rev = revision or latest
     full = await _call("GET", f"/api/cards/{design_id}/scene?owner=" + (owner or "anon") +
-                       f"&revision={rev}", api_key=api_key)
+                       f"&revision={rev}", api_key=api_key, owner_sig=owner_sig)
     spec = ((full.get("scene") or {}).get("spec")) or ((cur.get("design") or {}).get("spec")) or {}
     new_spec = _deep_merge(spec, changes or {})
     saved = await _call("POST", "/api/cards/designs",
                         {"owner": owner, "id": design_id,
-                         "expected_revision": latest, "spec": new_spec}, api_key=api_key)
+                         "expected_revision": latest, "spec": new_spec}, api_key=api_key, owner_sig=owner_sig)
     if not saved.get("ok"):
         return [TextContent(type="text", text=_j(saved))]
     d = saved["design"]
-    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key)
+    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key, owner_sig=owner_sig)
     body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
             "diff": _spec_diff(spec, new_spec),
             "card_url": saved.get("card_url", ""),
@@ -918,7 +1106,8 @@ _TONE_VIBES = {"funny": ["funny-loud", "bold", "playful"], "dark": ["dry-funny",
 
 async def figg_card_for_person(person: str, occasion: str = "birthday",
                                tone: str = "funny", owner: str = "",
-                               subject_id: str = "", api_key: str = "") -> list:
+                               subject_id: str = "", api_key: str = "",
+                               owner_sig: str = "") -> list:
     """Birthday card for Dad in ONE call — the agent makes zero creative
     choices. Finds the subject, picks their best portrait, picks the template
     by occasion, writes headline + inside from their profile, picks fonts by
@@ -927,7 +1116,7 @@ async def figg_card_for_person(person: str, occasion: str = "birthday",
     from mcp.types import TextContent
     from backend import cards as _cards
     people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
-                         api_key=api_key)
+                         api_key=api_key, owner_sig=owner_sig)
     sub = _find_subject(people, person, subject_id)
     if not sub:
         return [TextContent(type="text", text=_j({"ok": False, "error": "no subject match — check oddhobb_people first"}))]
@@ -954,7 +1143,7 @@ async def figg_card_for_person(person: str, occasion: str = "birthday",
     if face_ids:
         photo_id = face_ids[0]
     else:
-        lib = await _call("GET", "/api/cards/photos?owner=" + (owner or "anon"), api_key=api_key)
+        lib = await _call("GET", "/api/cards/photos?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig)
         pics = (lib.get("photos") or []) if isinstance(lib, dict) else []
         photo_id = str((pics[0].get("id") if pics else "") or "")
     if not photo_id:
@@ -987,11 +1176,11 @@ async def figg_card_for_person(person: str, occasion: str = "birthday",
             "inside": {"right": {"message": inside, "font": bfont},
                        "left": {"mode": "blank"}}}
     saved = await _call("POST", "/api/cards/designs",
-                        {"owner": owner, "spec": spec}, api_key=api_key)
+                        {"owner": owner, "spec": spec}, api_key=api_key, owner_sig=owner_sig)
     if not saved.get("ok"):
         return [TextContent(type="text", text=_j(saved))]
     d = saved["design"]
-    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key)
+    bundle = await _card_spread_bundle(d["id"], d["revision"], owner, api_key, owner_sig=owner_sig)
     body = {"ok": True, "design_id": d["id"], "revision": d["revision"],
             "chosen": {"subject": sub.get("name"), "photo_id": photo_id,
                        "template": template, "headline_font": hfont,
@@ -1020,18 +1209,20 @@ async def figg_blender_make(line: str, text: str, owner: str = "") -> str:
                          {"owner": owner, "line": line, "text": text}))
 
 
-async def figg_card_templates(owner: str = "", api_key: str = "") -> str:
+async def figg_card_templates(owner: str = "", api_key: str = "",
+owner_sig: str = "") -> str:
     """Card templates with their paper design contracts: locked print truths
     (bleed, DPI, photo counts), envelope trims, stock, rough print costs."""
-    return _j(await _call("GET", "/api/cards/templates?owner=" + (owner or "anon"), api_key=api_key))
+    return _j(await _call("GET", "/api/cards/templates?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig))
 
 
-async def figg_card_fonts(owner: str = "", api_key: str = "") -> str:
+async def figg_card_fonts(owner: str = "", api_key: str = "",
+owner_sig: str = "") -> str:
     """Curated card fonts clustered by vibe + occasion: match the brief's tone
     and occasion to vibes/occasions, keep the slot's use_for role (headline /
     name / body / accent). Fall back to frances headlines + inter body.
     Registry ids only — buyers pick an id, never a file."""
-    return _j(await _call("GET", "/api/cards/fonts?owner=" + (owner or "anon"), api_key=api_key))
+    return _j(await _call("GET", "/api/cards/fonts?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig))
 
 
 _EDIT_FIELDS = {
@@ -1042,7 +1233,8 @@ _EDIT_FIELDS = {
 
 
 async def figg_card_edit(design_id: str, panel: str, field: str, value: str,
-                         owner: str = "", api_key: str = "") -> str:
+                         owner: str = "", api_key: str = "",
+                         owner_sig: str = "") -> str:
     """Edit one panel field → new immutable revision + fresh card_url.
     Panel: front | inside_left | inside_right. Front fields: headline,
     headline_font, recipient, sender. Inside fields: message/text, font,
@@ -1053,7 +1245,7 @@ async def figg_card_edit(design_id: str, panel: str, field: str, value: str,
         return _j({"ok": False,
                    "error": f"panel must be front|inside_left|inside_right with fields {sorted({k: sorted(v) for k, v in _EDIT_FIELDS.items()}.get(panel, []))}"})
     cur = await _call("GET", "/api/cards/designs/" + design_id +
-                      "?owner=" + (owner or "anon"), api_key=api_key)
+                      "?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig)
     if not cur.get("ok"):
         return _j(cur)
     spec = (cur.get("design") or {}).get("spec") or {}
@@ -1070,23 +1262,24 @@ async def figg_card_edit(design_id: str, panel: str, field: str, value: str,
     return _j(await _call("POST", "/api/cards/designs",
                          {"owner": owner, "id": design_id,
                           "expected_revision": rev, "spec": spec},
-                         api_key=api_key))
+                         api_key=api_key, owner_sig=owner_sig))
 
 
 async def figg_card_variants(design_id: str, n: int = 3, owner: str = "",
-                              api_key: str = "") -> str:
+                              api_key: str = "",
+                              owner_sig: str = "") -> str:
     """Same photo + words on N other templates → N new designs with card_urls.
     The design strip: show them side by side, human picks one, then edit and
     buy that revision. n is 2-5; only photo-count-compatible templates qualify."""
     n = max(2, min(5, int(n or 3)))
     cur = await _call("GET", "/api/cards/designs/" + design_id +
-                      "?owner=" + (owner or "anon"), api_key=api_key)
+                      "?owner=" + (owner or "anon"), api_key=api_key, owner_sig=owner_sig)
     if not cur.get("ok"):
         return _j(cur)
     spec = (cur.get("design") or {}).get("spec") or {}
     rev = (cur.get("design") or {}).get("revision", 1)
     tpl = await _call("GET", "/api/cards/templates?owner=" + (owner or "anon"),
-                      api_key=api_key)
+                      api_key=api_key, owner_sig=owner_sig)
     templates = tpl.get("templates") or []
     count = len(spec.get("photos") or [])
     cands = [t for t in templates
@@ -1096,7 +1289,7 @@ async def figg_card_variants(design_id: str, n: int = 3, owner: str = "",
     for t in cands:
         trial = dict(spec, template=t["id"])
         saved = await _call("POST", "/api/cards/designs",
-                            {"owner": owner, "spec": trial}, api_key=api_key)
+                            {"owner": owner, "spec": trial}, api_key=api_key, owner_sig=owner_sig)
         if saved.get("ok"):
             d = saved["design"]
             out.append({"template": t["id"], "label": t.get("label", t["id"]),
@@ -1108,13 +1301,14 @@ async def figg_card_variants(design_id: str, n: int = 3, owner: str = "",
 
 async def figg_card_messages(person: str = "", tone: str = "funny",
                              owner: str = "", subject_id: str = "",
-                             api_key: str = "") -> str:
+                             api_key: str = "",
+                             owner_sig: str = "") -> str:
     """Smart-text v1: funny/warm/short inside lines built from the subject's
     profile (name, interests, memories). Each line cites its source fact.
     Deterministic starting points to edit together — a preview alone is not done."""
     from backend import cards as _cards
     people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
-                         api_key=api_key)
+                         api_key=api_key, owner_sig=owner_sig)
     prof = _find_subject(people, person, subject_id)
     if not prof and person:
         prof = {"name": person}
@@ -1332,6 +1526,8 @@ TOOL_AREAS: dict[str, list] = {
     "oddhobb":   [oddhobb_people, oddhobb_ideas, oddhobb_create,
                   oddhobb_render, oddhobb_status, oddhobb_buy,
                   oddhobb_providers, oddhobb_capsule,
+                  oddhobb_make_card, oddhobb_regenerate_title_art,
+                  oddhobb_edit_card_copy, oddhobb_checkout_card,
                   oddhobb_capture_start, oddhobb_capture_mark,
                   oddhobb_capture_finish, oddhobb_review, oddhobb_revise,
                   oddhobb_joke_ideas, oddhobb_joke_render, oddhobb_joke_pick],
@@ -1366,6 +1562,7 @@ PUBLIC_TOOLS = frozenset({
     "oddhobb_people", "oddhobb_ideas", "oddhobb_create",
     "oddhobb_render", "oddhobb_status", "oddhobb_buy",
     "oddhobb_providers", "oddhobb_capsule",
+    "oddhobb_make_card", "oddhobb_edit_card_copy",
     "oddhobb_review", "oddhobb_revise",
     "oddhobb_joke_ideas", "oddhobb_joke_pick",
 })

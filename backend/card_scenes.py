@@ -32,11 +32,50 @@ TEMPLATES = {
     "birthday_news": {"label": "Birthday newsflash", "headline": "Local legend in birthday shocker.", "max_photos": 1, "min_photos": 1, "motion": "news reveal + moving ticker", "bg": "#14202e", "ink": "#ffffff", "accent": "#d43a2f", "fonts": {"headline": "inter_bold", "body": "courier"}},
     "birthday_gold": {"label": "Birthday gold", "headline": "Another year, more legend.", "max_photos": 1, "min_photos": 1, "motion": "champion reveal + confetti", "bg": "#1d1a16", "ink": "#fff6e3", "accent": "#d9a441", "fonts": {"headline": "fraunces", "body": "inter"}},
     "birthday_wall": {"label": "Birthday wall", "headline": "Our favourite person.", "max_photos": 5, "min_photos": 2, "motion": "wall reveals", "bg": "#f6efe3", "ink": "#26221c", "accent": "#2e6b4f", "fonts": {"headline": "fraunces", "body": "courier"}},
+    # ── canonical product: birthday_4photo_title_v1 (docs/cardspec.md) ──
+    # 4 rounded photo slots, generated title-art zone in the middle, flat
+    # subline + footer zones. Exact zones live in CANONICAL_ZONES (1500×2100
+    # trim space). Agent supplies photos + bounded copy only.
+    "birthday_4photo": {"label": "Birthday four-photo", "headline": "Happy Birthday!", "max_photos": 4, "min_photos": 4, "motion": "photo reveal", "bg": "#faf6ee", "ink": "#23201b", "accent": "#b34a30", "fonts": {"headline": "fraunces", "body": "inter"}},
 }
 
+# Canonical zones in 1500×2100 trim px (see docs/cardspec.md §2–4).
+CANONICAL_ZONES = {
+    "photos": [(120, 160, 480, 480), (900, 160, 480, 480),
+               (120, 1160, 480, 480), (900, 1160, 480, 480)],
+    "photo_radius": 28,
+    "title_art": (285, 790, 930, 320),
+    "front_subline": (285, 1675, 930, 70),
+    "front_footer": (525, 1990, 450, 45),
+    "inside_message": (1710, 430, 1040, 820),
+    "inside_signature": (1710, 1330, 520, 120),
+    "inside_logo": (2160, 1030, 420, 80),
+    "back_logo": (525, 1740, 450, 80),
+    "back_url": (585, 1970, 330, 36),
+}
+
+# Frozen title-art vibes. The model may style lettering + mini-elements;
+# never layout, logos, or extra text.
+TITLE_VIBES = ("playful_balloons", "retro_party", "floral_soft", "comic_burst",
+               "sports_energy", "clean_luxury", "childlike_doodle", "festive_confetti")
+
+TITLE_PROMPT = ("Create a decorative title graphic on a transparent background. "
+                "Render exactly this text: “{text}”. Style: {vibe}. "
+                "Canvas size: {w}x{h} pixels. Keep the design centered and fully "
+                "contained within the canvas with comfortable margins. No extra text. "
+                "No border. No mockup. No card. Transparent background only. Make the "
+                "lettering bold, clean, legible, and celebration-appropriate.")
+
+
+def title_prompt(text: str, vibe: str, w: int = 930, h: int = 320) -> str:
+    """Constrained generation-zone prompt: lettering + mini-elements only."""
+    if vibe not in TITLE_VIBES:
+        raise ValueError(f"title vibe must be one of {TITLE_VIBES}")
+    return TITLE_PROMPT.format(text=str(text or "")[:40], vibe=vibe, w=w, h=h)
+
 # Birthday product set: the only templates the agent offers for birthdays.
-BIRTHDAY_TEMPLATES = ("birthday_arch", "birthday_dots", "birthday_news",
-                      "birthday_gold", "birthday_wall")
+BIRTHDAY_TEMPLATES = ("birthday_4photo", "birthday_arch", "birthday_dots",
+                      "birthday_news", "birthday_gold", "birthday_wall")
 # Composition sharing: birthday covers reuse proven layouts with their own
 # palettes, art and mastheads (one composition codebase, five products).
 BIRTHDAY_COMP = {"birthday_arch": "portrait", "birthday_news": "breaking_news",
@@ -149,6 +188,16 @@ CARD_DESIGN_CONTRACTS = {
         "domain": "paper",
         "locked": ["3mm bleed all round", "300dpi floor at trim", "2–5 photos in the wall grid, order preserved",
                    "fonts fixed: fraunces headline, courier inside — agent chooses photos + text only"],
+        "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
+        "formats": ["5x7"],
+        "cost_target_cents": {"5x7": 200},
+        "verify": [],
+    },
+    "birthday_4photo": {
+        "domain": "paper",
+        "locked": ["3mm bleed all round", "300dpi floor at trim", "exactly 4 photos in fixed slots r28",
+                   "title art 930x320 transparent in the middle zone only",
+                   "fonts fixed by template — agent supplies 4 photos + bounded copy only"],
         "envelope_mm": [148, 210], "material": "350gsm silk", "colors_max": 0,
         "formats": ["5x7"],
         "cost_target_cents": {"5x7": 200},
@@ -462,7 +511,7 @@ def _scatter(draw, w, h, n, seed, colors, box, size=0.012):
                      fill=colors[i % len(colors)])
 
 
-def _shape_mask(size, shape):
+def _shape_mask(size, shape, radius=None):
     """L-mode mask: arch | circle | round | rect."""
     from PIL import Image as _I
     sw, sh = size
@@ -474,7 +523,7 @@ def _shape_mask(size, shape):
         md.rectangle((0, sh // 3, sw, sh), fill=255)
         md.ellipse((0, 0, sw, sh * 2 // 3), fill=255)
     elif shape == "round":
-        r = min(sw, sh) // 8
+        r = min(sw, sh) // 8 if radius is None else int(radius)
         md.rounded_rectangle((0, 0, sw, sh), radius=r, fill=255)
     else:
         md.rectangle((0, 0, sw, sh), fill=255)
@@ -482,7 +531,7 @@ def _shape_mask(size, shape):
 
 
 def _photo_zone(slot, assets, size, *, shape="round", border=0,
-                border_fill="#ffffff", progress=1.0, seed=0):
+                border_fill="#ffffff", progress=1.0, seed=0, radius=None):
     """A photo slotted into a designed frame: masked shape + border ring.
     Crop/focus/cutout all honoured — the zone shows the crop, never raw full-frame."""
     sw, sh = max(1, round(size[0])), max(1, round(size[1]))
@@ -501,7 +550,7 @@ def _photo_zone(slot, assets, size, *, shape="round", border=0,
                             centering=tuple(slot["focus"]))
     tile.putalpha(Image.composite(tile.getchannel("A"),
                                   Image.new("L", tile.size, 0),
-                                  _shape_mask((sw, sh), shape)))
+                                  _shape_mask((sw, sh), shape, radius)))
     tile.putalpha(tile.getchannel("A").point(lambda v: round(v * reveal)))
     if border:
         ring = Image.new("RGBA", (sw + border * 2, sh + border * 2), (0, 0, 0, 0))
@@ -711,6 +760,47 @@ def front(design, assets, width=720, height=None, progress=1.0):
         text_block(d, design["sender"], (w*.08, h*.875, w*.84, h*.03), ink, w*.021)
         return card.convert("RGB")
 
+    if tid == "birthday_4photo" and count == 4:
+        # canonical product: 4 rounded slots, title-art zone, subline + footer
+        s = w / 1500.0
+        d.rectangle((w*.04, h*.03, w*.96, h*.97), outline=accent, width=max(1, w//180))
+        for slot, (zx, zy, zw, zh) in zip(slots, CANONICAL_ZONES["photos"]):
+            tile, reveal = _photo_zone(slot, assets,
+                                       (zw * s, zh * s), shape="round",
+                                       border=0, progress=progress, seed=0,
+                                       radius=28 * s)
+            if tile is None:
+                continue
+            # fixed 28px corner radius at trim scale
+            card.alpha_composite(tile, (round(zx * s), round(zy * s)))
+        tx, ty, tw, th = [v * s for v in CANONICAL_ZONES["title_art"]]
+        art = None
+        tkey = design.get("title_art_key") or ""
+        if tkey:
+            try:
+                from backend import cards as _cardsmod
+                with Image.open(_cardsmod.local_asset(tkey)) as _im:
+                    art = _im.convert("RGBA")
+            except OSError:
+                art = None
+        if art is not None:
+            r = min(tw / art.width, th / art.height)
+            art = art.resize((max(1, round(art.width * r)), max(1, round(art.height * r))),
+                             Image.Resampling.LANCZOS)
+            card.alpha_composite(art, (round(tx + (tw - art.width) / 2),
+                                       round(ty + (th - art.height) / 2)))
+        elif progress > .15:
+            text_block(d, design["headline"], (tx, ty, tw, th), ink,
+                       tw * 0.075, bold=True, font_id="fraunces")
+        sx, sy, sw, sh = [v * s for v in CANONICAL_ZONES["front_footer"]]
+        foot = ("with love, " + design["sender"]) if design.get("sender") and len(design["sender"]) <= 32 else ""
+        if foot:
+            try:
+                text_block(d, foot, (sx, sy, sw, sh), ink, sw * 0.075)
+            except TextOverflow:
+                pass  # footer is garnish — small previews skip it, print keeps it
+        return card.convert("RGB")
+
     # typography + fallback: full-bleed type poster (no photos by design)
     if count:
         gap, x0, y0 = w*.025, w*.08, h*.08
@@ -747,6 +837,24 @@ def inside(design, width=720, height=None):
     Per-panel font/size/colour/align ride in design["inside"]."""
     fmt = FORMATS[design["format"]]
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
+    if design.get("template") == "birthday_4photo":
+        # canonical spread: 3000×2100 space, blank left, message + signature
+        # + brand zones on the right. Coordinates from CANONICAL_ZONES.
+        img = Image.new("RGB", (width, height), "#fffdf7")
+        d = ImageDraw.Draw(img)
+        s = width / 3000.0
+        mx, my, mw, mh = [v * s for v in CANONICAL_ZONES["inside_message"]]
+        right = ((design.get("inside") or {}).get("right")) or {}
+        rfont = right.get("font") if right.get("font") in CARD_FONT_IDS else "inter"
+        text_block(d, right.get("message", design.get("inside_message", "")),
+                   (mx, my, mw, mh), "#23201b", mw * 0.062, align="center",
+                   font_id=rfont)
+        sx, sy, sw, sh = [v * s for v in CANONICAL_ZONES["inside_signature"]]
+        text_block(d, design.get("sender", ""), (sx, sy, sw, sh),
+                   "#55554d", sw * 0.075, font_id="caveat")
+        lx, ly, lw, lh = [v * s for v in CANONICAL_ZONES["inside_logo"]]
+        text_block(d, "oddhobb.", (lx, ly, lw, lh), "#8a6a2f", lw * 0.16)
+        return img
     img = Image.new("RGB", (width, height), "#fffdf7")
     d = ImageDraw.Draw(img)
     hw = width / 2

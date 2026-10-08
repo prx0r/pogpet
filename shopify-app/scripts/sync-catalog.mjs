@@ -25,7 +25,7 @@ const FEED_URL =
   "https://oddhobb.com/backend/api/feeds/shopify.json";
 const STORE = process.env.SHOPIFY_STORE ?? "";
 const DRY = process.argv.includes("--dry-run");
-const API_VERSION = "2024-10";
+const API_VERSION = process.env.SHOPIFY_API_VERSION || "2026-07";
 
 // Dev Dashboard apps don't expose a copyable shpat_ token in the UI — you
 // exchange client_id + client_secret for a 24h access token (client_credentials

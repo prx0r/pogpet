@@ -30,6 +30,7 @@ from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 API = os.environ.get("FIGG_API_BASE", "http://127.0.0.1:8798")
 PORT = int(os.environ.get("MCP_PORT", "8799"))
+MCP_VERSION = "1.5.0"
 
 
 def _service_token() -> str:
@@ -638,8 +639,10 @@ async def figg_card_library(owner: str = "") -> str:
 
 async def figg_card_save(spec: dict, owner: str = "", design_id: str = "",
                          expected_revision: int = 0) -> str:
-    """Save a card scene: template, format, photos[{photo_id,crop,focus,cutout}], headline, recipient, sender, inside_message."""
-    body = {"owner": owner, "spec": spec}
+    """Save a card scene: template, format, photos[{photo_id,crop,focus,cutout}], headline, recipient, sender, inside_message.
+    Stamped via=mcp. Same validators as REST/UI (brand locks + no wordmark run in save).
+    Done means a product_url the human can buy from — POST checkout next. A preview alone is not done."""
+    body = {"owner": owner, "spec": spec, "via": "mcp"}
     if design_id:
         body.update(id=design_id, expected_revision=expected_revision)
     return _j(await _call("POST", "/api/cards/designs", body))
@@ -678,8 +681,20 @@ async def figg_card_cutout(photo_id: str, crop: list[float], owner: str = "") ->
 
 async def figg_card_reserve(design_id: str, revision: int, idempotency_key: str,
                             qty: int = 1, owner: str = "") -> str:
-    """Reserve a real card with approved export and server price. Show price first. No payment or supplier fulfilment."""
+    """Reserve a real card (£7.99 FIXED) with approved export. Show price first.
+    Reserve-only — no payment. To sell: figg_card_checkout for Shopify checkout_url.
+    Done means a product_url the human can buy from; a preview alone is not done."""
     return _j(await _call("POST", f"/api/cards/{design_id}/order",
+                         {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}))
+
+
+async def figg_card_checkout(design_id: str, revision: int, idempotency_key: str,
+                             qty: int = 1, owner: str = "") -> str:
+    """Buy a card (£7.99): freeze revision → Shopify draft → checkout_url.
+    Returns product_url (OddHobb page agents hand over, never a PNG) + checkout_url
+    (Shopify payment). Shopify owns payment; Prodigi prints on orders/paid only.
+    Done means a product_url the human can buy from. A preview alone is not done."""
+    return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
                          {"owner": owner, "revision": revision, "idempotency_key": idempotency_key, "qty": qty}))
 
 
@@ -716,8 +731,10 @@ async def figg_design_save(line: str, owner: str = "",
                            material: str = "", colors: int = 1,
                            text: str = "", volume_cm3: float | None = None,
                            stl_base64: str = "") -> str:
-    """Play with the base, save the design: validated spec stored as a draft.
+    """    Play with the base, save the design: validated spec stored as a draft.
     Returns design_id for figg_design_order. Invalid designs 400 with gaps.
+    LOCKS FIRST: read figg_constraints — locked geometry/brand cannot be
+    changed by any prompt, and save rejects violations with coordinates.
     BASE-FIRST: fetch figg_design_base for the line before saving — fulfil
     refuses drafts saved without it. Pass stl_base64 (aliases stl,
     geometry_b64; ≤32MB) and the geometry itself is CHECKED (envelope,
@@ -742,6 +759,17 @@ async def figg_design_order(design_id: str, owner: str = "", qty: int = 1,
     if os.environ.get("PUBLIC_MCP") == "1" and isinstance(d, dict):
         d["fulfil_dropped"] = "public tier is reserve-only — fulfil needs the bridge token"
     return _j(d)
+
+
+async def figg_constraints(line: str = "") -> str:
+    """Locked constraints you cannot change, per line or all lines: locked
+    geometry (croc stem dia, envelopes), brand rules (card back/type/grammars
+    are renderer-owned, no inputs exist), and what save enforces vs what is
+    still open (physical fit checks). Read this BEFORE designing — save
+    rejects violations, and no prompt wording overrides a lock."""
+    if line:
+        return _j(await _call("GET", "/api/design/locks/" + line))
+    return _j(await _call("GET", "/api/design/locks"))
 
 
 async def figg_blender_make(line: str, text: str, owner: str = "") -> str:
@@ -943,8 +971,9 @@ TOOL_META: dict[str, dict] = {
 TOOL_AREAS: dict[str, list] = {
     "cards":     [figg_card_library, figg_card_save, figg_card_render,
                   figg_card_job, figg_card_scene, figg_card_cutout, figg_card_reserve,
-                  figg_card_templates],
+                  figg_card_checkout, figg_card_templates],
     "design":    [figg_blueprints, figg_design_validate, figg_design_base,
+                  figg_constraints,
                   figg_design_save, figg_design_order, figg_blender_make],
     "flow":      [figg_flow, figg_upload_photo, figg_upload_chatgpt_file,
                   figg_preview_image, figg_start_mesh, figg_playbook, figg_quick_map,
@@ -985,6 +1014,7 @@ PUBLIC_TOOLS = frozenset({
     "figg_studio_combos", "figg_product_personalise", "figg_gift_pack",
     "figg_supplier_quote",
     "figg_blueprints", "figg_design_validate", "figg_design_base",
+    "figg_constraints",
     "figg_design_save", "figg_design_order",
     "figg_flow", "figg_playbook", "figg_quick_map",
     "figg_card_library", "figg_card_templates",

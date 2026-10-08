@@ -28,7 +28,8 @@ def compose(design: dict, assets: dict,
     pw = W // 4
     f = front(design, assets, pw, H).convert("RGB")
     inner = inside(design, pw * 2, H).convert("RGB")
-    back = Image.new("RGB", (pw, H), "#fffdf7")
+    from backend.card_scenes import back as back_panel
+    back = back_panel(design, pw, H).convert("RGB")
     panels = {"back": back, "front": f,
               "inside_left": inner.crop((0, 0, pw, H)),
               "inside_right": inner.crop((pw, 0, pw * 2, H))}

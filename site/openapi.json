@@ -333,7 +333,7 @@
     "/backend/api/cards/templates": {
       "get": {
         "operationId": "cardTemplates",
-        "summary": "Card templates with paper contracts",
+        "summary": "Card templates with paper contracts + FIXED £7.99 product + mcp_status",
         "parameters": [
           {
             "in": "query",
@@ -349,6 +349,124 @@
               "type": "string"
             }
           }
+        ]
+      }
+    },
+    "/backend/api/cards/designs": {
+      "post": {
+        "operationId": "cardSave",
+        "summary": "Save card (mcp|rest|ui stamped; brand locks + no-wordmark enforced in save). Done means product_url, not preview.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "spec": {"type": "object"},
+                  "owner": {"type": "string"},
+                  "via": {"type": "string", "enum": ["mcp", "rest", "ui"]},
+                  "id": {"type": "string"},
+                  "expected_revision": {"type": "integer"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "design + card_url + product (£7.99 FIXED) + mcp_status"
+          }
+        }
+      },
+      "get": {
+        "operationId": "cardDesigns",
+        "summary": "List saved card designs + mcp_status",
+        "parameters": [
+          {"in": "query", "name": "owner", "schema": {"type": "string"}},
+          {"in": "query", "name": "token", "schema": {"type": "string"}}
+        ]
+      }
+    },
+    "/backend/api/cards/{id}/render": {
+      "post": {
+        "operationId": "cardRender",
+        "summary": "Render preview/export/motion for a frozen revision (same rules as MCP)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {"type": "integer"},
+                  "kind": {"type": "string", "enum": ["preview", "export", "motion"]},
+                  "owner": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"200": {"description": "async job; same revision drives paper + MP4"}}
+      }
+    },
+    "/backend/api/cards/{id}/order": {
+      "post": {
+        "operationId": "cardOrder",
+        "summary": "Reserve card (£7.99 FIXED). fulfil disabled — use checkout for Shopify payment.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {"type": "integer"},
+                  "qty": {"type": "integer"},
+                  "idempotency_key": {"type": "string"},
+                  "owner": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"200": {"description": "order + card_url + product + mcp_status"}}
+      }
+    },
+    "/backend/api/cards/{id}/checkout": {
+      "post": {
+        "operationId": "cardCheckout",
+        "summary": "Buy card £7.99: freeze revision → Shopify draft → checkout_url. Prodigi on orders/paid only.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "revision": {"type": "integer"},
+                  "qty": {"type": "integer"},
+                  "idempotency_key": {"type": "string"},
+                  "owner": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+        "responses": {"200": {"description": "order + product_url + checkout_url (Shopify). Done = buyable link."}}
+      }
+    },
+    "/backend/api/design/locks": {
+      "get": {
+        "operationId": "designLocks",
+        "summary": "Locked constraints agents cannot change (read before designing)",
+        "parameters": [
+          {"in": "query", "name": "token", "schema": {"type": "string"}}
+        ]
+      }
+    },
+    "/backend/api/mcp/health": {
+      "get": {
+        "operationId": "mcpHealth",
+        "summary": "MCP tier health: version, tool count, uptime, ports. Handshake first.",
+        "parameters": [
+          {"in": "query", "name": "token", "schema": {"type": "string"}}
         ]
       }
     },

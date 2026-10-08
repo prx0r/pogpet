@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -67,6 +68,9 @@ def _gated():
 @app.before_request
 def gate():
     if request.path == "/health":
+        return None
+    # Shopify webhooks carry HMAC, not our token — verified in-handler.
+    if request.path.startswith("/api/shopify/webhooks/"):
         return None
     return _gated()
 
@@ -3890,6 +3894,183 @@ def products_for_subject(subject: str):
                    lines=ranked)
 
 
+@app.get("/api/mcp/health")
+def mcp_health():
+    """MCP tier health: version, tool count, process uptime, port checks.
+    A tunnel 502 with healthy Flask shows up here as backend unreachable;
+    a fresh restart shows up as low uptime. No secrets.
+    Cf-Ray matching: bridge logs cf_ray on every 502 to ~/.figg_mcp_proxy.log
+    so agent timestamps + ray IDs map to process logs."""
+    import socket
+    import time as _time
+    from backend import mcp_server as _mcp
+    tools = sum(len(v) for v in _mcp.TOOL_AREAS.values()) + 1
+    version = getattr(_mcp, "MCP_VERSION", "unversioned")
+
+    def _uptime(pattern: str):
+        try:
+            import subprocess as _sp
+            out = _sp.run(["pgrep", "-f", pattern], capture_output=True,
+                          text=True, timeout=5).stdout.strip().split()
+            if not out:
+                return None
+            # oldest matching PID = main process (stable across forks)
+            pid = sorted(out, key=int)[0]
+            stat = open(f"/proc/{pid}/stat").read().split()
+            clk = os.sysconf("SC_CLK_TCK")
+            boot = float(open("/proc/stat").read().split("btime")[1].split()[0])
+            started = boot + float(stat[21]) / clk
+            return round(_time.time() - started)
+        except Exception:
+            return None
+
+    mcp_uptime_s = _uptime("backend.mcp_server")
+    flask_uptime_s = _uptime("backend.server")
+    ports = {}
+    for port in (8799, 8800):
+        try:
+            s = socket.create_connection(("127.0.0.1", port), timeout=2)
+            s.close()
+            ports[str(port)] = "open"
+        except OSError:
+            ports[str(port)] = "closed"
+    return jsonify(ok=True, version=version, tools=tools,
+                   uptime_s=mcp_uptime_s, flask_uptime_s=flask_uptime_s,
+                   ports=ports,
+                   degraded=ports.get("8799") != "open",
+                   cf_ray_log="~/.figg_mcp_proxy.log (bridge logs cf_ray on every 502)",
+                   hint="Handshake first: GET this. If degraded, prefer waiting — "
+                        "REST works but is off the main road (see mcp_status).")
+
+
+@app.post("/api/shopify/webhooks/orders-paid")
+def shopify_orders_paid():
+    """Shopify orders/paid → Prodigi fulfilment. Idempotent.
+
+    Invariant: Prodigi is never called until Shopify says paid.
+    Verifies X-Shopify-Hmac-Sha256, finds oddhobb_order_id in line-item
+    customAttributes/properties (or note_attributes/note), skips if already
+    fulfilled, else composes the frozen revision's exact Prodigi PDF,
+    preflights, presigns via R2, and calls Prodigi create_order with the
+    customer's shipping address. Shopify retries are safe (idempotent).
+    Blocked until CARD_PANEL_CONFIRMED=1 (panel order vs Prodigi template).
+    """
+    from backend import shopify_fulfil as _sf
+    raw = request.get_data() or b""
+    hmac_header = request.headers.get("X-Shopify-Hmac-Sha256", "")
+    if not _sf.verify_webhook(raw, hmac_header):
+        return _err("bad webhook signature", 401)
+    try:
+        payload = json.loads(raw.decode() or "{}")
+    except (ValueError, UnicodeDecodeError):
+        return _err("bad webhook JSON", 400)
+    # find our order id — customAttributes first, then properties, notes
+    oid = ""
+    line_items = payload.get("line_items") or payload.get("lineItems") or []
+    for li in line_items:
+        for attr in (li.get("customAttributes") or li.get("custom_attributes") or []):
+            if isinstance(attr, dict) and str(attr.get("key") or "").lower() == "oddhobb_order_id":
+                oid = str(attr.get("value") or "")
+        for prop in (li.get("properties") or []):
+            if isinstance(prop, dict) and str(prop.get("name") or prop.get("key") or "").lower() == "oddhobb_order_id":
+                oid = str(prop.get("value") or "")
+    if not oid:
+        for na in (payload.get("note_attributes") or payload.get("noteAttributes") or []):
+            if isinstance(na, dict) and str(na.get("name") or na.get("key") or "").lower() == "oddhobb_order_id":
+                oid = str(na.get("value") or "")
+    if not oid:
+        import re as _re
+        m = _re.search(r"ord_card_[0-9a-f]{16,}", str(payload.get("note") or ""))
+        if m:
+            oid = m.group(0)
+    if not oid:
+        return jsonify(ok=False, error="no oddhobb_order_id in webhook"), 200
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM card_orders WHERE id=?", (oid,)).fetchone()
+    if row is None:
+        return jsonify(ok=False, error="unknown oddhobb order"), 200
+    order = dict(row)
+    if order.get("status") == "fulfilled" and order.get("prodigi_ref"):
+        return jsonify(ok=True, reused=True, order_id=oid,
+                       prodigi_ref=order.get("prodigi_ref")), 200
+    if os.environ.get("CARD_PANEL_CONFIRMED", "") != "1":
+        return _err("card panel order not confirmed against Prodigi template yet "
+                    "(CARD_PANEL_CONFIRMED=1 blocks live print)", 409)
+    # shipping address from Shopify → Prodigi recipient
+    ship = payload.get("shipping_address") or payload.get("shippingAddress") or {}
+    recipient = {
+        "name": str(ship.get("name") or f"{ship.get('first_name','')} {ship.get('last_name','')}".strip() or "OddHobb customer")[:60],
+        "line1": str(ship.get("address1") or ship.get("line1") or "")[:100],
+        "line2": str(ship.get("address2") or ship.get("line2") or "")[:100],
+        "town": str(ship.get("city") or ship.get("town") or "")[:60],
+        "postcode": str(ship.get("zip") or ship.get("postcode") or "")[:20],
+        "country": str(ship.get("country_code") or ship.get("country") or "GB")[:2].upper(),
+        "email": str(payload.get("email") or payload.get("contact_email") or "")[:120],
+    }
+    if not all(recipient[k].strip() for k in ("name", "line1", "town", "postcode", "country")):
+        return _err("webhook shipping address incomplete — cannot print", 422)
+    try:
+        from backend import cards as _cards
+        from backend import card_print as _print
+        from backend import r2presign as _r2
+        from backend import prodigi as _prodigi
+        spec = json.loads(order["spec"])
+        owner, did, rev = order["owner"], order["design_id"], order["revision"]
+        # frozen revision must still validate + belong to owner
+        _cards.validate(owner, spec)
+        aa = _cards.assets(owner, spec)
+        single = _print.compose(spec, aa)
+        gaps = _print.preflight(single)
+        if gaps:
+            return _err("print file failed preflight: " + "; ".join(gaps), 500)
+        r2key = _r2.put_temp(single)
+        try:
+            asset_url = _r2.presigned_url(r2key)
+        except Exception as e:  # noqa: BLE001
+            _r2.delete(r2key)
+            return _err(f"asset delivery failed: {str(e)[:200]}", 502)
+        placed = _prodigi.create_order(_cards.CARD_PRODIGI_SKU, order["qty"],
+                                       asset_url, recipient)
+    except Exception as e:  # noqa: BLE001
+        return _err(f"fulfilment failed: {str(e)[:200]}", 502)
+    with db.connect() as c:
+        c.execute("UPDATE card_orders SET status='fulfilled', prodigi_ref=? WHERE id=?",
+                  (placed["id"], oid))
+        c.commit()
+    return jsonify(ok=True, order_id=oid, prodigi_ref=placed["id"],
+                   status=placed.get("status", "received"))
+
+
+@app.post("/api/shopify/webhooks/register")
+def shopify_webhook_register():
+    """Register orders/paid → our webhook. Needs SHOPIFY creds + PUBLIC_BASE.
+    Idempotent: reuses existing subscription for the same address."""
+    from backend import shopify_fulfil as _sf
+    if not _sf.configured():
+        return _err("Shopify not configured", 503)
+    address = (config.PUBLIC_BASE or "").rstrip("/") + "/backend/api/shopify/webhooks/orders-paid"
+    query = """
+    mutation webhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
+      webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
+        webhookSubscription { id endpoint { __typename ... on WebhookHttpEndpoint { callbackUrl } } }
+        userErrors { field message }
+      }
+    }
+    """
+    try:
+        data = _sf.gql(query, {"topic": "ORDERS_PAID",
+                               "webhookSubscription": {"callbackUrl": address,
+                                                       "format": "JSON"}})
+    except Exception as e:  # noqa: BLE001
+        return _err(f"webhook register failed: {str(e)[:200]}", 502)
+    res = ((data.get("data") or {}).get("webhookSubscriptionCreate")) or {}
+    if res.get("userErrors"):
+        return _err(str(res["userErrors"][0].get("message", "webhook failed"))[:200], 502)
+    sub = res.get("webhookSubscription") or {}
+    return jsonify(ok=True, subscription=sub, address=address,
+                   api_version=_sf.API_VERSION)
+
+
 @app.post("/api/products/personalise")
 def products_personalise():
     """Controlled personalise: coat colour + pattern + hat on a product line."""
@@ -4138,6 +4319,23 @@ def _base_first(owner: str, line: str) -> bool:
             return row is not None
     except Exception:  # noqa: BLE001 — table missing on old DBs: treat as no
         return False
+
+
+@app.get("/api/design/locks")
+def design_locks_all():
+    """Every locked constraint, all lines. Agents read this BEFORE
+    designing: locked geometry, brand rules, and what save enforces."""
+    from backend import locks as _locks
+    return jsonify(ok=True, **_locks.all_locks())
+
+
+@app.get("/api/design/locks/<line>")
+def design_locks(line: str):
+    from backend import locks as _locks
+    try:
+        return jsonify(ok=True, **_locks.locks_for(line.strip()))
+    except KeyError:
+        return _err("unknown line", 404)
 
 
 @app.post("/api/design/save")

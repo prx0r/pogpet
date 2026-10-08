@@ -103,25 +103,58 @@ del _tid, _contract
 
 
 def font(size, bold=False):
-    suffix = "-Bold" if bold else ""
-    for base in ("/usr/share/fonts/truetype/dejavu/DejaVuSans", "/usr/share/fonts/truetype/liberation2/LiberationSans"):
+    # House type system (assets/fonts, all OFL commercial-print-safe):
+    # display = Fraunces (headlines), hand = Caveat (names/signatures only),
+    # sans = Inter (everything else). DejaVu is the fallback, never the look.
+    return get_font("sans", size, bold=bold)
+
+
+def get_font(role, size, bold=False):
+    from pathlib import Path as _P
+    here = _P(__file__).resolve().parent.parent / "assets" / "fonts"
+    cands = {
+        "display": [here / "Fraunces-SemiBold.ttf"],
+        "hand": [here / "Caveat-SemiBold.ttf"],
+        "sans": [here / "Inter-Bold.ttf" if bold else here / "Inter-Regular.ttf"],
+    }[role]
+    cands += ["/usr/share/fonts/truetype/dejavu/DejaVuSans" +
+              ("-Bold" if bold else "") + ".ttf"]
+    for base in cands:
         try:
-            return ImageFont.truetype(base + suffix + ".ttf", max(8, int(size)))
+            return ImageFont.truetype(str(base), max(8, int(size)))
         except OSError:
             pass
     return ImageFont.load_default()
+
+
+def back(design, width=720, height=None):
+    """Canonical back: brand mark, tagline, URL, quiet margins. The renderer
+    owns it — never AI, never blank."""
+    fmt = FORMATS[design["format"]]
+    height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
+    img = Image.new("RGB", (width, height), "#fffdf7")
+    d = ImageDraw.Draw(img)
+    ink, muted, gold = "#22221d", "#55554d", "#8a6a2f"
+    d.text((width / 2, height * 0.42), "oddhobb.", font=get_font("display", width * 0.09),
+           fill=ink, anchor="mm")
+    d.text((width / 2, height * 0.50), "odd little gifts for the things they're obsessed with",
+           font=get_font("sans", width * 0.028), fill=muted, anchor="mm")
+    d.text((width / 2, height * 0.90), "oddhobb.com", font=get_font("sans", width * 0.03),
+           fill=gold, anchor="mm")
+    return img
 
 
 class TextOverflow(ValueError):
     pass
 
 
-def text_block(draw, text, box, colour, size, *, bold=False, align="center"):
+def text_block(draw, text, box, colour, size, *, bold=False, align="center",
+               role="sans"):
     """Wrap and shrink to fit the entire text; never silently clip a headline."""
     x, y, w, h = box
     fitted=False
     for fs in range(max(8,int(size)), 7, -1):
-        f = font(fs, bold)
+        f = get_font(role, fs, bold)
         lines = []
         for paragraph in str(text).split("\n"):
             line = ""
@@ -161,6 +194,29 @@ def cropped(img, box):
                      round((x + w) * img.width), round((y + h) * img.height)))
 
 
+MASTHEAD = {"breaking_news": "BREAKING NEWS", "game_winner": "THE GAME WINNER",
+            "awards": "LIFETIME ACHIEVEMENT", "christmas": "THE CHRISTMAS CAST"}
+FULLBLEED = {"portrait"}
+
+
+def _tile(slot, assets, size, progress, i):
+    reveal = max(0.0, min(1.0, progress * 2.2 - i * .13))
+    if reveal <= 0:
+        return None, 0.0
+    src = assets[slot["photo_id"]].copy()
+    if not slot.get("cutout"):
+        src = cropped(src, slot["crop"])
+    if slot.get("cutout"):
+        src.thumbnail(size, Image.Resampling.LANCZOS)
+        tile = Image.new("RGBA", size)
+        tile.alpha_composite(src, ((size[0] - src.width) // 2, size[1] - src.height))
+    else:
+        tile = ImageOps.fit(src, size, method=Image.Resampling.LANCZOS,
+                            centering=tuple(slot["focus"]))
+    tile.putalpha(tile.getchannel("A").point(lambda v: round(v * reveal)))
+    return tile, reveal
+
+
 def front(design, assets, width=720, height=None, progress=1.0):
     fmt = FORMATS[design["format"]]
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
@@ -169,39 +225,53 @@ def front(design, assets, width=720, height=None, progress=1.0):
     d = ImageDraw.Draw(card)
     w, h = width, height
     accent, ink = tpl["accent"], tpl["ink"]
-    d.rectangle((w*.04, h*.03, w*.96, h*.97), outline=accent, width=max(1, w//180))
-    title = {"breaking_news": "BREAKING NEWS", "game_winner": "THE GAME WINNER", "awards": "LIFETIME ACHIEVEMENT", "christmas": "THE CHRISTMAS CAST"}.get(design["template"], "ODDHOBB")
-    if design["template"] == "breaking_news":
-        d.rectangle((w*.04, h*.03, w*.96, h*.13), fill=accent)
-    text_block(d, title, (w*.08, h*.06, w*.84, h*.06), ink, w*.035, bold=True)
     slots = design["photos"]
     count = len(slots)
+    tid = design["template"]
+
+    if tid in FULLBLEED and count:
+        # full-bleed photo, scrim, overlaid type — no frame, no masthead
+        src = assets[slots[0]["photo_id"]].copy()
+        if not slots[0].get("cutout"):
+            src = cropped(src, slots[0]["crop"])
+        bg = ImageOps.fit(src, (w, h), method=Image.Resampling.LANCZOS,
+                          centering=tuple(slots[0]["focus"]))
+        card.alpha_composite(bg.convert("RGBA"))
+        d = ImageDraw.Draw(card, "RGBA")
+        for y in range(int(h * .62), h):
+            a = round(200 * (y - h * .62) / (h * .38))
+            d.rectangle((0, y, w, y + 1), fill=(10, 10, 12, a))
+        if progress > .15:
+            text_block(d, design["headline"], (w * .08, h * .72, w * .84, h * .12),
+                       "#fff9e7", w * .07, bold=True, role="display")
+        text_block(d, design["recipient"], (w * .08, h * .87, w * .84, h * .05),
+                   "#e5ba62", w * .032, bold=True, role="hand")
+        return card.convert("RGB")
+
+    d.rectangle((w*.04, h*.03, w*.96, h*.97), outline=accent, width=max(1, w//180))
+    title = MASTHEAD.get(tid)
+    top = h*.16
+    if title:
+        if tid == "breaking_news":
+            d.rectangle((w*.04, h*.03, w*.96, h*.13), fill=accent)
+        text_block(d, title, (w*.08, h*.06, w*.84, h*.06), ink, w*.035, bold=True)
+    else:
+        top = h*.08
     if count:
-        gap, x0, y0 = w*.025, w*.08, h*.16
+        gap, x0, y0 = w*.025, w*.08, top
         cols = 1 if count == 1 else 2
         rows = math.ceil(count / cols)
-        sw, sh = (w*.84 - gap*(cols-1))/cols, (h*.49-gap*(rows-1))/rows
+        sw, sh = (w*.84 - gap*(cols-1))/cols, (h*.60-gap*(rows-1))/rows
         for i, slot in enumerate(slots):
-            reveal = max(0.0, min(1.0, progress*2.2-i*.13))
-            if reveal <= 0:
+            tile, reveal = _tile(slot, assets, (max(1, round(sw)), max(1, round(sh))), progress, i)
+            if tile is None:
                 continue
-            src = assets[slot["photo_id"]].copy()
-            if not slot.get("cutout"):
-                src = cropped(src, slot["crop"])
-            size = (max(1, round(sw)), max(1, round(sh)))
-            if slot.get("cutout"):
-                src.thumbnail(size, Image.Resampling.LANCZOS)
-                tile = Image.new("RGBA", size)
-                tile.alpha_composite(src, ((size[0]-src.width)//2, size[1]-src.height))
-            else:
-                tile = ImageOps.fit(src, size, method=Image.Resampling.LANCZOS, centering=tuple(slot["focus"]))
-            tile.putalpha(tile.getchannel("A").point(lambda v: round(v*reveal)))
             px, py = round(x0+(i%cols)*(sw+gap)), round(y0+(i//cols)*(sh+gap)+(1-reveal)*h*.025)
             card.alpha_composite(tile, (px, py))
     hy = h*.70 if count else h*.30
     if progress > .15:
-        text_block(d, design["headline"], (w*.08, hy, w*.84, h*.15 if count else h*.35), ink, w*.065, bold=True)
-    text_block(d, design["recipient"], (w*.08, h*.87, w*.84, h*.04), accent, w*.029, bold=True)
+        text_block(d, design["headline"], (w*.08, hy, w*.84, h*.15 if count else h*.35), ink, w*.065, bold=True, role="display")
+    text_block(d, design["recipient"], (w*.08, h*.87, w*.84, h*.04), accent, w*.029, bold=True, role="hand")
     text_block(d, design["sender"], (w*.08, h*.925, w*.84, h*.025), ink, w*.021)
     if design["template"] in ("awards", "game_winner") and progress < 1:
         for i in range(32):
@@ -241,10 +311,9 @@ def print_pdf(design, assets, dest):
     w,h = [round(mm*300/25.4) for mm in fmt["mm"]]
     bleed = round(3*300/25.4)
     a,b = front(design,assets,w,h), inside(design,w,h)
-    back = Image.new("RGB",(w,h),"#fffdf7")
-    text_block(ImageDraw.Draw(back), "oddhobb.com", (w*.1,h*.85,w*.8,h*.1), "#55554d",w*.035)
+    back_img = back(design, w, h)
     pages=[]
-    pairs = [(back,a),(Image.new("RGB",(w,h),"#fffdf7"),b)] if fmt["folded"] else [(a,),(b,)]
+    pairs = [(back_img,a),(Image.new("RGB",(w,h),"#fffdf7"),b)] if fmt["folded"] else [(a,),(b,)]
     for panels in pairs:
         spread=Image.new("RGB",(w*len(panels),h),"#fffdf7")
         for i,panel in enumerate(panels):

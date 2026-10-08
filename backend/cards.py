@@ -59,8 +59,14 @@ def init():
         c.executescript(SCHEMA)
         if "storage_owner" not in {r[1] for r in c.execute("PRAGMA table_info(card_designs)")}:
             c.execute("ALTER TABLE card_designs ADD COLUMN storage_owner TEXT NOT NULL DEFAULT ''")
+        if "via" not in {r[1] for r in c.execute("PRAGMA table_info(card_designs)")}:
+            c.execute("ALTER TABLE card_designs ADD COLUMN via TEXT NOT NULL DEFAULT ''")
         if "prodigi_ref" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
             c.execute("ALTER TABLE card_orders ADD COLUMN prodigi_ref TEXT NOT NULL DEFAULT ''")
+        if "shopify_draft_id" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
+            c.execute("ALTER TABLE card_orders ADD COLUMN shopify_draft_id TEXT NOT NULL DEFAULT ''")
+        if "checkout_url" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
+            c.execute("ALTER TABLE card_orders ADD COLUMN checkout_url TEXT NOT NULL DEFAULT ''")
         c.execute("UPDATE card_designs SET storage_owner=owner WHERE storage_owner=''")
         c.execute("UPDATE card_jobs SET status='failed',error='Render interrupted. Retry this revision.' WHERE status IN ('queued','running')")
         c.commit()
@@ -107,9 +113,80 @@ def cutout(owner,cid,pid):
     return dict(row)
 
 
+_MCP_STATUS_CACHE: dict = {"at": 0.0, "value": "unknown"}
+
+
+def mcp_status() -> str:
+    """live|degraded (cached 30s): is the MCP tier reachable? REST callers
+    see this so agents know when they're off the main road."""
+    import socket as _sock
+    import time as _time
+    if _time.time() - _MCP_STATUS_CACHE["at"] < 30:
+        return _MCP_STATUS_CACHE["value"]
+    # Full tier only: primary 8799 + MCP_PORT_FALLBACK replica.
+    # :8800 is the PUBLIC tier (different allowlist), never a failover.
+    import os as _os
+    primary = _os.environ.get("MCP_PORT", "8799")
+    fallback = _os.environ.get("MCP_PORT_FALLBACK", "")
+    v = "degraded"
+    for port in (primary, fallback):
+        if not port:
+            continue
+        try:
+            s = _sock.create_connection(("127.0.0.1", int(port)), timeout=1)
+            s.close()
+            v = "live"
+            break
+        except (OSError, ValueError):
+            continue
+    _MCP_STATUS_CACHE.update(at=_time.time(), value=v)
+    return v
+
+
+# ── card P0 product truth ──────────────────────────────────────────
+# One hidden Shopify product, one fixed retail price. Prodigi cost is an
+# internal margin variable — the customer never sees EST.
+CARD_PRODUCT_ID = "ODD-CARD-5X7"
+CARD_PRODUCT_NAME = "OddHobb Personalised 5×7 Greeting Card"
+CARD_PRODIGI_SKU = "CLASSIC-GRE-FEDR-7X5-BLA"
+CARD_PRICE_CENTS = 799  # £7.99 fixed — envelope included
+
+
+def card_price() -> dict:
+    """Fixed retail truth for cards. Reads PRODIGI_PRODUCTS when present
+    so config stays the source, but never floats — falls back to £7.99."""
+    try:
+        prod = (config.PRODIGI_PRODUCTS.get("greeting_card") or {})
+        cents = int(prod.get("price_cents") or CARD_PRICE_CENTS)
+        # clamp to the frozen P0 price: config drift must not change checkout
+        if cents != CARD_PRICE_CENTS:
+            cents = CARD_PRICE_CENTS
+    except Exception:
+        cents = CARD_PRICE_CENTS
+    return {"product_id": CARD_PRODUCT_ID, "name": CARD_PRODUCT_NAME,
+            "price_cents": cents, "price": f"£{cents/100:.2f}",
+            "currency": "GBP", "price_grade": "FIXED",
+            "prodigi_sku": CARD_PRODIGI_SKU}
+
+
+def card_url_for(did: str, rev: int | None = None) -> str:
+    base = (config.PUBLIC_BASE or "https://oddhobb.com").rstrip("/")
+    if rev:
+        return f"{base}/cards/{did}/r{rev}"
+    return f"{base}/cards/{did}"
+
+
 def validate(owner,b):
     if not isinstance(b,dict):
         raise CardError("Expected a card design object")
+    # Brand locks run in the SAVE handler, not the MCP layer — same
+    # validators on every path (mcp|rest|ui). Renderer-owned geometry has
+    # no inputs by construction: reject attempts to set it.
+    for locked_key in ("back", "fonts", "font", "layout", "bleed", "dpi",
+                       "panel_order", "panels", "print_area", "safe_zone",
+                       "fold", "sku", "supplier"):
+        if locked_key in b:
+            raise CardError(f"{locked_key} is renderer-owned — no inputs exist")
     tid=b.get("template","portrait")
     if not isinstance(tid,str) or not isinstance(b.get("format","5x7"),str) or tid not in scenes.TEMPLATES or b.get("format","5x7") not in scenes.FORMATS:
         raise CardError("Unknown card template or format")
@@ -142,6 +219,8 @@ def validate(owner,b):
         if not isinstance(value,str) or len(value)>limit:
             raise CardError(f"{field} must be text up to {limit} characters")
         spec[field]=value.strip()
+    if "oddhobb" in (spec["headline"] + " " + spec["recipient"]).lower():
+        raise CardError("No wordmark on the front — brand lives on the back only")
     if not spec["headline"]:
         raise CardError("Add a headline")
     return spec
@@ -156,7 +235,7 @@ def record(owner,did,revision=None):
         row=c.execute("SELECT * FROM card_revisions WHERE design_id=? AND revision=?",(did,rev)).fetchone()
         if row is None:
             raise CardError("Card revision not found",404)
-    return {"id":did,"revision":rev,"latest":d["latest"],"spec":json.loads(row["spec"]),"updated_at":d["updated_at"]}
+    return {"id":did,"revision":rev,"latest":d["latest"],"spec":json.loads(row["spec"]),"updated_at":d["updated_at"],"via":d["via"] if "via" in d.keys() else ""}
 
 
 def key(owner,did,rev,kind):
@@ -271,7 +350,11 @@ def register(app,owner_denied):
 
     @bp.get("/api/cards/templates")
     def templates():
-        return jsonify(ok=True,version=scenes.VERSION,templates=[{"id":k,**v} for k,v in scenes.TEMPLATES.items()],formats=scenes.FORMATS,motion_available=__import__('shutil').which("ffmpeg") is not None,print_status="Generic PDF export; supplier fulfilment is not connected.")
+        return jsonify(ok=True,version=scenes.VERSION,templates=[{"id":k,**v} for k,v in scenes.TEMPLATES.items()],formats=scenes.FORMATS,motion_available=__import__('shutil').which("ffmpeg") is not None,
+                      product={**card_price(),
+                               "buy_hint": "POST /api/cards/<id>/checkout returns checkout_url — done means a product_url the human can buy from; a preview alone is not done."},
+                      mcp_status=mcp_status(),
+                      mcp_hint="If degraded, prefer waiting — REST works but is off the main road.")
 
     @bp.get("/api/cards/photos")
     def photos():
@@ -338,9 +421,14 @@ def register(app,owner_denied):
         if request.method=="GET":
             with db.connect() as c:
                 rows=c.execute("SELECT id,latest FROM card_designs WHERE owner=? ORDER BY updated_at DESC LIMIT 100",(owner,)).fetchall()
-            return jsonify(ok=True,designs=[record(owner,r["id"],r["latest"]) for r in rows])
+            return jsonify(ok=True,designs=[record(owner,r["id"],r["latest"]) for r in rows],
+                           mcp_status=mcp_status(),
+                           mcp_hint="If degraded, prefer waiting — REST works but is off the main road.")
         b=request.get_json() or {}
         did=str(b.get("id") or "card_"+uuid.uuid4().hex)
+        via=str(b.get("via") or "").strip().lower()[:10]
+        if via not in ("mcp", "rest", "ui"):
+            via = "rest"
         with db.connect() as c:
             c.execute("BEGIN IMMEDIATE")
             spec=validate(owner,b.get("spec",{}))
@@ -356,12 +444,12 @@ def register(app,owner_denied):
                 else:
                     rev=old["latest"]+1
                     c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",(did,rev,json_dump(spec),time.time()))
-                    c.execute("UPDATE card_designs SET latest=?,updated_at=? WHERE id=?",(rev,time.time(),did))
+                    c.execute("UPDATE card_designs SET latest=?,updated_at=?,via=? WHERE id=?",(rev,time.time(),via,did))
             else:
                 if b.get("id"):
                     raise CardError("Card not found",404)
                 rev=1;t=time.time()
-                c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner) VALUES (?,?,?,?,?,?)",(did,owner,rev,t,t,owner))
+                c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",(did,owner,rev,t,t,owner,via))
                 c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",(did,rev,json_dump(spec),t))
             c.commit()
         warnings=[]
@@ -375,7 +463,13 @@ def register(app,owner_denied):
             dpi=round(min(p["width"]*cw/(mm[0]*.84/cols/25.4),p["height"]*ch/(mm[1]*.49/rows/25.4)))
             if dpi<200:
                 warnings.append(f"Photo {p['orig_name']} is approximately {dpi} dpi in this layout; it may print soft. Use a larger photo or a wider crop.")
-        return jsonify(ok=True,design=record(owner,did,rev),warnings=warnings)
+        return jsonify(ok=True,design=record(owner,did,rev),warnings=warnings,
+                       mcp_status=mcp_status(),
+                       mcp_hint="If degraded, prefer waiting — REST works but is off the main road.",
+                       card_url=card_url_for(did, rev),
+                       product={**card_price(),
+                                "buy_hint": "Done means a product_url the human can buy from. "
+                                            "POST /api/cards/<id>/checkout returns checkout_url; a preview alone is not done."})
 
     @bp.get("/api/cards/gallery")
     def gallery():
@@ -460,8 +554,8 @@ def register(app,owner_denied):
                     did, rev = "card_" + uuid.uuid4().hex, 1
                     t = time.time()
                     with db.connect() as c:
-                        c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner) VALUES (?,?,?,?,?,?)",
-                                  (did, owner, rev, t, t, owner))
+                        c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",
+                                  (did, owner, rev, t, t, owner, "ui"))
                         c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
                                   (did, rev, json_dump(spec), t))
                         c.commit()
@@ -485,16 +579,24 @@ def register(app,owner_denied):
                     "design_id": did, "revision": rev, "template": tid,
                     "template_label": tpl["label"], "headline": headline,
                     "recipient": name, "format": "5x7",
-                    "price_cents": scenes.FORMATS["5x7"]["price_cents"],
+                    "price_cents": card_price()["price_cents"],
+                    "price": card_price()["price"],
+                    "price_grade": "FIXED",
+                    "card_url": card_url_for(did, rev),
                     "photo": {"id": p["id"], "orig_name": p.get("orig_name") or "Photo",
                               "url": f"/api/cards/photos/{p['id']}/image"},
                     "preview_url": url, "preview_status": status,
                 })
-        return jsonify(ok=True, items=items)
+        return jsonify(ok=True, items=items, product=card_price(),
+                       mcp_status=mcp_status(),
+                       buy_hint="Done means a product_url the human can buy from — "
+                                "POST /api/cards/<id>/checkout for checkout_url. Preview alone is not done.")
 
     @bp.get("/api/cards/designs/<did>")
     def get_design(did):
-        return jsonify(ok=True,design=record(request.card_owner,did))
+        rec = record(request.card_owner,did)
+        return jsonify(ok=True,design=rec, card_url=card_url_for(did, rec["revision"]),
+                       product=card_price(), mcp_status=mcp_status())
 
     @bp.get("/api/cards/<did>/scene")
     def scene(did):
@@ -522,7 +624,9 @@ def register(app,owner_denied):
             "capabilities":{"card":True,"video":__import__('shutil').which("ffmpeg") is not None,
                             "character_animation":False,"ar":False},
             "poster":{"kind":"preview","url":outputs["preview"]["url"]},
-        })
+        }, card_url=card_url_for(did, rev), product=card_price(),
+            mcp_status=mcp_status(),
+            buy_hint="Done means a product_url the human can buy from — checkout, not preview.")
 
     @bp.post("/api/cards/<did>/render")
     def render(did):
@@ -570,18 +674,28 @@ def register(app,owner_denied):
             if old:
                 if (old["design_id"],old["revision"],old["qty"])!=(did,rev,qty):
                     raise CardError("This order key was used for a different design",409)
-                return jsonify(ok=True,order=dict(old),reused=True)
+                return jsonify(ok=True,order=dict(old),reused=True,
+                               card_url=card_url_for(did, rev),
+                               product=card_price(), mcp_status=mcp_status(),
+                               checkout_url=old["checkout_url"] if "checkout_url" in old.keys() else "")
             ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='export' AND status='ready'",(owner,did,rev)).fetchone()
             if not ready:
                 raise CardError("Export the saved artwork before reserving this card",409)
             oid="ord_card_"+uuid.uuid4().hex
-            price=scenes.FORMATS[spec["format"]]["price_cents"]*qty
+            price=card_price()["price_cents"]*qty
             c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",(oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"pending_checkout",idem,time.time()))
             c.commit()
             result=dict(c.execute("SELECT * FROM card_orders WHERE id=?",(oid,)).fetchone())
         fulfil = bool(b.get("fulfil"))
         prodigi: dict = {"attempted": False}
         if fulfil:
+            # P0 flaw closed: fulfil=true must NOT print before Shopify payment.
+            # Use POST /api/cards/<id>/checkout → Shopify invoiceUrl → paid
+            # webhook → Prodigi. Direct Prodigi is gated for internal tests only.
+            import os as _os
+            if _os.environ.get("ALLOW_DIRECT_PRODIGI", "") != "1":
+                raise CardError("Direct fulfil is disabled — use POST /api/cards/<id>/checkout "
+                                "for Shopify payment first (Prodigi runs on orders/paid only).", 410)
             from backend import config as _cfg
             fmt = spec.get("format", "5x7")
             product = {"5x7": "greeting_card", "A6": "postcard"}.get(fmt, "greeting_card")
@@ -618,6 +732,104 @@ def register(app,owner_denied):
                 c.commit()
                 result = dict(c.execute("SELECT * FROM card_orders WHERE id=?", (oid,)).fetchone())
             prodigi = {"attempted": True, "ok": True, **placed}
-        return jsonify(ok=True,order=result,currency="GBP",price_grade="EST",prodigi=prodigi,hint="Card reserved. No charge. Supplier checkout is not connected." if not fulfil else "Sent to Prodigi print.")
+        return jsonify(ok=True,order=result,currency="GBP",price_grade="FIXED",
+                       card_url=card_url_for(did, rev),
+                       product=card_price(),
+                       mcp_status=mcp_status(),
+                       prodigi=prodigi,
+                       hint=("Card reserved at £7.99 — use POST /api/cards/<id>/checkout "
+                             "for the Shopify payment link. Prodigi runs on orders/paid only.")
+                       if not fulfil else "Sent to Prodigi print (internal path only).")
+
+    @bp.post("/api/cards/<did>/checkout")
+    def checkout(did):
+        """P0 revenue path: freeze revision → Shopify draft → human pays → webhook prints.
+
+        Checks: revision exists + belongs to owner + export ready + preflight
+        passed + fixed £7.99. Creates local card_order (awaiting_payment),
+        then a Shopify draft with line-item customAttributes
+        (oddhobb_order_id, design_id, revision, grammar, prodigi_sku).
+        Returns checkout_url (Shopify invoiceUrl) + card_url (OddHobb page).
+        Shopify owns payment; Prodigi runs on orders/paid only.
+        """
+        owner=request.card_owner;b=request.get_json() or {}
+        qty=b.get("qty",1);rev=b.get("revision");idem=b.get("idempotency_key","") or \
+            f"checkout-{did}-r{rev}-q{qty}"
+        if not isinstance(qty,int) or isinstance(qty,bool) or not 1<=qty<=20 \
+                or not isinstance(rev,int) or isinstance(rev,bool):
+            raise CardError("Choose a valid quantity and saved revision")
+        if not isinstance(idem,str) or not 12<=len(idem)<=100:
+            raise CardError("An idempotency key is required")
+        rec = record(owner,did,rev)
+        spec = rec["spec"]
+        validate(owner,spec)
+        with db.connect() as c:
+            old=c.execute("SELECT * FROM card_orders WHERE owner=? AND idempotency_key=?",
+                          (owner,idem)).fetchone()
+            if old and old["checkout_url"]:
+                return jsonify(ok=True, order=dict(old), reused=True,
+                               card_url=card_url_for(did, rev),
+                               product_url=card_url_for(did, rev),
+                               product=card_price(),
+                               checkout_url=old["checkout_url"],
+                               mcp_status=mcp_status(),
+                               hint="Done means a product_url the human can buy from.")
+            ready=c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? "
+                            "AND revision=? AND kind='export' AND status='ready'",
+                            (owner,did,rev)).fetchone()
+            if not ready and not (old is not None):
+                raise CardError("Export the saved artwork before checkout (render export first)",409)
+        # preflight the exact PDF bytes the webhook would print
+        from backend import card_print as _print
+        aa = assets(owner, spec)
+        single = _print.compose(spec, aa)
+        gaps = _print.preflight(single)
+        if gaps:
+            raise CardError("print file failed preflight: " + "; ".join(gaps), 500)
+        price = card_price()["price_cents"]*qty
+        with db.connect() as c:
+            c.execute("BEGIN IMMEDIATE")
+            if old is not None:
+                oid = old["id"]
+                c.execute("UPDATE card_orders SET qty=?, price_cents=? WHERE id=?",
+                          (qty, price, oid))
+            else:
+                oid="ord_card_"+uuid.uuid4().hex
+                c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                          (oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"awaiting_payment",idem,time.time()))
+            c.commit()
+        # Shopify draft — the payment/order layer, not a second storefront.
+        # One hidden product ODD-CARD-5X7; personalisation rides as
+        # customAttributes, never as new products. No source photos leave us.
+        from backend import shopify_fulfil as _sf
+        if not _sf.configured():
+            raise CardError("Shopify checkout is not configured — set SHOPIFY_STORE + credentials in .env", 503)
+        grammar = spec.get("template", "")
+        try:
+            draft = _sf.create_card_draft_order(
+                qty=qty, price_cents=price, oddhobb_order_id=oid,
+                design_id=did, revision=rev, grammar=grammar,
+                prodigi_sku=CARD_PRODIGI_SKU)
+        except Exception as e:  # noqa: BLE001
+            raise CardError(f"Shopify draft failed: {str(e)[:200]}", 502) from None
+        if not draft.get("ok"):
+            raise CardError(f"Shopify draft failed: {draft.get('error','unknown')[:200]}", 502)
+        checkout_url = draft.get("invoice_url") or ""
+        if not checkout_url:
+            raise CardError("Shopify draft created but returned no checkout URL", 502)
+        with db.connect() as c:
+            c.execute("UPDATE card_orders SET status='awaiting_payment', shopify_draft_id=?, checkout_url=? WHERE id=?",
+                      (str(draft.get("draft_id") or draft.get("name") or ""), checkout_url, oid))
+            c.commit()
+            result=dict(c.execute("SELECT * FROM card_orders WHERE id=?",(oid,)).fetchone())
+        return jsonify(ok=True, order=result,
+                       product_id=CARD_PRODUCT_ID, product=card_price(),
+                       product_url=card_url_for(did, rev),
+                       card_url=card_url_for(did, rev),
+                       checkout_url=checkout_url,
+                       shopify_draft=draft,
+                       mcp_status=mcp_status(),
+                       hint="Send the human to checkout_url to pay (£7.99). "
+                            "Prodigi prints after Shopify orders/paid — preview alone is not done.")
 
     app.register_blueprint(bp)

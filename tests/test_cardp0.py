@@ -74,3 +74,20 @@ def test_print_area_cached():
     from backend import prodigi as P
     spec = P.print_area("CLASSIC-GRE-FEDR-7X5-BLA")
     assert (spec["horizontalResolution"], spec["verticalResolution"]) == (6120, 2160)
+
+
+def test_house_type_and_canonical_back(tmp_path):
+    from backend import card_scenes as scenes
+    from pathlib import Path
+    assert (Path("assets/fonts") / "Fraunces-SemiBold.ttf").is_file()
+    assert (Path("assets/fonts") / "Caveat-SemiBold.ttf").is_file()
+    assert (Path("assets/fonts") / "Inter-Regular.ttf").is_file()
+    design = {"template": "typography", "format": "5x7",
+              "headline": "Hi", "recipient": "Cathy", "sender": "x",
+              "inside_message": "x", "photos": []}
+    back = scenes.back(design, 720)
+    assert back.size[0] == 720
+    # back carries the brand mark (not blank, not placeholder text)
+    import hashlib
+    blank = __import__("PIL.Image", fromlist=["new"]).new("RGB", back.size, "#fffdf7")
+    assert hashlib.md5(back.tobytes()).hexdigest() != hashlib.md5(blank.tobytes()).hexdigest()

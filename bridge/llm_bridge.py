@@ -245,6 +245,25 @@ class Handler(BaseHTTPRequestHandler):
         self._public_hits[ip] = hits
         return True
 
+    def _cf_ray(self) -> str:
+        """Cloudflare Ray ID for matching user timestamps to process logs.
+        Header name is Cf-Ray (case-insensitive); '-' when direct/local."""
+        for k in ("Cf-Ray", "CF-Ray", "cf-ray", "Cf-ray"):
+            v = self.headers.get(k, "")
+            if v:
+                return str(v)[:64]
+        return "-"
+
+    def _log_502(self, where: str, backend: str, path: str, err: object) -> None:
+        import datetime as _dt
+        try:
+            with open(os.path.expanduser("~/.figg_mcp_proxy.log"), "a") as lf:
+                lf.write(f"{_dt.datetime.now(_dt.timezone.utc).isoformat()} "
+                         f"502 {where} mcp={backend} client={self.client_address[0]} "
+                         f"cf_ray={self._cf_ray()} path={path} err={err}\n")
+        except OSError:
+            pass
+
     def _mcp_proxy(self, method: str, backend: str = "oddhobb") -> None:
         """POST/GET /mcp -> the local MCP server (:8799), streaming.
         backend="pogtown" routes /pog to the joke MCP (:8801) instead.
@@ -285,8 +304,25 @@ class Handler(BaseHTTPRequestHandler):
         except urllib.error.HTTPError as e:
             r = e
         except Exception as e:                                  # noqa: BLE001
-            self._json({"success": False, "error": f"mcp unreachable: {e}"}, 502)
-            return
+            # failover: a second FULL MCP replica (zero-downtime restarts: run
+            # two full MCPs, e.g. :8799 primary + :8802 fallback via
+            # MCP_PORT_FALLBACK, drain before restarting so a deploy isn't a
+            # 502 window). :8800 is the PUBLIC tier (different allowlist) and
+            # is never a failover for authenticated traffic.
+            fb = os.environ.get("MCP_PORT_FALLBACK", "")
+            if fb and str(port) != str(fb):
+                try:
+                    r2 = urllib.request.Request(
+                        target.replace(f"127.0.0.1:{port}", f"127.0.0.1:{fb}",
+                                       1), data=body, headers=fwd, method=method)
+                    r = urllib.request.urlopen(r2, timeout=600)
+                except Exception as e2:
+                    e = e2
+                    r = None
+            if r is None or isinstance(r, Exception):
+                self._log_502("mcp-proxy", backend, raw.path, e)
+                self._json({"success": False, "error": f"mcp unreachable: {e}"}, 502)
+                return
         self.send_response(r.status)
         for hk in ("Content-Type", "Cache-Control", "mcp-session-id",
                    "Mcp-Session-Id"):
@@ -337,7 +373,8 @@ class Handler(BaseHTTPRequestHandler):
         body = self.rfile.read(n) if n > 0 and method == "POST" else None
         headers = {}
         for h in ("Content-Type", "X-API-Token", "X-Owner-Sig", "X-API-Key",
-                  "Authorization"):
+                  "Authorization", "X-Shopify-Hmac-Sha256", "X-Shopify-Topic",
+                  "X-Shopify-Shop-Domain", "Cf-Ray", "CF-Ray"):
             if self.headers.get(h):
                 headers[h] = self.headers[h]
         if body is not None and "Content-Type" not in headers:
@@ -361,6 +398,7 @@ class Handler(BaseHTTPRequestHandler):
             extra = [(k, v) for k, v in e.headers.items()
                      if k.lower().startswith("x-")]
         except Exception as e:
+            self._log_502("backend-proxy", "flask", sub, e)
             self._json({"success": False, "error": f"backend unreachable: {e}"}, 502)
             return
         # Old Flask processes and proxy error pages return HTML. API callers
@@ -543,6 +581,11 @@ class Handler(BaseHTTPRequestHandler):
             sub = urlparse(self.path).path[len("/backend"):]
             if sub in ("/api/accounts", "/api/accounts/login", "/api/session"):
                 # public signup/login/session — rate-limited by the API itself
+                self._proxy("POST")
+                return
+            if sub.startswith("/api/shopify/webhooks/"):
+                # Shopify orders/paid carries HMAC, not our token — verified
+                # in Flask (shopify_fulfil.verify_webhook). Proxy ungated.
                 self._proxy("POST")
                 return
             if not self._gated():

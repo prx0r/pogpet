@@ -254,15 +254,49 @@ def font_for(font_id, size, bold=False):
     return ImageFont.load_default()
 
 
+# ── generative backdrops: beauty is generated ONCE per template ─────
+# The template keeps rigid slots (photo zones, type zones). fal.ai paints
+# only the backdrop: a text-free party texture that fills the whole cover.
+# One paid generation per template, reused for every card forever.
+# Backdrops live in assets/card-art/backdrops/<template>.png + SOURCES.
+# Missing file = flat template colour. Geometry never moves.
+TEMPLATE_BACKDROPS = {
+    "birthday_arch": "birthday party balloon sky, soft cream bokeh, festive but airy, wide empty center",
+    "birthday_dots": "pastel polka confetti field, light and airy, lots of empty cream space",
+    "birthday_news": "dark navy broadcast studio glow, subtle light streaks, empty center",
+    "birthday_gold": "dark champagne celebration bokeh, golden light spots, empty center",
+    "birthday_wall": "warm cream party garland along the top edge only, rest empty",
+}
+_BACKDROP_CACHE: dict = {}
+
+
+def _backdrop(tid, size):
+    """Generated backdrop scaled to cover, or None (flat colour fallback)."""
+    if tid in _BACKDROP_CACHE:
+        bg = _BACKDROP_CACHE[tid]
+        return bg.resize(size, Image.Resampling.LANCZOS) if bg else None
+    from pathlib import Path as _P
+    p = _P(__file__).resolve().parent.parent / "assets" / "card-art" / "backdrops" / f"{tid}.png"
+    try:
+        bg = Image.open(p).convert("RGB")
+    except OSError:
+        bg = None
+    _BACKDROP_CACHE[tid] = bg
+    return bg.resize(size, Image.Resampling.LANCZOS) if bg else None
+# Real illustration composited around the photo slot — the Moonpig model:
+# the template IS artwork, the photo is one ingredient. Only files listed
+# in SOURCES.md may be used here. Missing files render without art, never fail.
 # ── CC0 art library (assets/card-art, see SOURCES.md) ──────────────
 # Real illustration composited around the photo slot — the Moonpig model:
 # the template IS artwork, the photo is one ingredient. Only files listed
 # in SOURCES.md may be used here. Missing files render without art, never fail.
 CARD_ART = {
-    "portrait": [("colored-balloons-191040-800.png", (0.02, 0.035, 0.30, 0.20)),
+    "portrait": [("frame-mono-colored-34-14201-800.png", (0.0, 0.0, 1.0, 1.0), "fill"),
+                 ("colored-balloons-191040-800.png", (0.02, 0.035, 0.30, 0.20)),
                  ("birthday-cake-3-304095-800.png", (0.74, 0.045, 0.22, 0.15))],
-    "birthday_arch": [("balloon-border-3024-800.png", (0.05, 0.035, 0.90, 0.10)),
+    "birthday_arch": [("balloon-border-3024-800.png", (0.0, 0.0, 1.0, 1.0), "fill"),
                       ("birthday-cake-296924-800.png", (0.74, 0.045, 0.22, 0.15))],
+    "birthday_dots": [("pink-bow-170156-800.png", (0.40, 0.045, 0.20, 0.075))],
 }
 _ART_CACHE: dict = {}
 
@@ -281,13 +315,19 @@ def _art(name):
     return img
 
 
-def _sticker(card, name, box):
-    """Paste one art file into a relative box, aspect-kept, alpha-honoured."""
+def _sticker(card, name, box, mode="fit"):
+    """Paste one art file into a relative box, alpha-honoured.
+    fit = aspect-kept (stickers); fill = stretched edge-to-edge (borders)."""
     img = _art(name)
     if img is None:
         return
     w, h = card.size
     bw, bh = box[2] * w, box[3] * h
+    if mode == "fill":
+        thumb = img.resize((max(1, round(bw)), max(1, round(bh))),
+                           Image.Resampling.LANCZOS)
+        card.alpha_composite(thumb, (round(box[0] * w), round(box[1] * h)))
+        return
     r = min(bw / img.width, bh / img.height)
     tw, th = max(1, round(img.width * r)), max(1, round(img.height * r))
     thumb = img.resize((tw, th), Image.Resampling.LANCZOS)
@@ -507,6 +547,9 @@ def front(design, assets, width=720, height=None, progress=1.0):
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
     tpl = TEMPLATES[design["template"]]
     card = Image.new("RGBA", (width, height), tpl["bg"])
+    _bg = _backdrop(design["template"], (width, height))
+    if _bg is not None:
+        card.alpha_composite(_bg.convert("RGBA"))
     d = ImageDraw.Draw(card)
     w, h = width, height
     accent, ink, bg = tpl["accent"], tpl["ink"], tpl["bg"]
@@ -520,8 +563,9 @@ def front(design, assets, width=720, height=None, progress=1.0):
 
     if comp == "portrait" and count:
         # illustrated birthday cover: art around an arch photo slot
-        for name, box in CARD_ART.get(tid, []):
-            _sticker(card, name, box)
+        for _entry in CARD_ART.get(tid, []):
+            _name, _box = _entry[0], _entry[1]
+            _sticker(card, _name, _box, *(_entry[2:3] or ("fit",)))
         _scatter(d, w, h, 26, 7, [accent, "#e5ba62", ink], (0.06, 0.045, 0.88, 0.05))
         _frames(card, d, design, assets, [(0.16, 0.11, 0.68, 0.50)],
                 shape="arch", border=0.008, border_fill="#ffffff",
@@ -628,6 +672,9 @@ def front(design, assets, width=720, height=None, progress=1.0):
 
     if tid == "birthday_dots" and count:
         # dot field: 1–3 circle slots on scattered dots, bold headline band
+        for _entry in CARD_ART.get(tid, []):
+            _name, _box = _entry[0], _entry[1]
+            _sticker(card, _name, _box, *(_entry[2:3] or ("fit",)))
         _scatter(d, w, h, 60, 42, [accent, "#e08a3c", "#3cb35e"],
                  (0.05, 0.04, 0.90, 0.55), 0.014)
         n = min(count, 3)

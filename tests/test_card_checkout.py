@@ -542,7 +542,7 @@ def test_cc0_art_library():
     """Every render art file exists, opens RGBA, and is listed in SOURCES.md."""
     from backend.card_scenes import _art, CARD_ART
     src = pathlib.Path("assets/card-art/SOURCES.md").read_text()
-    used = {name for files in CARD_ART.values() for name, _ in files}
+    used = {entry[0] for files in CARD_ART.values() for entry in files}
     assert used, "no art wired into any template"
     for name in used:
         assert name in src, name
@@ -658,3 +658,64 @@ def test_birthday_five_locked():
             a = front(spec, C.assets(owner, spec), 360)
             b = front(spec, C.assets(owner, spec), 360)
             assert hashlib.md5(a.tobytes()).hexdigest() == hashlib.md5(b.tobytes()).hexdigest()
+
+
+def test_covers_carry_illustration():
+    """Covers must read as designed cards: art pixels in the corners."""
+    from backend import cards as C
+    from backend.card_scenes import front
+    owner, pid = "hark-dad-a7a5cc", "pho_676d794af4d945d38439"
+    spots = {"portrait": (30, 60), "birthday_arch": (30, 60),
+             "birthday_dots": (180, 42)}
+    for tid, (sx, sy) in spots.items():
+        spec = C.validate(owner, {"template": tid, "format": "5x7",
+                                  "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                                              "focus": [0.5, 0.5], "cutout": ""}],
+                                  "headline": "Happy Birthday", "recipient": "Dad",
+                                  "sender": "Me", "inside_message": "x"})
+        img = front(spec, C.assets(owner, spec), 360)
+        bg = {"portrait": (248, 241, 230), "birthday_arch": (250, 243, 231),
+              "birthday_dots": (253, 253, 248)}[tid]
+        diff = n = 0
+        for y in range(sy - 15, sy + 15, 3):
+            for x in range(sx - 40, sx + 40, 3):
+                p = img.getpixel((x, y))[:3]
+                n += 1
+                if sum(abs(a - b) for a, b in zip(p, bg)) > 60:
+                    diff += 1
+        assert diff / n > 0.10, (tid, diff, n)
+
+
+def test_backdrop_slot():
+    """Missing backdrop = flat colour (never fail); present = painted."""
+    from backend import cards as C
+    from backend import card_scenes as S
+    from PIL import Image as _I
+    owner, pid = "hark-dad-a7a5cc", "pho_676d794af4d945d38439"
+    spec = C.validate(owner, {"template": "birthday_arch", "format": "5x7",
+                              "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                                          "focus": [0.5, 0.5], "cutout": ""}],
+                              "headline": "Happy Birthday", "recipient": "Dad",
+                              "sender": "Me", "inside_message": "x"})
+    aa = C.assets(owner, spec)
+    plain = S.front(spec, aa, 360)
+    bgdir = pathlib.Path("assets/card-art/backdrops")
+    bgdir.mkdir(parents=True, exist_ok=True)
+    dest = bgdir / "birthday_arch.png"
+    try:
+        _I.new("RGB", (360, 504), "#123456").save(dest)
+        S._BACKDROP_CACHE.pop("birthday_arch", None)
+        painted = S.front(spec, aa, 360)
+        import hashlib as _h
+        assert _h.md5(plain.tobytes()).hexdigest() != _h.md5(painted.tobytes()).hexdigest()
+    finally:
+        dest.unlink(missing_ok=True)
+        S._BACKDROP_CACHE.pop("birthday_arch", None)
+
+
+def test_backdrop_prompts_text_free():
+    from backend.card_scenes import TEMPLATE_BACKDROPS
+    from backend.creative.providers.fal import plate_prompt
+    assert len(TEMPLATE_BACKDROPS) == 5
+    for tid, scene in TEMPLATE_BACKDROPS.items():
+        assert "no text" in plate_prompt(scene), tid

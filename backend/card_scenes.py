@@ -194,6 +194,45 @@ def font_for(font_id, size, bold=False):
     return ImageFont.load_default()
 
 
+# ── CC0 art library (assets/card-art, see SOURCES.md) ──────────────
+# Real illustration composited around the photo slot — the Moonpig model:
+# the template IS artwork, the photo is one ingredient. Only files listed
+# in SOURCES.md may be used here. Missing files render without art, never fail.
+CARD_ART = {
+    "portrait": [("colored-balloons-191040-800.png", (0.02, 0.035, 0.30, 0.20)),
+                 ("birthday-cake-3-304095-800.png", (0.74, 0.045, 0.22, 0.15))],
+}
+_ART_CACHE: dict = {}
+
+
+def _art(name):
+    """Load a library PNG once (RGBA). None if absent — art is garnish."""
+    if name in _ART_CACHE:
+        return _ART_CACHE[name]
+    from pathlib import Path as _P
+    p = _P(__file__).resolve().parent.parent / "assets" / "card-art" / name
+    try:
+        img = Image.open(p).convert("RGBA")
+    except OSError:
+        img = None
+    _ART_CACHE[name] = img
+    return img
+
+
+def _sticker(card, name, box):
+    """Paste one art file into a relative box, aspect-kept, alpha-honoured."""
+    img = _art(name)
+    if img is None:
+        return
+    w, h = card.size
+    bw, bh = box[2] * w, box[3] * h
+    r = min(bw / img.width, bh / img.height)
+    tw, th = max(1, round(img.width * r)), max(1, round(img.height * r))
+    thumb = img.resize((tw, th), Image.Resampling.LANCZOS)
+    card.alpha_composite(thumb, (round(box[0] * w + (bw - tw) / 2),
+                                 round(box[1] * h + (bh - th) / 2)))
+
+
 def _luminance(hexcol):
     hexcol = hexcol.lstrip("#")
     r, g, b = (int(hexcol[i:i + 2], 16) / 255 for i in (0, 2, 4))
@@ -416,7 +455,9 @@ def front(design, assets, width=720, height=None, progress=1.0):
     d.rectangle((w*.04, h*.03, w*.96, h*.97), outline=accent, width=max(1, w//180))
 
     if tid == "portrait" and count:
-        # arch portrait under a confetti strip, serif headline on flat cream
+        # illustrated birthday cover: balloons + cake around an arch photo slot
+        for name, box in CARD_ART.get("portrait", []):
+            _sticker(card, name, box)
         _scatter(d, w, h, 26, 7, [accent, "#e5ba62", ink], (0.06, 0.045, 0.88, 0.05))
         _frames(card, d, design, assets, [(0.16, 0.11, 0.68, 0.50)],
                 shape="arch", border=0.008, border_fill="#ffffff",

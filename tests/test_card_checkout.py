@@ -1,5 +1,6 @@
 """Card P0 guardrails + checkout: fixed price, validators in save,
 source stamping, mcp_status, Shopify draft shape, webhook HMAC, openapi."""
+import pathlib
 from backend import cards as C
 from backend import shopify_fulfil as SF
 
@@ -534,3 +535,38 @@ def test_render_unknown_creative_stages():
     d = r.get_json()
     assert d["ok"] and not d["done"]
     assert d["staged"] and d["staged"][0]["output"] == "preview"
+
+
+def test_cc0_art_library():
+    """Every render art file exists, opens RGBA, and is listed in SOURCES.md."""
+    from backend.card_scenes import _art, CARD_ART
+    src = pathlib.Path("assets/card-art/SOURCES.md").read_text()
+    used = {name for files in CARD_ART.values() for name, _ in files}
+    assert used, "no art wired into any template"
+    for name in used:
+        assert name in src, name
+        img = _art(name)
+        assert img is not None and img.mode == "RGBA"
+
+
+def test_portrait_carries_artwork():
+    """Portrait cover is illustration + photo slot, not photo + text alone."""
+    from backend import cards as C
+    from backend.card_scenes import front
+    owner, pid = "hark-dad-a7a5cc", "pho_676d794af4d945d38439"
+    spec = C.validate(owner, {"template": "portrait", "format": "5x7",
+                              "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
+                                          "focus": [0.5, 0.5], "cutout": ""}],
+                              "headline": "Happy Birthday", "recipient": "Dad",
+                              "sender": "Me", "inside_message": "x"})
+    img = front(spec, C.assets(owner, spec), 360)
+    plain = (248, 241, 230)
+    diff = 0
+    n = 0
+    for y in range(12, 90, 4):
+        for x in range(7, 115, 4):
+            p = img.getpixel((x, y))[:3]
+            n += 1
+            if sum(abs(a - b) for a, b in zip(p, plain)) > 60:
+                diff += 1
+    assert diff / n > 0.15, "balloon corner must carry illustration"

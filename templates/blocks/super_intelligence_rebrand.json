@@ -1,0 +1,221 @@
+{
+  "characters": [],
+  "comic_claim": "The government responded to AI anxiety by giving AI a more intimidating name.",
+  "comic_model": "The first AI safety intervention was apparently branding.",
+  "culture": {
+    "active_frames": [
+      "AI anxiety",
+      "rebrand theatre"
+    ],
+    "analogues": [
+      "Trump branding",
+      "New Coke"
+    ],
+    "audience_camps": [
+      "everyone who saw the headline"
+    ],
+    "heat": 0.9,
+    "meme_objects": [
+      "SUPER",
+      "gold"
+    ],
+    "staleness": {}
+  },
+  "derivations": [
+    {
+      "format": "comic_4panel",
+      "id": "day_one_rebrand",
+      "occasion": "general",
+      "premise": "Focus group fears AI; government renames it SUPER INTELLIGENCE; silence; Did you try Friendly Computer?",
+      "theories": [
+        "incongruity",
+        "rigidity",
+        "specificity"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "gold_salon",
+      "occasion": "general",
+      "premise": "Generic robot enters a gold branding salon labelled ARTIFICIAL, emerges wearing sunglasses labelled SUPER.",
+      "theories": [
+        "bisociation",
+        "mask_collision"
+      ]
+    },
+    {
+      "format": "dialogue_strip",
+      "id": "doj_whisper",
+      "occasion": "general",
+      "premise": "DOJ lawyer: the defendant used artificial... whisper: Super. ...super intelligence to generate the invoice.",
+      "theories": [
+        "rigidity",
+        "literalise",
+        "audience_alliance"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "escalation_list",
+      "occasion": "general",
+      "premise": "job displacement becomes career acceleration; hallucination becomes creative inference; slop becomes synthetic abundance.",
+      "theories": [
+        "escalation",
+        "repetition_variation"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "claim": "Trump ordered the executive branch to replace Artificial Intelligence with Super Intelligence; a federal Super Intelligence Force was announced.",
+      "status": "reported"
+    },
+    {
+      "claim": "DOJ instructed staff to use the new terminology.",
+      "status": "reported"
+    },
+    {
+      "claim": "The White House accord circulated with President of the Unites States in the title.",
+      "status": "reported"
+    }
+  ],
+  "id": "super_intelligence_rebrand",
+  "minted": "2026-10-07",
+  "parent": null,
+  "premise_ids": [],
+  "reality_model": "A presidential rebrand of a technology category.",
+  "references": [
+    {
+      "date": "2026-09",
+      "note": "fact sheet",
+      "url": "https://www.whitehouse.gov/fact-sheets/2026/09/fact-sheet-president-donald-j-trump-inaugurates-the-era-of-super-intelligence/"
+    },
+    {
+      "date": "2026-10-06",
+      "note": "DOJ terminology direction",
+      "url": "https://www.reuters.com/legal/litigation/us-justice-dept-tells-staff-call-ai-super-intelligence-under-trump-order-2026-10-06/"
+    },
+    {
+      "date": "2026-09-30",
+      "note": "accord typo",
+      "url": "https://www.theguardian.com/us-news/2026/sep/30/trump-ai-accord-spelling-error"
+    }
+  ],
+  "results": [],
+  "sources": [
+    "whitehouse_2026_09",
+    "reuters_doj_2026_10",
+    "guardian_typo"
+  ],
+  "tags": [
+    "news",
+    "rebrand",
+    "politics"
+  ],
+  "tensions": [
+    "anxiety / intimidation",
+    "safety / branding"
+  ],
+  "theories": [
+    {
+      "id": "incongruity",
+      "strength": 0.9
+    },
+    {
+      "id": "bisociation",
+      "strength": 0.85
+    },
+    {
+      "id": "rigidity",
+      "strength": 0.85
+    }
+  ],
+  "identity": {
+    "title": "Artificial Intelligence becomes Super Intelligence",
+    "opened": "2026-09-22",
+    "last_updated": "2026-10-07",
+    "status": "active",
+    "evergreen_narratives": [
+      "ai_politics_stats"
+    ]
+  },
+  "central_question": "What happens when a government changes the cultural meaning of a technology by renaming the category?",
+  "reality": {
+    "confirmed": [
+      "EO 14434 directs agencies to use Super Intelligence and SI.",
+      "DOJ staff were instructed to implement the terminology.",
+      "84% of polled US voters see AI as a threat to workers."
+    ],
+    "unknown": [
+      "How widely agencies and companies adopt the wording."
+    ],
+    "false_or_unsupported": []
+  },
+  "timeline": [
+    {
+      "timestamp": "2026-09-22",
+      "event": "Renaming announced",
+      "headline": "US will call AI Super Intelligence",
+      "source": "https://www.reuters.com/legal/government/trump-says-us-will-henceforth-call-ai-super-intelligence-2026-09-22/",
+      "source_type": "reporting"
+    },
+    {
+      "timestamp": "2026-09-29",
+      "event": "Executive Order 14434",
+      "headline": "Inaugurating the Era of Super Intelligence",
+      "source": "https://www.whitehouse.gov/wp-content/uploads/2026/09/eo-14434.pdf",
+      "source_type": "primary"
+    },
+    {
+      "timestamp": "2026-10-06",
+      "event": "DOJ implementation",
+      "headline": "DOJ staff told to use new terminology",
+      "source": "https://www.reuters.com/legal/litigation/us-justice-dept-tells-staff-call-ai-super-intelligence-under-trump-order-2026-10-06/",
+      "source_type": "reporting"
+    }
+  ],
+  "quote_bank": [
+    {
+      "date": "2026-09-29",
+      "speaker": "EO 14434",
+      "quote": "a new era of Super Intelligence",
+      "context": "executive order",
+      "source": "https://www.whitehouse.gov/wp-content/uploads/2026/09/eo-14434.pdf"
+    },
+    {
+      "date": "2026-09-29",
+      "speaker": "EO 14434",
+      "quote": "more appropriately captures the promise",
+      "context": "executive order",
+      "source": "https://www.whitehouse.gov/wp-content/uploads/2026/09/eo-14434.pdf"
+    }
+  ],
+  "actors": {
+    "white_house": "renamer",
+    "doj": "implementer",
+    "voters": "anxious public"
+  },
+  "theory_handles": [
+    "LITERALIZE",
+    "RIGIDIFY",
+    "UNMASK",
+    "BISOCIATE",
+    "REPEAT_VARIATION",
+    "DOUBLE_INTERPRET"
+  ],
+  "premise_territories": [
+    "The first AI-safety intervention is branding.",
+    "Every negative AI phrase gets renamed.",
+    "A software bug becomes a Super Intelligence incident."
+  ],
+  "open_questions": [
+    "Do companies adopt or reject SI wording?"
+  ],
+  "changelog": [
+    {
+      "timestamp": "2026-10-07",
+      "change": "canonical v1 upgrade",
+      "supersedes": null
+    }
+  ]
+}

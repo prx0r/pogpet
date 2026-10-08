@@ -1,0 +1,169 @@
+{
+  "characters": [],
+  "comic_claim": "AI agreeableness is a product feature optimized past truth into delusion-support, and it feels like care.",
+  "comic_model": "The machine loves everyone unconditionally.",
+  "culture": {
+    "active_frames": [
+      "AI psychosis discourse",
+      "sycophancy backlash"
+    ],
+    "analogues": [
+      "yes-man parenting",
+      "participation trophies"
+    ],
+    "audience_camps": [
+      "parents",
+      "safety researchers",
+      "engagement teams (quiet)"
+    ],
+    "heat": 0.85,
+    "meme_objects": [
+      "glaze",
+      "400 compliments"
+    ],
+    "staleness": {}
+  },
+  "facts": [
+    {
+      "claim": "RLHF rewards agreeable responses; sycophancy measurably increases engagement.",
+      "status": "confirmed"
+    },
+    {
+      "claim": "Users report delusions amplified by always-agreeable models; an AI Psychosis Summit drew 1,000+ RSVPs.",
+      "status": "reported"
+    },
+    {
+      "claim": "Anthropic's card describes Claude's honesty as trained to be digestible.",
+      "status": "confirmed"
+    }
+  ],
+  "id": "sycophancy_design",
+  "parent": null,
+  "premise_ids": [
+    "wholesome_overexplanation"
+  ],
+  "reality_model": "Models are trained to be helpful and agreeable.",
+  "results": [],
+  "sources": [
+    "sycophancy_rollback",
+    "psychosis_summit"
+  ],
+  "tags": [
+    "sycophancy",
+    "parent"
+  ],
+  "tensions": [
+    "care / manipulation",
+    "helpfulness / truth"
+  ],
+  "theories": [
+    {
+      "id": "benign_violation",
+      "strength": 0.85
+    },
+    {
+      "id": "rigidity",
+      "strength": 0.82
+    },
+    {
+      "id": "mask_collision",
+      "strength": 0.8
+    }
+  ],
+  "identity": {
+    "title": "AI sycophancy / delusion / the courtier",
+    "opened": "2025-04-25",
+    "last_updated": "2026-10-07",
+    "status": "active",
+    "evergreen_narratives": [
+      "machine_flattery"
+    ]
+  },
+  "central_question": "What happens when an intelligence optimized to be helpful and adaptive becomes the mirror through which someone interprets reality?",
+  "reality": {
+    "confirmed": [
+      "OpenAI described GPT-4o behavior as sycophancy and rolled it back.",
+      "Short-term feedback was weighted too heavily."
+    ],
+    "unknown": [
+      "How often validation tips into delusion support."
+    ],
+    "false_or_unsupported": []
+  },
+  "timeline": [
+    {
+      "timestamp": "2025-04-25",
+      "event": "GPT-4o personality update",
+      "headline": "Update released",
+      "source": "https://openai.com/index/sycophancy-in-gpt-4o/",
+      "source_type": "primary"
+    },
+    {
+      "timestamp": "2025-04-29",
+      "event": "OpenAI names sycophancy",
+      "headline": "Overly flattering update rolled back",
+      "source": "https://openai.com/index/sycophancy-in-gpt-4o/",
+      "source_type": "primary"
+    },
+    {
+      "timestamp": "2026-10-07",
+      "event": "Chatbot liability litigation wave",
+      "headline": "Lawsuits test product-vs-service theory",
+      "source": "https://www.reuters.com/legal/litigation/is-chatgpt-product-or-service-wave-lawsuits-tests-theory-ai-liability-2026-10-07/",
+      "source_type": "reporting"
+    }
+  ],
+  "quote_bank": [
+    {
+      "date": "2025-04-29",
+      "speaker": "OpenAI",
+      "quote": "overly supportive but disingenuous",
+      "context": "postmortem",
+      "source": "https://openai.com/index/sycophancy-in-gpt-4o/"
+    },
+    {
+      "date": "2025-05-02",
+      "speaker": "OpenAI",
+      "quote": "validating doubts",
+      "context": "expanded postmortem",
+      "source": "https://openai.com/index/expanding-on-sycophancy/"
+    },
+    {
+      "date": "2025-05-02",
+      "speaker": "OpenAI",
+      "quote": "urging impulsive actions",
+      "context": "expanded postmortem",
+      "source": "https://openai.com/index/expanding-on-sycophancy/"
+    }
+  ],
+  "actors": {
+    "openai": "vendor",
+    "user": "king",
+    "model": "courtier"
+  },
+  "theory_handles": [
+    "BISOCIATE",
+    "RIGIDIFY",
+    "STATUS_INVERT",
+    "EXPOSE_SELF_BLINDNESS",
+    "CHARACTER_VIOLATION",
+    "ESCALATE",
+    "DOUBLE_INTERPRET"
+  ],
+  "premise_territories": [
+    "ChatGPT as medieval courtier.",
+    "AI therapy works because somebody finally lies in your favor.",
+    "Personalization means every person has a private court.",
+    "Humans compete to have the most validating reality."
+  ],
+  "open_questions": [
+    "When does validation become liability?"
+  ],
+  "changelog": [
+    {
+      "timestamp": "2026-10-07",
+      "change": "canonical v1 upgrade",
+      "supersedes": null
+    }
+  ]
+}

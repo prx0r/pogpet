@@ -1,0 +1,229 @@
+{
+  "characters": [],
+  "comic_claim": "The one building on earth designated plague-proof got plague.",
+  "comic_model": "The institute follows anti-plague protocol while being the outbreak.",
+  "culture": {
+    "active_frames": [
+      "pandemic deja vu",
+      "government reassurance skepticism",
+      "lab-leak vindication"
+    ],
+    "analogues": [
+      "COVID-19",
+      "lab-leak discourse"
+    ],
+    "audience_camps": [
+      "normies (flashbacks)",
+      "lab-leak veterans (restraint)",
+      "conspiracy corners (greatest hits)"
+    ],
+    "heat": 0.84,
+    "meme_objects": [
+      "sourdough",
+      "toilet paper",
+      "two weeks",
+      "Zoom"
+    ],
+    "staleness": {
+      "sourdough": 0.67,
+      "toilet_paper": 0.91
+    }
+  },
+  "derivations": [
+    {
+      "format": "single_panel",
+      "id": "too_soon_marcus",
+      "occasion": "halloween",
+      "premise": "Guy arrives at a party in full plague-doctor regalia; everyone backs away. Too soon, Marcus.",
+      "theories": [
+        "benign_violation",
+        "specificity"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "unopened_card",
+      "occasion": "christmas",
+      "premise": "The institute sends its annual holiday card; nobody opens the envelope.",
+      "theories": [
+        "contrast",
+        "benign_violation"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "hr_dropdown",
+      "occasion": "general",
+      "premise": "The HR dropdown lacks plague as a sick-leave option; that would be unprofessional.",
+      "theories": [
+        "rigidity",
+        "literalise"
+      ]
+    },
+    {
+      "format": "detective_caption",
+      "id": "cough_freeze",
+      "occasion": "general",
+      "premise": "Scientist coughs. Entire laboratory stops moving. No dialogue needed.",
+      "theories": [
+        "audience_alliance",
+        "specificity"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "sourdough_reinstall",
+      "occasion": "general",
+      "premise": "Humanity hears unknown pneumonia at pathogen lab and reaches for the sourdough starter.",
+      "theories": [
+        "bisociation",
+        "escalation"
+      ]
+    },
+    {
+      "format": "news_vs_discourse",
+      "id": "one_job_review",
+      "occasion": "general",
+      "premise": "Left: what happened (one paragraph, dated). Right: what the timeline said. The gap is the joke.",
+      "theories": [
+        "contrast",
+        "specificity"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "claim": "A 28-year-old employee of the Irkutsk Anti-Plague Institute died after severe pneumonia of unknown origin.",
+      "status": "reported"
+    },
+    {
+      "claim": "Plague caused the death.",
+      "status": "unconfirmed"
+    },
+    {
+      "claim": "Authorities report no dangerous pathogen found and no secondary cases; WHO is seeking more information.",
+      "status": "reported"
+    }
+  ],
+  "id": "plague_lab",
+  "minted": "2026-10-07",
+  "parent": null,
+  "premise_ids": [],
+  "reality_model": "A lab worker died; the cause is under investigation and unconfirmed.",
+  "references": [
+    {
+      "date": "2026-10-07",
+      "note": "WHO seeking details; second worker reports",
+      "url": "https://www.reuters.com/business/healthcare-pharmaceuticals/who-seeks-details-russia-media-reports-a-second-lab-worker-with-pneumonia-2026-10-07/"
+    },
+    {
+      "date": "2026-10-04",
+      "note": "quarantine reports",
+      "url": "https://www.cnn.com/2026/10/04/europe/russia-laboratory-plague-accident-intl"
+    },
+    {
+      "date": "2026-10-05",
+      "note": "200 under observation",
+      "url": "https://www.cnbc.com/2026/10/05/suspected-plague-cases-reported-in-russias-irkutsk-region.html"
+    }
+  ],
+  "results": [],
+  "sources": [
+    "reuters_2026_10_07",
+    "cnn_2026_10_04",
+    "cnbc_2026_10_05"
+  ],
+  "tags": [
+    "news",
+    "irony",
+    "pandemic-memory"
+  ],
+  "tensions": [
+    "preventer / vector",
+    "reassurance / alarm"
+  ],
+  "theories": [
+    {
+      "id": "identity_contradiction",
+      "strength": 0.9
+    },
+    {
+      "id": "rigidity",
+      "strength": 0.82
+    },
+    {
+      "id": "bisociation",
+      "strength": 0.8
+    },
+    {
+      "id": "benign_violation",
+      "strength": 0.75
+    }
+  ],
+  "identity": {
+    "title": "Russia anti-plague institute / 2020 save file",
+    "opened": "2026-10-02",
+    "last_updated": "2026-10-07",
+    "status": "active",
+    "evergreen_narratives": []
+  },
+  "central_question": "How much cultural memory gets activated by mysterious pneumonia, laboratory and plague before anyone knows what happened?",
+  "reality": {
+    "confirmed": [
+      "An employee died after undetermined pneumonia.",
+      "She worked at the Irkutsk Anti-Plague Institute.",
+      "Quarantine and investigation occurred.",
+      "No plague case currently confirmed."
+    ],
+    "unknown": [
+      "What caused the death."
+    ],
+    "false_or_unsupported": [
+      "Dropped vial story.",
+      "Intentional release.",
+      "New pandemic."
+    ]
+  },
+  "timeline": [
+    {
+      "timestamp": "2026-10-02",
+      "event": "Worker death",
+      "headline": "Employee dies after undetermined pneumonia",
+      "source": "https://www.reuters.com/business/healthcare-pharmaceuticals/what-do-we-know-about-plague-institute-lab-workers-death-russia-2026-10-06/",
+      "source_type": "reporting"
+    },
+    {
+      "timestamp": "2026-10-07",
+      "event": "5,000 tests, no dangerous pathogen",
+      "headline": "No epidemic risk, WHO requests more information",
+      "source": "https://www.reuters.com/business/healthcare-pharmaceuticals/who-seeks-details-russia-media-reports-a-second-lab-worker-with-pneumonia-2026-10-07/",
+      "source_type": "reporting"
+    }
+  ],
+  "quote_bank": [],
+  "actors": {
+    "rospotrebnadzor": "authority",
+    "who": "assessor",
+    "timeline": "autocompleter"
+  },
+  "theory_handles": [
+    "IDENTITY_CONTRADICT",
+    "REPEAT_VARIATION",
+    "BISOCIATE",
+    "ESCALATE"
+  ],
+  "premise_territories": [
+    "Humanity reinstalled 2020.",
+    "The internet completes the story faster than microbiology."
+  ],
+  "open_questions": [
+    "Will the cause ever be identified?"
+  ],
+  "changelog": [
+    {
+      "timestamp": "2026-10-07",
+      "change": "canonical v1 upgrade",
+      "supersedes": null
+    }
+  ]
+}

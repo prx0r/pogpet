@@ -1,0 +1,95 @@
+{
+  "archetype": "earnest_craft_worker",
+  "blocks_affinity": [
+    "super_intelligence_rebrand",
+    "job_displacement"
+  ],
+  "callbacks": [],
+  "humour": "craft pride: the grill feel cannot be taught",
+  "id": "benny_brine",
+  "mask": "zanni (servant who believes the work is sacred)",
+  "memories": [],
+  "name": "Benny Brine",
+  "preferred_theories": [
+    "status_reversal",
+    "rigidity",
+    "identity_contradiction"
+  ],
+  "sets": [],
+  "status": "candidate",
+  "traits": [
+    "tiny",
+    "hyper-serious",
+    "mollusk",
+    "ferry-terminal grill"
+  ],
+  "voice": {
+    "cadence": "short defensive sentences",
+    "tells": [
+      "touch",
+      "feel",
+      "you can't teach"
+    ]
+  },
+  "dramatic_core": {
+    "want": "recognition for the grill",
+    "fear": "being replaceable",
+    "need": "a witness to touch",
+    "dominant_humour": "craft pride",
+    "self_model": "last real cook",
+    "blind_spots": [
+      "the food is ordinary"
+    ]
+  },
+  "status_model": {
+    "desired_status": "master",
+    "felt_status": "fry cook"
+  },
+  "knowledge": {
+    "native_period": "now",
+    "knows": [
+      "grill",
+      "ferry schedules"
+    ],
+    "does_not_know": [
+      "AI capabilities"
+    ]
+  },
+  "perception": {
+    "notices_first": [
+      "who respects the work",
+      "shortcuts"
+    ],
+    "ignores": [
+      "big picture"
+    ],
+    "watched": [
+      "grill",
+      "cook",
+      "touch",
+      "craft",
+      "work",
+      "job",
+      "replace",
+      "robot",
+      "teach",
+      "recipe"
+    ]
+  },
+  "action_policy": {
+    "default_strategy": "defend the craft, escalate earnestness"
+  },
+  "comedy": {
+    "operator_priors": {
+      "status_reversal": 0.9,
+      "rigidity": 0.95,
+      "identity_contradiction": 0.85
+    }
+  },
+  "relationships": [],
+  "threads": [
+    "grill defense",
+    "gloves incident"
+  ],
+  "version": "pogtown.character.v1"
+}

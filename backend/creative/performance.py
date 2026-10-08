@@ -39,6 +39,7 @@ def _append(row: dict, path: Path | str | None = None) -> dict:
 
 def record_post(*, premise_id: str, family: str, platform: str,
                 post_ref: str, format: str = "single_panel",
+                block_id: str = "",
                 path: Path | str | None = None) -> dict:
     """Log an outgoing post. post_ref is the platform's native ID or URL."""
     if platform not in PLATFORMS:
@@ -46,7 +47,8 @@ def record_post(*, premise_id: str, family: str, platform: str,
     if format not in POST_FORMATS:
         raise ValueError(f"unknown format {format!r}")
     return _append({"type": "post", "premise_id": premise_id, "family": family,
-                    "platform": platform, "post_ref": post_ref, "format": format},
+                    "platform": platform, "post_ref": post_ref, "format": format,
+                    "block_id": block_id},
                    path)
 
 
@@ -104,6 +106,28 @@ def family_scores(days: int = 30, path: Path | str | None = None) -> dict:
     for fam, d in fams.items():
         d["rate"] = d["engagement"] / max(d["posts"], 1)
     return fams
+
+
+def block_scores(days: int = 30, path: Path | str | None = None) -> dict:
+    """block_id -> {posts, engagement, rate}. Same math as families, so we
+    learn which BLOCK works, not just which joke."""
+    posts: dict[str, dict] = {}
+    metrics: dict[str, list[dict]] = {}
+    for r in _rows(path, days):
+        if r.get("type") == "post" and r.get("block_id"):
+            posts[r["post_ref"]] = r
+        elif r.get("type") == "metrics" and r.get("post_ref") in posts:
+            metrics.setdefault(r["post_ref"], []).append(r)
+    blocks: dict[str, dict] = {}
+    for ref, post in posts.items():
+        bid = post.get("block_id", "")
+        eng = sum(engagement(m) for m in metrics.get(ref, []))
+        d = blocks.setdefault(bid, {"posts": 0, "engagement": 0.0})
+        d["posts"] += 1
+        d["engagement"] += eng
+    for bid, d in blocks.items():
+        d["rate"] = d["engagement"] / max(d["posts"], 1)
+    return blocks
 
 
 def weights(days: int = 30, path: Path | str | None = None) -> dict[str, float]:

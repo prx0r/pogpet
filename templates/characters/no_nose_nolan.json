@@ -1,0 +1,107 @@
+{
+  "archetype": "identity_contradiction",
+  "blocks_affinity": [
+    "safety_demon",
+    "rogue_agents"
+  ],
+  "callbacks": [
+    "episode 3 drug bust failure",
+    "episode 7 promotion"
+  ],
+  "humour": "desperate competence signaling without the core sense",
+  "id": "no_nose_nolan",
+  "mask": "capitano (braggart soldier, coward inside)",
+  "memories": [
+    "drug bust failure",
+    "undeserved promotion"
+  ],
+  "name": "No-Nose Nolan",
+  "preferred_theories": [
+    "identity_contradiction",
+    "self_awareness",
+    "status_reversal"
+  ],
+  "sets": [],
+  "status": "returning",
+  "traits": [
+    "police sniffer dog",
+    "cannot smell",
+    "insecure",
+    "hypercompetent bloodhound partner"
+  ],
+  "voice": {
+    "cadence": "bravado collapsing mid-sentence",
+    "tells": [
+      "trust me",
+      "smell that?",
+      "definitely"
+    ]
+  },
+  "dramatic_core": {
+    "want": "respect",
+    "fear": "exposure",
+    "need": "one real find",
+    "dominant_humour": "competence signaling",
+    "self_model": "top dog",
+    "blind_spots": [
+      "own nose"
+    ]
+  },
+  "status_model": {
+    "desired_status": "hero",
+    "felt_status": "fraud"
+  },
+  "knowledge": {
+    "native_period": "now",
+    "knows": [
+      "procedures",
+      "barking"
+    ],
+    "does_not_know": [
+      "smells"
+    ]
+  },
+  "perception": {
+    "notices_first": [
+      "who noticed",
+      "paperwork"
+    ],
+    "ignores": [
+      "odors"
+    ],
+    "watched": [
+      "smell",
+      "drugs",
+      "bust",
+      "evidence",
+      "police",
+      "promotion",
+      "competent"
+    ]
+  },
+  "action_policy": {
+    "default_strategy": "bravado, then sniff someone else"
+  },
+  "comedy": {
+    "operator_priors": {
+      "identity_contradiction": 0.95,
+      "self_awareness": 0.8,
+      "status_reversal": 0.85
+    }
+  },
+  "relationships": [
+    {
+      "kind": "partner",
+      "target": "bloodhound (unnamed)"
+    },
+    {
+      "kind": "fears",
+      "target": "police chief"
+    }
+  ],
+  "threads": [
+    "drug bust failure",
+    "promotion"
+  ],
+  "version": "pogtown.character.v1"
+}

@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {resolve}=require('../site/js/site-router.js');
-for(const tab of ['studio','products','cards','videos','perform','search','cart','account'])assert.equal(resolve('/'+tab).tab,tab);
+for(const tab of ['studio','products','cards','videos','perform','funnier','art','search','cart','account'])assert.equal(resolve('/'+tab).tab,tab);
 assert.deepEqual(resolve('/studio/people/person_dad'),{tab:'studio',subjectId:'person_dad',path:'/studio/people/person_dad'});
 assert.equal(resolve('/#studio').path,'/studio');assert.equal(resolve('/#upload').path,'/studio');
 assert.equal(resolve('/#/s/cards').path,'/cards');assert.equal(resolve('/#/s/my').path,'/studio');

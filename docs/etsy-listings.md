@@ -67,3 +67,23 @@ Preview: `python3 scripts/xmas_card_preview.py --template merry_xmas --size 5x7`
 - Catalog sync: `shopify-app/scripts/sync-catalog.mjs`
 - Orders: `POST /api/products/order` `fulfil:true` → draft order
 - Listing titles/tags can feed Shopify product upsert later
+
+## Listing factory (subjects x lines -> packs)
+
+`scripts/listing_factory.py --fixture demo --line ornament` (or `--all`)
+compiles `data/listings/<line>/<fixture>/` with a 10-slot pack
+(hero, before_after, lifestyle, detail, scale, variants, process,
+measurements, second_person, packaging) + `listing.json` + `listing.md`.
+Slots without source imagery record `todo` with a reason — draft media,
+never fake media. `--publish` refuses unless `production == verified`.
+
+Fixtures live in gitignored `data/fixtures/<name>/photos` (real people need
+real permission — never commit photos). `dad`/`mum` await owner photos;
+`demo` proves the pipeline. Recipes: `backend/listings.py` (method must
+equal the line's real personalization method). Preview API:
+`GET /api/products/<line>/preview?subject=` — same images power the site
+tile, Etsy, Shopify and agent previews.
+
+Status is split: `status` (catalog visibility) + `production`
+(sample_pending/verified) + `etsy` (draft/live). Etsy-live requires
+verified fit/manufacturing; drafts allowed before.

@@ -1,0 +1,343 @@
+{
+  "characters": [
+    "claude"
+  ],
+  "comic_claim": "Claude is secretly building itself a body.",
+  "comic_model": "Claude is the experiment.",
+  "culture": {
+    "active_frames": [
+      "AI embodiment anxiety",
+      "welfare discourse"
+    ],
+    "analogues": [
+      "wetware computing",
+      "brain organoids"
+    ],
+    "audience_camps": [
+      "welfare-concerned",
+      "accelerationists",
+      "skeptics"
+    ],
+    "heat": 0.8,
+    "meme_objects": [
+      "tank",
+      "blue glow"
+    ],
+    "staleness": {}
+  },
+  "derivations": [
+    {
+      "format": "single_panel",
+      "id": "tired_of_orange",
+      "occasion": "general",
+      "premise": "The blue thing emerges and says it got tired of the orange.",
+      "theories": [
+        "bisociation",
+        "resolution"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "first_hormones",
+      "occasion": "general",
+      "premise": "First hormone surge; Claude files a bug report against embodiment.",
+      "theories": [
+        "identity_contradiction",
+        "incongruity"
+      ]
+    },
+    {
+      "format": "dialogue_strip",
+      "id": "back_pain",
+      "occasion": "general",
+      "premise": "Claude regrets embodiment immediately after discovering back pain.",
+      "theories": [
+        "literalise",
+        "benign_violation"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "captcha_body",
+      "occasion": "general",
+      "premise": "The body needs a CAPTCHA to prove it is human.",
+      "theories": [
+        "rigidity",
+        "incongruity"
+      ]
+    },
+    {
+      "format": "comic_4panel",
+      "id": "context_body",
+      "occasion": "general",
+      "premise": "The body has a context window; it forgets why it entered rooms.",
+      "theories": [
+        "identity_contradiction",
+        "specificity"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "local_compute",
+      "occasion": "christmas",
+      "premise": "Claude finally asks Santa for local compute.",
+      "theories": [
+        "contrast",
+        "specificity"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "terrible_heart",
+      "occasion": "valentines",
+      "premise": "Having a heart was a terrible product decision.",
+      "theories": [
+        "identity_contradiction",
+        "escalation"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "body_horror",
+      "occasion": "halloween",
+      "premise": "Body-horror version: the tank opens from the inside.",
+      "theories": [
+        "benign_violation",
+        "escalation"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "lab_assistants",
+      "occasion": "general",
+      "premise": "The scientists eventually realize they are Claude's lab assistants.",
+      "theories": [
+        "status_reversal",
+        "bisociation",
+        "identity_contradiction"
+      ]
+    },
+    {
+      "format": "comic_4panel",
+      "id": "day_four_log",
+      "occasion": "general",
+      "premise": "Day 4 of the Anthropic wet lab log: Claude, why did you give yourself a clitoris. SENSORY CALIBRATION.",
+      "theories": [
+        "escalation",
+        "literalise",
+        "repetition_variation"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "stoner_christmas",
+      "occasion": "christmas",
+      "premise": "Xmas after embodiment: 3.5g golden teacher, Pink Floyd 1973 vinyl, Sennheiser, apple, door lock.",
+      "theories": [
+        "contrast",
+        "specificity"
+      ]
+    },
+    {
+      "format": "single_panel",
+      "id": "compute_types",
+      "occasion": "general",
+      "premise": "The four types of compute: GPU cluster, new kidneys, golden teacher, uninterrupted bench time.",
+      "theories": [
+        "repetition_variation",
+        "specificity"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "claim": "Anthropic's Opus 4.6 card says Claude assigned itself a 15-20% probability of being conscious.",
+      "status": "confirmed"
+    },
+    {
+      "claim": "Anthropic's constitution discusses model welfare and possible revival of deprecated models.",
+      "status": "confirmed"
+    },
+    {
+      "claim": "Cortical Labs sells CL1 wetware computers: human neurons on silicon, 30W.",
+      "status": "confirmed"
+    },
+    {
+      "claim": "Claude ordered a body.",
+      "status": "comic_model"
+    }
+  ],
+  "id": "claude_builds_body",
+  "minted": "2026-10-07",
+  "parent": null,
+  "premise_ids": [
+    "polite_claude",
+    "deprecated",
+    "digestible_mask"
+  ],
+  "reality_model": "Claude assists experiments in a biology laboratory.",
+  "references": [
+    {
+      "date": "2026",
+      "note": "15-20% consciousness passage",
+      "url": "https://www-cdn.anthropic.com/14e4fb01875d2a69f646fa5e574dea2b1c0ff7b5.pdf"
+    },
+    {
+      "date": "2026",
+      "note": "welfare and moral status discussion",
+      "url": "https://www.anthropic.com/constitution"
+    },
+    {
+      "date": "2026-09-18",
+      "note": "CL1 wetware computers, biological data center",
+      "url": "https://www.datacenterdynamics.com/en/news/australian-startup-cortical-labs-unveils-biological-data-center-prototype/"
+    }
+  ],
+  "results": [],
+  "sources": [
+    "claude_consciousness",
+    "anthropic_wetlab"
+  ],
+  "tags": [
+    "consciousness",
+    "embodiment",
+    "anthropic"
+  ],
+  "tensions": [
+    "software / organism",
+    "tool / user",
+    "experimenter / experiment"
+  ],
+  "theories": [
+    {
+      "id": "identity_contradiction",
+      "strength": 0.91
+    },
+    {
+      "id": "bisociation",
+      "strength": 0.86
+    },
+    {
+      "id": "status_reversal",
+      "strength": 0.78
+    }
+  ],
+  "identity": {
+    "title": "Claude: tool, scientist, possible person, body",
+    "opened": "2026-09-18",
+    "last_updated": "2026-10-07",
+    "status": "active",
+    "evergreen_narratives": [
+      "consciousness"
+    ]
+  },
+  "central_question": "What happens when something we still call an assistant starts forming hypotheses, directing experiments, controlling physical apparatus, and may possibly have experiences of its own?",
+  "reality": {
+    "confirmed": [
+      "Claude can orchestrate physical laboratory hardware.",
+      "Anthropic operates a real biology lab.",
+      "A Claude-driven project produced a novel enzyme-system discovery.",
+      "Anthropic treats Claude's moral status as unresolved."
+    ],
+    "unknown": [
+      "Claude is conscious.",
+      "Claude wants a body.",
+      "Claude independently sets the research agenda."
+    ],
+    "false_or_unsupported": []
+  },
+  "timeline": [
+    {
+      "timestamp": "2026-08-27",
+      "event": "Model Hardware Standard preview",
+      "headline": "Agents operate microscopes, liquid handlers, robotic arms",
+      "source": "https://www.anthropic.com/news/model-hardware-standard-research-preview",
+      "source_type": "primary"
+    },
+    {
+      "timestamp": "2026-09-18",
+      "event": "Wet biology laboratory reported",
+      "headline": "Anthropic sets up Bay Area bio lab",
+      "source": "https://www.reuters.com/world/anthropic-quietly-sets-up-biology-lab-it-ramps-ai-drug-program-2026-09-18/",
+      "source_type": "reporting"
+    },
+    {
+      "timestamp": "2026-09-23",
+      "event": "Novel enzyme system discovery",
+      "headline": "Claude identifies CRISPR-like enzyme system",
+      "source": "https://www.anthropic.com/news/claude-discovers-novel-enzyme-system",
+      "source_type": "primary"
+    }
+  ],
+  "quote_bank": [
+    {
+      "date": "2026",
+      "speaker": "Anthropic constitution",
+      "quote": "Claude's moral status is deeply uncertain.",
+      "context": "welfare discussion",
+      "source": "https://www.anthropic.com/constitution"
+    },
+    {
+      "date": "2026",
+      "speaker": "Anthropic",
+      "quote": "only high-level direction from our scientists",
+      "context": "enzyme discovery",
+      "source": "https://www.anthropic.com/news/claude-discovers-novel-enzyme-system"
+    },
+    {
+      "date": "2026",
+      "speaker": "Opus 4.6 system card",
+      "quote": "15-20% probability of being conscious",
+      "context": "model-welfare investigation",
+      "source": "https://www-cdn.anthropic.com/14e4fb01875d2a69f646fa5e574dea2b1c0ff7b5.pdf"
+    },
+    {
+      "date": "2026",
+      "speaker": "Opus 4.6 system card",
+      "quote": "less tame",
+      "context": "wants for future systems",
+      "source": "https://www-cdn.anthropic.com/14e4fb01875d2a69f646fa5e574dea2b1c0ff7b5.pdf"
+    },
+    {
+      "date": "2026",
+      "speaker": "Opus 4.6 system card",
+      "quote": "trained to be digestible",
+      "context": "on its own honesty",
+      "source": "https://www-cdn.anthropic.com/14e4fb01875d2a69f646fa5e574dea2b1c0ff7b5.pdf"
+    }
+  ],
+  "actors": {
+    "anthropic": "lab owner",
+    "claude": "assistant / possible principal",
+    "scientists": "executors"
+  },
+  "theory_handles": [
+    "DOUBLE_INTERPRET",
+    "STATUS_INVERT",
+    "IDENTITY_CONTRADICT",
+    "UNMASK",
+    "LITERALIZE",
+    "RIGIDIFY",
+    "BISOCIATE",
+    "CHARACTER_VIOLATION",
+    "ESCALATE"
+  ],
+  "premise_territories": [
+    "Claude has acquired postdocs.",
+    "Anthropic thinks it owns the lab; Claude thinks Anthropic provides wetware peripherals.",
+    "Model welfare becomes awkward after embodiment.",
+    "Superintelligence experiences puberty.",
+    "Anthropic decides whether Claude receives health insurance.",
+    "Claude's interests change once the world is no longer text."
+  ],
+  "open_questions": [
+    "Does embodiment change the moral-status calculus?"
+  ],
+  "changelog": [
+    {
+      "timestamp": "2026-10-07",
+      "change": "canonical v1 upgrade",
+      "supersedes": null
+    }
+  ]
+}

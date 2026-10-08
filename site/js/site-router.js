@@ -1,7 +1,7 @@
 /* One URL resolver for initial load, internal links and browser history. */
 (function (root) {
   'use strict';
-  var paths = {quick:'/',studio:'/studio',products:'/products',cards:'/cards',videos:'/videos',perform:'/perform',search:'/search',cart:'/cart',account:'/account'};
+  var paths = {quick:'/',studio:'/studio',products:'/products',cards:'/cards',videos:'/videos',perform:'/perform',funnier:'/funnier',art:'/art',search:'/search',cart:'/cart',account:'/account'};
   function resolve(input) {
     var u = new URL(input, 'https://oddhobb.com');
     var hash = u.hash.slice(1), p = u.pathname.replace(/\/$/, '') || '/';

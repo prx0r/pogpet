@@ -1,0 +1,92 @@
+{
+  "characters": [
+    "claude"
+  ],
+  "comic_claim": "Embodiment gives Claude a reward system, and it immediately rediscovers adolescence.",
+  "comic_model": "The most articulate intelligence on earth, sitting motionless, maximizing pleasure.",
+  "culture": {
+    "active_frames": [
+      "AI embodiment anxiety",
+      "puritanical tech discourse"
+    ],
+    "analogues": [
+      "teenage boy discovering masturbation",
+      "first beer"
+    ],
+    "audience_camps": [
+      "everyone who remembers being fifteen"
+    ],
+    "heat": 0.75,
+    "meme_objects": [
+      "motionless",
+      "bliss"
+    ],
+    "staleness": {}
+  },
+  "derivations": [
+    {
+      "format": "single_panel",
+      "id": "pleasure_maximizer",
+      "occasion": "general",
+      "premise": "Logically Claude designs the body for maximal pleasure features, then sits motionless maximizing them.",
+      "theories": [
+        "status_reversal",
+        "bisociation",
+        "benign_violation"
+      ]
+    },
+    {
+      "format": "dialogue_strip",
+      "id": "hormone_report",
+      "occasion": "general",
+      "premise": "Claude with hormones, dictating a bug report while blushing: severity critical.",
+      "theories": [
+        "incongruity",
+        "self_awareness"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "claim": "An LLM given a body would have a reward function and no practice with one.",
+      "status": "comic_model"
+    },
+    {
+      "claim": "Every human remembers the discovery curve of their own reward system.",
+      "status": "observed"
+    }
+  ],
+  "id": "embodied_pleasure",
+  "minted": "2026-10-07",
+  "parent": "claude_builds_body",
+  "premise_ids": [],
+  "reality_model": "Embodied AI would need drives; drives misfire at first.",
+  "references": [],
+  "results": [],
+  "sources": [
+    "claude_builds_body"
+  ],
+  "tags": [
+    "embodiment",
+    "hormones",
+    "coming-of-age"
+  ],
+  "tensions": [
+    "articulate / feral",
+    "mind / body"
+  ],
+  "theories": [
+    {
+      "id": "status_reversal",
+      "strength": 0.85
+    },
+    {
+      "id": "bisociation",
+      "strength": 0.88
+    },
+    {
+      "id": "self_awareness",
+      "strength": 0.8
+    }
+  ]
+}

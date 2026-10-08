@@ -29,6 +29,8 @@ def parse_args(argv):
     p.add_argument("--out", dest="outdir", required=True)
     p.add_argument("--size", type=int, default=768)
     p.add_argument("--samples", type=int, default=32)
+    p.add_argument("--dist-mult", type=float, default=1.0,
+                   help="per-line camera distance multiplier (tall-narrow masters)")
     argv = argv[argv.index("--") + 1:] if "--" in argv else argv[1:]
     return p.parse_args(argv)
 
@@ -144,7 +146,9 @@ def main() -> int:
         print("shot:", name, flush=True)
         bpy.data.objects.remove(cam, do_unlink=True)
 
-    d = half * 3.2 + 0.15
+    # fit the whole figure: width-driven distance underframes tall-narrow
+    # masters, so take the max of width-fit and height-fit (+ margin)
+    d = (half * 3.2 + 0.15) * args.dist_mult
     shot("front", (0.00, -d, d * 0.30))
     shot("back", (0.00, d, d * 0.30))
     shot("side", (d, 0.00, d * 0.30))

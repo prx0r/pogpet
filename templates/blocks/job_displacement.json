@@ -1,0 +1,139 @@
+{
+  "characters": [],
+  "comic_claim": "The productivity miracle keeps happening to someone else's salary.",
+  "comic_model": "Train your replacement, then onboard it before leaving.",
+  "culture": {
+    "active_frames": [
+      "displacement anxiety",
+      "bank layoffs"
+    ],
+    "analogues": [
+      "offshoring waves"
+    ],
+    "audience_camps": [
+      "white-collar workers"
+    ],
+    "heat": 0.8,
+    "meme_objects": [
+      "onboard it"
+    ],
+    "staleness": {}
+  },
+  "derivations": [
+    {
+      "format": "single_panel",
+      "id": "onboard_copilot",
+      "occasion": "general",
+      "premise": "Employee trains Copilot, Copilot gets the desk, employee is asked to onboard it before leaving.",
+      "theories": [
+        "status_reversal",
+        "escalation"
+      ]
+    }
+  ],
+  "facts": [
+    {
+      "claim": "DNB announced about 400 cuts while describing AI-driven organizational change.",
+      "status": "reported"
+    }
+  ],
+  "id": "job_displacement",
+  "minted": "2026-10-07",
+  "parent": null,
+  "premise_ids": [],
+  "reality_model": "Restructuring explicitly linked to AI investment.",
+  "references": [
+    {
+      "date": "2026-10-06",
+      "note": "DNB 400 cuts",
+      "url": "https://www.reuters.com/business/world-at-work/norways-biggest-bank-dnb-lay-off-around-400-staff-amid-ai-driven-changes-2026-10-06/"
+    }
+  ],
+  "results": [],
+  "sources": [
+    "reuters_dnb_2026_10"
+  ],
+  "tags": [
+    "news",
+    "labor"
+  ],
+  "tensions": [
+    "trainer / replaced",
+    "miracle / paycheck"
+  ],
+  "theories": [
+    {
+      "id": "status_reversal",
+      "strength": 0.88
+    },
+    {
+      "id": "benign_violation",
+      "strength": 0.75
+    }
+  ],
+  "identity": {
+    "title": "AI, jobs, and the productivity miracle",
+    "opened": "2026-10-06",
+    "last_updated": "2026-10-07",
+    "status": "active",
+    "evergreen_narratives": [
+      "jobs_purpose"
+    ]
+  },
+  "central_question": "If AI makes a worker dramatically more productive, who receives the gain?",
+  "reality": {
+    "confirmed": [
+      "DNB announced ~400 layoffs amid AI-driven change.",
+      "FICO cut 15% in AI restructuring.",
+      "84% of polled US voters see AI as a worker threat."
+    ],
+    "unknown": [
+      "Net long-run employment effects."
+    ],
+    "false_or_unsupported": []
+  },
+  "timeline": [
+    {
+      "timestamp": "2026-10-06",
+      "event": "DNB layoffs",
+      "headline": "~400 cuts amid AI-driven change",
+      "source": "https://www.reuters.com/business/world-at-work/norways-biggest-bank-dnb-lay-off-around-400-staff-amid-ai-driven-changes-2026-10-06/",
+      "source_type": "reporting"
+    },
+    {
+      "timestamp": "2026-10-06",
+      "event": "FICO restructuring",
+      "headline": "15% workforce reduction",
+      "source": "https://www.reuters.com/business/world-at-work/fico-cuts-workforce-by-15-ai-driven-restructuring-2026-10-06/",
+      "source_type": "reporting"
+    }
+  ],
+  "quote_bank": [],
+  "actors": {
+    "dnb": "bank",
+    "fico": "firm",
+    "workers": "trainers"
+  },
+  "theory_handles": [
+    "STATUS_INVERT",
+    "IDENTITY_CONTRADICT",
+    "UNMASK",
+    "BISOCIATE",
+    "DOUBLE_INTERPRET",
+    "ESCALATE"
+  ],
+  "premise_territories": [
+    "Employee trains Copilot; Copilot inherits the desk.",
+    "UBI becomes royalties from the robot that learned your job."
+  ],
+  "open_questions": [
+    "Tasks vs occupations: where does it land?"
+  ],
+  "changelog": [
+    {
+      "timestamp": "2026-10-07",
+      "change": "canonical v1 upgrade",
+      "supersedes": null
+    }
+  ]
+}

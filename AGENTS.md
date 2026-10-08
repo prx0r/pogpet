@@ -121,6 +121,9 @@ curl -s -o /dev/null -w '%{http_code}\n' https://oddhobb.com/#products
 | `docs/mcp.md` | agent connection |
 | `docs/meme-engine.md` | meme loop: post → ledger → reweight → site |
 | `docs/original-premise-bible.md` | premise quality guide (verbatim founder) |
+| `docs/joke-blocks.md` | JokeBlock ontology: blocks, theories, operators |
+| `docs/comedy-graph.md` | full architecture spec (verbatim founder) |
+| `docs/comedy-os.md` | system inventory + Freaktown/oddhobb relevance |
 | `docs/studio.md` | studio + products contract |
 | `docs/studio-custom.md` | controlled custom + props |
 | `docs/etsy-listings.md` | Etsy packs + sizing |

@@ -175,6 +175,15 @@ def api_session():
     elif owner.startswith("pog_") and len(owner) <= 40:
         pass  # client-generated browser id — sign as presented
     else:
+        # a valid API key for this handle is proof of ownership too —
+        # agents (ChatGPT/Muse) hold keys, not browser sigs
+        key = _api_key()
+        if key:
+            with db.connect() as c:
+                u = db.get_user_by_api_key(c, key)
+            if u and (u["handle"] or "") == owner:
+                return jsonify({"ok": True, "owner": owner,
+                                "owner_sig": config.sign_owner(owner)})
         return _err(
             "cannot claim a named owner without a valid owner_sig or API key",
             403)
@@ -3782,6 +3791,71 @@ def mesh_manifest(mid: str):
     })
 
 
+@app.get("/api/products/<line>/preview")
+def product_preview(line: str):
+    """Canonical preview: subject + product personalization method +
+    fixture assets -> rendered preview artifact. Same images power the
+    website tile, Etsy listing, Shopify image and agent previews."""
+    from backend import listings as _list
+    try:
+        rec = _list.recipe_for(line)
+    except KeyError:
+        return _err("unknown line — valid ids: " + ", ".join(sorted(_list.RECIPES)), 404)
+    subject = (request.args.get("subject") or rec["fixture"]).strip()[:80]
+    photos = _list.fixture_photos(subject)
+    if not photos:
+        return jsonify(ok=False, error=f"fixture {subject!r} has no photos yet",
+                       hint=f"add to data/fixtures/{subject}/photos/"), 404
+    spec = config.STUDIO_LINES.get(line, {})
+    stills = {}
+    for name in [rec["hero"], *rec["angles"]]:
+        p = _list.PROD / name
+        if p.is_file():
+            stills[name] = f"/img/prod/{name}"
+    outdir = _list.OUT / line / subject
+    listing = {}
+    lp = outdir / "listing.json"
+    if lp.is_file():
+        try:
+            listing = json.loads(lp.read_text())
+        except ValueError:
+            listing = {}
+    return jsonify(ok=True, line=line, subject=subject, story=rec["story"],
+                   text=rec["text"], hero=f"/img/prod/{rec['hero']}",
+                   stills=stills, price_cents=spec.get("price_cents", 0),
+                   status={"catalog": spec.get("status", "soon"),
+                           "production": spec.get("production", "sample_pending"),
+                           "etsy": spec.get("etsy", "draft")},
+                   listing=listing)
+
+
+@app.get("/api/products/for/<subject>")
+def products_for_subject(subject: str):
+    """Rank product lines for someone we know: their interests, motifs and
+    occasions against each line's theme, blurb and occasion. Prints the
+    reasoning so an agent can explain the pick, not just take it."""
+    from backend import subjects as _subjects
+    owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        sub = _subjects.get_subject(c, owner, subject)
+        if not sub:
+            sub = _subjects.find_subject_by_name(c, owner, subject)
+        if not sub:
+            return _err("unknown friend — add them in Studio first", 404)
+        prof = _subjects.profile_for(c, owner, sub["id"]).get("profile", {})
+    interests = [str(x).lower() for x in (prof.get("interests") or [])
+                 if isinstance(x, str)]
+    notes = f"{prof.get('notes') or ''} {prof.get('relationship') or ''}".lower()
+    from backend import listings as _list
+    ranked = _list.rank_for(interests, notes)
+    return jsonify(ok=True, subject=sub.get("name", subject),
+                   interests=prof.get("interests") or [],
+                   lines=ranked)
+
+
 @app.post("/api/products/personalise")
 def products_personalise():
     """Controlled personalise: coat colour + pattern + hat on a product line."""
@@ -4166,10 +4240,48 @@ def design_make():
     if proc.returncode != 0 or not (outdir / job).is_file():
         tail = (proc.stderr or proc.stdout or "")[-300:]
         return _err(f"Blender failed: {tail}", 500)
+    preview_url = ""
+    try:
+        import subprocess as _sp
+        import tempfile as _tf
+        import shutil as _sh
+        tmp = Path(_tf.mkdtemp(prefix="makeprev-"))
+        r = _sp.run(
+            [str(Path.home() / "blender" / "blender"), "--background",
+             "--python", "scripts/factory/stills.py", "--",
+             "--in", str(outdir / job), "--out", str(tmp),
+             "--size", "512", "--samples", "16"],
+            cwd=str(Path(__file__).resolve().parent.parent),
+            capture_output=True, text=True, timeout=600)
+        hero = tmp / "hero.png"
+        if r.returncode == 0 and hero.is_file():
+            prevdir = Path("data/designs/previews")
+            prevdir.mkdir(parents=True, exist_ok=True)
+            dest = prevdir / f"{Path(job).stem}.png"
+            _sh.copyfile(hero, dest)
+            preview_url = f"/backend/api/design/preview/{dest.name}"
+        _sh.rmtree(tmp, ignore_errors=True)
+    except Exception:
+        preview_url = ""
     return jsonify({"ok": True, "line": line, "text": text,
-                    "stl_url": f"/api/design/file/{job}",
+                    "stl_url": f"/backend/api/design/file/{job}",
+                    "preview_url": preview_url,
                     "log": (proc.stdout or "")[-500:],
                     "hint": "Watertight STL from the line master. Validate dims via /api/design/validate."})
+
+
+@app.get("/api/design/preview/<name>")
+def design_preview(name: str):
+    """Fetch a made-STL preview PNG."""
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+\.png", name or ""):
+        return _err("bad name", 400)
+    target = (Path("data/designs/previews") / name).resolve()
+    if not str(target).startswith(str(Path("data/designs/previews").resolve())) \
+            or not target.is_file():
+        return _err("not found", 404)
+    res = send_file(target, mimetype="image/png", max_age=3600)
+    res.headers["Cache-Control"] = "private, no-store"
+    return res
 
 
 @app.get("/api/design/file/<name>")
@@ -4323,11 +4435,27 @@ def products_order():
                 shopify.update(draft)
                 if draft.get("ok"):
                     with db.connect() as c:
-                        c.execute(
-                            "UPDATE orders SET note=? WHERE id=?",
-                            ((custom_note + f" | shopify:{draft.get('draft_id') or draft.get('name')}")[:200],
-                             order.get("id")),
-                        )
+                        try:
+                            cols = [r[1] for r in c.execute("PRAGMA table_info(orders)").fetchall()]
+                        except Exception:
+                            cols = []
+                        if "checkout_url" not in cols:
+                            try:
+                                c.execute("ALTER TABLE orders ADD COLUMN checkout_url TEXT NOT NULL DEFAULT ''")
+                            except Exception:
+                                pass
+                        try:
+                            c.execute(
+                                "UPDATE orders SET note=?, checkout_url=? WHERE id=?",
+                                ((custom_note + f" | shopify:{draft.get('draft_id') or draft.get('name')}")[:200],
+                                 draft.get("invoice_url") or "", order.get("id")),
+                            )
+                        except Exception:
+                            c.execute(
+                                "UPDATE orders SET note=? WHERE id=?",
+                                ((custom_note + f" | shopify:{draft.get('draft_id') or draft.get('name')}")[:200],
+                                 order.get("id")),
+                            )
                         c.commit()
         except Exception as e:  # noqa: BLE001
             shopify = {"attempted": True, "ok": False, "error": str(e)[:300]}
@@ -4338,6 +4466,7 @@ def products_order():
         "status": "pending_checkout",
         "label": label,
         "shopify": shopify,
+        "checkout_url": (shopify.get("invoice_url") if isinstance(shopify, dict) else "") or "",
         "hint": "Order reserved. Shopify draft only if fulfil=true and creds work. "
                 "No card charge from this endpoint.",
     })
@@ -4986,6 +5115,114 @@ def creative_catalog():
         q=(request.args.get("q") or "").strip(),
         rank=(request.args.get("rank") or "").strip(),
     ))
+
+
+@app.get("/api/creative/duel")
+def creative_duel():
+    """Two comics, pick the funnier one. Trains the ComedyJudge: every
+    vote lands in the preference DB next to social engagement."""
+    from backend.creative import comics as _comics
+    try:
+        a, b = _comics.duel_pair()
+    except ValueError as e:
+        return _err(str(e), 503)
+    slim = lambda s: {"id": s.get("id"), "title": s.get("title"),
+                      "premise": s.get("premise"), "panels": s.get("panels"),
+                      "caption": s.get("caption")}
+    return jsonify(ok=True, a=slim(a), b=slim(b))
+
+
+@app.post("/api/creative/duel/vote")
+def creative_duel_vote():
+    """Record a duel vote. winner is one of the two ids or 'neither'."""
+    from backend.creative import comics as _comics
+    from backend.creative import judge as _judge
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    scripts = {s.get("id"): s for s in _comics.load_comics().values()}
+    aid, bid = str(body.get("a_id") or ""), str(body.get("b_id") or "")
+    winner = str(body.get("winner") or "")
+    if aid not in scripts or bid not in scripts or aid == bid:
+        return _err("pass two different comic ids", 400)
+    if winner not in (aid, bid, "neither"):
+        return _err("winner must be one of the two ids or 'neither'", 400)
+    row = _judge.record_preference(scripts[aid], scripts[bid],
+                                   "a" if winner == aid else
+                                   "b" if winner == bid else "neither",
+                                   user=owner, context="duel")
+    return jsonify(ok=True, recorded=bool(row.get("ts")))
+
+
+@app.get("/api/creative/art")
+def creative_art():
+    """The art shelf: browse finished pieces, pick a surface."""
+    from backend.creative import art as _art
+    return jsonify(ok=True, formats={k: {"label": v["label"],
+                                          "price_cents": v["price_cents"],
+                                          "blurb": v["blurb"]}
+                                      for k, v in _art.FORMATS.items()},
+                   items=_art.list_art())
+
+
+@app.post("/api/creative/art/order")
+def creative_art_order():
+    """Reserve an art piece on a surface. No charge from our API."""
+    from backend.creative import art as _art
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    try:
+        qty = int(body.get("qty") or 1)
+    except (ValueError, TypeError):
+        return _err("qty must be a number", 400)
+    try:
+        return jsonify(ok=True, **_art.order(
+            owner, str(body.get("art_id") or ""),
+            str(body.get("format") or ""), qty))
+    except KeyError:
+        return _err("unknown art piece", 404)
+    except ValueError as e:
+        return _err(str(e), 400)
+
+
+@app.post("/api/creative/art/mp4")
+def creative_art_mp4():
+    """Render an art piece as a vertical MP4 (text plates + voiceover)."""
+    from backend.creative import art as _art
+    body = request.get_json(silent=True) or {}
+    owner = _own(body.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    try:
+        dest = _art.make_mp4(str(body.get("art_id") or ""),
+                             str(body.get("voice") or "ryan"))
+    except KeyError:
+        return _err("unknown art piece", 404)
+    except Exception as e:
+        return _err(f"render failed: {str(e)[:200]}", 500)
+    return jsonify(ok=True, mp4_url=f"/api/creative/art/mp4/{dest.name}")
+
+
+@app.get("/api/creative/art/mp4/<name>")
+def creative_art_mp4_file(name: str):
+    from backend.creative import art as _art
+    owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    safe = "".join(ch for ch in name if ch.isalnum() or ch in "-_.")[:80]
+    dest = config.DATA / "art" / "mp4" / safe
+    if dest.suffix != ".mp4" or not dest.is_file():
+        return _err("not ready", 404)
+    res = send_file(dest, mimetype="video/mp4", max_age=0)
+    res.headers["Cache-Control"] = "private, no-store"
+    return res
 
 
 @app.post("/api/creative/brief")

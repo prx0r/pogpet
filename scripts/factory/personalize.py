@@ -73,6 +73,9 @@ def main() -> int:
     tx = bpy.context.active_object
     tx.name = "name"
     tx.data.body = text
+    if not text.strip():
+        print("empty text — nothing to emboss")
+        return 2
     tx.data.size = size
     tx.data.extrude = depth / 2.0
     tx.data.align_x = "CENTER"
@@ -84,6 +87,19 @@ def main() -> int:
     tx.rotation_euler = EULER_FOR_NORMAL[normal]
     bpy.ops.object.convert(target="MESH")
     tx = bpy.context.active_object
+    if len(tx.data.vertices) == 0:
+        print(f"text {text!r} produced no geometry — refusing")
+        return 2
+
+    # center in mesh space (object location gets overwritten at placement,
+    # so shifting the object here would be silently lost)
+    xs = [v.co.x for v in tx.data.vertices]
+    ys = [v.co.y for v in tx.data.vertices]
+    cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+    for v in tx.data.vertices:
+        v.co.x -= cx
+        v.co.y -= cy
+    tx.data.update()
 
     # auto-fit: shrink text to the surface box by measured bounds
     if txspec.get("auto_fit", True):
@@ -98,10 +114,20 @@ def main() -> int:
                 print(f"  auto-fit {text!r}: scale {s:.2f} to "
                       f"{surf['width_mm']}x{surf['height_mm']}mm box")
 
+    # placement: XY from the adapter origin, Z from the MEASURED base top
+    # along the face normal (adapter z values drifted from the masters and
+    # buried text inside the part — silent no-op output).
+    bxs = [v.co.x for v in base.data.vertices]
+    bys = [v.co.y for v in base.data.vertices]
+    bzs = [v.co.z for v in base.data.vertices]
     ox, oy, oz = surf["origin_mm"]
     nx, ny, nz = normal
-    tx.location = (ox - nx * embed, oy - ny * embed, oz - nz * embed)
+    top = max(bzs) if nz > 0 else (min(bzs) if nz < 0 else oz)
+    tx.location = (ox, oy, top - nz * embed * 0.5)
+    print(f"  place: base z [{min(bzs):.2f},{max(bzs):.2f}] top={top:.2f} "
+          f"-> text z {tx.location[2]:.2f} (adapter z was {oz})")
 
+    base_verts = len(base.data.vertices)
     m = base.modifiers.new("NAME", "BOOLEAN")
     m.operation = "UNION"
     m.object = tx
@@ -121,6 +147,15 @@ def main() -> int:
     me = base.data
     print(f"personalised: {text!r} on {ad['base']} verts={len(me.vertices)} "
           f"polys={len(me.polygons)} -> {out}")
+    # never silently return the untouched master: the boolean must add geometry
+    if len(me.vertices) <= base_verts:
+        print(f"REFUSED: boolean added no geometry (base {base_verts} verts, "
+              f"out {len(me.vertices)}) — text buried or missed the part")
+        try:
+            out.unlink(missing_ok=True)
+        except TypeError:
+            pass
+        return 3
     return 0
 
 

@@ -19,3 +19,21 @@
 .oc-card__to{font-size:12px;color:#8a6a2f;margin-top:2px}
 .oc-card__meta{font-size:12px;color:#666;margin-top:4px}
 .oc-card__msg{font-size:12px;color:#2f7a52;margin-top:6px;min-height:1.2em}
+
+/* Funnier duel + Art shelf (no build step; keep with card styles) */
+.oc-duel{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:12px 0}
+@media (max-width:700px){.oc-duel{grid-template-columns:1fr}}
+.oc-duel__card{background:#fff;border:1px solid #eee4d3;border-radius:14px;padding:14px}
+.oc-duel__title{font-size:17px;margin:0 0 10px}
+.oc-duel__panel{background:#faf8f4;border-radius:10px;padding:10px;margin-bottom:8px}
+.oc-duel__beat{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8a6a2f;font-weight:700}
+.oc-duel__scene{font-size:13px;color:#141414;margin:4px 0}
+.oc-duel__line{font-size:13px;color:#444;margin:2px 0 2px 12px;font-style:italic}
+.oc-duel__caption{font-size:14px;font-weight:600;margin:10px 0}
+.oc-art-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:6px 0 26px}
+.oc-art-tile{background:#fff;border:1px solid #eee4d3;border-radius:14px;padding:14px}
+.oc-art-title{font-size:17px;margin:0 0 8px}
+.oc-art-premise{font-size:13px;color:#444}
+.oc-art-caption{font-size:13px;font-weight:600}
+.oc-art-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:#fff;border:1px solid #eee4d3;border-radius:12px;padding:10px 14px;margin-bottom:8px}
+.oc-art-format{font-weight:700}

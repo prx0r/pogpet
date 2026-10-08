@@ -147,6 +147,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "printed loop",
         "blurb": "Tree hanger. Loop is part of the print.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1500,
         "assets": {
             "hats": ["none", "santa", "xmas_hat"],
@@ -164,6 +166,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "printed loop + ring",
         "blurb": "Same design, smaller. No metal.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1500,
         "assets": {
             "hats": ["none"],
@@ -181,6 +185,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "printed pin stem (Jibbitz-style)",
         "blurb": "Charm that pops into Croc holes. Same mesh, tiny print.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1000,
         "assets": {
             "hats": ["none"],
@@ -201,6 +207,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "Digital credit. Redeem on any OddHobb product.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "gift",
@@ -214,6 +222,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "Desk figure — your star as a 75 mm brick-style minifig. Two figures live.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "desk",
@@ -230,6 +240,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "printed pin stem (Jibbitz-style)",
         "blurb": "Name/pet/face/hobby on a Jibbitz-style post. Tiny, instant gift.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -250,6 +262,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "printed loop + split-ring seat",
         "blurb": "Pet/person/motif charm for bags and zips.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -270,6 +284,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "printed loop + printed ring",
         "blurb": "Brick-style minifig keychain from your photo. No metal.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -290,6 +306,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none (female MX cruciform socket)",
         "blurb": "Female MX socket, blank canvas top. Gamer stocking filler.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "gamer",
@@ -310,6 +328,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "lace-loop interface",
         "blurb": "Clog-charm engine reused for trainers. Pet/name/initial/hobby.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -330,6 +350,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "26mm thumb ring + paddle. ~3g print, BookTok audience.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -350,6 +372,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none (flat marker)",
         "blurb": "Names, initials, pets, jokes, club motif. Evergreen gift.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -370,6 +394,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "ID ring + topper pad. Charm format, no food-contact claims.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 300,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -390,6 +416,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "Gamertag embossed. Broad gamer gift, obvious on a desk.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "gamer",
@@ -410,6 +438,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "Family name + functional hub. Niche gift differentiator.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -430,6 +460,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "MUM / DAD / TOM / SARAH. Family set, upsell to the station.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -450,6 +482,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "Exploding category, tiny print, huge name surface.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -470,6 +504,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "snap-fit wheel (2 parts)",
         "blurb": "Tiny quirky add-on. Geometry still to author.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -490,6 +526,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "Simple stepped geometry, big name fascia. Family packs later.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -510,6 +548,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "180mm 3-groove hand rack. Canasta, Bridge, Hand & Foot.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",
@@ -530,6 +570,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "110mm easel for PSA/toploader slabs. No character IP needed.",
         "status": "live",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "gamer",
@@ -550,6 +592,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "Own peg master, 3.0-3.2mm shaft for 1/8in holes. Sculptural topper.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 1500,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "stocking",
@@ -570,6 +614,8 @@ STUDIO_LINES: dict[str, dict] = {
         "hardware": "none",
         "blurb": "DAD'S DARTS, 180 CLUB. Obvious family gift, one-shot print.",
         "status": "soon",
+        "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
+        "etsy": "draft",
         "price_cents": 2000,
         "assets": {"hats": ["none"], "coats": ["none"], "patterns": ["solid"]},
         "theme": "game_night",

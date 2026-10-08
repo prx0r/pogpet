@@ -1,3 +1,49 @@
+# HANDOVER — next session: Comedy OS live (blocks → judge → duel page)
+
+> **Status:** theory-aware JokeBlock library built and tested (57+ green);
+> duel page live in tree; docs explain relevance to Freaktown + oddhobb.
+> Start here: `docs/comedy-os.md`. Tree UNPUSHED.
+
+## What shipped this session
+
+- **27 JokeBlocks** (`templates/blocks/`), 6 canonical anchors v1 with
+  timelines, quote banks, premise territories, changelogs; append-only
+  history (`log_update` / `supersede_claim` — claims retire, never delete).
+- **15 theories** + **12 world operators as functions**
+  (`invert_status(A,B)` returns a new state) + 12 question operators +
+  GTVH premise fields + jestry S/R/E in the judge.
+- **ComedyJudge** (pairwise + swap-agreement + vetoes + ledger taste prior),
+  backwards **classifier** (transcript → tags), **regulars** scoring,
+  **performance ledger** + catalog `?rank=top`, **meme video** renderer.
+- **9 validated 4-panel comics** (canonical Claude-5 + mass-culture 4),
+  Originals shelf + premise bibles, Halloween lore pack with source_lore.
+- **`/funnier` duel page** (😂 tab): A/B comics voting → preference DB;
+  also fixed dead Sharpen-my-bit button (duplicate id bound handler to div).
+- **Evergreen tree** (6 trunks / 40 leaves) with event→leaf activation;
+  mass-culture gate (6 criteria) for new blocks.
+
+## Relevance
+
+- **Freaktown** built the delivery compiler today (`comedy/`); we are its
+  material mine. Contract: our premises stage in their director, our
+  theory scores feed their evaluator, our regulars become their cast,
+  their stage returns delivery traces our ledger can't get from socials.
+- **oddhobb.com:** duel page trains the judge; Originals monetize winning
+  premises; personalization runs on voted weights; news_vs_discourse is
+  the store's voice on current events.
+
+## Next
+
+1. Keys: FAL_KEY (plates) → OPENROUTER_API_KEY (jev + writers) → X API
+   (auto-post; manual until then, log post_ref).
+2. First weekly loop: approve 2–3 blocks → 5 comics → post X → ledger →
+   reweight. Rebrand Day-1 + 2020-box ready first.
+3. Splat rooms (MARBLE_API_KEY), delivery harness (DASHSCOPE), corpora
+   mining (shakedracor/romdracor/Molière) — all parked, all specced.
+4. Push when owner says go (37 files in tree).
+
+---
+
 # HANDOVER — next session: meme engine live, Originals shelf opens
 
 > **Status:** lore-anchored premise system built, performance loop wired,

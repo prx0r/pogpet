@@ -224,6 +224,7 @@ class Handler(BaseHTTPRequestHandler):
         "/api/catalog", "/api/agent/playbook", "/api/acts",
         "/api/videos/feed", "/api/videos", "/api/cards/templates", "/api/design/base",
         "/api/companygraph", "/api/creative/catalog", "/api/creative/templates",
+        "/api/creative/duel", "/api/creative/art",
     )
 
     _public_hits: dict = {}

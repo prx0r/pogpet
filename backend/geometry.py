@@ -50,6 +50,20 @@ def volume_cm3(tris: np.ndarray) -> float:
     return round(abs(vol) / 1000.0, 2)
 
 
+def nonmanifold_spots(tris: np.ndarray, limit: int = 3) -> list[list[float]]:
+    """Centroids of boundary/dangling edges, for pointing at the failure."""
+    v = np.round(tris.reshape(-1, 3), 3)
+    n = len(v) // 3
+    tris3 = v.reshape(n, 3, 3)
+    e = np.concatenate([tris3[:, [0, 1]], tris3[:, [1, 2]],
+                        tris3[:, [2, 0]]]).reshape(-1, 2, 3)
+    es = np.sort(e, axis=1)
+    keys, counts = np.unique(es.reshape(-1, 6), axis=0, return_counts=True)
+    bad = keys[counts != 2][:limit]
+    return [[round(float(x), 2) for x in edge.reshape(2, 3).mean(axis=0)]
+            for edge in bad]
+
+
 def manifold_gaps(tris: np.ndarray) -> list[str]:
     """Every edge shared by exactly two triangles (rounded to 1µm)."""
     v = np.round(tris.reshape(-1, 3), 3)
@@ -61,7 +75,10 @@ def manifold_gaps(tris: np.ndarray) -> list[str]:
     _, counts = np.unique(e.reshape(-1, 6), axis=0, return_counts=True)
     bad = int(np.sum(counts != 2))
     if bad:
-        return [f"non-manifold: {bad} boundary/dangling edges"]
+        spots = nonmanifold_spots(tris)
+        where = (" near " + ", ".join(f"({s[0]},{s[1]},{s[2]})" for s in spots)
+                 if spots else "")
+        return [f"non-manifold: {bad} boundary/dangling edges{where}"]
     return []
 
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>oddhobb — Upload your pet, get free videos</title>
+  <title>oddhobb — odd little gifts for the things they're obsessed with</title>
   <meta name="description" content="oddhobb — what odd thing shall we make you? Upload your pet once and browse figurines, cards, gifts and video that already feature them.">
   <meta name="theme-color" content="#000000">
   <meta property="og:type" content="website">
@@ -399,6 +399,12 @@
     body.studio-chrome .panel.white .panel__inner:has(.qk-stage){/* stage manages own layout */}
     .panel.white[data-panel="quick"]{background:radial-gradient(ellipse at 50% 0%,#fff8ec 0%,#ffffff 55%)}
     .qk-stage{max-width:820px;margin:0 auto;padding:104px 18px 48px;min-height:100dvh}
+    .qk-made{margin-bottom:26px}
+    .qk-made__hd{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8a6a2f;font-weight:700;margin-bottom:10px}
+    .qk-made__row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .qk-made figure{margin:0;background:#fff;border:1px solid #eee4d3;border-radius:14px;overflow:hidden}
+    .qk-made img{width:100%;aspect-ratio:1;display:block;object-fit:cover}
+    .qk-made figcaption{font-size:12px;color:#6b5b3e;padding:8px 10px;text-align:center}
     .qk-idle,.qk-live,.qk-results{text-align:center}
     .qk-eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8a6a2f;font-weight:700;margin-bottom:8px}
     .qk-hero{font-family:'Playfair Display',serif;font-size:clamp(32px,7vw,52px);color:#141414;line-height:1.1;margin:0 0 10px}
@@ -808,6 +814,8 @@
   <link rel="stylesheet" href="/css/site-shell.css?v=studio-2">
   <script src="/vendor/swiper/swiper-bundle.min.js"></script>
   <script src="/js/site-router.js?v=studio-2"></script>
+  <script src="/js/duel.js?v=1"></script>
+  <script src="/js/art.js?v=1"></script>
   <script src="/js/studio-people.js?v=studio-2"></script>
   <script src="/js/site-shell.js?v=studio-2"></script>
 </head>
@@ -836,14 +844,14 @@
   <div class="greet" id="greet">
     <div class="greet__inner">
       <div class="greet__mark">oddhobb<i>.</i></div>
-      <div class="greet__eyebrow">Odd things only · free to try · no catch</div>
-      <p class="greet__sub">One photo of your pet, and you get them back as videos worth sharing. No card, no trial, no catch.</p>
+      <div class="greet__eyebrow">Personalised gifts · made from your photos</div>
+      <p class="greet__sub">Upload Dad, the dog, anyone — then browse a shop where everything already features them. Cards, keychains, ornaments and mugs, made to order.</p>
       <ol class="greet__steps">
-        <li><div><b>Upload your pet</b><span>One photo, front-on, good light. We do the rest.</span></div></li>
-        <li><div><b>Give them a voice</b><span>324 voices to pick from — or let them keep their dignity.</span></div></li>
-        <li><div><b>Take free videos home</b><span>Three a day, watermarked, yours to share.</span></div></li>
+        <li><div><b>Upload someone</b><span>One photo, front-on, good light. We sort the rest.</span></div></li>
+        <li><div><b>Browse their versions</b><span>Every product renders your person or pet. What you see is what ships.</span></div></li>
+        <li><div><b>Gift it</b><span>Card, mug, ornament or keychain — posted to the door.</span></div></li>
       </ol>
-      <button class="greet__cta" id="greet-cta" type="button">Upload your pet <span aria-hidden="true">→</span></button>
+      <button class="greet__cta" id="greet-cta" type="button">Make something odd <span aria-hidden="true">→</span></button>
 
       <div class="greet__auth">
         <span class="greet__or">or</span>
@@ -854,7 +862,7 @@
       </div>
       <div class="greet__who" id="g-who" hidden></div>
 
-      <p class="greet__fine">Already know what you want? Open <b>quick</b> — ramble, watch products appear.</p>
+      <p class="greet__fine">Know the person, not the product? Tell us about them — we'll find the thing.</p>
       <p class="greet__fine"><a href="/privacy">Privacy</a> · <a href="mailto:support@oddhobb.com">support@oddhobb.com</a></p>
     </div>
   </div>
@@ -885,6 +893,12 @@
 
     <a class="tab" href="/perform" data-route data-tab="perform">
       <span class="tab__icon">🎤</span>perform
+    </a>
+    <a class="tab" href="/funnier" data-route data-tab="funnier">
+      <span class="tab__icon">😂</span>funnier
+    </a>
+    <a class="tab" href="/art" data-route data-tab="art">
+      <span class="tab__icon">🎨</span>art
     </a>
   </nav>
 
@@ -1151,7 +1165,7 @@
       <button class="btn" id="up-sculpt" type="button" hidden>Sculpt them →</button>
       <div class="panel__status" id="up-status"></div>
 
-      <p class="panel__fine">Free tier: 3 sculpts a day. Stored under your own R2 namespace — <code style="color:var(--poison)">owners/&lt;you&gt;/…</code> — and cached, so re-sculpting the same photo never spends a credit.</p>
+      <p class="panel__fine">First 3 figures a day are free. Your photos stay private to your account, and reusing the same photo never counts twice.</p>
     </div>
   </section>
 
@@ -1198,8 +1212,8 @@
       <div class="roster" id="stv-roster" role="listbox" aria-label="Mesh roster"></div>
 
       <div class="stv__order" style="justify-content:center;gap:10px">
-        <button class="btn ghost" id="stv-brick" type="button" hidden>Add brick 1</button>
-        <button class="btn ghost" id="stv-brick2" type="button" hidden>Add brick 2</button>
+        <button class="btn ghost" id="stv-brick" type="button" hidden>Use brick figure</button>
+        <button class="btn ghost" id="stv-brick2" type="button" hidden>Use brick figure 2</button>
       </div>
       <div class="panel__msg" id="stv-msg" role="status" aria-live="polite"></div>
 
@@ -1210,7 +1224,7 @@
       <div class="panel__status" id="as-status" role="status" aria-live="polite"></div>
       <div class="panel__msg" id="as-msg" role="status" aria-live="polite"></div>
       <div id="studio-photo-controls" style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px">
-        <button class="btn ghost" id="as-ai" type="button" style="width:auto;margin:0">AI tag people</button>
+        <button class="btn ghost" id="as-ai" type="button" style="width:auto;margin:0">Name everyone</button>
         <button class="btn ghost" id="as-refresh" type="button" style="width:auto;margin:0">Refresh</button>
       </div>
       <div class="photo-grid" id="as-grid"></div>
@@ -1378,12 +1392,20 @@
   <!-- ══ TAB: quick — immersive ramble (mic-first, store theme) ══ -->
   <section class="panel white" data-panel="quick" id="panel-quick" aria-label="Quick">
     <div class="qk-stage" id="qk-stage">
+      <div class="qk-made" id="qk-made">
+        <div class="qk-made__hd">Made last week</div>
+        <div class="qk-made__row">
+          <figure><img src="/img/prod/prod-hero.png" alt="Personalised Christmas ornament" loading="lazy"><figcaption>Ornament · £15.00</figcaption></figure>
+          <figure><img src="/img/prod/kc-hero.png" alt="Personalised pet keychain" loading="lazy"><figcaption>Keychain · £15.00</figcaption></figure>
+          <figure><img src="/img/prod/brick-hero.png" alt="Personalised brick figure" loading="lazy"><figcaption>Brick figure · £20.00</figcaption></figure>
+        </div>
+      </div>
       <!-- IDLE: ready to ramble -->
       <div class="qk-idle" id="qk-idle">
         <div class="qk-eyebrow">oddhobb · quick</div>
         <div class="pr-banner__mesh" id="qk-mesh-chip" style="display:inline-block;margin-bottom:12px">mesh —</div>
         <svg class="oddy-avatar" id="oddy-idle" viewBox="0 0 512 512" role="img" aria-label="Oddy"><use href="#oddy-neutral"/></svg>
-        <h1 class="qk-hero">Infodump to Oddy</h1>
+        <h1 class="qk-hero">Tell Oddy about them</h1>
         <p class="qk-sub">Ramble about the person, pet, or occasion. Oddy listens, thinks, and finds the odd thing that fits.</p>
         <div class="qk-how" id="qk-how" data-collapsed="1">
           <div class="qk-how__title">How it works</div>
@@ -1533,12 +1555,12 @@
         </div>
         <div class="panel__status" id="pr-status"></div>
         <div class="panel__msg" id="pr-msg" role="status" aria-live="polite"></div>
-        <div class="pr-mcp">
-          <div style="font-weight:600;color:#8a6a2f;margin-bottom:4px">Agent / MCP — no token needed</div>
+        <details class="pr-mcp">
+          <summary style="font-weight:600;color:#8a6a2f;cursor:pointer">Agent / MCP — no token needed</summary>
           <div style="font-size:12px;color:#6b5b3e;margin-bottom:4px">Any agent connects to <code>https://mcp.oddhobb.com/mcp</code> and gets the public tier (catalog, contracts, quotes, gift packs). Start with <code>figg_tools</code>. Full loop docs: <code>/llms.txt</code>.</div>
           <code>figg_quick_map</code> · <code>figg_fullchain_personalise_order</code> ·
           <code>figg_checkout</code> · playbook <code>/api/agent/playbook</code>
-        </div>
+        </details>
       </div>
 
       <div class="qk-label">Prints &amp; gifts · mesh on the face</div>
@@ -1567,7 +1589,7 @@
         <p>Your meshes performing — stage clips only. Card scenes live under Cards.</p>
       </div>
       <div style="margin:0 0 10px">
-        <a class="btn ghost" href="/stage.html" style="width:auto;display:inline-flex;margin:0">Open live stage (jawOpen lipsync)</a>
+        <a class="btn ghost" href="/stage.html" style="width:auto;display:inline-flex;margin:0">Open live stage</a>
         <a class="oc-button" href="/rehearse.html">Rehearse a recorded performance / AR</a>
       </div>
       <div class="feed" id="vid-feed" tabindex="0" role="feed" aria-label="Video feed"></div>
@@ -1595,7 +1617,7 @@
       <input type="text" id="pf-name" placeholder="Bender" maxlength="40">
 
       <button class="btn" id="pf-go" type="button">Take the stage &#8594;</button>
-      <button class="btn ghost" id="pf-premise" type="button">Sharpen my bit (writing room)</button>
+      <button class="btn ghost" id="pf-sharpen" type="button">Sharpen my bit (writing room)</button>
       <button class="btn ghost" id="pf-riff" type="button">Riff it</button>
       <div class="panel__status" id="pf-status"></div>
       <div class="panel__msg" id="pf-msg" role="status" aria-live="polite"></div>
@@ -1613,20 +1635,34 @@
   </section>
 
 <section class="panel white" data-panel="search" id="panel-search"><div class="panel__inner"></div></section>
+  <section class="panel white" data-panel="funnier" id="panel-funnier" aria-label="Funnier">
+    <div class="panel__inner" id="funnier-inner">
+      <h2 class="panel__h">Funnier</h2>
+      <p class="panel__lede">Two comics. Pick the funnier one. Every vote trains our humour model — watch two sets, crown a winner.</p>
+      <div id="duel-mount"></div>
+    </div>
+  </section>
+  <section class="panel white" data-panel="art" id="panel-art" aria-label="Art">
+    <div class="panel__inner" id="art-inner">
+      <h2 class="panel__h">Art</h2>
+      <p class="panel__lede">The funniest things we've made. Pick one, put it on something — postcard, card, mug, poster — or turn it into a live video.</p>
+      <div id="art-mount"></div>
+    </div>
+  </section>
 <section class="panel white" data-panel="cart" id="panel-cart"><div class="panel__inner"></div></section>
 <section class="panel white" data-panel="account" id="panel-account"><div class="panel__inner"></div></section>
 <section class="panel white" data-panel="notfound" id="panel-notfound"><div class="panel__inner"></div></section>
   <section class="panel" data-panel="shop" id="panel-shop" aria-label="Shop">
     <div class="panel__inner">
-      <h2 class="panel__h">3. Shop</h2>
-      <p class="panel__lede" id="shop-lede">Everything below is already active against your mesh — same model, one sculpt, many products. <a href="/products.html" style="color:var(--gold)">Ornament &amp; keychain gallery + drag the 3D mesh →</a></p>
+      <h2 class="panel__h">Shop</h2>
+      <p class="panel__lede" id="shop-lede">Everything below is already active against your mesh — same model, one sculpt, many products. <a href="/products.html" style="color:var(--gold)">See exactly what arrives →</a></p>
       <div class="hero" id="shop-hero">
         <h3>what odd thing shall we make you?</h3>
         <p id="hero-sub">Your star, on everything below.</p>
         <div class="hero__row"><input id="hero-q" placeholder="Describe it — a bauble that barks…" maxlength="140"><button id="hero-go" type="button">Ask &rarr;</button></div>
       </div>
 
-      <span class="panel__label">template (36 concepts)</span>
+      <span class="panel__label">design</span>
       <select class="panel__select" id="shop-concept"></select>
       <span class="panel__label">their name</span>
       <input type="text" id="shop-subject" placeholder="Max" maxlength="40">
@@ -1634,7 +1670,7 @@
       <div class="panel__status" id="shop-status"></div>
       <div class="cards" id="shop-grid"></div>
       <div class="panel__msg" id="shop-msg" role="status" aria-live="polite"></div>
-      <p class="panel__fine">Physical ships from our print farm partners. Digital lands instantly.</p>
+      <p class="panel__fine">Printed to order and posted to you. Digital gifts land instantly.</p>
     </div>
   </section>
 
@@ -1662,7 +1698,7 @@
   <div class="overlay" id="concepts-overlay"><button class="overlay-close" id="concepts-close">×</button><div class="overlay-panel"><h2 id="concepts-title">Ideas</h2><p>Which feels right?</p><div class="concepts-grid" id="concepts-grid"></div></div></div>
   <div class="overlay" id="products-overlay"><button class="overlay-close" id="products-close">×</button><div class="overlay-panel"><h2>How should we deliver this?</h2><p>Same concept. Different form.</p><div class="products-grid"><div class="product" data-type="digital" data-price="6.99"><div class="product__visual">✨</div><div class="product__body"><div class="product__name">Personalised Video</div><div class="product__desc">Your pet, brought to life</div><div class="product__price">£6.99</div></div></div><div class="product" data-type="card" data-price="12.99"><div class="product__visual">💳</div><div class="product__body"><div class="product__name">Video + Portal Card</div><div class="product__desc">Scan to summon them</div><div class="product__price">£12.99</div></div></div><div class="product" data-type="gift" data-price="19.99"><div class="product__visual">☕</div><div class="product__body"><div class="product__name">Mug Portal</div><div class="product__desc">Their face on your mornings</div><div class="product__price">£19.99</div></div></div><div class="product" data-type="legend" data-price="29.99"><div class="product__visual">🛋️</div><div class="product__body"><div class="product__name">Cushion Portal</div><div class="product__desc">A throne for their face</div><div class="product__price">£29.99</div></div></div></div></div></div>
   <div class="hive-signal"><div class="hive-signal-fill" id="hive-signal"></div></div>
-  <div class="honey-badge" id="honey-badge"><span>🎃</span><span id="honey-count">0</span></div>
+  <div class="honey-badge" id="honey-badge"><span>🛒</span><span id="honey-count">0</span></div>
   <div class="satchel" id="satchel"><div class="satchel__icon">👜</div><div class="satchel__count" id="satchel-count">0 items</div><div class="satchel__total" id="satchel-total">Empty</div></div>
   <div class="bee-status" id="bee-status"><span class="bee-status__name" id="bee-name">bobdod</span> — <span id="bee-role">Store helper</span></div>
 
@@ -3089,7 +3125,7 @@
       var s = stv.slots[stv.idx];
       if (!el || !s) return;
       if (s.demo) {
-        el.textContent = "preview · Add brick to use on products";
+        el.textContent = "preview · use the button below to install it";
         el.style.opacity = "0.7";
       } else {
         el.textContent = "active star · appears on products";
@@ -3142,7 +3178,7 @@
       if (!stv.slots.length) return;
       stv.idx = (i + stv.slots.length) % stv.slots.length;
       var s = stv.slots[stv.idx];
-      if(peopleStudio) peopleStudio.rememberMesh(s.mesh_id);
+      if(peopleStudio&&!s.demo) peopleStudio.rememberMesh(s.mesh_id);
       mountViewer(s);
       paintCarousel();
       // Looking at a real mesh = it IS the active star for Products.
@@ -3153,7 +3189,7 @@
         s.active=true;
         paintActiveTag();
       } else if (s.demo) {
-        msg("stv-msg", s.label + " — preview. Use Add brick to install it.", "");
+        msg("stv-msg", s.label + " — preview. Use the figure button below to install it.", "");
       }
     }
 
@@ -3736,6 +3772,16 @@
           " · " + it.label + " ×" + body.qty +
           " · " + money(d.price_cents) +
           " · mesh " + (body.mesh_id || "canonical") + sh, "ok");
+        if (d.checkout_url) {
+          var payBox = $("pr-msg");
+          if (payBox) {
+            payBox.appendChild(document.createTextNode(" "));
+            var pay = document.createElement("a");
+            pay.href = d.checkout_url; pay.target = "_blank"; pay.rel = "noopener";
+            pay.className = "btn btn-shopify"; pay.textContent = "Pay here →";
+            payBox.appendChild(pay);
+          }
+        }
         try { if (window.ohPressSeal) window.ohPressSeal(); } catch (e) {}
         try { if (typeof siteShell !== "undefined" && siteShell.refreshBadge) siteShell.refreshBadge(); } catch (e) {}
       }).catch(function (e) {
@@ -5244,7 +5290,7 @@
       }).catch(function () {});
     }
 
-    var pfPremise = $("pf-premise"), pfRiff = $("pf-riff");
+    var pfPremise = $("pf-sharpen"), pfRiff = $("pf-riff");
     function pfRoomMsg(text, kind) { msg("pf-room", text, kind || ""); }
     if (pfPremise) pfPremise.addEventListener("click", function () {
       var topicEl = $("pf-topic"), topic = topicEl ? (topicEl.value || "").trim() : "";
@@ -5387,19 +5433,43 @@
       clearMesh:function(){state.meshId='';pr.activeMesh='';try{localStorage.removeItem('pogpet.mesh');}catch(e){}},
       renderMeshes:function(meshes,preferred){
         var meta=meshes.filter(function(m){return m.status==='succeeded';});
-        stv.slots=meta.map(function(m,i){var keys=JSON.parse(m.thumb_keys||'[]');return {mesh_id:m.id,label:shortName(m.id),glb_url:m.glb_key?studioAsset('/api/artifacts/'+m.glb_key):'',portrait:keys[0]?studioAsset('/api/artifacts/'+keys[0]):studioAsset('/api/studio/photos/'+m.photo_id+'/image?size=480'),demo:false,n:i+1};});
+        var installed=meta.map(function(m,i){var keys=JSON.parse(m.thumb_keys||'[]');return {mesh_id:m.id,label:shortName(m.id),glb_url:m.glb_key?studioAsset('/api/artifacts/'+m.glb_key):'',portrait:keys[0]?studioAsset('/api/artifacts/'+keys[0]):studioAsset('/api/studio/photos/'+m.photo_id+'/image?size=480'),demo:false,n:i+1};});
+        // Demo lineup: canonical dog + both bricks are static /img/prod files,
+        // always present so the tab is never an empty viewer.
+        var haveLabel={};installed.forEach(function(m){haveLabel[m.label]=1;});
+        var demos=[
+          {mesh_id:"canonical",label:"canonical dog",glb_url:"/img/prod/chibi-figure-hook.glb",portrait:"/img/prod/prod-hero.png",demo:true,kind:"pet"},
+          {mesh_id:"brick-demo",label:"brick figure",glb_url:"/img/prod/brick-figure.glb",portrait:"/img/prod/brick-hero.png",demo:true,kind:"brick"},
+          {mesh_id:"brick-demo-2",label:"brick figure 2",glb_url:"/img/prod/brick-figure-2.glb",portrait:"/img/prod/brick-hero-2.png",demo:true,kind:"brick"}
+        ].filter(function(d){return d.kind!=="brick"||!haveLabel[d.label];});
+        stv.slots=demos.concat(installed);
+        stv.slots.forEach(function(s,i){s.n=i+1;});
         stv.idx=Math.max(0,stv.slots.findIndex(function(m){return m.mesh_id===preferred;}));
-        $('stv').hidden=!stv.slots.length;$('stv-roster').hidden=!stv.slots.length;
-        $('studio-mesh-empty').hidden=!!stv.slots.length;
+        if(stv.idx<0)stv.idx=0;
+        $('stv').hidden=false;$('stv-roster').hidden=false;
+        $('studio-mesh-empty').hidden=!!installed.length;
         $('studio-mesh-empty').textContent=meshes.length?'Your character is '+(meshes[0].status||'processing')+'. Refresh to check its progress.':'No meshes for this friend yet. Choose one of their photos to create a character.';
-        ['stv-brick','stv-brick2'].forEach(function(id){if($(id))$(id).hidden=true;});
-        if(stv.slots.length){state.meshId=stv.slots[stv.idx].mesh_id;pr.activeMesh=state.meshId;paintCarousel();mountViewer(stv.slots[stv.idx]);}
-        else{$('stv-viewer').removeAttribute('src');$('stv-roster').replaceChildren();}
+        var showBrick1=demos.some(function(d){return d.mesh_id==="brick-demo";});
+        var showBrick2=demos.some(function(d){return d.mesh_id==="brick-demo-2";});
+        if($('stv-brick'))$('stv-brick').hidden=!showBrick1;
+        if($('stv-brick2'))$('stv-brick2').hidden=!showBrick2;
+        var cur=stv.slots[stv.idx];
+        if(cur&&!cur.demo){state.meshId=cur.mesh_id;pr.activeMesh=cur.mesh_id;}
+        paintCarousel();mountViewer(cur);
       }
     });
     var siteShell = window.OddHobbShell({ready:studioReady,
       get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
       loadProducts:loadProducts,search:rankSearch,searchTile:paintSearchTile});
+    var duel = window.OddHobbDuel ? window.OddHobbDuel({
+      get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
+      post:function(path,body){body.owner=state.owner;return post(API+path,body).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});}
+    }) : null;
+    var artShelf = window.OddHobbArt ? window.OddHobbArt({
+      get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
+      post:function(path,body){body.owner=state.owner;return post(API+path,body).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
+      asset:function(path){return API+path+(path.indexOf('?')>=0?'&':'?')+'owner='+encodeURIComponent(state.owner);}
+    }) : null;
     window.addEventListener('load',function(){
       window.OddHobbRouter.start(function(route){
         if(route.tab==='products')pendingProductLine=route.id||null;
@@ -5411,6 +5481,8 @@
         if(route.tab==='notfound'){$('panel-notfound').querySelector('.panel__inner').textContent='Page not found. Use the navigation to return to Studio or browse products.';}
         if(route.tab==='cards'&&route.id){cardStudio.openDesign(route.id).then(function(){var t=document.querySelector('#panel-cards details.oc-tinkerer');if(t)t.open=true;}).catch(function(){});}
         if(route.tab==='videos'&&route.id){loadVideoFeed();}
+        if(route.tab==='funnier'&&duel){duel.open();}
+        if(route.tab==='art'&&artShelf){artShelf.open();}
       });
       cardReady().then(function(){return peopleStudio.refresh();}).catch(function(e){msg('stv-msg',e.message,'err');});
       try{if(siteShell&&siteShell.refreshBadge)siteShell.refreshBadge();}catch(e){}

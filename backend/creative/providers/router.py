@@ -21,6 +21,9 @@ ROUTES: dict[str, list[str]] = {
     "realtime_voice":  ["local.stub", "alibaba.qwen_omni", "gemini.live"],
     "mesh":            ["local.meshy", "fal.tripo"],
     "music":           ["local.procedural"],
+    "scene_plate":     ["fal.flux_plate"],
+    "identity_plate":  ["local.composite", "fal.phota"],
+    "upscale":         ["fal.upscale"],
 }
 
 _ADAPTERS: dict[str, BaseAdapter] = {}

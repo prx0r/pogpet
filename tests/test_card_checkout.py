@@ -750,3 +750,34 @@ def test_title_prompt_guarded():
     import pytest as _p
     with _p.raises(ValueError):
         title_prompt("Hi", "yolo")
+
+
+def test_canonical_zones():
+    """Grid reads as one grid; no subline zone; no inside brand zone."""
+    from backend.card_scenes import CANONICAL_ZONES
+    xs = sorted({x for x, _, _, _ in CANONICAL_ZONES["photos"]})
+    ws = {w for _, _, w, _ in CANONICAL_ZONES["photos"]}
+    assert len(xs) == 2 and len(ws) == 1
+    gutter = xs[1] - (xs[0] + next(iter(ws)))
+    assert gutter <= 2 * CANONICAL_ZONES["photo_radius"], gutter
+    assert "front_subline" not in CANONICAL_ZONES
+    assert "inside_logo" not in CANONICAL_ZONES
+
+
+def test_make_card_requires_signature():
+    import asyncio, json
+    from backend import mcp_server as M
+    out = asyncio.run(M.oddhobb_make_card("person_9fdc85d6730d43e099dc", "birthday",
+                                          "playful_balloons", "funny", "", "",
+                                          "hark-dad-a7a5cc"))
+    body = json.loads(out[0].text)
+    assert body["ok"] is False and "signature" in body["error"]
+
+
+def test_proof_og_image_public():
+    from backend import config
+    config.API_TOKEN = "test-token"
+    import backend.server as S
+    S.config.API_TOKEN = "test-token"
+    c = S.app.test_client()
+    assert c.get("/api/cards/proof/nope-card/og-image.png").status_code == 404

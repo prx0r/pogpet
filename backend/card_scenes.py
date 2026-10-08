@@ -40,16 +40,16 @@ TEMPLATES = {
 }
 
 # Canonical zones in 1500×2100 trim px (see docs/cardspec.md §2–4).
+# Grid gutter (56px) stays ≤ twice the slot corner radius: slots read as one
+# grid, never four stickers. Type zones sit on flat stock, never on photos.
 CANONICAL_ZONES = {
-    "photos": [(120, 160, 480, 480), (900, 160, 480, 480),
-               (120, 1160, 480, 480), (900, 1160, 480, 480)],
+    "photos": [(120, 160, 602, 560), (778, 160, 602, 560),
+               (120, 776, 602, 560), (778, 776, 602, 560)],
     "photo_radius": 28,
-    "title_art": (285, 790, 930, 320),
-    "front_subline": (285, 1675, 930, 70),
+    "title_art": (285, 1390, 930, 320),
     "front_footer": (525, 1990, 450, 45),
     "inside_message": (1710, 430, 1040, 820),
     "inside_signature": (1710, 1330, 520, 120),
-    "inside_logo": (2160, 1030, 420, 80),
     "back_logo": (525, 1740, 450, 80),
     "back_url": (585, 1970, 330, 36),
 }
@@ -790,10 +790,22 @@ def front(design, assets, width=720, height=None, progress=1.0):
             card.alpha_composite(art, (round(tx + (tw - art.width) / 2),
                                        round(ty + (th - art.height) / 2)))
         elif progress > .15:
-            text_block(d, design["headline"], (tx, ty, tw, th), ink,
-                       tw * 0.075, bold=True, font_id="fraunces")
+            # fallback lettering fills the zone on ONE line — shrink to fit,
+            # never wrap small. Generated title art replaces this when present.
+            _t = design["headline"]
+            _fs = round(th * 0.30)
+            while _fs > 8:
+                _f = font_for(design.get("headline_font") or "fraunces", _fs, True)
+                if d.textlength(_t, font=_f) <= tw:
+                    break
+                _fs -= 2
+            else:
+                _f = font_for(design.get("headline_font") or "fraunces", 8, True)
+            d.text((tx + (tw - d.textlength(_t, font=_f)) / 2, ty + (th - _fs) / 2),
+                   _t, font=_f, fill=ink)
         sx, sy, sw, sh = [v * s for v in CANONICAL_ZONES["front_footer"]]
-        foot = ("with love, " + design["sender"]) if design.get("sender") and len(design["sender"]) <= 32 else ""
+        # footer is the bare signature — no prefixes stacked, no recipient echo
+        foot = design.get("sender", "") if len(design.get("sender", "")) <= 32 else ""
         if foot:
             try:
                 text_block(d, foot, (sx, sy, sw, sh), ink, sw * 0.075)
@@ -851,9 +863,8 @@ def inside(design, width=720, height=None):
                    font_id=rfont)
         sx, sy, sw, sh = [v * s for v in CANONICAL_ZONES["inside_signature"]]
         text_block(d, design.get("sender", ""), (sx, sy, sw, sh),
-                   "#55554d", sw * 0.075, font_id="caveat")
-        lx, ly, lw, lh = [v * s for v in CANONICAL_ZONES["inside_logo"]]
-        text_block(d, "oddhobb.", (lx, ly, lw, lh), "#8a6a2f", lw * 0.16)
+                   "#55554d", sw * 0.09, align="center", font_id="caveat")
+        # no brand mark inside a personal card — back only
         return img
     img = Image.new("RGB", (width, height), "#fffdf7")
     d = ImageDraw.Draw(img)

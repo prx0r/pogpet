@@ -475,6 +475,8 @@ async def oddhobb_make_card(subject_id: str = "", occasion: str = "birthday",
     and a contact sheet. The agent supplies photos-by-choice + words only."""
     from mcp.types import TextContent
     from backend import cards as _cards
+    if not signature.strip():
+        return [TextContent(type="text", text=_j({"ok": False, "error": "signature required \u2014 ask the human who signs the card (never default to the recipient)"}))]
     people = await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"),
                          api_key=api_key, owner_sig=owner_sig)
     sub = _find_subject(people, "", subject_id)
@@ -501,12 +503,14 @@ async def oddhobb_make_card(subject_id: str = "", occasion: str = "birthday",
     if len(pids) < 4:
         return [TextContent(type="text", text=_j({"ok": False, "error": f"need 4 photos — only {len(pids)} confirmed"}) )]
     name = sub.get("name") or "them"
-    title = f"Happy Birthday, {name}!"[:40]
+    short = str(name).split()[0] if str(name).split() else name
+    title = f"Happy Birthday, {short}!"[:40]
     lines = _cards.message_lines(prof, tone)
     message = (message_hint.strip()[:240] if message_hint.strip()
                else (lines[0]["text"][:240] if lines else ""))
-    sig = (signature.strip()[:40] if signature.strip()
-           else ("Love, " + name)[:40])
+    if not signature.strip():
+        return [TextContent(type="text", text=_j({"ok": False, "error": "signature required — ask the human who signs the card (never default to the recipient)"}))]
+    sig = signature.strip()[:40]
     spec = {"template": "birthday_4photo", "format": "5x7",
             "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
                         "focus": [0.5, 0.5], "cutout": ""} for pid in pids],
@@ -880,7 +884,12 @@ async def _card_spread_bundle(design_id: str, revision: int, owner: str,
         j = st.get("job") or {}
         if j.get("status") == "ready":
             from backend import cards as _cards
-            return {"ok": True, "views": j.get("urls") or {},
+            from backend import config as _cfg
+            views = j.get("urls") or {}
+            base = (_cfg.PUBLIC_BASE or "https://oddhobb.com").rstrip("/")
+            views_abs = {k: f"{base}/backend{v}?owner={owner or 'anon'}"
+                         for k, v in views.items()}
+            return {"ok": True, "views": views, "views_abs": views_abs,
                     "proof_url": _cards.proof_url_for(design_id),
                     "revision": revision, "design_id": design_id}
         if j.get("status") == "failed":
@@ -917,6 +926,7 @@ owner_sig: str = "") -> list:
             "proof_url": saved.get("proof_url", ""),
             "product": saved.get("product", {}),
             "views": bundle.get("views", {}),
+            "views_abs": bundle.get("views_abs", {}),
             "render_error": bundle.get("error", "")}
     try:
         return [TextContent(type="text", text=_j(body)),
@@ -978,6 +988,7 @@ async def figg_card_update(design_id: str, changes: dict, revision: int = 0,
             "card_url": saved.get("card_url", ""),
             "proof_url": saved.get("proof_url", ""),
             "views": bundle.get("views", {}),
+            "views_abs": bundle.get("views_abs", {}),
             "render_error": bundle.get("error", "")}
     try:
         return [TextContent(type="text", text=_j(body)),
@@ -1151,7 +1162,8 @@ async def figg_card_for_person(person: str, occasion: str = "birthday",
     occasion = (occasion or "birthday").lower()
     template = {"christmas": "christmas"}.get(occasion, "birthday_arch")
     name = sub.get("name") or person
-    headline = f"{_OCCASION_TITLES.get(occasion, 'Hello')}, {name}!"[:60]
+    short = str(name).split()[0] if str(name).split() else name
+    headline = f"{_OCCASION_TITLES.get(occasion, 'Hello')}, {short}!"[:60]
     lines = _cards.message_lines(prof, tone)
     inside = lines[0]["text"] if lines else ""
     vibes = _TONE_VIBES.get(str(tone or "funny").lower(), _TONE_VIBES["funny"])
@@ -1189,6 +1201,7 @@ async def figg_card_for_person(person: str, occasion: str = "birthday",
             "proof_url": saved.get("proof_url", ""),
             "product": saved.get("product", {}),
             "views": bundle.get("views", {}),
+            "views_abs": bundle.get("views_abs", {}),
             "render_error": bundle.get("error", ""),
             "hint": "Send the human the proof_url. Tweak via figg_card_update, sell via figg_card_checkout."}
     try:

@@ -55,6 +55,23 @@ template pair (a warning says so). The older templates (`portrait`,
 `breaking_news`, `game_winner`, `awards`, `christmas`, `family`,
 `typography`) keep rendering but are not product picks.
 
+## The canonical product: `birthday_4photo_title_v1`
+
+One rigid card. 5×7 folded portrait. Exact zones in 1500×2100 trim px
+(`CANONICAL_ZONES` in `backend/card_scenes.py` — code is the master):
+
+- 4 photo slots, 602×560, 28px corners, 56px gutter (≤ 2× corner radius,
+  so the grid reads as one grid, never four stickers)
+- title-art zone 930×320 below the grid (generated transparent PNG;
+  house-serif fallback fills it on one auto-fit line until art exists)
+- footer: bare signature only, never prefixed, inside the safe margin
+- inside: blank left page; right page has the message block, a centered
+  handwritten signature, and nothing else — brand lives on the back only
+- back: quiet logo + URL
+
+Tighter caps than generic (rejected at save): headline 40, message 240,
+signature 40, exactly 4 photos, vibe from the 8 frozen strings.
+
 ## Renderer contract (deterministic, no AI)
 
 ```

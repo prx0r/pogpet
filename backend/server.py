@@ -72,6 +72,9 @@ def gate():
     # Shopify webhooks carry HMAC, not our token — verified in-handler.
     if request.path.startswith("/api/shopify/webhooks/"):
         return None
+    # Public proof images: design ids are unguessable capability URLs.
+    if request.path.startswith("/api/cards/proof/"):
+        return None
     return _gated()
 
 
@@ -3958,6 +3961,25 @@ def mcp_health():
                    hint="Handshake first: GET this. tools_full needs the bridge token; "
                         "tokenless callers see tools_public only. If degraded, prefer waiting — "
                         "REST works but is off the main road (see mcp_status).")
+
+
+@app.get("/api/cards/proof/<did>/og-image.png")
+def card_proof_image(did):
+    """Public card preview for link unfurls (og:image). Design ids are
+    unguessable, so the link itself is the capability — no owner needed."""
+    from backend import cards as _cards
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM card_designs WHERE id=?", (did,)).fetchone()
+    if row is None:
+        return _err("Card not found", 404)
+    d = dict(row)
+    try:
+        p = _cards.local_asset(_cards.key(d["owner"], did, d["latest"], "preview"))
+    except Exception:
+        return _err("Preview not rendered yet", 404)
+    res = send_file(p, mimetype="image/png", max_age=3600)
+    res.headers["Cache-Control"] = "public, max-age=3600"
+    return res
 
 
 @app.post("/api/shopify/webhooks/orders-paid")

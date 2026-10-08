@@ -225,6 +225,7 @@ class Handler(BaseHTTPRequestHandler):
         "/api/videos/feed", "/api/videos", "/api/cards/templates", "/api/design/base",
         "/api/companygraph", "/api/creative/catalog", "/api/creative/templates",
         "/api/creative/duel", "/api/creative/art", "/api/cards/copy",
+        "/api/cards/proof",
     )
 
     _public_hits: dict = {}
@@ -518,6 +519,18 @@ class Handler(BaseHTTPRequestHandler):
             ".ico": "image/x-icon",
         }.get(target.suffix, "application/octet-stream")
         data = target.read_bytes()
+        _proof = re.fullmatch(r"/proof/([\w-]+)/?", raw)
+        if _proof and target.suffix == ".html":
+            # Link unfurls: stable og tags per card (the SPA fills in after).
+            _did = _proof.group(1)
+            _og = (f'<meta property="og:title" content="A card for you — OddHobb">'
+                   f'<meta property="og:description" content="A personalised 5×7 greeting card, £7.99 with envelope.">'
+                   f'<meta property="og:url" content="https://oddhobb.com/proof/{_did}">'
+                   f'<meta property="og:image" content="https://oddhobb.com/backend/api/cards/proof/{_did}/og-image.png">'
+                   f'<meta name="twitter:card" content="summary_large_image">').encode()
+            marker = b"</head>"
+            data = (data.replace(marker, _og + marker, 1)
+                    if marker in data else data + _og)
         # Pages call our own /api/* routes. Rather than hardcoding a secret in
         # their source, patch window.fetch at serve time so the token rides
         # along on same-origin API calls only.

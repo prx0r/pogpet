@@ -246,7 +246,7 @@ def message_lines(profile: dict, tone: str = "funny") -> list[dict]:
         if interests:
             first = interests[0]
             out = [
-                (f"Happy birthday to the person who took {first} far too seriously.", "interest:" + first),
+                (f"Happy birthday to the person who takes {first} far too seriously.", "interest:" + first),
                 (f"Another year older. Still the reigning {first} champion, allegedly.", "interest:" + first),
             ]
         else:

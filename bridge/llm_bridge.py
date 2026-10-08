@@ -519,7 +519,7 @@ class Handler(BaseHTTPRequestHandler):
             ".ico": "image/x-icon",
         }.get(target.suffix, "application/octet-stream")
         data = target.read_bytes()
-        _proof = re.fullmatch(r"/proof/([\w-]+)/?", raw)
+        _proof = re.fullmatch(r"/proof/([\w-]+)/?", urlparse(self.path).path)
         if _proof and target.suffix == ".html":
             # Link unfurls: stable og tags per card (the SPA fills in after).
             _did = _proof.group(1)

@@ -3976,7 +3976,10 @@ def card_proof_image(did):
     try:
         p = _cards.local_asset(_cards.key(d["owner"], did, d["latest"], "preview"))
     except Exception:
-        return _err("Preview not rendered yet", 404)
+        try:
+            p = _cards.local_asset(_cards.key(d["owner"], did, d["latest"], "spread-front"))
+        except Exception:
+            return _err("Preview not rendered yet", 404)
     res = send_file(p, mimetype="image/png", max_age=3600)
     res.headers["Cache-Control"] = "public, max-age=3600"
     return res

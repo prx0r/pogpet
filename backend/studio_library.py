@@ -266,19 +266,39 @@ def register(app, owner_denied):
 
     @bp.get('/api/studio/basket')
     def basket():
+        import os as _os
         owner=request.studio_owner
         with db.connect() as c:
-            items=[{**dict(r),'label':r['line'].replace('_',' ')} for r in c.execute("SELECT * FROM orders WHERE owner=? AND status='pending_checkout' ORDER BY created_at DESC",(owner,))]
+            items=[]
+            for r in c.execute("SELECT * FROM orders WHERE owner=? AND status='pending_checkout' ORDER BY created_at DESC",(owner,)):
+                item=dict(r)
+                item['label']=r['line'].replace('_',' ')
+                item['kind']='product'
+                line=r['line']
+                views=[]
+                for vid,vlabel,fname in (("front","Front","%s-front.png"%line),
+                                         ("detail","Detail","%s-hero.png"%line),
+                                         ("back","Back","%s-back.png"%line)):
+                    if _os.path.exists("data/productimg/prod/"+fname):
+                        views.append({"id":vid,"label":vlabel,"url":"/img/prod/"+fname})
+                if views:
+                    item['views']=views
+                # design_id on a product row is a *design* ref, not a card —
+                # only keep it when it resolves to a real card design.
+                did=item.get('design_id') or ''
+                if did and not c.execute("SELECT 1 FROM card_designs WHERE id=?",(did,)).fetchone():
+                    item.pop('design_id',None)
+                items.append(item)
             if c.execute("SELECT 1 FROM sqlite_master WHERE name='card_orders'").fetchone():
                 for r in c.execute("SELECT * FROM card_orders WHERE owner=? AND status IN ('pending_checkout','awaiting_payment') ORDER BY created_at DESC",(owner,)):
                     item=dict(r);spec=json.loads(item.pop('spec'));item['label']=spec.get('headline') or 'Greeting card'
+                    item['kind']='card'
                     did=item.get('design_id');rev=item.get('revision')
                     if did and rev:
+                        item['views']=[{"id":"front","label":"Front","url":"/api/cards/%s/r%s/preview"%(did,rev)},
+                                       {"id":"inside","label":"Inside","url":"/api/cards/%s/r%s/inside"%(did,rev)},
+                                       {"id":"back","label":"Back","url":"/api/cards/%s/r%s/back"%(did,rev)}]
                         item['preview']='/api/cards/%s/r%s/triptych'%(did,rev)
-                        item['faces']={'front':'/api/cards/%s/r%s/spread/front'%(did,rev),
-                                       'inside_left':'/api/cards/%s/r%s/spread/inside_left'%(did,rev),
-                                       'inside_right':'/api/cards/%s/r%s/spread/inside_right'%(did,rev),
-                                       'back':'/api/cards/%s/r%s/spread/back'%(did,rev)}
                     items.append(item)
             drafts=[]
             if c.execute("SELECT 1 FROM sqlite_master WHERE name='card_designs'").fetchone():
@@ -291,14 +311,41 @@ def register(app, owner_denied):
                        "template":spec.get("template",""),
                        "preview":("/api/cards/%s/r%s/triptych"%(did,rev) if "spread" in jobs
                                   else ("/api/cards/%s/r%s/preview"%(did,rev) if "preview" in jobs else None)),
+                       "views":[{"id":"front","label":"Front","url":"/api/cards/%s/r%s/preview"%(did,rev)},
+                                {"id":"inside","label":"Inside","url":"/api/cards/%s/r%s/inside"%(did,rev)},
+                                {"id":"back","label":"Back","url":"/api/cards/%s/r%s/back"%(did,rev)}] if "preview" in jobs else [],
                        "export_ready":"export" in jobs,"spread_ready":"spread" in jobs}
-                    if "spread" in jobs:
-                        d["faces"]={'front':'/api/cards/%s/r%s/spread/front'%(did,rev),
-                                    'inside_left':'/api/cards/%s/r%s/spread/inside_left'%(did,rev),
-                                    'inside_right':'/api/cards/%s/r%s/spread/inside_right'%(did,rev),
-                                    'back':'/api/cards/%s/r%s/spread/back'%(did,rev)}
                     drafts.append(d)
         return jsonify(ok=True,items=items,drafts=drafts,currency='GBP')
+
+    @bp.post('/api/studio/basket/update')
+    def basket_update():
+        """Remove a reservation or change its qty. Owner-scoped by row —
+        one account can never touch another's basket."""
+        owner=request.studio_owner
+        b=request.get_json(silent=True) or {}
+        iid=str(b.get("id") or "")
+        action=str(b.get("action") or "remove")
+        if not iid:
+            return jsonify(ok=False,error="id is required"),400
+        with db.connect() as c:
+            if action=="remove":
+                c.execute("DELETE FROM orders WHERE id=? AND owner=? AND status='pending_checkout'",(iid,owner))
+                if c.execute("SELECT 1 FROM sqlite_master WHERE name='card_orders'").fetchone():
+                    c.execute("DELETE FROM card_orders WHERE id=? AND owner=? AND status IN ('pending_checkout','awaiting_payment') AND (prodigi_ref IS NULL OR prodigi_ref='')",(iid,owner))
+                c.commit()
+                return jsonify(ok=True,removed=bool(c.total_changes))
+            if action=="qty":
+                try: q=max(1,int(b.get("qty") or 1))
+                except (ValueError,TypeError): return jsonify(ok=False,error="qty must be a number"),400
+                c.execute("UPDATE orders SET qty=? WHERE id=? AND owner=? AND status='pending_checkout'",(q,iid,owner))
+                hit=c.total_changes
+                if c.execute("SELECT 1 FROM sqlite_master WHERE name='card_orders'").fetchone():
+                    c.execute("UPDATE card_orders SET qty=? WHERE id=? AND owner=? AND status IN ('pending_checkout','awaiting_payment')",(q,iid,owner))
+                    hit+=c.total_changes
+                c.commit()
+                return jsonify(ok=True,updated=bool(hit),qty=q)
+            return jsonify(ok=False,error="action must be remove or qty"),400
 
     @bp.get('/api/studio/photos/<pid>/image')
     def image(pid):

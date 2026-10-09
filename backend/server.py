@@ -4569,20 +4569,40 @@ def design_make():
             cwd=str(Path(__file__).resolve().parent.parent),
             capture_output=True, text=True, timeout=600)
         hero = tmp / "hero.png"
-        if r.returncode == 0 and hero.is_file():
-            prevdir = Path("data/designs/previews")
-            prevdir.mkdir(parents=True, exist_ok=True)
-            dest = prevdir / f"{Path(job).stem}.png"
-            _sh.copyfile(hero, dest)
-            preview_url = f"/backend/api/design/preview/{dest.name}"
+        views = {}
+        if r.returncode == 0:
+            destdir = Path("data/designs/previews") / Path(job).stem
+            destdir.mkdir(parents=True, exist_ok=True)
+            for name in ("hero", "front", "side", "back"):
+                src = tmp / f"{name}.png"
+                if src.is_file():
+                    _sh.copyfile(src, destdir / f"{name}.png")
+                    views[name] = f"/backend/api/design/preview/{Path(job).stem}/{name}"
         _sh.rmtree(tmp, ignore_errors=True)
+        preview_url = views.get("hero", "")
     except Exception:
         preview_url = ""
     return jsonify({"ok": True, "line": line, "text": text,
                     "stl_url": f"/backend/api/design/file/{job}",
-                    "preview_url": preview_url,
+                    "preview_url": preview_url, "views": views,
                     "log": (proc.stdout or "")[-500:],
                     "hint": "Watertight STL from the line master. Validate dims via /api/design/validate."})
+
+
+@app.get("/api/design/preview/<stem>/<view>")
+def design_preview_view(stem: str, view: str):
+    """Fetch one persisted make-view: hero/front/side/back per design."""
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", stem or ""):
+        return _err("bad design", 400)
+    if view not in ("hero", "front", "side", "back"):
+        return _err("view must be hero, front, side or back", 400)
+    target = (Path("data/designs/previews") / stem / f"{view}.png").resolve()
+    base = Path("data/designs/previews").resolve()
+    if not str(target).startswith(str(base)) or not target.is_file():
+        return _err("not found", 404)
+    res = send_file(target, mimetype="image/png", max_age=3600)
+    res.headers["Cache-Control"] = "private, no-store"
+    return res
 
 
 @app.get("/api/design/preview/<name>")

@@ -806,7 +806,7 @@
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/api-client.js?v=studio-3"></script>
   <script src="/js/viral-card-library.js?v=viral-2"></script>
-  <script src="/js/cards-studio.js?v=studio-3"></script>
+  <script src="/js/cards-studio.js?v=studio-4"></script>
   <script src="/js/card-gallery.js?v=studio-3"></script>
 
   <script src="/js/oddy.js"></script>
@@ -817,7 +817,7 @@
   <script src="/js/duel.js?v=1"></script>
   <script src="/js/art.js?v=1"></script>
   <script src="/js/studio-people.js?v=studio-3"></script>
-  <script src="/js/site-shell.js?v=studio-3"></script>
+  <script src="/js/site-shell.js?v=studio-5"></script>
 </head>
 <body class="studio-chrome">
   <!-- boot screen: mark draws, thickens to coin, spins, tours products, lifts -->
@@ -5541,7 +5541,7 @@
     var siteShell = window.OddHobbShell({ready:studioReady,
       get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
       post:function(path,body){body.owner=state.owner;return post(API+path,body).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
-      asset:function(path){return API+path+(path.indexOf('?')>=0?'&':'?')+'owner='+encodeURIComponent(state.owner);},
+      asset:function(path){try{return studioAsset(path);}catch(e){return path;}},
       loadProducts:loadProducts,search:rankSearch,searchTile:paintSearchTile});
     var duel = window.OddHobbDuel ? window.OddHobbDuel({
       get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},

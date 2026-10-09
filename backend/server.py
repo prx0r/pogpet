@@ -4012,6 +4012,10 @@ def card_proof_image(did):
 def shopify_orders_paid():
     """Shopify orders/paid → Prodigi fulfilment. Idempotent.
 
+    Fast-ack design (Shopify gives webhooks ~5s): verify HMAC, resolve the
+    order, answer 202 immediately; the slow block (compose → preflight →
+    R2 → Prodigi → DB) runs on a daemon thread. Retries are safe: rows
+    already fulfilled short-circuit before any work.
     Invariant: Prodigi is never called until Shopify says paid.
     Verifies X-Shopify-Hmac-Sha256, finds oddhobb_order_id in line-item
     customAttributes/properties (or note_attributes/note), skips if already
@@ -4061,49 +4065,63 @@ def shopify_orders_paid():
     if os.environ.get("CARD_PANEL_CONFIRMED", "") != "1":
         return _err("card panel order not confirmed against Prodigi template yet "
                     "(CARD_PANEL_CONFIRMED=1 blocks live print)", 409)
-    # shipping address from Shopify → Prodigi recipient
-    ship = payload.get("shipping_address") or payload.get("shippingAddress") or {}
-    recipient = {
-        "name": str(ship.get("name") or f"{ship.get('first_name','')} {ship.get('last_name','')}".strip() or "OddHobb customer")[:60],
-        "line1": str(ship.get("address1") or ship.get("line1") or "")[:100],
-        "line2": str(ship.get("address2") or ship.get("line2") or "")[:100],
-        "town": str(ship.get("city") or ship.get("town") or "")[:60],
-        "postcode": str(ship.get("zip") or ship.get("postcode") or "")[:20],
-        "country": str(ship.get("country_code") or ship.get("country") or "GB")[:2].upper(),
-        "email": str(payload.get("email") or payload.get("contact_email") or "")[:120],
-    }
-    if not all(recipient[k].strip() for k in ("name", "line1", "town", "postcode", "country")):
-        return _err("webhook shipping address incomplete — cannot print", 422)
-    try:
-        from backend import cards as _cards
-        from backend import card_print as _print
-        from backend import r2presign as _r2
-        from backend import prodigi as _prodigi
-        spec = json.loads(order["spec"])
-        owner, did, rev = order["owner"], order["design_id"], order["revision"]
-        # frozen revision must still validate + belong to owner
-        _cards.validate(owner, spec)
-        aa = _cards.assets(owner, spec)
-        single = _print.compose(spec, aa)
-        gaps = _print.preflight(single)
-        if gaps:
-            return _err("print file failed preflight: " + "; ".join(gaps), 500)
-        r2key = _r2.put_temp(single)
+    # Fast-ack: everything above is cheap; the slow fulfilment block runs
+    # on a daemon thread AFTER we answer, so Shopify never times out.
+    import threading as _th
+
+    def _fulfil(payload=payload, oid=oid):
+        with db.connect() as c:
+            row = c.execute("SELECT * FROM card_orders WHERE id=?", (oid,)).fetchone()
+        if row is None:
+            return
+        order = dict(row)
+        if order.get("status") == "fulfilled" and order.get("prodigi_ref"):
+            return
+        # shipping address from Shopify → Prodigi recipient
+        ship = payload.get("shipping_address") or payload.get("shippingAddress") or {}
+        recipient = {
+            "name": str(ship.get("name") or f"{ship.get('first_name','')} {ship.get('last_name','')}".strip() or "OddHobb customer")[:60],
+            "line1": str(ship.get("address1") or ship.get("line1") or "")[:100],
+            "line2": str(ship.get("address2") or ship.get("line2") or "")[:100],
+            "town": str(ship.get("city") or ship.get("town") or "")[:60],
+            "postcode": str(ship.get("zip") or ship.get("postcode") or "")[:20],
+            "country": str(ship.get("country_code") or ship.get("country") or "GB")[:2].upper(),
+            "email": str(payload.get("email") or payload.get("contact_email") or "")[:120],
+        }
+        if not all(recipient[k].strip() for k in ("name", "line1", "town", "postcode", "country")):
+            return
         try:
-            asset_url = _r2.presigned_url(r2key)
-        except Exception as e:  # noqa: BLE001
-            _r2.delete(r2key)
-            return _err(f"asset delivery failed: {str(e)[:200]}", 502)
-        placed = _prodigi.create_order(_cards.CARD_PRODIGI_SKU, order["qty"],
-                                       asset_url, recipient)
-    except Exception as e:  # noqa: BLE001
-        return _err(f"fulfilment failed: {str(e)[:200]}", 502)
-    with db.connect() as c:
-        c.execute("UPDATE card_orders SET status='fulfilled', prodigi_ref=? WHERE id=?",
-                  (placed["id"], oid))
-        c.commit()
-    return jsonify(ok=True, order_id=oid, prodigi_ref=placed["id"],
-                   status=placed.get("status", "received"))
+            from backend import cards as _cards
+            from backend import card_print as _print
+            from backend import r2presign as _r2
+            from backend import prodigi as _prodigi
+            spec = json.loads(order["spec"])
+            owner, did, rev = order["owner"], order["design_id"], order["revision"]
+            # frozen revision must still validate + belong to owner
+            _cards.validate(owner, spec)
+            aa = _cards.assets(owner, spec)
+            single = _print.compose(spec, aa)
+            gaps = _print.preflight(single)
+            if gaps:
+                return
+            r2key = _r2.put_temp(single)
+            try:
+                asset_url = _r2.presigned_url(r2key)
+            except Exception:  # noqa: BLE001
+                _r2.delete(r2key)
+                return
+            placed = _prodigi.create_order(_cards.CARD_PRODIGI_SKU, order["qty"],
+                                           asset_url, recipient)
+        except Exception:  # noqa: BLE001
+            return
+        with db.connect() as c:
+            c.execute("UPDATE card_orders SET status='fulfilled', prodigi_ref=? WHERE id=?",
+                      (placed["id"], oid))
+            c.commit()
+
+    _th.Thread(target=_fulfil, daemon=True, name="shopify-fulfil").start()
+    return jsonify(ok=True, order_id=oid, accepted=True,
+                   hint="paid accepted; fulfilment runs in background")
 
 
 @app.post("/api/shopify/webhooks/register")

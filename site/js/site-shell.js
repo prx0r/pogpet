@@ -63,8 +63,11 @@
         result.items.forEach(function(item){
           var qty=Math.max(1,parseInt(item.qty||1,10)||1);count+=qty;
           var row=node('article',undefined,'basket-row');
+          if(item.preview){var im=node('img');im.alt=item.label;im.loading='lazy';im.src=item.preview;im.onerror=function(){im.remove();};row.append(im);}
           row.append(node('h2',item.label),node('p',qty+' × '+String(item.status||'pending_checkout').replaceAll('_',' ')),node('strong','£'+((item.price_cents||0)/100).toFixed(2)));
-          if(item.design_id)row.append(link('Open card','/cards/'+item.design_id));
+          if(item.faces){var faces=node('div',undefined,'basket-faces');['front','inside_left','inside_right','back'].forEach(function(f){if(!item.faces[f])return;var fi=node('img');fi.alt=f.replaceAll('_',' ');fi.loading='lazy';fi.src=item.faces[f];fi.onerror=function(){fi.remove();};faces.append(fi);});row.append(faces);}
+          if(item.checkout_url){var co=node('a','Checkout · £'+((item.price_cents||0)/100).toFixed(2),'oc-button');co.href=item.checkout_url;row.append(co);}
+          else if(item.design_id)row.append(link('Open card','/cards/'+item.design_id));
           else if(item.note&&/^design\s+\S+/.test(item.note||'')){
             var did=String(item.note).split(/\s+/)[1].replace(/[(),]/g,'');
             if(did)row.append(link('Open card','/cards/'+did));
@@ -75,8 +78,46 @@
         if(result.items.length)body.append(node('p','Reserved items: £'+(total/100).toFixed(2)+'. Shipping is quoted separately.'));
         else body.append(node('p','Your basket is empty. Choose a card or personalised product to get started.'));
         body.append(link('Browse products','/products'),link('Greeting cards','/cards'));
-        if(result.items.length)body.append(node('p','These are reservations; you have not been charged. Checkout links appear only when a supplier quote is available.'));
-        result.items.filter(function(i){return i.checkout_url;}).forEach(function(i){var a=node('a','Checkout '+i.label,'oc-button');a.href=i.checkout_url;body.append(a);});
+        try{
+          var cid=null;try{cid=localStorage.getItem('oddhobb.cartId');}catch(e){cid=null;}
+          if(cid){
+            var sc=await host.get('/cart?id='+encodeURIComponent(cid));
+            var cart=sc.cart||{},edges=(((cart.lines||{}).edges)||[]);
+            if(edges.length){
+              body.append(node('h2','Checkout basket'));
+              edges.forEach(function(e){
+                var n=e.node||{},at={};(n.attributes||[]).forEach(function(a){at[a.key]=a.value;});
+                var row=node('article',undefined,'basket-row');
+                if(at.design_id&&at.revision){var im=node('img');im.alt='Card preview';im.loading='lazy';im.src=host.asset('/cards/'+at.design_id+'/r'+at.revision+'/triptych');im.onerror=function(){im.remove();};row.append(im);}
+                row.append(node('h2',((n.merchandise||{}).title)||'Card'),node('p','Qty '+n.quantity));
+                var lineId=n.id;
+                [['−',Math.max(1,n.quantity-1)],['+',n.quantity+1]].forEach(function(q){
+                  var qb=node('button',q[0],'oc-button');qb.type='button';
+                  qb.onclick=function(){qb.disabled=true;host.post('/cart/lines',{cart_id:cid,action:'update',line_id:lineId,qty:q[1]}).then(function(){cart();}).catch(function(err){qb.disabled=false;body.append(node('p',err.message));});};
+                  row.append(qb);
+                });
+                var rm=node('button','Remove','oc-button');rm.type='button';
+                rm.onclick=function(){rm.disabled=true;host.post('/cart/lines',{cart_id:cid,action:'remove',line_id:lineId}).then(function(){cart();}).catch(function(err){rm.disabled=false;body.append(node('p',err.message));});};
+                row.append(rm);
+                if(cart.checkoutUrl){var co=node('a','Checkout','oc-button');co.href=cart.checkoutUrl;row.append(co);}
+                body.append(row);
+              });
+            }
+          }
+        }catch(e){/* no checkout basket yet — silent */}
+        var drafts=(result.drafts||[]).filter(function(d){return !(result.items||[]).some(function(i){return i.design_id===d.design_id;});});
+        if(drafts.length){
+          body.append(node('h2','Your drafts — checkout in one tap'));
+          drafts.forEach(function(d){
+            var row=node('article',undefined,'basket-row');
+            if(d.preview){var im=node('img');im.alt=d.label;im.loading='lazy';im.src=d.preview;im.onerror=function(){im.remove();};row.append(im);}
+            row.append(node('h2',d.label),node('p','Draft · revision '+d.revision));
+            if(d.faces){var faces=node('div',undefined,'basket-faces');['front','inside_left','inside_right','back'].forEach(function(f){if(!d.faces[f])return;var fi=node('img');fi.alt=f.replaceAll('_',' ');fi.loading='lazy';fi.src=d.faces[f];fi.onerror=function(){fi.remove();};faces.append(fi);});row.append(faces);}
+            if(d.export_ready){var b=node('button','Checkout','oc-button');b.type='button';b.onclick=function(){b.disabled=true;body.append(node('p','Reserving and checking out…'));var idem=d.design_id+'-r'+d.revision+'-qty1-'+Date.now().toString(36);host.post('/cards/'+d.design_id+'/order',{revision:d.revision,qty:1,idempotency_key:idem}).then(function(){return host.post('/cards/'+d.design_id+'/checkout',{revision:d.revision,qty:1,idempotency_key:idem});}).then(function(c){location.href=c.checkout_url;}).catch(function(e){b.disabled=false;body.append(node('p',e.message));});};row.append(b);}
+            else row.append(link('Finish in studio','/cards/'+d.design_id));
+            body.append(row);
+          });
+        }
       }catch(e){body.replaceChildren(node('h1','Your basket'),node('p',e.message));}
     }
     async function account(ownerHint){

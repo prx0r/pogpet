@@ -65,3 +65,40 @@ Registry proposal (not applied — needs owner/other-agent slot): add
 `pcbway_rapid` (order api, QUOTE, $25-min flag), `wenext` (order quote,
 QUOTE), `comparepcb` (tool, not lane), and a `jlc` entry carrying the
 TDP/PCB/Stencil/Parts API paths from `backend/jlc_materials.json`.
+
+## Importable modules (verified 2026-10-09, venv `~/.venvs/factory`)
+
+- `pip install printify-client` (official, MIT) — shops/products/orders/
+  shipping, retries, caching. Imports on 3.12; our token scope fits.
+  USE for the Printify lane.
+- `pip install mixam-sdk` (official, PyPI) — spec models + validator.
+  Proven: our live greeting-card spec validates with 0 errors. USE for
+  spec validation before every Mixam quote.
+- Slant MCP extended verbs (no install): `quote_shipping_options` +
+  `quote_checkout` (payment link → paid → farm). USE for US checkout
+  without the dev-key signup.
+- dltHub Prodigi source (Python) — orders/quotes → DuckDB. LATER, for
+  the quote-history cost model.
+- `i2cjak/jlcpcb_api` (Python) + `hatlabs/jlcpcb-cli` (no-keys order
+  data) — LATER, post-JLC-approval and for tracking.
+- Reference only (wrong runtime): starkyru/effect-prodigi + mpsuesser
+  (TS), rdtclark (Ruby), openpeeps (Nim), ekkolon gelato-admin (TS).
+
+## Checkout/webhook modules worth reusing (searched 2026-10-09)
+
+- `leocxy/flask-shopify-utils` (Flask extension: HMAC/webhooks/GraphQL via
+  sgqlc, OAuth) — EVALUATE: closest drop-in for our Flask app; its GraphQL
+  client could replace hand-rolled `gql()`.
+- `smallwat3r/shopify-webhook-router` (Flask + Celery topic dispatch) —
+  REFERENCE: reply-fast-then-process pattern our webhook needs (below).
+- `stripe-samples/checkout-one-time-payments` (official, incl. PYTHON) —
+  USE when Stripe lands: Checkout + webhook in Flask, copy the shape.
+- `AndrewSepic/jpowellshirts` (Stripe + Printify + Mapbox address
+  autocomplete) — STEAL THE DESIGN: address autocomplete at checkout kills
+  bad-address failures; webhook-fulfills-after-payment is our exact rule.
+- `satwikkansal/shopify-data-generator` Address/Customer dataclasses —
+  REFERENCE for the address-book schema (matches our planned fields).
+- HARDENING FOUND: Shopify gives webhooks ~5s to reply then retries. Our
+  orders/paid handler composes PDFs + uploads + calls Prodigi INLINE —
+  correct but slow; idempotency (`fulfilled`+`prodigi_ref` check) already
+  saves us from double-prints, but move slow work after the 200 response.

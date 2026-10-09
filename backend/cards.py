@@ -67,6 +67,10 @@ def init():
             c.execute("ALTER TABLE card_orders ADD COLUMN shopify_draft_id TEXT NOT NULL DEFAULT ''")
         if "checkout_url" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
             c.execute("ALTER TABLE card_orders ADD COLUMN checkout_url TEXT NOT NULL DEFAULT ''")
+        if "recipient_json" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
+            c.execute("ALTER TABLE card_orders ADD COLUMN recipient_json TEXT NOT NULL DEFAULT ''")
+        if "shipping_method" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
+            c.execute("ALTER TABLE card_orders ADD COLUMN shipping_method TEXT NOT NULL DEFAULT 'Standard'")
         c.execute("UPDATE card_designs SET storage_owner=owner WHERE storage_owner=''")
         c.execute("UPDATE card_jobs SET status='failed',error='Render interrupted. Retry this revision.' WHERE status IN ('queued','running')")
         c.commit()
@@ -1747,6 +1751,15 @@ def register(app,owner_denied):
         owner=request.card_owner;b=request.get_json() or {}
         qty=b.get("qty",1);rev=b.get("revision");idem=b.get("idempotency_key","") or \
             f"checkout-{did}-r{rev}-q{qty}"
+        ship_method = str(b.get("shipping_method") or "Standard")
+        if ship_method not in ("Budget", "Standard", "StandardPlus", "Express", "Overnight"):
+            raise CardError("unknown shipping method", 400)
+        recip = b.get("recipient") or {}
+        recip_json = ""
+        if isinstance(recip, dict) and any(str(recip.get(k) or "").strip() for k in ("name", "line1", "town", "postcode", "country")):
+            if not all(str(recip.get(k) or "").strip() for k in ("name", "line1", "town", "postcode", "country")):
+                raise CardError("recipient needs name, line1, town, postcode, country", 400)
+            recip_json = json_dump({k: str(recip.get(k) or "")[:100] for k in ("name", "line1", "line2", "town", "postcode", "country", "email")})
         if not isinstance(qty,int) or isinstance(qty,bool) or not 1<=qty<=20 \
                 or not isinstance(rev,int) or isinstance(rev,bool):
             raise CardError("Choose a valid quantity and saved revision")
@@ -1786,12 +1799,12 @@ def register(app,owner_denied):
             c.execute("BEGIN IMMEDIATE")
             if old is not None:
                 oid = old["id"]
-                c.execute("UPDATE card_orders SET qty=?, price_cents=? WHERE id=?",
-                          (qty, price, oid))
+                c.execute("UPDATE card_orders SET qty=?, price_cents=?, recipient_json=?, shipping_method=? WHERE id=?",
+                          (qty, price, recip_json, ship_method, oid))
             else:
                 oid="ord_card_"+uuid.uuid4().hex
-                c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                          (oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"awaiting_payment",idem,time.time()))
+                c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at,recipient_json,shipping_method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                          (oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"awaiting_payment",idem,time.time(),recip_json,ship_method))
             c.commit()
         # Shopify draft — the payment/order layer, not a second storefront.
         # One hidden product ODD-CARD-5X7; personalisation rides as
@@ -1825,7 +1838,141 @@ def register(app,owner_denied):
                        checkout_url=checkout_url,
                        shopify_draft=draft,
                        mcp_status=mcp_status(),
-                       hint="Send the human to checkout_url to pay (£7.99). "
-                            "Prodigi prints after Shopify orders/paid — preview alone is not done.")
+                        hint="Send the human to checkout_url to pay (£7.99). "
+                             "Prodigi prints after Shopify orders/paid — preview alone is not done.")
+
+    @bp.post("/api/cards/<did>/shipping")
+    def shipping(did):
+        """Live shipping options for a card revision: no order, no spend.
+        Composes the exact print PDF, stages it on temp R2, quotes
+        Budget/Standard/Express against the destination, deletes the temp
+        asset, returns per-method totals + carrier. Powers the buy box."""
+        owner = request.card_owner
+        b = request.get_json() or {}
+        rev = b.get("revision")
+        country = (b.get("country") or "GB").strip().upper()[:2] or "GB"
+        if not isinstance(rev, int) or isinstance(rev, bool):
+            raise CardError("revision is required", 400)
+        spec = record(owner, did, rev)["spec"]
+        validate(owner, spec)
+        from backend import card_print as _print
+        from backend import r2presign as _r2
+        from backend import prodigi as _prodigi
+        single = _print.compose(spec, assets(owner, spec))
+        gaps = _print.preflight(single)
+        if gaps:
+            raise CardError("print file failed preflight: " + "; ".join(gaps), 500)
+        r2key = _r2.put_temp(single)
+        try:
+            options = []
+            for method in ("Budget", "Standard", "Express"):
+                try:
+                    q = _prodigi.quote(CARD_PRODIGI_SKU, 1, country,
+                                       attrs={}, shipping_method=method)
+                    options.append({"method": method, "ok": True,
+                                    "total": q.get("total"), "item": q.get("item"),
+                                    "shipping": q.get("shipping"), "tax": q.get("tax"),
+                                    "carrier": q.get("carrier"),
+                                    "currency": q.get("currency", "GBP")})
+                except Exception as e:  # noqa: BLE001
+                    options.append({"method": method, "ok": False,
+                                    "error": str(e)[:160]})
+        finally:
+            try:
+                _r2.delete(r2key)
+            except Exception:  # noqa: BLE001
+                pass
+        return jsonify(ok=True, design_id=did, revision=rev,
+                       country=country, options=options,
+                       note="Totals are live Prodigi quotes incl. tax where given; "
+                            "card prints in the UK within 24h, courier time on top.")
+
+    @bp.post("/api/cart/create")
+    def shop_cart_create():
+        """Guest-safe Storefront cart: freeze revision → cartCreate with
+        design linkage in line attributes. Returns cartId + checkoutUrl.
+        No OddHobb account needed; no photos/tokens/URLs in attributes."""
+        from backend import shopify_cart as _cart
+        owner = request.card_owner
+        b = request.get_json() or {}
+        did = str(b.get("design_id") or "")
+        rev = b.get("revision")
+        qty = b.get("qty", 1)
+        if not did or not isinstance(rev, int) or isinstance(rev, bool):
+            raise CardError("design_id + revision are required", 400)
+        if not isinstance(qty, int) or isinstance(qty, bool) or not 1 <= qty <= 20:
+            raise CardError("qty 1–20", 400)
+        rec = record(owner, did, rev)
+        validate(owner, rec["spec"])
+        with db.connect() as c:
+            ready = c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='export' AND status='ready'", (owner, did, rev)).fetchone()
+            if not ready:
+                raise CardError("Export the saved artwork before checkout (render export first)", 409)
+        oid = "ord_card_" + uuid.uuid4().hex
+        with db.connect() as c:
+            c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                      (oid, owner, did, rev, int(qty), card_price()["price_cents"] * int(qty), json_dump(rec["spec"]), key(owner, did, rev, "export"), "in_cart", f"cart-{did}-r{rev}-{time.time():.0f}", time.time()))
+            c.commit()
+        res = _cart.cart_create(did, rev, int(qty), oid)
+        if not res.get("ok"):
+            raise CardError(res.get("error", "cart failed"), 502)
+        return jsonify(ok=True, order_id=oid, cart=res["cart"],
+                       checkout_url=(res["cart"] or {}).get("checkoutUrl", ""),
+                       product=card_price())
+
+    @bp.post("/api/cart/lines")
+    def shop_cart_lines():
+        """Add / update-qty / remove lines on an existing cart. Body:
+        {cart_id, action: add|update|remove, design_id?, revision?, qty?,
+        line_id?}. Add re-validates design ownership + export."""
+        from backend import shopify_cart as _cart
+        owner = request.card_owner
+        b = request.get_json() or {}
+        cart_id = str(b.get("cart_id") or "")
+        action = str(b.get("action") or "")
+        if not cart_id:
+            raise CardError("cart_id is required", 400)
+        if action == "add":
+            did = str(b.get("design_id") or "")
+            rev = b.get("revision")
+            qty = int(b.get("qty") or 1)
+            if not did or not isinstance(rev, int) or isinstance(rev, bool):
+                raise CardError("design_id + revision are required", 400)
+            rec = record(owner, did, rev)
+            validate(owner, rec["spec"])
+            with db.connect() as c:
+                ready = c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='export' AND status='ready'", (owner, did, rev)).fetchone()
+                if not ready:
+                    raise CardError("Export the saved artwork before checkout", 409)
+            oid = "ord_card_" + uuid.uuid4().hex
+            with db.connect() as c:
+                c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                          (oid, owner, did, rev, qty, card_price()["price_cents"] * qty, json_dump(rec["spec"]), key(owner, did, rev, "export"), "in_cart", f"cart-{did}-r{rev}-{time.time():.0f}", time.time()))
+                c.commit()
+            res = _cart.cart_lines_add(cart_id, did, rev, qty, oid)
+        elif action == "update":
+            res = _cart.cart_lines_update(cart_id, str(b.get("line_id") or ""), int(b.get("qty") or 1))
+        elif action == "remove":
+            res = _cart.cart_lines_remove(cart_id, str(b.get("line_id") or ""))
+        else:
+            raise CardError("action must be add, update or remove", 400)
+        if not res.get("ok"):
+            raise CardError(res.get("error", "cart failed"), 502)
+        return jsonify(ok=True, cart=res["cart"],
+                       checkout_url=(res["cart"] or {}).get("checkoutUrl", ""))
+
+    @bp.get("/api/cart")
+    def shop_cart_get():
+        """Read a cart (lines carry design_id/revision attributes so the
+        frontend renders our own previews, never Shopify's)."""
+        from backend import shopify_cart as _cart
+        cart_id = (request.args.get("id") or "").strip()
+        if not cart_id:
+            raise CardError("cart id is required", 400)
+        res = _cart.cart_get(cart_id)
+        if not res.get("ok"):
+            raise CardError(res.get("error", "cart failed"), 502)
+        return jsonify(ok=True, cart=res["cart"],
+                       checkout_url=(res["cart"] or {}).get("checkoutUrl", ""))
 
     app.register_blueprint(bp)

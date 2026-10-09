@@ -1,6 +1,6 @@
 # Test report — oddhobb
 
-> Run 2026-10-08 17:27 · `scripts/test_site.py` · **78/78 passed** · 0 credits
+> Run 2026-10-09 15:11 · `scripts/test_site.py` · **76/78 passed** · 0 credits
 
 | # | Result | Test | Detail |
 |---|---|---|---|
@@ -26,7 +26,7 @@
 | 20 | PASS | page: my-space copy (star/people) |  |
 | 21 | PASS | inline JS syntax (node --check) | clean |
 | 22 | PASS | brand_for: oddhobb host |  |
-| 23 | PASS | brand_for: www.ochema.co inherits ochema |  |
+| 23 | FAIL | brand_for: www.ochema.co inherits ochema |  |
 | 24 | PASS | brand_for: unknown host falls back, never errors |  |
 | 25 | PASS | brand map covers both live domains |  |
 | 26 | PASS | GET /api/brand (public, bridge-gated) | oddhobb.com -> oddhobb |
@@ -36,7 +36,7 @@
 | 30 | PASS | non-anon mesh read without sig -> 403 | HTTP 403 |
 | 31 | PASS | non-anon rename without sig -> 403 | HTTP 403 |
 | 32 | PASS | signed non-anon credits read allowed | HTTP 200 |
-| 33 | PASS | login rate limit kicks in (429) | codes=[401, 401, 401, 401, 401, 429] |
+| 33 | PASS | login rate limit kicks in (429) | codes=[429, 429, 429, 429, 429, 429] |
 | 34 | PASS | security headers on public pages | nosniff/SAMEORIGIN |
 | 35 | PASS | trademark doc exists |  |
 | 36 | PASS | GET /api/seo/products.json (public) | 13 products |
@@ -74,13 +74,13 @@
 | 68 | PASS | API catalog public -> 200 | HTTP 200 |
 | 69 | PASS | API bad token -> 401 | HTTP 401 |
 | 70 | PASS | POST /premesh (passthrough recipe) | HTTP 200 x-premesh-ok=1 bytes=7643 |
-| 71 | PASS | MCP initialize (token) | session 88ea6e7b |
+| 71 | PASS | MCP initialize (token) | session f1e2826b |
 | 72 | PASS | MCP tools/list >= 30 | 104 tools |
 | 73 | PASS | MCP foundation tools present |  |
 | 74 | PASS | MCP tools/call figg_flow | stage=ready mesh=msh_70edae28a4 |
-| 75 | PASS | MCP without token -> public tier | HTTP 200 |
+| 75 | FAIL | MCP without token -> public tier | HTTP 502 |
 | 76 | PASS | MCP wrong token -> 401 | HTTP 401 |
-| 77 | PASS | api.log: no NEW tracebacks during this run | baseline=0 now=0 (2 historical = fixed flow bug) |
+| 77 | PASS | api.log: no NEW tracebacks during this run | baseline=-1 now=-1 (2 historical = fixed flow bug) |
 | 78 | PASS | oddhobb.com final smoke | HTTP 200 |
 
 Re-run: `python3 scripts/test_site.py` (exits non-zero on FAIL).

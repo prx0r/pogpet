@@ -1,7 +1,17 @@
-# Shopify auth — how OddHobb talks to the dev store
+# Shopify auth — how OddHobb talks to Shopify
 
 Reference only. **No secrets live in this file.** Real credentials are in
-`.env` (gitignored, mode 0600). Last verified: 2026-09-30 — shop query OK,
+`.env` (gitignored, mode 0600).
+
+> LIVE TARGET 2026-10-09: `byg8sv-p6.myshopify.com` ("OddHobb" — 15
+> products). `.env` still points at the dev store
+> (`oddhobb-oufybzg3.myshopify.com`) until live credentials land. Do NOT
+> treat dev-store drafts/webhooks as production. Needed for the switch:
+> live Admin API token (draft orders + webhooks scopes), live Storefront
+> access token (cart API), then create the ODD-CARD-5X7 variant and set
+> `SHOPIFY_CARD_VARIANT_ID`. History below is the dev store.
+
+Last verified (dev): 2026-09-30 — shop query OK,
 13 products active on `oddhobb-oufybzg3.myshopify.com` (GBP).
 
 ## Why there is no copyable `shpat_` in the Shopify UI

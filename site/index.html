@@ -5540,6 +5540,8 @@
     });
     var siteShell = window.OddHobbShell({ready:studioReady,
       get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
+      post:function(path,body){body.owner=state.owner;return post(API+path,body).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
+      asset:function(path){return API+path+(path.indexOf('?')>=0?'&':'?')+'owner='+encodeURIComponent(state.owner);},
       loadProducts:loadProducts,search:rankSearch,searchTile:paintSearchTile});
     var duel = window.OddHobbDuel ? window.OddHobbDuel({
       get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},

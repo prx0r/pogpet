@@ -84,15 +84,20 @@ def check_sku(sku: str) -> dict:
 
 
 def quote(sku: str, copies: int = 1, country: str = "GB",
-          attrs: dict | None = None) -> dict:
-    """Live price + shipping for a SKU. Raises ProdigiError when unavailable."""
+          attrs: dict | None = None, shipping_method: str = "Standard") -> dict:
+    """Live price + shipping for a SKU. Raises ProdigiError when unavailable.
+    attrs=None keeps the legacy default set; pass {} for SKUs (like the
+    classic card) that reject unexpected attributes."""
+    item = {"sku": sku, "copies": int(copies),
+            "assets": [{"printArea": "default"}]}
+    picked = DEFAULT_ATTRS if attrs is None else attrs
+    if picked:
+        item["attributes"] = picked
     d = _call("POST", "/v4.0/quotes", {
-        "shippingMethod": "Standard",
+        "shippingMethod": shipping_method,
         "destinationCountryCode": country,
         "currencyCode": "GBP",
-        "items": [{"sku": sku, "copies": int(copies),
-                   "attributes": attrs or DEFAULT_ATTRS,
-                   "assets": [{"printArea": "default"}]}],
+        "items": [item],
     })
     if d.get("outcome") != "Created":
         raise ProdigiError(str(d.get("failures") or d.get("outcome"))[:300])

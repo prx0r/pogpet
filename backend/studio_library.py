@@ -270,9 +270,35 @@ def register(app, owner_denied):
         with db.connect() as c:
             items=[{**dict(r),'label':r['line'].replace('_',' ')} for r in c.execute("SELECT * FROM orders WHERE owner=? AND status='pending_checkout' ORDER BY created_at DESC",(owner,))]
             if c.execute("SELECT 1 FROM sqlite_master WHERE name='card_orders'").fetchone():
-                for r in c.execute("SELECT * FROM card_orders WHERE owner=? AND status='pending_checkout' ORDER BY created_at DESC",(owner,)):
-                    item=dict(r);spec=json.loads(item.pop('spec'));item['label']=spec.get('headline') or 'Greeting card';items.append(item)
-        return jsonify(ok=True,items=items,currency='GBP')
+                for r in c.execute("SELECT * FROM card_orders WHERE owner=? AND status IN ('pending_checkout','awaiting_payment') ORDER BY created_at DESC",(owner,)):
+                    item=dict(r);spec=json.loads(item.pop('spec'));item['label']=spec.get('headline') or 'Greeting card'
+                    did=item.get('design_id');rev=item.get('revision')
+                    if did and rev:
+                        item['preview']='/api/cards/%s/r%s/triptych'%(did,rev)
+                        item['faces']={'front':'/api/cards/%s/r%s/spread/front'%(did,rev),
+                                       'inside_left':'/api/cards/%s/r%s/spread/inside_left'%(did,rev),
+                                       'inside_right':'/api/cards/%s/r%s/spread/inside_right'%(did,rev),
+                                       'back':'/api/cards/%s/r%s/spread/back'%(did,rev)}
+                    items.append(item)
+            drafts=[]
+            if c.execute("SELECT 1 FROM sqlite_master WHERE name='card_designs'").fetchone():
+                for r in c.execute("SELECT id,latest FROM card_designs WHERE owner=? ORDER BY updated_at DESC LIMIT 20",(owner,)):
+                    did,rev=r["id"],r["latest"]
+                    srow=c.execute("SELECT spec FROM card_revisions WHERE design_id=? AND revision=?",(did,rev)).fetchone()
+                    spec=json.loads(srow["spec"]) if srow else {}
+                    jobs={j["kind"] for j in c.execute("SELECT kind FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND status='ready'",(owner,did,rev))}
+                    d={"design_id":did,"revision":rev,"label":spec.get("headline") or "Greeting card",
+                       "template":spec.get("template",""),
+                       "preview":("/api/cards/%s/r%s/triptych"%(did,rev) if "spread" in jobs
+                                  else ("/api/cards/%s/r%s/preview"%(did,rev) if "preview" in jobs else None)),
+                       "export_ready":"export" in jobs,"spread_ready":"spread" in jobs}
+                    if "spread" in jobs:
+                        d["faces"]={'front':'/api/cards/%s/r%s/spread/front'%(did,rev),
+                                    'inside_left':'/api/cards/%s/r%s/spread/inside_left'%(did,rev),
+                                    'inside_right':'/api/cards/%s/r%s/spread/inside_right'%(did,rev),
+                                    'back':'/api/cards/%s/r%s/spread/back'%(did,rev)}
+                    drafts.append(d)
+        return jsonify(ok=True,items=items,drafts=drafts,currency='GBP')
 
     @bp.get('/api/studio/photos/<pid>/image')
     def image(pid):

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" role="img" aria-label="OddHobb canonical glyph v5 — tangent centre">
+  <defs>
+    <clipPath id="oddhobb-boundary">
+      <circle cx="500" cy="500" r="350"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#oddhobb-boundary)"
+     fill="none" stroke="#000" stroke-width="26"
+     stroke-linecap="round" stroke-linejoin="round">
+    <path d="M360 150
+C360 285 370 410 410 500
+C430 472 458 462 476 476
+C489.9821 492 490.9821 528 477 548
+C458 566 430 560 410 500
+C388 542 366 590 360 640
+C355 712 363 785 378 850"/>
+    <path d="M640 150
+C640 285 630 410 590 500
+C570 472 542 462 524 476
+C510.0179 492 509.0179 528 523 548
+C542 566 570 560 590 500
+C612 542 634 590 640 640
+C645 712 637 785 622 850"/>
+  </g>
+  <circle cx="500" cy="500" r="350"
+          fill="none" stroke="#000" stroke-width="26"/>
+</svg>

@@ -7,7 +7,7 @@ from backend import shopify_fulfil as SF
 
 def test_card_price_fixed():
     p = C.card_price()
-    assert p["price_cents"] == 799
+    assert p["price_cents"] == 299
     assert p["price_grade"] == "FIXED"
     assert p["currency"] == "GBP"
     assert p["product_id"] == "ODD-CARD-5X7"
@@ -86,8 +86,8 @@ def test_bridge_logs_cf_ray():
 
 def test_formats_price_consistent():
     from backend import card_scenes as scenes
-    assert scenes.FORMATS["5x7"]["price_cents"] == 799
-    assert C.card_price()["price_cents"] == 799
+    assert scenes.FORMATS["5x7"]["price_cents"] == 299
+    assert C.card_price()["price_cents"] == 299
 
 
 def test_via_spoof_rejected():
@@ -169,7 +169,7 @@ def test_save_checkout_flow_mocked():
     SF.create_card_draft_order = lambda **kw: {
         "ok": True, "draft_id": "gid://shopify/DraftOrder/TEST",
         "name": "#DTEST", "invoice_url": "https://example.com/checkout/test",
-        "total": {"amount": "7.99", "currencyCode": "GBP"},
+        "total": {"amount": "2.99", "currencyCode": "GBP"},
         "store": SF.store(), "api_version": SF.API_VERSION, "sku": "ODD-CARD-5X7"}
     c = S.app.test_client()
     owner = "anon"
@@ -183,7 +183,7 @@ def test_save_checkout_flow_mocked():
         d = r.get_json()
         # test client has no X-MCP transport header → rest (spoof-proof)
         assert d["design"]["via"] == "rest"
-        assert d["product"]["price_cents"] == 799
+        assert d["product"]["price_cents"] == 299
         assert d["mcp_status"] in ("live", "degraded", "unknown")
         assert "/cards/" in d["card_url"]
         did, rev = d["design"]["id"], d["design"]["revision"]
@@ -207,7 +207,7 @@ def test_save_checkout_flow_mocked():
         assert ch["checkout_url"].startswith("https://")
         assert ch["product_url"].endswith(f"/r{rev}")
         assert ch["order"]["status"] == "awaiting_payment"
-        assert ch["order"]["price_cents"] == 799
+        assert ch["order"]["price_cents"] == 299
         # direct fulfil disabled
         r = c.post(f"/api/cards/{did}/order?owner={owner}&token=test-token",
                    json={"owner": owner, "revision": rev, "qty": 1,

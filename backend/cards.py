@@ -153,7 +153,7 @@ def mcp_status() -> str:
 CARD_PRODUCT_ID = "ODD-CARD-5X7"
 CARD_PRODUCT_NAME = "OddHobb Personalised 5×7 Greeting Card"
 CARD_PRODIGI_SKU = "CLASSIC-GRE-FEDR-7X5-BLA"
-CARD_PRICE_CENTS = 799  # £7.99 fixed — envelope included
+CARD_PRICE_CENTS = 299  # £2.99 fixed — envelope included (margin thin: verify pack pricing before scaling)
 
 
 def card_price() -> dict:

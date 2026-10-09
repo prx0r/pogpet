@@ -1561,7 +1561,7 @@ SCENES: dict[str, str] = {
 # price_cents is EST (cents) — no live Prodigi key on this box, so these are
 # placeholders to confirm against the dashboard before anything is listed.
 PRODIGI_PRODUCTS: dict[str, dict] = {
-    "greeting_card": {"label": "Greeting Card",   "price_cents": 799,  "sku": "CLASSIC-GRE-FEDR-7X5-BLA", "sku_note": "Classic 5x7 portrait, 127x178mm, verified live",   "shape": "card",   "free": False},
+    "greeting_card": {"label": "Greeting Card",   "price_cents": 299,  "sku": "CLASSIC-GRE-FEDR-7X5-BLA", "sku_note": "Classic 5x7 portrait, 127x178mm, verified live",   "shape": "card",   "free": False},
     "postcard":      {"label": "Postcard",        "price_cents": 399,  "sku_note": "A6 postcard",              "shape": "postcard", "free": False},
     "sticker":       {"label": "Sticker Sheet",   "price_cents": 499,  "sku_note": "kiss-cut sheet",           "shape": "sticker", "free": False},
     "framed_print":  {"label": "Framed Print",    "price_cents": 2499, "sku_note": "framed / canvas / metal",  "shape": "print",  "free": False},

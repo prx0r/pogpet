@@ -1,0 +1,18 @@
+import sys, json; exec(open('/workspace/projects/791a7153-8d05-4c9b-b767-8f281ad46eb0/etsy_samples/studio.py').read())
+reset()
+P = 'p06_keycap'
+hx, hy = json.load(open(OUT + 'p06_keyboard/hero.json'))
+pbt = noise_bump(mat('pbt', hexc('#2b2d31'), rough=0.62), 600, 0.1)
+load_part('p06_keyboard', 'caps', pbt, 35)
+load_part('p06_keyboard', 'plate', mat('alu', hexc('#9aa0a8'), rough=0.35, metal=1.0), 35)
+CRE = wjp_colour('#f1ead8'); GRN = noise_bump(mat('grass', hexc('#3f9a3e'), rough=0.75, coat=0.1), 2.5, 0.6); WHT = wjp_colour('#fbfbf8'); RED = wjp_colour('#d42a2a'); DG = wjp_colour('#245c33')
+parts = [load_part(P, 'cap', CRE, 35), load_part(P, 'green', GRN, 35), load_part(P, 'pin', WHT, 35), load_part(P, 'pennant', RED, 35), load_part(P, 'ball', WHT, 35), load_part(P, 'name', DG, 35)]
+place(parts, (hx, hy, 0), (0, 0, 0))
+sw = backdrop('#e9e4dc', size=2000, curve=300); sw.location = (0, 140, -10)
+world(0.3, '#ffffff')
+light_area((-200, -200, 260), size=220, energy=3.2e5, color=(1, .95, .88))
+light_area((220, -60, 140), size=160, energy=1.0e5, color=(.88, .94, 1))
+light_area((0, 220, 220), size=240, energy=1.4e5)
+cam = Vector((hx - 30, hy - 82, 88))
+camera(cam, (hx + 1, hy + 2, 7), lens=100, fstop=3.2, focus=(cam - Vector((hx, hy - 3, 8))).length)
+go(P)

@@ -1,51 +1,64 @@
-# Studio MCP Spec — prompt → Blender + Meshy + Fal
+# Studio MCP Spec — prompt → Blender + Meshy + Fal + web hands
 
-> Status: SPEC (2026-10-09). Nothing built, nothing spent.
+> Status: SPEC v2 (2026-10-09). Nothing built, nothing spent.
 > Endgame: own studio — talk to the assistant, watch it work in Blender,
-> Meshy + Fal behind explicit spend gates, prompt-to-edit.
+> Meshy + Fal behind explicit spend gates, web hands where APIs gap,
+> prompt-to-edit. Pi builds the glue; harnesses do the clicking.
 
-## 0. Bridge decision
+## 0. Stack decision (researched 2026-10-09)
 
-**`ahujasid/mcp-for-blender`** (MIT, ~30k stars) as the Blender bridge.
+**Blender hands — `blender-agent` (Rich-Siomporas, Blender Projects), run as
+a separate service, never vendored.** Self-hosted harness + browser web UI
+(`:10102`), MCP over HTTP (`:10101`) shared by any number of clients,
+OpenAI-compatible chat API, bring-your-own LLM (remote endpoint or
+in-browser WebGPU, zero key), spawns its own headless Blender, Docker image
+bundles Blender + ffmpeg, confirm gate for destructive actions, artifacts
+panel for renders/exports. It is **GPL-3.0** — talk to it over HTTP/MCP,
+do not copy its code into this repo (same law as AGPL: patterns only).
+Fallback if it disappoints: `ahujasid/mcp-for-blender` (MIT, 9 tools,
+`uvx`, safe mode) + our own harness.
 
-- MIT fits the AGPL-patterns-only law. Richer alternatives (`mcp-blender`,
-  `blend-ai`) are AGPL — reference only, never vendor.
-- Supports OpenCode as a client, `uvx` install, 9 tools
-  (`execute_blender_code`, `look`, `get_scene_info`, `generate_3d`, …),
-  `BLENDER_MCP_SAFE_MODE=1` for gated code execution, viewport screenshots
-  so the agent sees its own work.
-- Blender Foundation's official MCP server (Blender 5.1+, Llama.cpp-oriented)
-  is newer and less tooled — watch, don't build on it yet.
+**Web hands — Steel (self-hosted) + Gemini Flash CUA.** Steel core is
+Apache-2.0, Docker on our hardware ($0), captchas + persistent logins + 24h
+sessions. Eyes: Gemini 3.5 Flash computer-use ($0.01–0.08/task), Claude
+fallback for hard pages (Eden AI one-endpoint fallback chain). Rule: API
+where an API exists (Printie, Etsy, Shopify — $0.01/call beats ~$2.70 for
+a 10-min visual session); computer-use only where it doesn't.
 
-Our studio MCP stays the orchestrator; their bridge is the hands.
+**Rejected:** Hark/Handoff (closed consumer product, no builder API, no
+Blender). Admire, don't plan on it.
+
+Our studio MCP stays the orchestrator; harnesses are the hands.
 Never reimplement Blender control — wrap it with spend gates + product flow.
 
 ## 1. Target architecture
 
 ```
-Prompt
-  │
-  ▼
-Studio UI (prompt box + job queue + viewport stream + credit meter)
-  │  MCP (stdio :8799 exists, + HTTP for ChatGPT/Claude)
-  ▼
-Studio MCP server (extend backend/mcp_server.py)
-  ├── blender.*  → mcp-for-blender (uvx) → TCP :9876 → addon → bpy
+You → Studio UI → Studio MCP (orchestrator; Pi builds this glue)
+  ├── blender.*  → blender-agent service (:10101 MCP-HTTP, :10102 web UI)
+  │                 → headless Blender it spawns; screenshots back
+  ├── web.*      → Steel service (self-host) + Gemini Flash CUA
+  │                 → supplier/Etsy pages only where APIs gap
   ├── meshy.*    → backend/meshy.py (exists, key-gated, ledgered)
   ├── fal.*      → new backend/fal.py (image edit/inpaint, TTS previews)
   └── oddhobb.*  → existing (add_hook amend, render_product, premesh, prodigi)
 ```
 
-Blender needs a machine with screen/GPU — not this box (no Blender, no GPU).
-The MCP server can run anywhere; the addon needs live Blender.
+Blender + browsers need a machine with GPU — not this box (no Blender, no
+GPU). Harnesses run there (Docker); studio MCP + UI run anywhere.
 
 ## 2. MCP tool surface
 
-**Blender (passthrough, safe-mode on):**
+**Blender (via blender-agent service, confirm gate on):**
 - `blender.exec {code}` — gated code execution, confirm file/network ops
 - `blender.look {view, mode}` — screenshot back, shown in studio UI
 - `blender.scene` — compact scene summary before/after every edit
-- `blender.render {engine, out}` — Cycles stills → `data/marketing/` pack flow
+- `blender.render {engine, out}` — stills/video (ffmpeg included) → `data/marketing/`
+
+**Web (via Steel + CUA, API-gap only):**
+- `web.act {url, instruction}` — supplier/Etsy pages with no usable API
+- `web.extract {url, schema}` — structured data back (prices, order status)
+- Budget guard: flag any session projected over $1; prefer API always.
 
 **Meshy (wrapped, spend-gated — docs/meshy.md rules stay):**
 - `meshy.balance` — free, always allowed, studio header
@@ -81,21 +94,22 @@ Undo via Blender undo stack + pre-edit `.blend` snapshots for destructive ops.
 
 | Phase | Work | Done when |
 |---|---|---|
-| 0. Bench | Blender 4.2+ LTS + addon on target machine; `uvx mcp-for-blender`, safe mode on; "make a cube red" → screenshot | Prompt → Blender → screenshot loop works |
-| 1. Passthrough | `blender.*` wrappers in `backend/mcp_server.py`; render output into `data/marketing/` | Existing render flow drivable by prompt |
+| 0. Bench | GPU machine: blender-agent Docker + Steel Docker; "make a cube red" → screenshot; Steel loads a supplier page → extract a price | Prompt → Blender → screenshot AND prompt → web → data both work |
+| 1. Passthrough | `blender.*` + `web.*` wrappers in `backend/mcp_server.py`; render output into `data/marketing/` | Existing render flow + one API-gap page drivable by prompt |
 | 2. Meshy gate | `meshy.*` with balance-first + approval + ledger | First gated prototype→build, credits logged |
 | 3. Fal | `backend/fal.py`, same key/ledger discipline | Render → Fal touch-up → 2000×2000 pack |
-| 4. Studio page | Four-pane UI, approvals, credit meter, snapshots | "New keychain variant" by conversation |
+| 4. Studio page | Four-pane UI (+ web view), approvals, credit meter, snapshots | "New keychain variant" by conversation |
 
 ## 5. Costs & keys
 
-- Blender + bridge: $0 (MIT, local compute).
+- Blender harness + Steel: $0 (GPL service / Apache-2.0 self-host, local compute).
+- Web eyes: Gemini Flash CUA ~$0.01–0.08/task, Claude fallback. Budget guard $1/session.
 - Meshy: 6cr prototype + 30cr build; `/balance` free. Key LOCKED, every call needs go.
 - Fal: pay-per-call, stored key, never auto-used.
-- GPU: cost is wherever Blender + Cycles runs. Phase 0 picks the machine.
+- GPU: cost is wherever Docker harnesses run. Phase 0 picks the machine.
 
 ## 6. Open owner calls
 
-1. Which machine runs Blender (workstation vs GPU box)?
-2. mcp-for-blender confirmed, or evaluate official Blender MCP first?
+1. Which machine runs the Docker harnesses (workstation vs GPU box)?
+2. BYO LLM for blender-agent: remote endpoint or in-browser WebGPU (zero key)?
 3. Fal session budget cap (suggest $5, UI-enforced)?

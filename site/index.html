@@ -5561,7 +5561,7 @@
         if(route.tab==='cart')siteShell.cart();
         if(route.tab==='account')siteShell.account(state.owner);
         if(route.tab==='notfound'){$('panel-notfound').querySelector('.panel__inner').textContent='Page not found. Use the navigation to return to Studio or browse products.';}
-        if(route.tab==='cards'&&route.id){cardStudio.openDesign(route.id, route.revision).then(function(){var t=document.querySelector('#panel-cards details.oc-tinkerer');if(t)t.open=true;if(route.proof){cardStudio.showSpread().catch(function(){});}}).catch(function(){});}
+        if(route.tab==='cards'&&route.id){cardStudio.openDesign(route.id, route.revision).then(function(){var t=document.querySelector('#panel-cards details.oc-tinkerer');if(t)t.open=true;if(route.proof){cardStudio.showSpread().catch(function(){});}}).catch(function(e){var p=document.querySelector('#panel-cards .panel__inner');if(p&&!p.querySelector('.oc-openfail')){var n=document.createElement('p');n.className='panel__msg oc-openfail';n.textContent='That card lives on a different account — sign in as its owner, then reopen this link. ('+((e&&e.message)||'not found')+')';p.insertBefore(n,p.firstChild);}});}
         if(route.tab==='videos'&&route.id){loadVideoFeed();}
         if(route.tab==='funnier'&&duel){duel.open();}
         if(route.tab==='art'&&artShelf){artShelf.open();}

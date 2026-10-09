@@ -8,11 +8,11 @@ server is the rebuild, already live).
 ## Contents
 
 - `SKILL.md` — the instructions (from `docs/gpt-instructions.md`).
-- `references/products.json` — all 23 lines with contracts + prices.
-- `references/card-templates.json` — 7 templates with paper contracts.
+- `references/products.json` — all 23 lines with contracts + prices (verified in sync 2026-10-09).
+- `references/card-templates.json` — all 14 templates with paper contracts, incl. the 7 canonical birthday recipes (regenerated 2026-10-09).
 - Connected app: `https://mcp.oddhobb.com/mcp?token=<bridge-token>`
-  (55 tools; install doc in `docs/chatgpt.md`).
-- Actions spec: `https://oddhobb.com/openapi.json` (14 endpoints).
+  (104 tools full tier / 6 public; install doc in `docs/chatgpt.md`).
+- Actions spec: `https://oddhobb.com/openapi.json` (28 endpoints).
 
 ## Migrate / install
 

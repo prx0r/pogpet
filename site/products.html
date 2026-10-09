@@ -153,6 +153,16 @@
     <div class="gallery" id="brick2-gallery" style="margin-top:12px"></div>
   </section>
 
+  <!-- CUSTOMER MAKES: BUSTER (finished samples, Oct 2026) -->
+  <section class="line" id="customer-makes">
+    <div class="line-head">
+      <h2>Customer makes — Buster</h2>
+      <span class="badge">finished samples · every line</span>
+    </div>
+    <p>One finished version of each product starring demo dog Buster — the photos you'd put on Etsy. Swap Buster assets per order to regenerate.</p>
+    <div class="gallery" id="buster-gallery"></div>
+  </section>
+
   <!-- ETSY LISTING PACK (for sellers & makers) -->
   <section class="panel" id="etsy-pack">
     <h2>Etsy listing pack — for sellers &amp; makers</h2>
@@ -201,6 +211,14 @@
   ];
   var BRICK2 = [
     ["brick-hero-2.png","Hero 2"],["brick-hero-2.png","Portrait"]
+  ];
+  var BUSTER = [
+    ["01_brick_figure.jpg","Brick figure"],["02_brick_turntable.jpg","360 sheet"],
+    ["03_ornament.jpg","Ornament"],["04_keychain.jpg","Keychain"],
+    ["05_mug_wrap.jpg","Mug wrap"],["06_cushion.jpg","Cushion"],
+    ["10_brick_keychain.jpg","Brick keychain"],["11_croc_charm.jpg","Croc charm"],
+    ["12_couple_figurine.jpg","Couple"],["13_board_games.jpg","Board games"],
+    ["14_cribbage_pegs.jpg","Cribbage"],["15_memory_album.jpg","Album"],["16_coaster_petg.jpg","Coaster PETG"]
   ];
   var COATS = [
     ["coat-cream-hero.png","Cream"],["coat-golden-hero.png","Golden"],
@@ -251,6 +269,7 @@
   fill("brick-gallery", BRICK, "", "brick");
   fill("brick2-gallery", BRICK2, "", "brick2");
   fill("etsy-gallery", ETSY, "", "etsy", "/img/etsy/");
+  fill("buster-gallery", BUSTER, "", "buster", "/img/samples-buster/");
 
   var rows = [];
   rows.push(["3D model (GLB)","all","/img/prod/chibi-figure-hook.glb","Download dog GLB"]);

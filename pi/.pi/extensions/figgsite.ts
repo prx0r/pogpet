@@ -669,4 +669,96 @@ export default function (pi: ExtensionAPI) {
 	cardTool("figg_card_cutout","Remove a selected subject's background after an explicit crop. Uses the configured transformation service; no mesh generation.",Type.Object({owner:ownerField,photo_id:Type.String(),crop:Type.Array(Type.Number(),{minItems:4,maxItems:4})}),async(a,o)=>call("POST","/api/cards/cutouts",{owner:o,photo_id:a.photo_id,crop:a.crop}));
 	cardTool("figg_card_reserve","Reserve a card with a ready PDF. Show the estimate first. No payment or supplier dispatch.",Type.Object({owner:ownerField,design_id:Type.String(),revision:Type.Integer(),idempotency_key:Type.String(),qty:Type.Optional(Type.Integer())}),async(a,o)=>call("POST","/api/cards/"+id(a.design_id)+"/order",{owner:o,revision:a.revision,idempotency_key:a.idempotency_key,qty:a.qty??1}));
 
+	// ── 3D MODE: Blender review room (review.oddhobb.com) ──────────────
+	// When the owner says 3D mode / review room / direct the puppet, switch
+	// to these rules and reference the local Blender docs mirror plus the
+	// repo scripts below. Gallery: https://review.oddhobb.com/
+	// 3D viewer: https://review.oddhobb.com/three.html
+	const DASH = (process.env.REVIEW_DASH_BASE ?? "http://127.0.0.1:8809").replace(/\/$/, "");
+	const dashGet = async (p: string) => {
+		const res = await fetch(DASH + p);
+		const text = await res.text();
+		try { return { status: res.status, json: JSON.parse(text) }; }
+		catch { return { status: res.status, json: { raw: text.slice(0, 500) } }; }
+	};
+	const dashPost = async (p: string, body: unknown) => {
+		const res = await fetch(DASH + p, { method: "POST",
+			headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+		const text = await res.text();
+		try { return { status: res.status, json: JSON.parse(text) }; }
+		catch { return { status: res.status, json: { raw: text.slice(0, 500) } }; }
+	};
+	const MODE_3D = [
+		"3D MODE rules (activate when owner says 3D mode / review room / direct the puppet):",
+		"1. Reference the Blender docs mirror FIRST: /home/ubuntu/blender-docs/INDEX.md, then api/ (bpy.ops.import_scene, export_scene, mesh, object; bpy.types Mesh/Object/Modifier) and manual/ (modifiers, normals, glTF). Docs are Blender 4.2; box runs 5.0 — bpy.ops.wm.stl_export (not export_mesh.stl), BLENDER_EEVEE (not BLENDER_EEVEE_NEXT), layered Action channelbags (not action.fcurves).",
+		"2. Repo scripts (all headless-safe, JSON reports): freaktown scripts/brick_qc.py (manifold/bounds/materials), repair_brick.py (weld, normals, fill, scale, STL), render_brick.py (turntable+hero), render_set.py (performance), puppet_qa.py (evidence bundle).",
+		"3. QC gates before any print claim: nonmanifold==0 (or slicer-healable handful), bounds sane for the SKU, face visible from primary camera, holds still in pauses. Static meshes get whole-body acting, never faked mouths.",
+		"4. Human verdicts live at the review dash gallery (/api/assets + reviews); read them before re-rendering. New outputs appear as /shots and /models entries.",
+		"5. Meshy costs credits: quote + get explicit approval before any live generation call. Dry-run is the default.",
+	].join("\n");
+	pi.registerTool({
+		name: "figg_3d_mode",
+		label: "3D mode brief",
+		description: "Activate 3D directing mode: Blender docs map, repo scripts, QC gates, review-dash wiring. Call this first when the owner says 3D mode.",
+		promptSnippet: "figg_3d_mode() → 3D rules + Blender docs map + QC gates",
+		parameters: Type.Object({}),
+		execute: async () => ok({ mode: "3D", brief: MODE_3D }),
+	});
+	pi.registerTool({
+		name: "figg_blender_docs",
+		label: "Blender docs lookup",
+		description: "Search the local Blender docs mirror (INDEX.md) and list repo Blender scripts. Use before writing any bpy code.",
+		promptSnippet: "figg_blender_docs(query) → doc paths + script inventory",
+		parameters: Type.Object({ query: Type.Optional(Type.String()) }),
+		execute: async (_id, args) => {
+			try {
+				const q = args.query ? `?q=${encodeURIComponent(args.query)}` : "";
+				const { status, json } = await dashGet(`/api/docs${q}`);
+				return status === 200 ? ok(json) : fail(json.error ?? "docs failed", status);
+			} catch (e) { return fail(String(e)); }
+		},
+	});
+	pi.registerTool({
+		name: "figg_blender_job",
+		label: "Blender job submit",
+		description: "Queue a headless Blender job on the review dash: brick_qc, brick_render, brick_repair. Returns job id; poll status.",
+		promptSnippet: "figg_blender_job(kind, args) → job id (kinds: brick_qc, brick_render, brick_repair)",
+		parameters: Type.Object({
+			kind: Type.Union([Type.Literal("brick_qc"), Type.Literal("brick_render"), Type.Literal("brick_repair")]),
+			args: Type.Any(),
+		}),
+		execute: async (_id, args) => {
+			try {
+				const { status, json } = await dashPost("/api/jobs", { kind: args.kind, args: args.args ?? {} });
+				return status === 200 ? ok(json) : fail(json.error ?? "submit failed", status);
+			} catch (e) { return fail(String(e)); }
+		},
+	});
+	pi.registerTool({
+		name: "figg_blender_job_status",
+		label: "Blender job status",
+		description: "Poll a queued Blender job; done jobs carry the log tail (QC-REPORT / RENDER DONE / REPAIR-REPORT).",
+		promptSnippet: "figg_blender_job_status() → all jobs + statuses",
+		parameters: Type.Object({}),
+		execute: async () => {
+			try {
+				const { status, json } = await dashGet("/api/jobs");
+				return status === 200 ? ok(json) : fail(json.error ?? "jobs failed", status);
+			} catch (e) { return fail(String(e)); }
+		},
+	});
+	pi.registerTool({
+		name: "figg_review_verdicts",
+		label: "Review verdicts",
+		description: "Read the human's approve/redo verdicts and notes per asset from the review dash. Check before re-rendering anything.",
+		promptSnippet: "figg_review_verdicts() → per-asset verdicts + notes",
+		parameters: Type.Object({}),
+		execute: async () => {
+			try {
+				const { status, json } = await dashGet("/api/assets");
+				return status === 200 ? ok({ reviews: json.reviews, groups: Object.keys(json.groups || {}) }) : fail(json.error ?? "reviews failed", status);
+			} catch (e) { return fail(String(e)); }
+		},
+	});
+
 }

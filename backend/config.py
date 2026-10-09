@@ -649,6 +649,27 @@ STUDIO_LINES: dict[str, dict] = {
     },
 }
 
+# ── Printie manufacturing profiles (docs/printie-materials.md) ───────
+# Customers never pick raw materials; lines resolve to a profile.
+# ABS + Nylon profiles exist but stay unassigned until a product needs them.
+PRINTIE_PROFILES: dict[str, dict] = {
+    "display": {"material": "PLA", "use": "figures, ornaments, collectables, decorative game pieces"},
+    "durable": {"material": "PETG", "use": "racks, keychains, storage, functional accessories"},
+    "flexible": {"material": "TPU", "use": "grips, bumpers, sleeves, flexible attachments"},
+    "outdoor": {"material": "ASA", "use": "garden accessories, weather-exposed parts"},
+    "heat": {"material": "ABS", "use": "specialised heat-exposed indoor housings", "enabled": False},
+    "mechanical": {"material": "Nylon", "use": "hinges, snap-fits, load-bearing mechanisms", "enabled": False},
+}
+# Studio line -> profile. Lines absent here resolve to "display".
+LINE_PRINTIE_PROFILE: dict[str, str] = {
+    "keychain": "durable",
+    "croc_tag": "durable",
+    "brick_keychain": "durable",
+    "clog_charm": "durable",
+    "bag_charm": "flexible",
+}
+
+
 # ── design contracts (the design space for models) ────────────────────
 # Per line: what is LOCKED (functional interfaces a designer must not move),
 # the working envelope, material, and rough cost targets at makr3d + printie

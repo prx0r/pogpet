@@ -28,12 +28,9 @@
 
 ## Dash (agentcom → prx0r/dash, 3 commits UNPUSHED)
 
-- `f822f56` orders feed: Etsy + Shopify signed webhooks, tested
-  (200/dedupe/401 paths green). `cb917b0` hub vision. `3214912` task
-  queue + inbox rank/draft/approve (never sends; 2 test-caught bugs fixed).
-- Secrets: `.env` only, scans clean. Test data cleaned.
-- Setup still needed: Etsy portal endpoint + `ETSY_WEBHOOK_SECRET`;
-  Shopify custom-app webhooks + `SHOPIFY_WEBHOOK_SECRET`; restart.
+- Full session state lives in that repo's own `HANDOVER.md` — read it
+  there. Short version: orders feed + hub vision + tasks/inbox, all
+  tested green, pushes pending `gh auth login`.
 
 ## Next
 

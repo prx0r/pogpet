@@ -649,9 +649,70 @@ STUDIO_LINES: dict[str, dict] = {
     },
 }
 
-# ── Printie manufacturing profiles (docs/printie-materials.md) ───────
+# ── Manufacturing: exact process + supplier per line ──────────────────
+# JLC is a production partner, not turnkey fulfilment (docs/jlc-manufacturing.md).
+# Additive routing only: lines absent here keep existing fulfilment behaviour.
+# Grimoirer/Ochema/Glimlings folded under OddHobb until a category earns identity.
+JLC_PROCESS: dict[str, str] = {
+    "brick": "WJP Tough multicolour (quote standard WJP alongside)",
+}
+PRIMARY_SUPPLIER: dict[str, str] = {
+    "brick": "jlc",
+}
+# Lines absent here -> existing supplier fields (makr3d/print farm, paper, metal).
 # Customers never pick raw materials; lines resolve to a profile.
 # ABS + Nylon profiles exist but stay unassigned until a product needs them.
+# ── JLC manufacturing constraints (docs/jlc-design-guide.md) ──────────
+# Numbers are JLC-published starting points, not guarantees. Design with
+# margin above minimums. jlc_check() gates a geometry.mesh_report() dict.
+JLC_CONSTRAINTS: dict[str, dict] = {
+    "FDM": {"min_wall_mm": 1.2, "clearance_mm": 0.5, "tol_mm": 0.3},
+    "SLA": {"min_wall_mm": 0.8, "clearance_mm": 0.5, "tol_mm": 0.2},
+    "SLS_MJF": {"min_wall_mm": 1.0, "clearance_mm": 0.6, "tol_mm": 0.3},
+    "SLM": {"min_wall_mm": 1.5, "clearance_mm": 1.0, "tol_mm": 0.3},
+    "BJ": {"min_wall_mm": 1.5, "clearance_mm": 1.0, "tol_mm": 0.3},
+    "WJP": {"min_wall_mm": 1.0, "clearance_mm": 1.5, "tol_mm": 0.2,
+            "emboss_mm": 0.8, "max_mm": [380, 330, 230]},
+    "WJP_TOUGH": {"min_wall_mm": 0.8, "clearance_mm": 1.5, "tol_mm": 0.2,
+                  "emboss_mm": 0.8, "max_mm": [390, 340, 240]},
+    "BJ_METAL": {"min_wall_mm": 1.5, "clearance_mm": 1.0, "tol_mm": 0.3,
+                 "detail_mm": 1.0, "shrink_pct": [10, 15]},
+    "SLM_METAL": {"min_wall_mm": 1.5, "clearance_mm": 1.0, "tol_mm": 0.3,
+                  "detail_mm": 1.0},
+    "CNC": {"detail_mm": 0.1, "uv_dpi": 1440, "laser_depth_mm": [0.03, 0.1]},
+}
+
+
+def jlc_check(report: dict, process: str) -> list[str]:
+    """Verdicts for a geometry.mesh_report() dict against a JLC process.
+    min_dim is a documented proxy for wall readiness, not a wall measurement.
+    Empty list = pass."""
+    c = JLC_CONSTRAINTS.get(process)
+    if c is None:
+        return [f"unknown process {process}"]
+    out = []
+    if report.get("manifold_issues"):
+        out.append(f"manifold: {report['manifold_issues']} issues (must be 0)")
+    dims = report.get("dims_mm") or [0, 0, 0]
+    if any(d > m for d, m in zip(dims, c.get("max_mm", [10**9] * 3))):
+        out.append(f"exceeds {process} build volume {dims}mm")
+    thin = min((d for d in dims if d > 0), default=0)
+    if thin < c["min_wall_mm"]:
+        out.append(f"thinnest extent below {process} wall minimum {c['min_wall_mm']}mm (proxy — verify thin features)")
+    if process in ("BJ_METAL", "SLM_METAL", "CNC"):
+        out.append("note: small glyphs go to laser marking, not geometry (1mm detail floor)")
+    return out
+
+
+def laser_text_ok(text: str, face_mm: float) -> list[str]:
+    """Text legibility gate: 0.4mm min coloured line, 0.5mm min laser char."""
+    per = face_mm / max(1, len(text))
+    if per < 0.5:
+        return [f"text too small for laser ({per:.2f}mm/char < 0.5mm) — shorten or enlarge face"]
+    return []
+
+
+
 PRINTIE_PROFILES: dict[str, dict] = {
     "display": {"material": "PLA", "use": "figures, ornaments, collectables, decorative game pieces"},
     "durable": {"material": "PETG", "use": "racks, keychains, storage, functional accessories"},
@@ -661,6 +722,32 @@ PRINTIE_PROFILES: dict[str, dict] = {
     "mechanical": {"material": "Nylon", "use": "hinges, snap-fits, load-bearing mechanisms", "enabled": False},
 }
 # Studio line -> profile. Lines absent here resolve to "display".
+# ── Catalog tiers: flagships earn identity, fillers earn volume ──────
+# Stonedoorway Stone enters as concept (docs/stonedoorway-thesis.md).
+PRODUCT_TIERS: dict[str, str] = {
+    "brick": "flagship",
+    "ornament": "flagship",
+    "stone": "flagship",
+    "keychain": "filler",
+    "croc_tag": "filler",
+    "brick_keychain": "filler",
+    "clog_charm": "filler",
+    "bag_charm": "filler",
+}
+STUDIO_LINES["stone"] = {
+    "label": "Stonedoorway Stone V1 (concept)",
+    "product": "device",
+    "status": "concept",
+    "production": "sample_pending",
+    "etsy": "draft",
+    "price_cents": 0,
+    "theme": "flagship",
+    "fulfilment": "bench_prototype",
+    "material": "translucent resin shell + BLE core",
+    "personalization": {"method": "none", "zone": "firmware_identity", "max_chars": 0},
+}
+
+
 LINE_PRINTIE_PROFILE: dict[str, str] = {
     "keychain": "durable",
     "croc_tag": "durable",

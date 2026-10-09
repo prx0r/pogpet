@@ -6,7 +6,7 @@ clog = load_part('p07_clog', 'clog', foam, 30)
 clog.location.z = -38
 def charm():
     bpy.ops.wm.obj_import(filepath=OUT + P + '/jlc/croc-charm-chris.obj', forward_axis='Y', up_axis='Z')
-    o = bpy.context.selected_objects[0]; active(o); bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
+    o = bpy.context.selected_objects[0]; o['prod'] = P; o['part'] = 'charm'; active(o); bpy.ops.object.shade_smooth_by_angle(angle=math.radians(35))
     m = o.data.materials[0]; b = m.node_tree.nodes['Principled BSDF']
     b.inputs['Roughness'].default_value = 0.22; b.inputs['Coat Weight'].default_value = 0.7; b.inputs['Specular IOR Level'].default_value = 0.5
     for n in m.node_tree.nodes:

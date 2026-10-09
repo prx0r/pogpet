@@ -4,7 +4,7 @@ E='/workspace/projects/791a7153-8d05-4c9b-b767-8f281ad46eb0/etsy_samples'
 F=lambda w,s: ImageFont.truetype(f'{E}/listings/inter/extras/ttf/Inter-{w}.ttf',s)
 BG=(244,244,244); INK=(22,22,24); GREY=(128,128,130); S=2000
 NAMES={'p01_golf_marker':'Golf Ball Marker','p02_line_reader':'Mahjong Line Reader','p03_card_rack':'Card Hand Rack','p04_dart_stand':'Dart Stand','p05_cribbage_pegs':'Cribbage Peg Pair','p06_keycap':'Artisan Keycap','p07_croc_charm':'Croc Charm','p08_keychain':'3D Face Keychain','p09_ornament':'Christmas Ornament','p10_mini_figure':'Mini Me Figure'}
-SEL={'p01_golf_marker':['high34','top','under','high34'],'p02_line_reader':['high34','top','detail:top:0.02,0.35,0.62,1.0','high34']}
+SEL={'p07_croc_charm':['high34','top','34','high34'],'p01_golf_marker':['high34','top','under','high34'],'p02_line_reader':['high34','top','detail:top:0.02,0.35,0.62,1.0','high34']}
 PREF=['34','high34','front','top','side','back','back34','under']
 def obj(path):
     im=Image.open(path).convert('RGB'); bg=Image.new('RGB',im.size,BG)

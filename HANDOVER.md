@@ -1,3 +1,50 @@
+# HANDOVER — session 2026-10-09 (studio spec v2 · suppliers · dash hub)
+
+> **Status:** spec + research session, no Meshy/Fal spend, nothing built
+> beyond docs + dash code. Two repos touched, pushes partly pending auth.
+> Start here, then `docs/studio-mcp-spec.md`.
+
+## Studio spec (this repo)
+
+- `docs/studio-mcp-spec.md` **v2**: blender-agent as GPL service over
+  HTTP/MCP (never vendored), Steel self-host + Gemini Flash CUA for web
+  hands, API-first rule, Pi builds glue. Commits `0107a76` (pushed) +
+  `086c9c3` (**UNPUSHED** — gh auth lapsed).
+- Photocraft verdict: 2D touch-ups only (listing stills), never mesh work.
+- Blender still absent on this box; Phase 0 needs a Docker/GPU host.
+
+## Supplier decisions (oddhobb 3D)
+
+- **US pick: Printie** (US farm, flat fee incl. shipping). Intake via ONE
+  provider only — **Shippo (OAuth)** chosen over ShipStation (cost + least
+  privilege at our volume); dual intake = duplicate orders.
+- **Default: Makr3D** (UK); sample-before-list rule stands.
+- **Correction:** 3D Vikings = Riga Latvia, NOT US. Stale `(US)` label in
+  `oddhobbies/data/supplier-snapshots/prodigi-PRODUCTS.md` still needs edit.
+- Open: Printie shows "1 colour" on a 3MF upload → file carries one
+  filament; fix = paint in Orca → export 3MF *project* → re-upload
+  (config identity preserved). STL or normalized exports are 1-colour
+  by construction.
+
+## Dash (agentcom → prx0r/dash, 3 commits UNPUSHED)
+
+- `f822f56` orders feed: Etsy + Shopify signed webhooks, tested
+  (200/dedupe/401 paths green). `cb917b0` hub vision. `3214912` task
+  queue + inbox rank/draft/approve (never sends; 2 test-caught bugs fixed).
+- Secrets: `.env` only, scans clean. Test data cleaned.
+- Setup still needed: Etsy portal endpoint + `ETSY_WEBHOOK_SECRET`;
+  Shopify custom-app webhooks + `SHOPIFY_WEBHOOK_SECRET`; restart.
+
+## Next
+
+1. `gh auth login` → push pogpet (1) + dash (3).
+2. Fix Vikings `(US)` label, push.
+3. Printie account → upload 8 STLs + painted 3MFs → record quotes.
+4. Pick Docker host → studio Phase 0 bench.
+5. Next dash addon: Products (listing push) or Ads.
+
+---
+
 # HANDOVER — next session: freeze review (Dad's 5 cards await verdict)
 
 > **Status:** recipes/ + compiler + canonical six MCP tools live and

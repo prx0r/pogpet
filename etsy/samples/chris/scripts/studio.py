@@ -1,3 +1,4 @@
+import os
 # Shared Blender studio for OddHobb Etsy sample heroes. exec() this from a build script.
 import bpy, bmesh, math, os, sys
 from mathutils import Vector, Euler
@@ -260,7 +261,7 @@ def solid_text(*a, voxel=0.05, **k):
 
 def load_part(prod, part, material=None, angle=32, loc=(0, 0, 0), rot=(0, 0, 0)):
     bpy.ops.wm.obj_import(filepath=OUT + prod + '/' + part + '.obj', forward_axis='Y', up_axis='Z')
-    o = bpy.context.selected_objects[0]; o.name = part
+    o = bpy.context.selected_objects[0]; o.name = part; o['prod'] = prod; o['part'] = part
     active(o); bpy.ops.object.shade_smooth_by_angle(angle=math.radians(angle))
     if material: setmat(o, material)
     o.rotation_euler = rot; o.location = loc
@@ -274,8 +275,18 @@ def place(objs, loc=(0, 0, 0), rot=(0, 0, 0)):
 
 def is_fast(): return '--fast' in sys.argv
 def go(name, samples=110, res=(1800, 1800)):
+    if os.environ.get('VIEWS'): return views(name)
     if is_fast(): render(name + '_fast', res=(720, int(720 * res[1] / res[0])), samples=40, final=720)
+    elif os.environ.get('TILE'):
+        # strip render (sandbox kills jobs >600s): TILE=i/n, i=0 is bottom strip
+        i, n = map(int, os.environ['TILE'].split('/'))
+        sc = bpy.context.scene; sc.render.use_border = True; sc.render.use_crop_to_border = True
+        sc.render.border_min_x, sc.render.border_max_x = 0.0, 1.0
+        sc.render.border_min_y, sc.render.border_max_y = i / n, (i + 1) / n
+        render(name + '_tile%d' % i, res=res, samples=samples, final=res[0])
     else:
+        if os.environ.get('HSAMP'): samples = int(os.environ['HSAMP'])
+        if os.environ.get('HRES'): r = int(os.environ['HRES']); res = (r, int(r * res[1] / res[0]))
         render(name, res=res, samples=samples, final=1600)
         import subprocess; subprocess.run(['python3', ROOT + '/etsy_samples/post.py', OUT + name + '_raw.png', OUT + name + '.png', '1600'])
 
@@ -382,8 +393,77 @@ def walnut(c1='#3a2215', c2='#6e4a2e', scale=0.16):
 
 def load_textured(prod, part='chris', rough=0.3, coat=0.6, loc=(0, 0, 0), rot=(0, 0, 0)):
     bpy.ops.wm.obj_import(filepath=OUT + prod + '/' + part + '.obj', forward_axis='Y', up_axis='Z')
-    o = bpy.context.selected_objects[0]; active(o); bpy.ops.object.shade_smooth()
+    o = bpy.context.selected_objects[0]; o['prod'] = prod; o['part'] = part; active(o); bpy.ops.object.shade_smooth()
     for m in o.data.materials:
         b = m.node_tree.nodes.get('Principled BSDF')
         if b: b.inputs['Roughness'].default_value = rough; b.inputs['Coat Weight'].default_value = coat; b.inputs['Specular IOR Level'].default_value = 0.5
     o.location = loc; o.rotation_euler = rot; return o
+
+
+VIEW_DIRS = {'34': (35, 22), 'front': (0, 8), 'side': (90, 8), 'back': (180, 8), 'top': (0, 89), 'high34': (30, 42), 'back34': (215, 42), 'under': (0, -89)}
+def views(name, which=None, res=1400, samples=64):
+    """Plain-background product shots of the product's own meshes only (no props)."""
+    which = os.environ.get('VIEWS') or 'auto'
+    samples = int(os.environ.get('VSAMP', samples))
+    keep, seen = [], set()
+    for o in list(bpy.data.objects):
+        if o.type == 'MESH' and o.get('prod') == name and o.get('part') not in seen:
+            seen.add(o.get('part')); keep.append(o)
+    for o in list(bpy.data.objects):
+        if o not in keep: bpy.data.objects.remove(o, do_unlink=True)
+    for o in keep:
+        o.parent = None; o.location = (0, 0, 0); o.rotation_euler = (0, 0, 0); o.scale = (1, 1, 1)
+    off = {'flag_peg': (14, 0, 0)}
+    for o in keep:
+        if o.get('part') in off: o.location = off[o['part']]
+    bpy.context.view_layer.update()
+    pts = [o.matrix_world @ Vector(c) for o in keep for c in o.bound_box]
+    lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+    hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+    ctr = (lo + hi) / 2; rad = (hi - lo).length / 2
+    ext = hi - lo
+    if which == 'auto':
+        which = 'high34,top,back34,under' if ext.z < 0.2 * max(ext.x, ext.y) else '34,front,side,back'
+    which = which.split(',')
+    sc = bpy.context.scene
+    w = sc.world or bpy.data.worlds.new('W'); sc.world = w; w.use_nodes = True
+    bg = w.node_tree.nodes.get('Background'); bg.inputs[0].default_value = (1, 1, 1, 1); bg.inputs[1].default_value = 0.35
+    import subprocess
+    for v in which:
+        az, el = VIEW_DIRS[v]
+        for o in [o for o in bpy.data.objects if o.type in ('CAMERA', 'LIGHT')]: bpy.data.objects.remove(o, do_unlink=True)
+        a, e = math.radians(az), math.radians(el)
+        d = Vector((math.sin(a) * math.cos(e), -math.cos(a) * math.cos(e), math.sin(e)))
+        lens = 85; dist = rad * 4
+        up = Vector((0, 1, 0)) if abs(el) > 80 else Vector((0, 0, 1))
+        camera(ctr + d * dist, ctr, lens=lens)
+        cam = sc.camera
+        if abs(el) > 80: cam.rotation_euler = (Vector((0, 0, 0)) - d).to_track_quat('-Z', 'Y').to_euler()
+        cam.data.type = 'ORTHO'
+        bpy.context.view_layer.update()
+        mi = cam.matrix_world.inverted()
+        cp = [mi @ p for p in pts]
+        w_ = max(c.x for c in cp) - min(c.x for c in cp); h_ = max(c.y for c in cp) - min(c.y for c in cp)
+        cx = (max(c.x for c in cp) + min(c.x for c in cp)) / 2; cy = (max(c.y for c in cp) + min(c.y for c in cp)) / 2
+        cam.data.ortho_scale = max(w_, h_) * 1.18
+        cam.data.shift_x = cx / cam.data.ortho_scale; cam.data.shift_y = cy / cam.data.ortho_scale
+        cam.data.dof.use_dof = False
+        cam.data.clip_end = dist * 10; cam.data.clip_start = dist / 100
+        right = Vector((math.cos(a), math.sin(a), 0))
+        for (vec, en, sz) in ((d + right * 0.9 + Vector((0, 0, 0.9)), 1.0, 1.2), (d - right * 1.2 + Vector((0, 0, 0.2)), 0.35, 1.6), (-d + Vector((0, 0, 1.2)), 0.6, 1.0)):
+            ld = vec.normalized() * dist * 1.3
+            bpy.ops.object.light_add(type='AREA', location=ctr + ld); L = bpy.context.object
+            L.data.size = rad * 2 * sz; L.data.energy = en * (dist * 1.3) ** 2 * 0.9
+            L.rotation_euler = (-ld).to_track_quat('-Z', 'Y').to_euler()
+        sc.render.film_transparent = True
+        sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'; sc.cycles.samples = samples
+        sc.cycles.use_adaptive_sampling = True; sc.cycles.adaptive_threshold = 0.02; sc.cycles.use_denoising = False
+        sc.render.resolution_x = sc.render.resolution_y = res; sc.render.resolution_percentage = 100
+        sc.render.use_border = False
+        sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - Medium High Contrast'
+        os.makedirs(OUT + 'views', exist_ok=True)
+        raw = OUT + 'views/' + name + '_' + v + '_rgba.png'; sc.render.filepath = raw
+        sc.render.image_settings.file_format = 'PNG'; sc.render.image_settings.color_mode = 'RGBA'
+        bpy.ops.render.render(write_still=True)
+        subprocess.run(['/usr/local/bin/python3', ROOT + '/etsy_samples/flatten.py', raw, OUT + 'views/' + name + '_' + v + '.png'])
+        print('VIEW', name, v)

@@ -1,0 +1,21 @@
+<!-- OddHobb 3D CSS coin loader: drop in anywhere. size via --s -->
+<div class="oh-coin" role="img" aria-label="Loading">
+  <div class="oh-coin__spin">
+    <div class="oh-coin__face oh-coin__front"><svg viewBox="0 0 1000 1000"><defs><clipPath id="cbe9e9ea"><circle cx="500" cy="500" r="350"/></clipPath></defs><circle cx="500" cy="500" r="430" fill="#111"/><g clip-path="url(#cbe9e9ea)" fill="none" stroke="#e9e9ea" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"><path d="M360 150 C360 285 370 410 410 500 C430 472 458 462 476 476 C489.9821 492 490.9821 528 477 548 C458 566 430 560 410 500 C388 542 366 590 360 640 C355 712 363 785 378 850"/><path d="M640 150 C640 285 630 410 590 500 C570 472 542 462 524 476 C510.0179 492 509.0179 528 523 548 C542 566 570 560 590 500 C612 542 634 590 640 640 C645 712 637 785 622 850"/></g><circle cx="500" cy="500" r="350" fill="none" stroke="#e9e9ea" stroke-width="26"/></svg></div>
+    <i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i>
+    <div class="oh-coin__face oh-coin__back"><svg viewBox="0 0 1000 1000"><defs><clipPath id="cbe9e9ea"><circle cx="500" cy="500" r="350"/></clipPath></defs><circle cx="500" cy="500" r="430" fill="#111"/><g clip-path="url(#cbe9e9ea)" fill="none" stroke="#e9e9ea" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"><path d="M360 150 C360 285 370 410 410 500 C430 472 458 462 476 476 C489.9821 492 490.9821 528 477 548 C458 566 430 560 410 500 C388 542 366 590 360 640 C355 712 363 785 378 850"/><path d="M640 150 C640 285 630 410 590 500 C570 472 542 462 524 476 C510.0179 492 509.0179 528 523 548 C542 566 570 560 590 500 C612 542 634 590 640 640 C645 712 637 785 622 850"/></g><circle cx="500" cy="500" r="350" fill="none" stroke="#e9e9ea" stroke-width="26"/></svg></div>
+  </div>
+</div>
+<style>
+.oh-coin{--s:120px;--t:10px;width:var(--s);height:var(--s);perspective:600px}
+.oh-coin__spin{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:oh-spin 1.8s cubic-bezier(.45,.05,.55,.95) infinite}
+.oh-coin__face{position:absolute;inset:0;backface-visibility:hidden}
+.oh-coin__face svg{width:100%;height:100%;display:block}
+.oh-coin__front{transform:translateZ(calc(var(--t)/2 + 1px))}
+.oh-coin__back{transform:rotateY(180deg) translateZ(calc(var(--t)/2 + 1px))}
+.oh-coin i{position:absolute;inset:calc(var(--s)*.072);border-radius:50%;
+  background:repeating-conic-gradient(#2b2b2e 0 1.2deg,#0c0c0d 1.2deg 2.4deg);
+  transform:translateZ(calc(var(--t)/2 - 1px - (var(--t) - 2px)*var(--i)/13))}
+@keyframes oh-spin{0%{transform:rotateY(0) rotateX(8deg)}100%{transform:rotateY(360deg) rotateX(8deg)}}
+@media (prefers-reduced-motion:reduce){.oh-coin__spin{animation:none}}
+</style>

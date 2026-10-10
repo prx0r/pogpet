@@ -10,6 +10,11 @@
 > one curated template. The only customer-facing render outputs are FRONT,
 > INSIDE, BACK. No external agent may design layout or invoke lower-level
 > card composition tools.** Detail: `docs/cardspec.md`.
+> **Cards are cardgen-canonical:** `cardgen/` (agent-first generative:
+> index → cast → write → generate → QA → spot → upscale → impose →
+> freeze) is the card path. The PIL shelf (`backend/card_scenes.py`,
+> `recipes/birthday_*`) is the legacy deterministic fallback only — do
+> not extend it, do not add PIL templates.
 
 ## What this is
 

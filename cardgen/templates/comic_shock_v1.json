@@ -1,0 +1,63 @@
+{
+  "id": "comic_shock_v1",
+  "occasions": [
+    "birthday"
+  ],
+  "interests": [],
+  "tones": [
+    "funny"
+  ],
+  "cast": {
+    "hero": {
+      "from": [
+        "expressive",
+        "solo"
+      ],
+      "prefer": "expressive"
+    }
+  },
+  "style": "vintage pop-art comic panel, Ben-Day dots, thick ink lines, primary colours",
+  "scene": "{hero} with the same wide-eyed, open-mouthed shocked face as the reference, staring at a birthday cake covered in candles blazing like a bonfire, a firefighter's helmet tumbling past; a speech bubble from him.",
+  "copy": {
+    "title": {
+      "max": 20,
+      "examples": [
+        "BIRTHDAY SHOCK!"
+      ]
+    },
+    "bubble": {
+      "max": 14,
+      "examples": [
+        "HOW MANY?!"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Don't worry, the fire brigade are on standby. Happy birthday!"
+      ]
+    }
+  },
+  "spot": "a red fire extinguisher next to a single smoking candle",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "bubble"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people"
+}

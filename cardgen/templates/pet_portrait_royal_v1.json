@@ -1,0 +1,65 @@
+{
+  "id": "pet_portrait_royal_v1",
+  "occasions": [
+    "birthday",
+    "christmas",
+    "general"
+  ],
+  "interests": [
+    "pets"
+  ],
+  "tones": [
+    "funny"
+  ],
+  "cast": {
+    "pet": {
+      "from": [
+        "pet"
+      ]
+    }
+  },
+  "style": "Renaissance oil portrait, dark varnished background, gilt frame painted into the art",
+  "scene": "{pet} as a pompous royal in an ermine cape and a small crown, one paw on a velvet cushion.",
+  "copy": {
+    "title": {
+      "max": 28,
+      "examples": [
+        "HIS ROYAL FLUFFINESS"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "{pet_name} the Magnificent"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "By royal decree: treats for everyone."
+      ]
+    }
+  },
+  "spot": "a tiny crown resting on a velvet cushion",
+  "qa": {
+    "faces": 0,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people"
+}

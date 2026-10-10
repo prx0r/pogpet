@@ -1,0 +1,66 @@
+{
+  "id": "xmas_family_v1",
+  "occasions": [
+    "christmas"
+  ],
+  "interests": [],
+  "tones": [
+    "warm",
+    "family"
+  ],
+  "cast": {
+    "family": {
+      "from": [
+        "group",
+        "couple"
+      ],
+      "min": 2,
+      "max": 6,
+      "unnamed_ok": true
+    }
+  },
+  "style": "storybook gouache, cosy warm light, falling snow",
+  "scene": "the family from the reference photo inside a snow globe on a mantelpiece, wearing matching festive jumpers, one of them tangled in fairy lights.",
+  "copy": {
+    "title": {
+      "max": 28,
+      "examples": [
+        "MERRY CHRISTMAS"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "from the {SURNAME}s"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Wishing you a merry Christmas and a calm(er) new year."
+      ]
+    }
+  },
+  "spot": "a single bauble with a tangle of fairy lights",
+  "qa": {
+    "faces": "cast",
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people"
+}

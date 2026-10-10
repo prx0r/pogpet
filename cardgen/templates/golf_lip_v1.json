@@ -1,0 +1,71 @@
+{
+  "id": "golf_lip_v1",
+  "occasions": [
+    "birthday",
+    "fathers_day",
+    "retirement"
+  ],
+  "interests": [
+    "golf"
+  ],
+  "tones": [
+    "warm",
+    "funny"
+  ],
+  "cast": {
+    "hero": {
+      "from": [
+        "solo",
+        "full_body"
+      ],
+      "min_face_px": 120,
+      "refs_max": 3
+    }
+  },
+  "style": "hand-painted gouache editorial caricature, warm late-afternoon light, rich greens, cream sky",
+  "scene": "{hero} in a polo shirt on a golf green, leaning his whole body sideways with one leg lifted, willing his golf ball in; the ball has stopped on the very lip of the hole. Exaggerated but warm caricature.",
+  "copy": {
+    "title": {
+      "max": 28,
+      "examples": [
+        "STILL ON THE LIP.",
+        "SO CLOSE. AGAIN.",
+        "GIMME?"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Happy Birthday, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Another year older, still one roll short. Have a brilliant birthday — the next one's dropping, I promise."
+      ]
+    }
+  },
+  "spot": "a single golf ball on the lip of a hole with a tuft of grass",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people"
+}

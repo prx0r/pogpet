@@ -1,0 +1,74 @@
+{
+  "id": "band_album_group_v1",
+  "occasions": [
+    "birthday",
+    "christmas"
+  ],
+  "interests": [
+    "music"
+  ],
+  "tones": [
+    "funny",
+    "family"
+  ],
+  "cast": {
+    "hero": {
+      "from": [
+        "group"
+      ]
+    },
+    "band": {
+      "from": [
+        "group"
+      ],
+      "with": "hero",
+      "min": 1,
+      "max": 4,
+      "unnamed_ok": true
+    }
+  },
+  "style": "1970s rock LP gatefold cover, painted illustration, stage smoke, amber and magenta light, film grain",
+  "scene": "the people from the reference photo as a rock band; {hero} front and centre as the frontman holding {hero_prop} like a guitar; the others on drums, bass and keys.",
+  "copy": {
+    "title": {
+      "max": 20,
+      "examples": [
+        "THE {SURNAME}S"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "GREATEST HITS · DAD'S BIRTHDAY TOUR"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Happy birthday to our frontman. Still can't sing, still won't leave the stage."
+      ]
+    }
+  },
+  "spot": "a backstage all-access pass on a lanyard with {hero_prop} and a drumstick crossed",
+  "qa": {
+    "faces": "cast",
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people"
+}

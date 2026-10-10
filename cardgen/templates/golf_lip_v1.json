@@ -12,18 +12,8 @@
     "warm",
     "funny"
   ],
-  "cast": {
-    "hero": {
-      "from": [
-        "solo",
-        "full_body"
-      ],
-      "min_face_px": 120,
-      "refs_max": 3
-    }
-  },
   "style": "hand-painted gouache editorial caricature, warm late-afternoon light, rich greens, cream sky",
-  "scene": "{hero} in a polo shirt on a golf green, leaning his whole body sideways with one leg lifted, willing his golf ball in; the ball has stopped on the very lip of the hole. Exaggerated but warm caricature.",
+  "scene": "{hero} in a polo shirt on a golf green, leaning their whole body sideways with one leg lifted, willing their golf ball in; the ball has stopped on the very lip of the hole. Exaggerated but warm caricature.",
   "copy": {
     "title": {
       "max": 28,
@@ -67,5 +57,42 @@
     "inside_right": "live_message",
     "back": "oddhobb_mark"
   },
-  "negative": "no other text, no logos, no watermark, no border, no extra people"
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        1
+      ],
+      "expression": [
+        "happy"
+      ],
+      "min_face_px": 120,
+      "refs": 3
+    },
+    "body": {
+      "shot": [
+        "solo"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        1
+      ],
+      "framing": [
+        "waist_up",
+        "full_body"
+      ],
+      "optional": true
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "schema": "cardgen.template.v2"
 }

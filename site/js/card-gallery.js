@@ -98,7 +98,20 @@
         var viewBtn = el("button", "View card", "oc-button");
         var photosBtn = el("button", "Different photos", "oc-button");
         var buyBtn = el("button", "Buy · " + money(item.price_cents), "oc-button");
-        bar.append(viewBtn, photosBtn, buyBtn);
+        var shipSel = document.createElement("select");
+        shipSel.className = "oc-button";
+        shipSel.setAttribute("aria-label", "Delivery country");
+        [["GB", "UK delivery"], ["US", "US delivery"]].forEach(function (o) {
+          var op = document.createElement("option");
+          op.value = o[0]; op.textContent = o[1];
+          shipSel.appendChild(op);
+        });
+        try { shipSel.value = localStorage.getItem("oddhobb.country") || "GB"; } catch (e) {}
+        if (shipSel.value !== "GB" && shipSel.value !== "US") shipSel.value = "GB";
+        shipSel.onchange = function () {
+          try { localStorage.setItem("oddhobb.country", shipSel.value); } catch (e) {}
+        };
+        bar.append(viewBtn, photosBtn, buyBtn, shipSel);
         body.append(bar);
         var msg = el("div", null, "oc-card__msg");
         body.append(msg);
@@ -223,12 +236,15 @@
 
       function buy(item, msg) {
         msg.textContent = "Preparing print artwork, then delivery options…";
+        var country = "GB";
+        try { country = localStorage.getItem("oddhobb.country") || "GB"; } catch (e) {}
+        if (country !== "GB" && country !== "US") country = "GB";
         host.post("/cards/" + item.design_id + "/render",
           { revision: item.revision, kind: "export" })
           .then(function () { return waitForExport(item, 0); })
           .then(function () {
             return host.get("/cards/" + item.design_id + "/delivery?revision=" +
-              item.revision + "&country=GB").catch(function () { return null; });
+              item.revision + "&country=" + encodeURIComponent(country)).catch(function () { return null; });
           })
           .then(function (d) {
             if (!d || !d.ok || !d.value) return {};

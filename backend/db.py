@@ -198,6 +198,27 @@ CREATE TABLE IF NOT EXISTS credit_ledger (
   created_at REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_credit_ledger_owner ON credit_ledger(owner);
+-- Transformed assets: reusable generation inventory. One expensive
+-- transformation is generated once (per subject + transform + refs) and
+-- reused across recipes. Rows append-only; reuse keyed by cache_key.
+CREATE TABLE IF NOT EXISTS transformed_assets (
+  id               TEXT PRIMARY KEY,
+  owner            TEXT NOT NULL,
+  subject_id       TEXT NOT NULL DEFAULT '',
+  transform_id     TEXT NOT NULL,
+  transform_version INTEGER NOT NULL DEFAULT 1,
+  reference_hashes TEXT NOT NULL DEFAULT '[]',
+  cache_key        TEXT NOT NULL DEFAULT '',
+  artifact_key     TEXT NOT NULL DEFAULT '',
+  width            INTEGER NOT NULL DEFAULT 0,
+  height           INTEGER NOT NULL DEFAULT 0,
+  mime             TEXT NOT NULL DEFAULT '',
+  provider         TEXT NOT NULL DEFAULT '',
+  provider_ref     TEXT NOT NULL DEFAULT '',
+  qc_status        TEXT NOT NULL DEFAULT 'pending',
+  created_at       REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_transformed_cache ON transformed_assets(owner, cache_key, qc_status);
 
 -- Studio one-click orders. Checkout (Stripe/Shopify) lands later; this
 -- table is the intent + quote so nothing is lost between click and pay.

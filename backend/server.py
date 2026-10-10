@@ -4701,7 +4701,7 @@ def shopify_orders_paid():
             except Exception:  # noqa: BLE001
                 _r2.delete(r2key)
                 return
-            placed = _prodigi.create_order(_cards.CARD_PRODIGI_SKU, order["qty"],
+            placed = _prodigi.create_order(((_route or {}).get("sku") or _cards.CARD_PRODIGI_SKU), order["qty"],
                                            asset_url, recipient,
                                            shipping_method=ship_method)
         except Exception:  # noqa: BLE001

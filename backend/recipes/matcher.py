@@ -84,6 +84,8 @@ def match(brief: dict, recipes: dict[str, dict], *,
         pts, reasons = score(r, brief, seen=seen)
         ranked.append({"id": rid, "version": r.get("version", 1),
                        "score": pts, "reasons": reasons,
-                       "price_cents": (r.get("product") or {}).get("price_cents", 799)})
+                        # fallback = card truth (£2.99): recipes without a price
+                        # are cards; priced products must declare price_cents.
+                        "price_cents": (r.get("product") or {}).get("price_cents", 299)})
     ranked.sort(key=lambda m: (-m["score"], m["id"]))
     return ranked[:limit]

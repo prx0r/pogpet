@@ -27,8 +27,10 @@ ROUTES: dict[str, list[str]] = {
     # transformation library (vision/multimedia.md): providers change,
     # capabilities don't. Soul ID wins when a persistent identity exists;
     # direct Alibaba is the cheap high-volume default; fal hosts the exotic.
+    # NOTE: identity_transform has no free implementation — local.composite
+    # only previews and must never satisfy this route (pretend-success ban).
     "subject_cutout":      ["fal.birefnet"],
-    "identity_transform":  ["local.composite", "higgsfield.soul",
+    "identity_transform":  ["higgsfield.soul",
                             "alibaba.qwen_image", "fal.flux_edit"],
     "multi_reference_edit": ["alibaba.qwen_image", "fal.flux_edit"],
     "brand_style":         ["local.composite", "alibaba.qwen_image"],

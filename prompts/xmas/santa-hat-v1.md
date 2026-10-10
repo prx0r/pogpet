@@ -7,15 +7,15 @@
 
 ## prompt
 
-> Keep this exact person's likeness, face shape and expression. Put a
+> Keep this exact pet's likeness, face shape and expression. Put a
 > classic red Santa hat on their head at a jaunty angle, fluffy white trim
 > and pom-pom. Clean studio-lit portrait style, soft festive warmth,
-> plain background, no other people, no animals.
+> plain background, no other animals.
 
 ## negative
 
-Extra faces, extra hats, text, letters, watermarks, distorted features,
-different person, photorealistic skin texture change.
+Extra animals, extra hats, text, letters, watermarks, distorted features,
+different pet, photorealistic fur texture change.
 
 ## output
 

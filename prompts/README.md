@@ -5,7 +5,8 @@ graphic) in, a styled variant out, via reference image-to-image (fal.ai or
 Alibaba satisfy the capability — recipes never name providers).
 
 Contract per prompt file:
-- `id`: `area/name-vN` (matches recipe `prompt_id`)
+- `id`: `area/name-vN` (matches recipe `prompt_id`), stored at
+  `prompts/area/name-vN.md`
 - `capability`: the named capability it satisfies
 - `input`: what it takes (face cutout, graphic, …)
 - `prompt`: the exact transformation text

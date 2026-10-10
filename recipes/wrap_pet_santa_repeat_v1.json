@@ -29,12 +29,9 @@
     }
   },
   "generation": {
-    "santa_transform": {
+    "motif": {
       "kind": "transform",
-      "capability": "face_styled_variant",
-      "method": "reference_image_to_image",
-      "prompt_id": "xmas/santa-hat-v1",
-      "note": "categorised face in, santa-hat face out. Provider-agnostic: fal.ai or Alibaba satisfy the capability. Prompt text lives in prompts/, never in the recipe."
+      "transform_id": "pet_santa_v1"
     }
   },
   "renderer": {

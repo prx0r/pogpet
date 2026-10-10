@@ -17,6 +17,86 @@ from backend import db as _db
 from . import matcher as _matcher
 from . import registry as _registry
 
+
+def compile_wrap(owner: str, recipe_id: str, *, subject: dict,
+                 motif_path: str = "", mode: str = "classic",
+                 bg: tuple = (18, 56, 45),
+                 sku: str = "WRAP-1-50X70",
+                 via: str = "mcp") -> dict:
+    """Internal wrap path: subject -> recipe -> transform motif -> repeat
+    renderer -> sheet preview + print master. motif_path injects a finished
+    motif (tests, or a reused transformed asset); empty means run the
+    recipe's transform (FAILs closed without providers — honest, not mock).
+    Recipes may be drafts here: this path, not the gallery shelf, owns wrap.
+    Returns ok/manifest (local files + manifest) or ok False. Never raises."""
+    from backend.renderers import wrap as _wrap
+    owner = (owner or "anon").strip()[:80] or "anon"
+    all_recipes = _registry.load_all()
+    recipe = all_recipes.get(recipe_id, {})
+    if not recipe or recipe.get("status") not in ("draft", "published"):
+        return {"ok": False, "error": f"unknown or retired recipe {recipe_id}"}
+    if (recipe.get("product") or {}).get("type") != "wrapping_paper":
+        return {"ok": False, "error": f"{recipe_id} is not a wrapping recipe"}
+    sub = subject or {}
+    if not sub.get("id"):
+        return {"ok": False, "error": "unknown subject — check oddhobb_people first"}
+    try:
+        pool = _photo_pool(owner, sub["id"])
+    except Exception:
+        pool = []
+    need = int(((recipe.get("inputs") or {}).get("photos") or {}).get("count", 1))
+    if len(pool) < need:
+        return {"ok": False, "error": f"need {need} photos — only {len(pool)} confirmed"}
+    motif_src, motif_prov = (motif_path or "").strip(), {"source": "injected"}
+    if not motif_src:
+        gen = (recipe.get("generation") or {}).get("motif") or {}
+        tid = str(gen.get("transform_id") or "")
+        if not tid:
+            return {"ok": False, "error": "recipe names no motif transform"}
+        from backend.creative import transform as _T
+        tres = _T.transform(tid, pool[:3], owner=owner, policy="free",
+                            subject_id=sub["id"])
+        if not tres.get("ok"):
+            return {"ok": False, "error": f"motif transform failed: {tres.get('error')}"}
+        motif_src = str((tres.get("artifact") or {}).get("url") or "")
+        motif_prov = {"source": "transform", **tres.get("provenance", {})}
+        if not motif_src:
+            return {"ok": False, "error": "motif transform returned no usable artifact"}
+    try:
+        sheet = _wrap.render_sheet(motif_src, sku=sku, mode=mode, bg=tuple(bg))
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "error": f"repeat renderer failed: {e}"}
+    wid = "wrap_" + uuid.uuid4().hex[:12]
+    base = f"owners/{_cards.storage._slug(owner)}/wrap/{wid}"
+    manifest = {
+        "id": wid, "owner": owner, "recipe_id": recipe["id"],
+        "recipe_version": recipe.get("version", 1),
+        "subject_id": sub["id"], "subject_name": sub.get("name", ""),
+        "sku": sku, "sheet_px": list(sheet.size), "mode": mode,
+        "bg": list(tuple(bg)), "motif": motif_prov,
+        "price_cents": int((recipe.get("product") or {}).get("price_cents", 1499)),
+        "via": via, "created_at": time.time(),
+        "sheet": base + "/sheet.png", "preview": base + "/preview.png",
+    }
+    try:
+        dest = _cards.cached(manifest["sheet"])
+        sheet.save(dest, "PNG", optimize=True)
+        prev = _wrap.sheet_preview(sheet)
+        ppath = _cards.cached(manifest["preview"])
+        prev.save(ppath, "PNG", optimize=True)
+        manifest["local_sheet"] = str(dest)
+        manifest["local_preview"] = str(ppath)
+        try:
+            _cards.storage.put(dest, manifest["sheet"])
+            _cards.storage.put(ppath, manifest["preview"])
+            manifest["stored"] = True
+        except Exception:  # noqa: BLE001 — R2 optional offline
+            manifest["stored"] = False
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "error": f"could not write sheet: {e}"}
+    return {"ok": True, "wrap": manifest,
+            "sheet_hash": _wrap.sheet_hash(sheet)}
+
 OCCASION_TITLES = {
     "birthday": "Happy Birthday",
     "christmas": "Merry Christmas",

@@ -64,16 +64,19 @@ CANONICAL_ZONES = {
 # Stored prompt templates (art direction) for the fullbleed line.
 # The manifest says WHAT; these say HOW the art should look. Task the
 # generator (or the agent) with one of these per face; the renderer still
-# owns all live type. {headline}, {palette}, {motif}, {name} filled by caller.
+# owns all live type. Models NEVER render text: no letters, no lettering,
+# no logos — OddHobb sets a clean title space live. {palette}, {motif},
+# {name} filled by caller; {headline} kept for renderer-side type only.
 ART_DIRECTIONS = {
     "birthday_fullbleed": {
         "front": ("Front of a premium 5x7 portrait greeting card (5:7), flat artwork, "
                   "no mockup. Style: rich editorial gouache, vintage poster crossed with "
                   "a New Yorker cover. Scene: {scene}. The person from the reference photo, "
-                  "a faithful flattering likeness, painted in the same style. Large "
-                  "hand-lettered cream title: '{headline}'. Generous margins, everything "
-                  "inside a safe zone. Palette: {palette}. No other text, no logos, "
-                  "no watermark, no border, no photo collage."),
+                  "a faithful flattering likeness, painted in the same style. "
+                  "NO text, NO letters, NO lettering, NO logos, NO watermark: leave a clean "
+                  "empty title band across the upper third for live typography. Generous "
+                  "margins, everything inside a safe zone. Palette: {palette}. "
+                  "No border, no photo collage."),
         "inside_spot": ("Small elegant spot illustration of {motif}, lots of negative space, "
                         "cream paper, same gouache style and palette ({palette}), no text."),
         "back": ("Solid {palette_colour} with fine paper texture, small line-drawn {motif} "
@@ -113,9 +116,11 @@ def reference_prompt(template_id: str, *, scene: str, headline: str = "",
 
 
 # Frozen title-art vibes. The model may style lettering + mini-elements;
-# never layout, logos, or extra text.
+# never layout, logos, or extra text. Recipe-owned vibes (broadcast_sober,
+# gold_serif, festive_serif) ride the same path as the original eight.
 TITLE_VIBES = ("playful_balloons", "retro_party", "floral_soft", "comic_burst",
-               "sports_energy", "clean_luxury", "childlike_doodle", "festive_confetti")
+               "sports_energy", "clean_luxury", "childlike_doodle", "festive_confetti",
+               "broadcast_sober", "gold_serif", "festive_serif")
 
 TITLE_PROMPT = ("Create a decorative title graphic on a transparent background. "
                 "Render exactly this text: “{text}”. Style: {vibe}. "

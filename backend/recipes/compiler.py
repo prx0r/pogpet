@@ -22,12 +22,15 @@ def compile_wrap(owner: str, recipe_id: str, *, subject: dict,
                  motif_path: str = "", mode: str = "classic",
                  bg: tuple = (18, 56, 45),
                  sku: str = "WRAP-1-50X70",
+                 generation_policy: str = "free",
                  via: str = "mcp") -> dict:
     """Internal wrap path: subject -> recipe -> transform motif -> repeat
     renderer -> sheet preview + print master. motif_path injects a finished
     motif (tests, or a reused transformed asset); empty means run the
-    recipe's transform (FAILs closed without providers — honest, not mock).
-    Recipes may be drafts here: this path, not the gallery shelf, owns wrap.
+    recipe's transform under generation_policy (free default, subsidized
+    for P0-funded runs, use-mine/best with keys). Transform motifs must be
+    qc-passed — injected author motifs bypass the gate. Recipes may be
+    drafts here: this path, not the gallery shelf, owns wrap.
     Returns ok/manifest (local files + manifest) or ok False. Never raises."""
     from backend.renderers import wrap as _wrap
     owner = (owner or "anon").strip()[:80] or "anon"
@@ -54,10 +57,17 @@ def compile_wrap(owner: str, recipe_id: str, *, subject: dict,
         if not tid:
             return {"ok": False, "error": "recipe names no motif transform"}
         from backend.creative import transform as _T
-        tres = _T.transform(tid, pool[:3], owner=owner, policy="free",
+        tres = _T.transform(tid, pool[:3], owner=owner, policy=generation_policy,
                             subject_id=sub["id"])
         if not tres.get("ok"):
-            return {"ok": False, "error": f"motif transform failed: {tres.get('error')}"}
+            err = str(tres.get("error") or "")
+            if tres.get("status") == "running":
+                return {"ok": False, "status": "running",
+                        "transform_job_id": tres.get("transform_job_id"),
+                        "hint": "motif still generating — poll transform_resume, then re-run compile_wrap with the reused asset"}
+            return {"ok": False, "error": f"motif transform failed: {err}"}
+        if tres.get("qc_status") != "passed":
+            return {"ok": False, "error": "motif transform is not QC-passed yet"}
         motif_src = str((tres.get("artifact") or {}).get("url") or "")
         motif_prov = {"source": "transform", **tres.get("provenance", {})}
         if not motif_src:
@@ -221,11 +231,39 @@ def compile(owner: str, recipe_id: str, *, subject: dict,
         return {"ok": False,
                 "error": "; ".join(_matcher.eligible(recipe, brief))}
     label = _cards.display_label(sub.get("name", ""), sub.get("relationship", ""))
-    base = OCCASION_TITLES.get(str(occasion).lower(), "Hello")
-    title = f"{base}, {label}!"[:40]
     prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
             "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
-    message, copy_source = _write_copy(prof, tone, message_hint)
+    copy_block = recipe.get("copy") or {}
+    interest = (prof.get("interests") or [""])[0]
+    fmt = {"label": label, "name": sub.get("name", ""),
+           "interest": interest,
+           "occasion_title": OCCASION_TITLES.get(str(occasion).lower(), "Hello")}
+    headline_tpl = str(copy_block.get("headline") or "")
+    if headline_tpl:
+        try:
+            title = headline_tpl.format(**fmt)[:40]
+        except (KeyError, ValueError):
+            base = OCCASION_TITLES.get(str(occasion).lower(), "Hello")
+            title = f"{base}, {label}!"[:40]
+        copy_source = "recipe-copy"
+        inside_pool = copy_block.get("inside") or []
+        if isinstance(inside_pool, list) and inside_pool and not (message_hint or "").strip():
+            try:
+                message = str(inside_pool[variation % len(inside_pool)]).format(**fmt)[:240]
+            except (KeyError, ValueError):
+                message, copy_source = _write_copy(prof, tone, message_hint)
+            else:
+                copy_source = "recipe-copy"
+        else:
+            message, _src2 = _write_copy(prof, tone, message_hint)
+            if _src2 != "caller-hint":
+                copy_source = "recipe-copy"
+    else:
+        base = OCCASION_TITLES.get(str(occasion).lower(), "Hello")
+        title = f"{base}, {label}!"[:40]
+        message, copy_source = _write_copy(prof, tone, message_hint)
+    title_vibe = str(((recipe.get("typography") or {}).get("vibe"))
+                      or copy_block.get("title_vibe") or "playful_balloons")
     warnings: list[str] = []
     if unsigned:
         # Previews may go unsigned — the signer is asked once, at buy time.
@@ -235,7 +273,7 @@ def compile(owner: str, recipe_id: str, *, subject: dict,
             "photos": [{"photo_id": pid, "crop": [0, 0, 1, 1],
                         "focus": [0.5, 0.5], "cutout": ""} for pid in pids],
             "headline": title, "recipient": sub.get("name", ""), "sender": signature,
-            "inside_message": message, "title_vibe": "playful_balloons",
+            "inside_message": message, "title_vibe": title_vibe,
             "recipe_id": recipe["id"], "recipe_version": recipe.get("version", 1)}
     jobs = []
     title_note = "serif-fallback"
@@ -253,7 +291,7 @@ def compile(owner: str, recipe_id: str, *, subject: dict,
         c.commit()
     tkey, title_note = (None, "skipped")
     if title_art:
-        tkey, title_note = _attempt_title_art(title, "playful_balloons", owner, did)
+        tkey, title_note = _attempt_title_art(title, title_vibe, owner, did)
     rev = 1
     if tkey:
         try:

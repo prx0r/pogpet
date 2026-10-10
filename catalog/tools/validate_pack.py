@@ -108,10 +108,21 @@ def run(pack, do_preflight=False):
         why.append('nothing to preflight')
     gate('G04', 'preflight PASS on exact file', not why, '; '.join(why))
 
-    # G05 geometry in product.json agrees with what preflight measured
+    # G05 geometry in product.json agrees with what preflight measured.
+    # Domain split: flat_print validates trim/dpi/bleed/safe/colour/sku/hash,
+    # not volume_cm3. Default domain is manufactured_mesh (old packs unchanged).
     why = []
     g = P['geometry']
-    if os.path.isfile(rep) and psha:
+    domain = P.get('domain') or 'manufactured_mesh'
+    if domain == 'flat_print':
+        pr = P.get('print') or {}
+        if not pr.get('trim_mm') or len(pr['trim_mm']) < 2: why.append('print.trim_mm missing')
+        if not pr.get('dpi') or pr['dpi'] < 150: why.append('print.dpi < 150')
+        if pr.get('bleed_mm') is None: why.append('print.bleed_mm missing')
+        if pr.get('safe_mm') is None: why.append('print.safe_mm missing')
+        if not pr.get('colour_space'): why.append('print.colour_space missing')
+        if not pr.get('supplier_sku'): why.append('print.supplier_sku missing')
+    elif os.path.isfile(rep) and psha:
         d = json.load(open(rep))
         if d.get('print_sha256') == psha:
             md, gd = sorted(d.get('dims_mm') or []), sorted(g['dims_mm'] or [])
@@ -190,6 +201,11 @@ def run(pack, do_preflight=False):
     if len(L['spec_rows']) < lc['spec_rows_min']: why.append('spec rows')
     if not L['processing']: why.append('processing time')
     if not L['channels']: why.append('no channels')
+    mk = P.get('marketing') or {}
+    if mk:
+        clash = set(map(str.lower, mk.get('claims') or [])) & set(map(str.lower, mk.get('forbidden_claims') or []))
+        if clash: why.append(f'claims also forbidden: {sorted(clash)}')
+        if mk.get('angles') and not mk.get('positioning'): why.append('angles without positioning')
     gate('G10', 'listing copy complete', not why, '; '.join(why))
 
     # G11 listing images: PNG, big enough, declared, rendered from the exact print file
@@ -222,10 +238,30 @@ def run(pack, do_preflight=False):
     if len(A['not_for']) < 1: why.append('no not_for')
     gate('G12', 'audience defined', not why, '; '.join(why))
 
-    # G13 graph refs resolve
+    # G13 graph refs resolve (packs, templates, transforms, prompts, renderers)
     packs = set(os.listdir(f'{CAT}/packs'))
     refs = P['parents'] + [r['sku'] for r in P['graph'].get('related', [])]
     bad = [r for r in refs if r not in packs and r not in CFG['templates']]
+    gen = P.get('generative') or {}
+    if gen:
+        import sys as _sys
+        _root = os.path.dirname(CAT)
+        _sys.path.insert(0, _root)
+        try:
+            from backend.creative import transforms as _T
+            t = _T.get(str(gen.get('transform_id') or ''))
+            if not t:
+                bad.append(f"transform {gen.get('transform_id')}")
+            elif int(t.get('version', 1)) != int(gen.get('transform_version', t.get('version', 1))):
+                bad.append(f"transform {gen.get('transform_id')} version drift")
+            pid = str(gen.get('prompt_id') or '')
+            if pid and not os.path.isfile(os.path.join(_root, 'prompts', pid + '.md')):
+                bad.append(f"prompt {pid} missing")
+        except Exception as e:  # noqa: BLE001 — registry import must not break packs
+            bad.append(f'transform registry unreadable: {e}')
+        finally:
+            try: _sys.path.remove(_root)
+            except ValueError: pass
     gate('G13', 'graph refs resolve', not bad, 'unknown refs: ' + ', '.join(bad))
 
     # G14 physical sample proven

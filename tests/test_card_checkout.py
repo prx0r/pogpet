@@ -748,7 +748,7 @@ def test_canonical_caps():
 
 def test_title_prompt_guarded():
     from backend.card_scenes import title_prompt, TITLE_VIBES
-    assert len(TITLE_VIBES) == 8
+    assert len(TITLE_VIBES) == 11  # 8 originals + broadcast_sober/gold_serif/festive_serif
     p = title_prompt("Happy Birthday, Chris!", "playful_balloons")
     assert "930x320" in p and "Transparent background only" in p
     import pytest as _p

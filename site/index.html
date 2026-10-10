@@ -23,7 +23,7 @@
   </script>
   <!-- Pinterest domain verification (oddhobb.com) -->
   <meta name="p:domain_verify" content="5f31a4515d8ece964b0d7db8d0961321"/>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
     :root{
       /* Inverse store theme: black chrome + white panels · pumpkin accent */
@@ -842,12 +842,16 @@
     </div>
   </div>
 
-  <!-- left tab rail -->
-  <nav class="tabrail" id="tabrail" aria-label="Sections">
+  <!-- world logo: fixed on canvas, rail floats below it -->
+  <div class="world-logo">
     <button class="brand-btn" id="brand-btn" type="button" aria-haspopup="true" aria-expanded="false" title="Switch world"><img src="/assets/logo-3d-black.png" alt="OddHobb"></button>
     <div class="switcher" id="switcher" role="menu" aria-label="Switch world" hidden>
       <a href="/" class="here" role="menuitem"><span>oddhobb.com</span><small>you are here</small></a>
     </div>
+  </div>
+
+  <!-- left tab rail -->
+  <nav class="tabrail" id="tabrail" aria-label="Sections">
     <a class="tab active" href="/" data-route data-tab="quick">
       <span class="tab__icon">💬</span>quick
     </a>
@@ -2428,8 +2432,11 @@
       if (!b || !b.brand) return;
       window.__BRAND__ = b;
       // Page title is owned by the router.
-      var marks = document.querySelectorAll(".pogboot__mark, .greet__mark, .topbar__brand");
-      for (var i = 0; i < marks.length; i++) marks[i].innerHTML = b.brand + "<i>.</i>";
+      var marks = document.querySelectorAll(".pogboot__mark, .topbar__brand");
+      for (var i = 0; i < marks.length; i++) {
+        if (marks[i].querySelector("img")) continue; // 3D mark owns this slot
+        marks[i].innerHTML = b.brand + "<i>.</i>";
+      }
       var here = document.querySelector(".switcher a.here span");
       if (here) here.textContent = b.domain;
       var swapped = false;

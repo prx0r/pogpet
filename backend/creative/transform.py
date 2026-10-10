@@ -152,9 +152,14 @@ def transform(transform_id: str, references: list | None = None, *,
               instruction_override: str = "",
               subject_id: str = "") -> dict:
     """Run one published transform. Cache-first: same subject + transform +
-    refs reuses the passed asset without spending again. Returns ok/artifact
-    (+ job_id when running) or ok False. Never raises on bad input."""
+    refs reuses the passed asset without spending again. Paid policies:
+    "use-mine"/"best" (BYO/server key) or "subsidized" (OddHobb-funded,
+    capped by SUBSIDIZED_TRANSFORMS_PER_DAY, 0 = off). Async providers
+    return status running + transform_job_id (resume with
+    transform_resume) instead of failing. Returns ok/artifact or ok False.
+    Never raises on bad input."""
     from backend import db as _db
+    import os as _os
     owner = (owner or "anon").strip()[:80] or "anon"
     t = _reg.get(transform_id)
     if not t:
@@ -185,6 +190,7 @@ def transform(transform_id: str, references: list | None = None, *,
                 "artifact": {"id": h["id"], "url": h["artifact_key"],
                              "width": h["width"], "height": h["height"],
                              "mime": h["mime"]},
+                "qc_status": "passed",
                 "provenance": {"transform_id": t["id"],
                                "transform_version": t.get("version", 1),
                                "capability": t.get("capability", ""),
@@ -199,39 +205,184 @@ def transform(transform_id: str, references: list | None = None, *,
         "transform_id": t["id"],
         "transform_version": t.get("version", 1),
     }
+    use_policy, use_keychain = policy, keychain
+    if policy == "subsidized":
+        limit = int(_os.environ.get("SUBSIDIZED_TRANSFORMS_PER_DAY", "0") or 0)
+        if limit <= 0:
+            return {"ok": False, "error": "subsidized generation is off (SUBSIDIZED_TRANSFORMS_PER_DAY=0)"}
+        with _db.connect() as c:
+            try:
+                from datetime import date as _date
+                ok, _used = _db.spend_credit(c, owner, _date.today().isoformat(),
+                                             "transform_subsidy", limit)
+            except Exception:  # noqa: BLE001
+                ok = False
+        if not ok:
+            return {"ok": False, "error": "subsidized generation budget spent for today"}
+        use_policy, use_keychain = "best", keychain
     try:
-        if policy != "free" or route:
-            raw = _router.run(capability, payload, policy=policy,
-                              route=route, keychain=keychain)
+        if use_policy != "free" or route:
+            raw = _router.run(capability, payload, policy=use_policy,
+                              route=route, keychain=use_keychain)
         else:
             raw = _router.run_for_owner(capability, owner, payload,
-                                        policy=policy, route=route)
+                                        policy=use_policy, route=route)
     except ProviderNotConfigured as e:
         return {"ok": False, "error": str(e)}
     except Exception as e:  # noqa: BLE001 — adapter failure is data
         return {"ok": False, "error": f"{capability} failed: {e}"}
     adapter_name = str(raw.get("adapter") or "")
     norm = normalize_output(raw, adapter_name)
+    if norm["status"] == "running":
+        return _queue_job(owner, t, refs, key, subject_id, adapter_name, norm)
     if norm["status"] != "ready":
         return {"ok": False, **{k: v for k, v in norm.items() if k != "status"},
                 "status": norm["status"]}
-    artifact = norm["artifact"]
+    return _ingest(owner, t, refs, key, subject_id, adapter_name,
+                   norm["artifact"], prompt_source)
+
+
+def _queue_job(owner: str, t: dict, refs: list, key: str,
+               subject_id: str, adapter_name: str, norm: dict) -> dict:
+    """Provider returned running(job): persist and hand back a resume token.
+    compile paths poll transform_resume instead of failing."""
+    from backend import db as _db
+    import time as _time
+    import uuid as _uuid
+    jid = "tj_" + _uuid.uuid4().hex[:16]
+    with _db.connect() as c:
+        try:
+            c.execute("INSERT INTO transform_jobs (id,owner,transform_id,transform_version,subject_id,refs_json,cache_key,adapter,provider_job,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                      (jid, owner, t["id"], int(t.get("version", 1)),
+                       (subject_id or "")[:80], json.dumps(refs)[:2000], key,
+                       adapter_name, str(norm.get("job_id") or "")[:200],
+                       "running", _time.time()))
+            c.commit()
+        except Exception:  # noqa: BLE001 — table missing on old DBs
+            pass
+    return {"ok": False, "status": "running", "transform_job_id": jid,
+            "job_id": norm.get("job_id"), "adapter": adapter_name,
+            "hint": "poll transform_resume until ready, then resume the recipe"}
+
+
+def transform_resume(transform_job_id: str, owner: str = "anon",
+                     timeout_s: int = 30) -> dict:
+    """Poll one queued transform. fal adapters resolve via _result; others
+    stay running (their status APIs are unmapped). On completion the
+    artifact ingests + QCs + persists exactly like the sync path."""
+    from backend import db as _db
+    owner = (owner or "anon").strip()[:80] or "anon"
+    with _db.connect() as c:
+        try:
+            row = c.execute("SELECT * FROM transform_jobs WHERE id=? AND owner=?",
+                            (transform_job_id, owner)).fetchone()
+        except Exception:  # noqa: BLE001
+            row = None
+    if not row:
+        return {"ok": False, "error": "unknown transform job"}
+    job = dict(row)
+    if job["status"] != "running":
+        return {"ok": job["status"] == "ready", "status": job["status"],
+                "transform_job_id": job["id"]}
+    adapter_name, rid = job["adapter"], job["provider_job"]
+    if not adapter_name.startswith("fal."):
+        return {"ok": False, "status": "running",
+                "transform_job_id": job["id"],
+                "note": f"{adapter_name or 'unknown'} has no status mapping yet"}
+    try:
+        from .providers import fal as _fal
+        import os as _os
+        ad = _router._ADAPTERS.get(adapter_name)
+        endpoint = getattr(ad, "endpoint", "fal-ai/flux/dev")
+        key = ""
+        for e in (getattr(ad, "key_envs", ()) or ("FAL_KEY",)):
+            if _os.environ.get(e):
+                key = _os.environ[e]
+                break
+        if not key:
+            return {"ok": False, "status": "running",
+                    "transform_job_id": job["id"],
+                    "error": "no provider key to poll with"}
+        res = _fal._result(endpoint, rid, key, timeout_s=timeout_s)
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, "status": "running",
+                "transform_job_id": job["id"], "error": str(e)[:200]}
+    if res.get("status") not in ("COMPLETED",):
+        if res.get("status") == "FAILED":
+            with _db.connect() as c:
+                try:
+                    c.execute("UPDATE transform_jobs SET status='failed' WHERE id=?", (job["id"],))
+                    c.commit()
+                except Exception:  # noqa: BLE001
+                    pass
+            return {"ok": False, "status": "failed",
+                    "transform_job_id": job["id"]}
+        return {"ok": False, "status": "running", "transform_job_id": job["id"]}
+    imgs = ((res.get("response") or res).get("images") or [])
+    if not imgs or not imgs[0].get("url"):
+        return {"ok": False, "status": "failed", "transform_job_id": job["id"],
+                "error": "provider finished with no image"}
+    t = _reg.get(job["transform_id"])
+    if not t:
+        return {"ok": False, "status": "failed", "error": "transform retired"}
+    norm = {"status": "ready", "artifact": {"url": imgs[0]["url"]},
+            "adapter": adapter_name}
+    out = _ingest(owner, t, json.loads(job["refs_json"] or "[]"), job["cache_key"],
+                  job["subject_id"], adapter_name, norm["artifact"], "resume")
+    with _db.connect() as c:
+        try:
+            c.execute("UPDATE transform_jobs SET status=? WHERE id=?",
+                      ("ready" if out.get("ok") else "failed", job["id"]))
+            c.commit()
+        except Exception:  # noqa: BLE001
+            pass
+    out["transform_job_id"] = job["id"]
+    return out
+
+
+def _ingest(owner: str, t: dict, refs: list, key: str, subject_id: str,
+            adapter_name: str, artifact: dict, prompt_source: str,
+            raw_ref: str = "") -> dict:
+    """QC + ingest + persist a ready artifact. http(s) artifacts must land
+    in OddHobb storage (R2) before qc passes — provider URLs expire and
+    must never back a reusable asset. Local files pass directly."""
+    from backend import db as _db
     blob = _load_image_bytes(artifact)
     if blob is None:
         qc_status, facts = "pending", {}
+        asset_url = str(artifact.get("url") or artifact.get("key") or "")
     else:
         passed, facts, reason = mechanical_qc(blob, t)
-        qc_status = "passed" if passed else "failed"
         if not passed:
             return {"ok": False, "error": f"QC rejected: {reason}",
                     "facts": facts, "adapter": adapter_name}
+        qc_status = "passed"
+        asset_url = str(artifact.get("url") or artifact.get("key") or "")
+        if asset_url.startswith(("http://", "https://")):
+            try:
+                from backend import storage as _storage
+                from backend import cards as _cards
+                import tempfile as _tf
+                import time as _tt
+                aid_pre = key
+                with _tf.NamedTemporaryFile(suffix=".png", delete=False) as tf:
+                    tf.write(blob)
+                    tmp = tf.name
+                from pathlib import Path as _P
+                dest = _P(tmp)
+                r2key = f"owners/{_cards.storage._slug(owner)}/transforms/{aid_pre}.png"
+                _storage.put(dest, r2key)
+                dest.unlink(missing_ok=True)
+                asset_url = r2key
+            except Exception:  # noqa: BLE001 — storage offline
+                return {"ok": False, "error": "ingest to OddHobb storage failed; artifact not kept",
+                        "facts": facts, "adapter": adapter_name}
     import time as _time
     import uuid as _uuid
     aid = "ta_" + _uuid.uuid4().hex[:16]
-    asset = {"id": aid,
-             "url": artifact.get("url") or artifact.get("key") or "",
+    asset = {"id": aid, "url": asset_url,
              "width": facts.get("width", 0), "height": facts.get("height", 0),
-             "mime": ("image/png" if str(artifact.get("url") or "").lower().endswith(".png") else "")}
+             "mime": ("image/png" if asset_url.lower().endswith(".png") else "")}
     with _db.connect() as c:
         try:
             c.execute("INSERT INTO transformed_assets (id,owner,subject_id,transform_id,transform_version,reference_hashes,cache_key,artifact_key,width,height,mime,provider,provider_ref,qc_status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -239,8 +390,7 @@ def transform(transform_id: str, references: list | None = None, *,
                        json.dumps(refs)[:2000], key, asset["url"][:500],
                        asset["width"], asset["height"], asset["mime"],
                        adapter_name.split(".")[0] if adapter_name else "",
-                       str(raw.get("request_id") or raw.get("job_id") or "")[:120],
-                       qc_status, _time.time()))
+                       str(raw_ref)[:120], qc_status, _time.time()))
             c.commit()
         except Exception:  # noqa: BLE001 — table missing on old DBs
             pass
@@ -248,7 +398,7 @@ def transform(transform_id: str, references: list | None = None, *,
             "qc_status": qc_status,
             "provenance": {"transform_id": t["id"],
                            "transform_version": t.get("version", 1),
-                           "capability": capability,
+                           "capability": t.get("capability", ""),
                            "references_used": len(refs),
                            "prompt_source": prompt_source}}
 

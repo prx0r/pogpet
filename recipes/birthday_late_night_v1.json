@@ -1,0 +1,65 @@
+{
+  "id": "birthday_late_night_v1",
+  "version": 1,
+  "status": "draft",
+  "product": {
+    "type": "greeting_card",
+    "sku": "card_5x7",
+    "price_cents": 299
+  },
+  "eligibility": {
+    "occasion": [
+      "birthday"
+    ],
+    "subjects": [
+      "person"
+    ],
+    "min_photos": 1
+  },
+  "ranking": {
+    "interests": [],
+    "tones": [
+      "funny",
+      "dry"
+    ]
+  },
+  "inputs": {
+    "photos": {
+      "count": 1,
+      "strategy": "best_distinct_memories"
+    },
+    "title": {
+      "source": "recipe"
+    },
+    "inside_copy": {
+      "source": "recipe"
+    }
+  },
+  "copy": {
+    "headline": "{label} After Dark",
+    "inside": [
+      "Welcome back to Late Night with {name}, where the only guest is {name}.",
+      "Tonight: {name} turns older live on stage. Applause."
+    ],
+    "title_vibe": "broadcast_sober"
+  },
+  "typography": {
+    "vibe": "broadcast_sober"
+  },
+  "generation": {
+    "scene": {
+      "kind": "transform",
+      "transform_id": "late_night_subject_v1"
+    }
+  },
+  "renderer": {
+    "layout": "birthday_late_night_v1",
+    "template": "birthday_news"
+  },
+  "outputs": [
+    "front",
+    "inside",
+    "back",
+    "print_master"
+  ]
+}

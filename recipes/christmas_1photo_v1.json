@@ -8,13 +8,22 @@
     "price_cents": 299
   },
   "eligibility": {
-    "occasion": ["christmas"],
-    "subjects": ["person", "pet"],
+    "occasion": [
+      "christmas"
+    ],
+    "subjects": [
+      "person",
+      "pet"
+    ],
     "min_photos": 1
   },
   "ranking": {
     "interests": [],
-    "tones": ["warm", "funny", "festive"]
+    "tones": [
+      "warm",
+      "funny",
+      "festive"
+    ]
   },
   "inputs": {
     "photos": {
@@ -38,5 +47,15 @@
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "Merry Christmas, {label}!",
+    "inside": [
+      "Wishing {name} mince pies, mild weather, and zero flat-pack furniture. Merry Christmas!"
+    ],
+    "title_vibe": "festive_serif"
+  },
+  "typography": {
+    "vibe": "festive_serif"
+  }
 }

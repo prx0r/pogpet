@@ -219,6 +219,21 @@ CREATE TABLE IF NOT EXISTS transformed_assets (
   created_at       REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_transformed_cache ON transformed_assets(owner, cache_key, qc_status);
+-- Async transform jobs: provider returned running(job_id). Poll via
+-- transform_resume; completion ingests + QCs + persists the asset.
+CREATE TABLE IF NOT EXISTS transform_jobs (
+  id               TEXT PRIMARY KEY,
+  owner            TEXT NOT NULL,
+  transform_id     TEXT NOT NULL,
+  transform_version INTEGER NOT NULL DEFAULT 1,
+  subject_id       TEXT NOT NULL DEFAULT '',
+  refs_json        TEXT NOT NULL DEFAULT '[]',
+  cache_key        TEXT NOT NULL DEFAULT '',
+  adapter          TEXT NOT NULL DEFAULT '',
+  provider_job     TEXT NOT NULL DEFAULT '',
+  status           TEXT NOT NULL DEFAULT 'running',
+  created_at       REAL NOT NULL
+);
 
 -- Studio one-click orders. Checkout (Stripe/Shopify) lands later; this
 -- table is the intent + quote so nothing is lost between click and pay.

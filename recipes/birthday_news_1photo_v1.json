@@ -2,24 +2,27 @@
   "id": "birthday_news_1photo_v1",
   "version": 1,
   "status": "published",
-
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
     "price_cents": 299
   },
-
   "eligibility": {
-    "occasion": ["birthday"],
-    "subjects": ["person"],
+    "occasion": [
+      "birthday"
+    ],
+    "subjects": [
+      "person"
+    ],
     "min_photos": 1
   },
-
   "ranking": {
     "interests": [],
-    "tones": ["dry", "funny"]
+    "tones": [
+      "dry",
+      "funny"
+    ]
   },
-
   "inputs": {
     "photos": {
       "count": 1,
@@ -32,25 +35,38 @@
       "source": "profile"
     }
   },
-
   "generation": {
     "title_art": {
       "kind": "image",
-      "box": [285, 790, 930, 320],
+      "box": [
+        285,
+        790,
+        930,
+        320
+      ],
       "transparent": true,
       "prompt_template": "Celebration lettering reading exactly {headline}, playful party style, transparent background, no other text"
     }
   },
-
   "renderer": {
     "layout": "birthday_news_v1",
     "template": "birthday_news"
   },
-
   "outputs": [
     "front",
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "{label} Makes Headlines",
+    "inside": [
+      "Stop the presses: {name} is another year older and still dodging retirement.",
+      "Extra! Extra! {name} caught being lovely again. Happy birthday!"
+    ],
+    "title_vibe": "broadcast_sober"
+  },
+  "typography": {
+    "vibe": "broadcast_sober"
+  }
 }

@@ -7,17 +7,8 @@
   "tones": [
     "funny"
   ],
-  "cast": {
-    "hero": {
-      "from": [
-        "expressive",
-        "solo"
-      ],
-      "prefer": "expressive"
-    }
-  },
   "style": "vintage pop-art comic panel, Ben-Day dots, thick ink lines, primary colours",
-  "scene": "{hero} with the same wide-eyed, open-mouthed shocked face as the reference, staring at a birthday cake covered in candles blazing like a bonfire, a firefighter's helmet tumbling past; a speech bubble from him.",
+  "scene": "{hero} with the a wide-eyed, open-mouthed shocked face, staring at a birthday cake covered in candles blazing like a bonfire, a firefighter's helmet tumbling past; a speech bubble from them.",
   "copy": {
     "title": {
       "max": 20,
@@ -59,5 +50,28 @@
     "inside_right": "live_message",
     "back": "oddhobb_mark"
   },
-  "negative": "no other text, no logos, no watermark, no border, no extra people"
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [
+        "expressive"
+      ],
+      "min_face_px": 120,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "schema": "cardgen.template.v2"
 }

@@ -1,0 +1,175 @@
+{
+ "template": "TPL-MOOD-LAMP",
+ "tools": [
+  {
+   "name": "light_set",
+   "description": "Set the ring colour",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "rgb": {
+      "type": "string",
+      "description": "hex"
+     },
+     "brightness": {
+      "type": "string",
+      "description": "0-1"
+     },
+     "transition_ms": {
+      "type": "string",
+      "description": "int>=150"
+     }
+    }
+   }
+  },
+  {
+   "name": "light_express",
+   "description": "Show an emotion",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "emotion": {
+      "type": "string",
+      "description": "joy|calm|sad|stressed|surprised|thinking|neutral"
+     },
+     "intensity": {
+      "type": "string",
+      "description": "0-1"
+     }
+    }
+   }
+  },
+  {
+   "name": "sensor_lux",
+   "description": "Ambient light level",
+   "parameters": {
+    "type": "object",
+    "properties": {}
+   }
+  }
+ ],
+ "actions": [
+  {
+   "t": 0.1,
+   "action": "user says hi -> express(neutral, 0.6)"
+  },
+  {
+   "t": 4.0,
+   "action": "user shares good news -> express(joy, 0.9)"
+  },
+  {
+   "t": 12.0,
+   "action": "agent working on a hard task -> express(thinking, 0.6)"
+  },
+  {
+   "t": 20.0,
+   "action": "build fails three times -> express(stressed, 0.6)"
+  },
+  {
+   "t": 27.0,
+   "action": "fix lands -> express(surprised, 0.9)"
+  },
+  {
+   "t": 31.0,
+   "action": "done, winding down -> express(calm, 0.6)"
+  },
+  {
+   "t": 38.0,
+   "action": "user mentions their dog died -> express(sad, 0.6)"
+  },
+  {
+   "t": 50.0,
+   "action": "goodnight -> express(calm, 0.6)"
+  }
+ ],
+ "events": [
+  {
+   "t": 44.15,
+   "event": "ambient_changed",
+   "lux": 4.0
+  }
+ ],
+ "checks": [
+  [
+   "LED current <= cap",
+   "PASS",
+   "365 mA"
+  ],
+  [
+   "flash rate < 3 Hz (photosensitive safety)",
+   "PASS",
+   "0.04 Hz"
+  ],
+  [
+   "night brightness cap",
+   "PASS",
+   "0.12 (cap 0.12)"
+  ]
+ ],
+ "calls": [
+  {
+   "t": 0.05,
+   "call": "light.express",
+   "args": {
+    "emotion": "neutral",
+    "intensity": 0.6
+   }
+  },
+  {
+   "t": 4.0,
+   "call": "light.express",
+   "args": {
+    "emotion": "joy",
+    "intensity": 0.9
+   }
+  },
+  {
+   "t": 12.0,
+   "call": "light.express",
+   "args": {
+    "emotion": "thinking",
+    "intensity": 0.6
+   }
+  },
+  {
+   "t": 20.0,
+   "call": "light.express",
+   "args": {
+    "emotion": "stressed",
+    "intensity": 0.6
+   }
+  },
+  {
+   "t": 27.0,
+   "call": "light.express",
+   "args": {
+    "emotion": "surprised",
+    "intensity": 0.9
+   }
+  },
+  {
+   "t": 31.0,
+   "call": "light.express",
+   "args": {
+    "emotion": "calm",
+    "intensity": 0.6
+   }
+  },
+  {
+   "t": 38.0,
+   "call": "light.express",
+   "args": {
+    "emotion": "sad",
+    "intensity": 0.6
+   }
+  },
+  {
+   "t": 50.0,
+   "call": "light.express",
+   "args": {
+    "emotion": "calm",
+    "intensity": 0.6
+   }
+  }
+ ]
+}

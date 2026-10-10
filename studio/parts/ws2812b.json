@@ -1,0 +1,4 @@
+{"id": "ws2812b", "lcsc": "C2761795", "model": "WS2812B-B/T", "kind": "actuator.light.rgb",
+ "electrical": {"vdd_v": 5.0, "ma_per_channel_full": 20, "idle_ma": 1.0, "data": "single-wire 800 kHz"},
+ "footprint": "5050", "joints": 4,
+ "sim": {"class": "LedPixel", "bits": 8, "gamma": 2.6, "refresh_hz": 400}}

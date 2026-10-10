@@ -1,0 +1,3 @@
+{"id": "esp32c3", "lcsc": "C2934560", "model": "ESP32-C3-WROOM-02-N4", "kind": "mcu.wifi_ble",
+ "electrical": {"vdd_v": 3.3, "ma_avg_wifi": 80}, "footprint": "module", "joints": 19,
+ "sim": {"class": "Mcu", "transport": ["mqtt", "http", "ble"]}}

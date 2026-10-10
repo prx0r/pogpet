@@ -1,0 +1,296 @@
+{
+ "schema_version": 2,
+ "sku": "STAND-DART-MJF",
+ "name": "Personalised dart stand, dartboard relief, black PA12",
+ "family": "dart-stand",
+ "kind": "personalised",
+ "parents": [
+  "TPL-DART-STAND"
+ ],
+ "geometry": {
+  "units": "mm",
+  "dims_mm": [
+   110.0,
+   110.0,
+   53.49
+  ],
+  "volume_cm3": 64.776,
+  "faces": null,
+  "shells": 1,
+  "size_variants_mm": [],
+  "locked_features": [
+   {
+    "id": "bores",
+    "note": "3 bores 12.4 mm x 40 deep (12 mm barrel + clearance)"
+   }
+  ],
+  "source": {}
+ },
+ "manufacture": {
+  "supplier": "jlc3dp",
+  "process": "mjf",
+  "material": "PA12 nylon (MJF)",
+  "finish": "dyed black",
+  "colour": "black",
+  "hand_finish": [
+   "gold paint of relief name/arc/bands (paint.obj)"
+  ],
+  "fulfilment": "dropship",
+  "print_file": {
+   "path": "print/STAND-DART-MJF-mjf.zip",
+   "sha256": "4480b8a30a29b7e9bea51acc7c5d75af1a8b2baa9acd66e15cb38ca1670a6922",
+   "format": "mesh-zip"
+  },
+  "preflight": {
+   "report": "print/preflight.json",
+   "acknowledged": {}
+  },
+  "supplier_settings": {},
+  "lead_time_days": {
+   "build": null,
+   "ship_min": null,
+   "ship_max": null
+  }
+ },
+ "cost": {
+  "currency": "USD",
+  "print": {
+   "amount": 22.67,
+   "basis": "estimate",
+   "ref": "volume x preflight rate",
+   "date": "2026-10-10"
+  },
+  "shipping": {
+   "amount": 6.05,
+   "basis": "estimate",
+   "ref": "JLC quote 2026-10-09 for brick figures (US Global Standard); not quoted for this product",
+   "date": "2026-10-09",
+   "region": "US"
+  },
+  "packaging": {
+   "amount": 0,
+   "basis": "estimate",
+   "ref": null,
+   "date": null
+  }
+ },
+ "slots": [
+  {
+   "id": "name",
+   "type": "text",
+   "label": "Name (banner)",
+   "required": true,
+   "offered": true,
+   "validated": true,
+   "evidence": "dart/personalisation_spec.json",
+   "surface": {
+    "kind": "planar",
+    "anchor": "front banner"
+   },
+   "method": "relief",
+   "text": {
+    "font": "Fraunces-SemiBold",
+    "cap_mm": 7.4,
+    "min_cap_mm": 5.0,
+    "max_chars": 10,
+    "charset": "A-Z 0-9 '&-.!",
+    "fit": "shrink-then-fallback-then-error"
+   },
+   "profile_source": [
+    "subject.display_name"
+   ]
+  },
+  {
+   "id": "tagline",
+   "type": "text",
+   "label": "Tagline (banner)",
+   "required": false,
+   "offered": true,
+   "validated": true,
+   "evidence": "dart/personalisation_spec.json",
+   "surface": {
+    "kind": "planar",
+    "anchor": "banner under name"
+   },
+   "method": "relief",
+   "text": {
+    "font": "Fraunces-SemiBold",
+    "cap_mm": 2.4,
+    "min_cap_mm": 2.4,
+    "max_chars": 16,
+    "charset": "A-Z 0-9 '&-.!",
+    "fit": "shrink-then-fallback-then-error"
+   },
+   "profile_source": []
+  },
+  {
+   "id": "arc",
+   "type": "text",
+   "label": "Rim arc",
+   "required": false,
+   "offered": true,
+   "validated": true,
+   "evidence": "dart/personalisation_spec.json",
+   "surface": {
+    "kind": "planar",
+    "anchor": "rim front arc"
+   },
+   "method": "relief",
+   "text": {
+    "font": "Fraunces-SemiBold",
+    "cap_mm": 3.4,
+    "min_cap_mm": 3.4,
+    "max_chars": 18,
+    "charset": "A-Z 0-9 '&-.!",
+    "fit": "shrink-then-fallback-then-error"
+   },
+   "profile_source": [
+    "relation + \"'S DARTS\""
+   ]
+  },
+  {
+   "id": "base_colour",
+   "type": "colour",
+   "label": "Base colour",
+   "required": false,
+   "offered": false,
+   "validated": true,
+   "evidence": "dart/personalisation_spec.json",
+   "surface": {
+    "kind": "material"
+   },
+   "method": "dyed/printed",
+   "colour": {
+    "palette": [
+     "midnight",
+     "white",
+     "navy",
+     "racing-green",
+     "oddhobb-orange",
+     "red"
+    ],
+    "default": "midnight"
+   }
+  }
+ ],
+ "audience": {
+  "suits": [
+   "darts players",
+   "pub league regulars",
+   "man-cave owners"
+  ],
+  "occasions": [
+   "birthday",
+   "Father's Day",
+   "Christmas"
+  ],
+  "interests": [
+   "darts",
+   "pub games"
+  ],
+  "relationship_to_buyer": [
+   "dad",
+   "grandad",
+   "partner",
+   "friend"
+  ],
+  "not_for": [
+   "children under 3 (small parts)"
+  ],
+  "price_band": null,
+  "tone": [
+   "funny-affectionate"
+  ]
+ },
+ "listing": {
+  "title": "Personalised Dart Stand, Custom Name Dart Holder, 180 Club Darts Gift, Dartboard Desk Display, Gift for Darts Player Dad",
+  "price": {
+   "currency": "GBP",
+   "amount": 20.0
+  },
+  "tags": [
+   "dart stand",
+   "dart holder",
+   "darts gift",
+   "personalised darts",
+   "180 club",
+   "dart display",
+   "gift for dad",
+   "darts player gift",
+   "man cave gift",
+   "dartboard gift",
+   "pub games",
+   "custom dart stand",
+   "christmas darts"
+  ],
+  "materials": [
+   "PA12 nylon"
+  ],
+  "short": "",
+  "description": "A dartboard in relief with three 12.4 mm bores that stand your darts up between throws. A CHRIS / 180 CLUB banner and a DAD'S DARTS arc finish it off.\n\nMJF nylon, weighted wide base, 110 mm across.\n\nPersonalisation: tell us the name (up to 10 letters) and, for photo pieces, send 1-3 clear front-facing photos after ordering.",
+  "spec_rows": [
+   [
+    "Size",
+    "110 mm Ø × 53 mm"
+   ],
+   [
+    "Material",
+    "Nylon PA12 (MJF)"
+   ],
+   [
+    "Holds",
+    "3 steel or soft-tip darts"
+   ],
+   [
+    "Personalised",
+    "Name banner + arc text"
+   ]
+  ],
+  "processing": "Made to order: 5-8 working days production, then shipping",
+  "channels": [
+   "etsy",
+   "oddhobb-store"
+  ],
+  "images": [
+   {
+    "file": "01_hero.png",
+    "role": "hero",
+    "alt": "Black personalised dart stand with dartboard relief, hero"
+   },
+   {
+    "file": "02_34.png",
+    "role": "view",
+    "alt": "Black personalised dart stand with dartboard relief, 34"
+   },
+   {
+    "file": "03_front.png",
+    "role": "view",
+    "alt": "Black personalised dart stand with dartboard relief, front"
+   },
+   {
+    "file": "04_side.png",
+    "role": "view",
+    "alt": "Black personalised dart stand with dartboard relief, side"
+   },
+   {
+    "file": "05_spec.png",
+    "role": "spec",
+    "alt": "Black personalised dart stand with dartboard relief, spec"
+   }
+  ]
+ },
+ "assets": {
+  "design_parts": "etsy_samples/out/p04_dart_stand/",
+  "generator": "etsy_samples/g04_*.py",
+  "listing_source": "etsy_samples/listings/p04_dart_stand"
+ },
+ "graph": {
+  "related": [],
+  "extends_to": []
+ },
+ "samples": [],
+ "ext": {
+  "listing_images_note": "rendered in Blender from the design-part OBJs (etsy_samples/r0N_*.py), NOT from the print file; re-render from print/ and register to pass G11",
+  "note": "slot schema live-tested 2026-10-10 (43/43 tests); plates for true-perspective preview still TODO"
+ }
+}

@@ -1,0 +1,45 @@
+{
+ "source": "Meshy_AI_me_and_my_big_pet_fig_1010081949_image-to-3d-texture.glb",
+ "faces_in": 1481367,
+ "native_height": 0.12,
+ "scale": 666.6667,
+ "shells_in": 1,
+ "debris_faces_removed": 0,
+ "debris_shells_removed": 0,
+ "faces_out": 149999,
+ "before_fix": {
+  "Non-manifold Edges": "167",
+  "Bad Contiguous Edges": "0",
+  "Intersect Faces": "132",
+  "Shells": "1",
+  "Zero Faces": "0",
+  "Zero Edges": "0",
+  "Non-flat Faces": "0",
+  "Thin Faces": "21149",
+  "Sharp Edges": "59",
+  "Overhang Faces": "15472"
+ },
+ "after_fix": {
+  "Non-manifold Edges": "33",
+  "Bad Contiguous Edges": "0",
+  "Intersect Faces": "122",
+  "Shells": "3",
+  "Zero Faces": "0",
+  "Zero Edges": "0",
+  "Non-flat Faces": "5",
+  "Thin Faces": "20957",
+  "Sharp Edges": "49",
+  "Overhang Faces": "15410"
+ },
+ "volume_info": [
+  [
+   "Volume",
+   "71440.2515 m\u00b3"
+  ]
+ ],
+ "dims_mm": [
+  61.74,
+  58.76,
+  79.99
+ ]
+}

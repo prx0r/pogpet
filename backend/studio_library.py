@@ -348,6 +348,36 @@ def register(app, owner_denied):
                 return jsonify(ok=False,error=str(e)),404
         return jsonify(ok=True,removed=True)
 
+    @bp.post('/api/studio/confirm-batch')
+    def confirm_batch():
+        """Dad selected + batch upload → one tap confirms all single-face
+        shots as Dad. Multi-face photos return in needs_review (face picker);
+        faceless in no_face. Detection is data, this tap is consent."""
+        b=request.get_json(silent=True) or {}; owner=request.studio_owner
+        sid=str(b.get('subject_id') or '').strip()[:80]
+        pids=[str(p)[:80] for p in (b.get('photo_ids') or []) if isinstance(p,str)][:30]
+        if not sid or not pids:
+            return jsonify(ok=False,error='subject_id and photo_ids are required'),400
+        confirmed, needs_review, no_face, missing = [], [], [], []
+        with db.connect() as c:
+            if not _owned(c,'studio_subjects',sid,owner):
+                return jsonify(ok=False,error='Friend not found.'),404
+            for pid in pids:
+                if not _owned(c,'photos',pid,owner):
+                    missing.append(pid); continue
+                faces=[dict(f) for f in c.execute('SELECT * FROM photo_faces WHERE photo_id=?',(pid,))]
+                if len(faces) == 1:
+                    c.execute('INSERT OR IGNORE INTO photo_subjects VALUES (?,?,?,1,?)',
+                              (pid,sid,faces[0]['id'],'batch-confirm'))
+                    confirmed.append(pid)
+                elif len(faces) > 1:
+                    needs_review.append(pid)
+                else:
+                    no_face.append(pid)
+            c.commit()
+        return jsonify(ok=True,confirmed=confirmed,needs_review=needs_review,
+                       no_face=no_face,missing=missing)
+
     @bp.post('/api/studio/photos/<pid>')
     def annotate(pid):
         b=request.get_json(silent=True) or {}; owner=request.studio_owner

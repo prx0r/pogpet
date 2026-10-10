@@ -1,0 +1,79 @@
+{
+ "sku": "FIG-PETBIG-TUX-80",
+ "level": "PRINT_READY",
+ "print_sha256": "18f75b31ac53cfb808db4e85486ded0688abe43133f654a96ab540ce8d2c9014",
+ "checked_at": "2026-10-10T10:32:29",
+ "validator": "catalog/tools/validate_pack.py v1",
+ "gates": {
+  "G01": {
+   "name": "structure + schema",
+   "status": "PASS",
+   "why": ""
+  },
+  "G02": {
+   "name": "supplier + process known",
+   "status": "PASS",
+   "why": ""
+  },
+  "G03": {
+   "name": "print file present + pinned",
+   "status": "PASS",
+   "why": ""
+  },
+  "G04": {
+   "name": "preflight PASS on exact file",
+   "status": "PASS",
+   "why": ""
+  },
+  "G05": {
+   "name": "geometry matches measurement",
+   "status": "PASS",
+   "why": ""
+  },
+  "G06": {
+   "name": "manufacture spec complete",
+   "status": "PASS",
+   "why": ""
+  },
+  "G07": {
+   "name": "real supplier cost",
+   "status": "FAIL",
+   "why": "print cost is estimate, need a supplier quote; shipping cost is estimate, need a supplier quote"
+  },
+  "G08": {
+   "name": "margin >= 30% per channel",
+   "status": "FAIL",
+   "why": "no price"
+  },
+  "G09": {
+   "name": "slots offered are validated",
+   "status": "PASS",
+   "why": ""
+  },
+  "G10": {
+   "name": "listing copy complete",
+   "status": "PASS",
+   "why": ""
+  },
+  "G11": {
+   "name": "listing images from print file",
+   "status": "FAIL",
+   "why": "4 images < 5; bigpet_hero.png 1600x1600 < 2000px; bigpet_front.png 1600x1600 < 2000px; bigpet_side.png 1600x1600 < 2000px; bigpet_back.png 1600x1600 < 2000px"
+  },
+  "G12": {
+   "name": "audience defined",
+   "status": "PASS",
+   "why": ""
+  },
+  "G13": {
+   "name": "graph refs resolve",
+   "status": "PASS",
+   "why": ""
+  },
+  "G14": {
+   "name": "physical sample received + passed",
+   "status": "FAIL",
+   "why": "no passed sample with photo in samples/"
+  }
+ }
+}

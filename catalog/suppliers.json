@@ -1,0 +1,14 @@
+{
+ "jlc3dp": {
+  "name": "JLC3DP (JLCPCB 3D printing)", "site": "https://jlc3dp.com", "account": "hello@oddhobb.com",
+  "processes": ["wjp", "wjp-tough", "mjf", "sla", "slm-316l", "cnc"],
+  "ships_from": "CN", "dropship": true, "blank_box": true,
+  "upload_rules": "OBJ numbers read as mm; flat zip; WJP needs OBJ+MTL(Kd 1.0)+PNG; 6-7 MB zips proven, 14-16 MB failed; tick thin-wall risk box on figures",
+  "shipping_known": {"US standard": "USD 5.86-7.19, 8-13 business days (quotes 2026-10-09)", "US UPS Express Saver DDP": "about USD 26.55, 2-4 business days"}
+ },
+ "printie": {
+  "name": "Printie", "site": null, "account": null,
+  "processes": ["fdm"], "ships_from": "US", "dropship": true,
+  "upload_rules": "3MF/STL, PLA/PETG/TPU/ASA/CF, AMS up to 8 colours; never for face products"
+ }
+}

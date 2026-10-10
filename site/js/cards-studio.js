@@ -159,9 +159,8 @@
       recipient.value=ctx.subject?ctx.subject.name:'';paintPhotos();paintCropChoices();
     });
     async function openDesign(id, revision){await open();await refresh();await loadSaved(id, revision);}
-    if(window.OddHobbViralCards&&panel){
-      try{window.OddHobbViralCards.mount(panel,host);}catch(e){}
-    }
+    /* P0: viral-format browser is NOT mounted on the customer Card flow.
+       OddHobbViralCards stays in the repo for a separate /ideas page. */
     return {open:open,refresh:refresh,videos:videos,openDesign:openDesign,showSpread:showSpread};
   };
 })();

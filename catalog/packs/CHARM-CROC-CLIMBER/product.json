@@ -1,0 +1,129 @@
+{
+ "schema_version": 2,
+ "sku": "CHARM-CROC-CLIMBER",
+ "name": "Croc charm: hole climber",
+ "family": "croc-charm",
+ "kind": "personalised",
+ "parents": [
+  "TPL-CROC-G07"
+ ],
+ "geometry": {
+  "units": "mm",
+  "dims_mm": null,
+  "volume_cm3": null,
+  "faces": null,
+  "shells": 1,
+  "size_variants_mm": [],
+  "locked_features": [
+   {
+    "id": "stem",
+    "note": "4.2 mm stem + 6.8 mm stopper (Crocs hole fit); never change"
+   },
+   {
+    "id": "face_max",
+    "note": "face <= 26 mm for this line"
+   }
+  ],
+  "source": {}
+ },
+ "manufacture": {
+  "supplier": "jlc3dp",
+  "process": "wjp-tough",
+  "material": "Full Color Tough Resin",
+  "finish": "Oil Spraying (clear gloss)",
+  "colour": "Multicolor (texture)",
+  "hand_finish": [],
+  "fulfilment": "dropship",
+  "print_file": {
+   "path": "print/CHARM-CROC-CLIMBER-wjp-tough.zip",
+   "sha256": "e2eb3f08cd00e995588e831d3e606a3adecce4f06e4d90436acb90109e834ad4",
+   "format": "obj-mtl-png-zip"
+  },
+  "preflight": {
+   "report": "print/preflight.json",
+   "acknowledged": {}
+  },
+  "supplier_settings": {},
+  "lead_time_days": {
+   "build": 5,
+   "ship_min": 8,
+   "ship_max": 13
+  }
+ },
+ "cost": {
+  "currency": "USD",
+  "print": {
+   "amount": 6.91,
+   "basis": "estimate",
+   "ref": "JLC WJP floor price seen 2026-10-09",
+   "date": "2026-10-09"
+  },
+  "shipping": {
+   "amount": 6.05,
+   "basis": "estimate",
+   "ref": "JLC quote 2026-10-09 for brick figures (US Global Standard); not quoted for this product",
+   "date": "2026-10-09",
+   "region": "US"
+  },
+  "packaging": {
+   "amount": 0,
+   "basis": "estimate",
+   "ref": null,
+   "date": null
+  }
+ },
+ "slots": [
+  {
+   "id": "subject",
+   "type": "mesh",
+   "label": "Your face / pet",
+   "required": true,
+   "offered": true,
+   "validated": false,
+   "evidence": null,
+   "surface": {
+    "kind": "whole-model"
+   },
+   "method": "subject-mesh",
+   "preview": "mesh-render"
+  }
+ ],
+ "audience": {
+  "suits": [],
+  "occasions": [],
+  "interests": [],
+  "relationship_to_buyer": [],
+  "not_for": [],
+  "price_band": null,
+  "tone": []
+ },
+ "listing": {
+  "title": "",
+  "price": {
+   "currency": "GBP",
+   "amount": null
+  },
+  "tags": [],
+  "materials": [],
+  "short": "",
+  "description": "",
+  "spec_rows": [],
+  "processing": "",
+  "channels": [
+   "etsy",
+   "oddhobb-store"
+  ],
+  "images": []
+ },
+ "assets": {},
+ "graph": {
+  "related": [],
+  "extends_to": [
+   "golf, footy and pet charm sets"
+  ]
+ },
+ "samples": [],
+ "ext": {
+  "note": "dims/volume fill in from preflight"
+ }
+}

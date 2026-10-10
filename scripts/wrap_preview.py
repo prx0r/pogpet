@@ -100,6 +100,11 @@ def main() -> int:
             fx, fy, fw, fh = (float(v) for v in args.face.split(","))
         except ValueError:
             raise SystemExit("--face must be 'x,y,w,h'")
+        src_img = Image.open(Path(args.photo))
+        # normalized (DB contract) or pixels — both accepted
+        if max(abs(fx), abs(fy), abs(fw), abs(fh)) <= 1.001:
+            fx, fy, fw, fh = (fx * src_img.width, fy * src_img.height,
+                              fw * src_img.width, fh * src_img.height)
         # scale box from original px into the square-cropped src
         side = min(Image.open(Path(args.photo)).size)
         ox = (Image.open(Path(args.photo)).width - side) // 2

@@ -1,0 +1,148 @@
+{
+ "zip": "FIG-PETBIG-TUX-80-wjp.zip",
+ "process": "wjp",
+ "verdict": "PASS_WITH_WARNINGS",
+ "volume_cm3": 71.44,
+ "cost_estimate_usd": 58.58,
+ "dims_mm": [
+  61.74,
+  58.76,
+  79.99
+ ],
+ "checks": [
+  {
+   "check": "zip size",
+   "status": "WARN",
+   "value": "8.5 MB",
+   "note": "limit 12.0 MB (6-7 MB proven, 14-16 MB failed)"
+  },
+  {
+   "check": "zip flat (files at root)",
+   "status": "PASS",
+   "value": [
+    "bigpet-80.obj",
+    "bigpet-80.mtl",
+    "bigpet-80.png"
+   ],
+   "note": ""
+  },
+  {
+   "check": "one OBJ",
+   "status": "PASS",
+   "value": [
+    "bigpet-80.obj"
+   ],
+   "note": ""
+  },
+  {
+   "check": "MTL Kd = 1.0 (else prints dark)",
+   "status": "PASS",
+   "value": [
+    [
+     "1.0",
+     "1.0",
+     "1.0"
+    ]
+   ],
+   "note": ""
+  },
+  {
+   "check": "map_Kd texture linked",
+   "status": "PASS",
+   "value": [
+    "bigpet-80.png"
+   ],
+   "note": ""
+  },
+  {
+   "check": "texture size",
+   "status": "PASS",
+   "value": "2048x2048 RGB",
+   "note": "2048-8192"
+  },
+  {
+   "check": "OBJ has UVs (vt)",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "face count",
+   "status": "PASS",
+   "value": 149822,
+   "note": ""
+  },
+  {
+   "check": "dimensions (OBJ units = mm)",
+   "status": "PASS",
+   "value": [
+    61.74,
+    58.76,
+    79.99
+   ],
+   "note": "JLC reads OBJ numbers as mm"
+  },
+  {
+   "check": "stands flat (contact patch)",
+   "status": "PASS",
+   "value": "58.1 x 58.8 mm at z=0",
+   "note": ""
+  },
+  {
+   "check": "open edges (welded)",
+   "status": "PASS",
+   "value": 0,
+   "note": ""
+  },
+  {
+   "check": "non-manifold edges (welded)",
+   "status": "PASS",
+   "value": 0,
+   "note": "WJP tolerates a few; JLC reviewer may query"
+  },
+  {
+   "check": "watertight",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "winding consistent",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "shells (no floaters)",
+   "status": "PASS",
+   "value": "1 shells, 0 debris",
+   "note": ""
+  },
+  {
+   "check": "resin volume",
+   "status": "PASS",
+   "value": "71.4 cm3",
+   "note": ""
+  },
+  {
+   "check": "thin walls < 0.8 mm",
+   "status": "WARN",
+   "value": "20957",
+   "note": "JLC flags thin walls on every figure; tick the risk box, check limbs/ears/tails"
+  },
+  {
+   "check": "self-intersections",
+   "status": "WARN",
+   "value": "122",
+   "note": "overlapping shells fuse in WJP"
+  },
+  {
+   "check": "cost estimate (JLC, qty 1)",
+   "status": "INFO",
+   "value": "$58.58",
+   "note": "~$0.82/cm3, floor $6.91; quote is final"
+  }
+ ],
+ "print_sha256": "18f75b31ac53cfb808db4e85486ded0688abe43133f654a96ab540ce8d2c9014",
+ "ran_at": "2026-10-10T10:17:02"
+}

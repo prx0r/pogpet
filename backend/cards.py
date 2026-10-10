@@ -71,6 +71,15 @@ def init():
             c.execute("ALTER TABLE card_orders ADD COLUMN recipient_json TEXT NOT NULL DEFAULT ''")
         if "shipping_method" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
             c.execute("ALTER TABLE card_orders ADD COLUMN shipping_method TEXT NOT NULL DEFAULT 'Standard'")
+        if "delivery_option_id" not in {r[1] for r in c.execute("PRAGMA table_info(card_orders)")}:
+            c.execute("ALTER TABLE card_orders ADD COLUMN delivery_option_id TEXT NOT NULL DEFAULT ''")
+        c.execute("""CREATE TABLE IF NOT EXISTS delivery_options (
+ id TEXT PRIMARY KEY, owner TEXT NOT NULL, design_id TEXT NOT NULL,
+ revision INTEGER NOT NULL, country TEXT NOT NULL DEFAULT 'GB',
+ supplier TEXT NOT NULL, sku TEXT NOT NULL, shipping_method TEXT NOT NULL,
+ ship_cents INTEGER NOT NULL DEFAULT 0, charge_cents INTEGER NOT NULL DEFAULT 0,
+ arrival_from TEXT NOT NULL DEFAULT '', arrival_to TEXT NOT NULL DEFAULT '',
+ carrier TEXT NOT NULL DEFAULT '', created_at REAL NOT NULL)""")
         c.execute("UPDATE card_designs SET storage_owner=owner WHERE storage_owner=''")
         c.execute("UPDATE card_jobs SET status='failed',error='Render interrupted. Retry this revision.' WHERE status IN ('queued','running')")
         c.commit()
@@ -147,6 +156,48 @@ def mcp_status() -> str:
     return v
 
 
+def save_delivery_option(owner, design_id, revision, country, route,
+                         charge_cents, arrival_from, arrival_to) -> dict:
+    """Persist one quoted route behind an opaque id. The UI and checkout
+    pass only the id; supplier identity never leaves the server."""
+    oid = "do_" + uuid.uuid4().hex[:16]
+    with db.connect() as c:
+        c.execute("INSERT INTO delivery_options (id,owner,design_id,revision,country,supplier,sku,shipping_method,ship_cents,charge_cents,arrival_from,arrival_to,carrier,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                  (oid, owner, design_id, revision, country, route["supplier"],
+                   route.get("sku", ""), route.get("shipping_method", "Standard"),
+                   int(round(route.get("supplier_ship", 0) * 100)), charge_cents,
+                   arrival_from, arrival_to, route.get("carrier", ""), time.time()))
+        c.commit()
+    return {"id": oid}
+
+
+def get_delivery_option(owner, oid, design_id=None, revision=None):
+    """Load a saved route if it belongs to this owner (and optionally this
+    design+revision). None when unknown, foreign, or mismatched."""
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM delivery_options WHERE id=? AND owner=?",
+                        (oid, owner)).fetchone()
+    if not row:
+        return None
+    d = dict(row)
+    if design_id is not None and (d["design_id"] != design_id or int(d["revision"]) != int(revision)):
+        return None
+    return d
+
+
+def resolve_delivery_choice(owner, body, did, rev):
+    """Validate an incoming delivery_option_id against this design+revision.
+    Returns (shipping_method, delivery_option_id). Unknown option → 400.
+    Absent option → Standard default (legacy callers keep working)."""
+    dopt = str((body or {}).get("delivery_option_id") or "").strip()[:32]
+    if not dopt:
+        return "Standard", ""
+    route = get_delivery_option(owner, dopt, did, rev)
+    if route is None:
+        raise CardError("unknown delivery option for this card", 400)
+    return route["shipping_method"], dopt
+
+
 # ── card P0 product truth ──────────────────────────────────────────
 # One hidden Shopify product, one fixed retail price. Prodigi cost is an
 # internal margin variable — the customer never sees EST.
@@ -158,7 +209,7 @@ CARD_PRICE_CENTS = 299  # £2.99 fixed — envelope included (margin thin: verif
 
 def card_price() -> dict:
     """Fixed retail truth for cards. Reads PRODIGI_PRODUCTS when present
-    so config stays the source, but never floats — falls back to £7.99."""
+    so config stays the source, but never floats — falls back to £2.99."""
     try:
         prod = (config.PRODIGI_PRODUCTS.get("greeting_card") or {})
         cents = int(prod.get("price_cents") or CARD_PRICE_CENTS)
@@ -171,6 +222,14 @@ def card_price() -> dict:
             "price_cents": cents, "price": f"£{cents/100:.2f}",
             "currency": "GBP", "price_grade": "FIXED",
             "prodigi_sku": CARD_PRODIGI_SKU}
+
+
+def public_price() -> dict:
+    """Customer-safe price: fixed £2.99 truth with no supplier internals.
+    prodigi_sku stays server-side — the shelf never leaks suppliers."""
+    p = card_price()
+    return {k: p[k] for k in ("product_id", "name", "price_cents",
+                              "price", "currency", "price_grade") if k in p}
 
 
 def card_url_for(did: str, rev: int | None = None) -> str:
@@ -940,15 +999,24 @@ def face_box(owner, pid):
         try:
             rows = c.execute("SELECT box FROM photo_faces WHERE photo_id=?",
                              (pid,)).fetchall()
+            dims = c.execute("SELECT width, height FROM photos WHERE id=?",
+                             (pid,)).fetchone()
         except Exception:
             return []
+    w = float(dict(dims).get("width") or 0) if dims else 0
+    h = float(dict(dims).get("height") or 0) if dims else 0
     boxes = []
     for r in rows:
         try:
             import json as _j
             b = _j.loads(r["box"]) if isinstance(r["box"], str) else list(r["box"])
             if len(b) == 4:
-                boxes.append([float(v) for v in b])
+                b = [float(v) for v in b]
+                # belt-and-braces: table contract is normalized, but pixel
+                # rows have existed — normalize against photo dims
+                if max(abs(v) for v in b) > 1.001 and w > 0 and h > 0:
+                    b = [b[0] / w, b[1] / h, b[2] / w, b[3] / h]
+                boxes.append(b)
         except (ValueError, TypeError):
             continue
     return boxes
@@ -964,6 +1032,104 @@ def crop_keeps_face(crop, faces) -> bool:
         if fw * fh > 0 and inter / (fw * fh) >= 0.5:
             return True
     return False
+
+
+def _compiler_shelf(owner, photos, who, occasion="birthday"):
+    """Shelf via matcher+compiler (same engine as oddhobb_make).
+
+    Canonical P0 path: subject → brief → match published recipes →
+    compile up to 6 finished buyable revisions. The shelf never invents
+    headlines, never hand-builds templates, never picks photos itself —
+    the compiler owns all of that. Returns [(did, rev, headline,
+    recipient, template, photos_used)]. Empty when nothing resolvable.
+    """
+    from backend import subjects as _subjects
+    from backend.recipes import compiler as _comp
+    from backend.recipes import matcher as _match
+    from backend.recipes import registry as _reg
+    subject = {}
+    with db.connect() as c:
+        for p in photos:
+            try:
+                hit = _subjects.profile_for_photo(c, owner, p["id"])
+            except Exception:
+                continue
+            sub = (hit or {}).get("subject") or {}
+            if sub.get("id"):
+                prof = (hit.get("profile") or {})
+                inner = prof.get("profile", {}) if isinstance(
+                    prof.get("profile"), dict) else {}
+                subject = {"id": sub["id"], "name": sub.get("name", ""),
+                           "relationship": prof.get("relationship", ""),
+                           "interests": inner.get("interests", []),
+                           "memories": inner.get("memories", [])}
+                break
+    if not subject.get("id"):
+        return []
+    try:
+        pool = _comp._photo_pool(owner, subject["id"])
+    except Exception:
+        return []
+    if not pool:
+        return []
+    try:
+        reg = _reg.published()
+    except Exception:
+        return []
+    brief = _comp.build_brief(subject=subject, occasion=occasion, vibe="",
+                              photo_count=len(pool))
+    matches = []
+    for m in _match.match(brief, reg, limit=12):
+        r = reg.get(m["id"])
+        if r and not _match.eligible(r, brief):
+            matches.append((m, r))
+        if len(matches) >= 6:
+            break
+    if not matches:
+        return []
+    rknown = {}
+    with db.connect() as c:
+        for r in c.execute("SELECT id,latest FROM card_designs WHERE owner=?",
+                           (owner,)).fetchall():
+            try:
+                rec = record(owner, r["id"], r["latest"])
+                sp = rec["spec"]
+                rknown[(sp.get("recipe_id"), sp.get("recipe_version"),
+                        tuple(s["photo_id"] for s in sp.get("photos", [])))] = \
+                    (r["id"], r["latest"])
+            except CardError:
+                pass
+    tones = ["funny", "warm", "dry", "playful"]
+    out = []
+    for i, (m, rec) in enumerate(matches):
+        need = int(((rec.get("inputs") or {}).get("photos") or {}).get("count", 1))
+        use_ids = pool[:need]
+        key = (m["id"], rec.get("version", 1), tuple(use_ids))
+        if key in rknown:
+            did, rev = rknown[key]
+        else:
+            try:
+                res = _comp.compile(owner, m["id"], subject=subject,
+                                    occasion=occasion,
+                                    tone=tones[i % len(tones)], variation=0,
+                                    title_art=False, via="ui")
+            except Exception:
+                continue
+            if not res.get("ok"):
+                continue
+            did, rev = res["design"]["id"], res["design"]["revision"]
+            rknown[key] = (did, rev)
+        try:
+            spec = record(owner, did, rev)["spec"]
+        except CardError:
+            continue
+        by_id = {p["id"]: p for p in photos}
+        uphotos = [by_id[pid] for pid in use_ids if pid in by_id]
+        out.append((did, rev, spec.get("headline", ""),
+                    spec.get("recipient", ""),
+                    spec.get("template", "birthday_4photo"),
+                    uphotos or photos[:len(use_ids)]))
+    return out
 
 
 def solo_first(owner, pids: list) -> list:
@@ -1264,20 +1430,23 @@ def register(app,owner_denied):
 
     @bp.get("/api/cards/gallery")
     def gallery():
-        """Ready-made cards from your uploaded images — no forms.
+        """Finished buyable cards for the active person — no forms.
 
-        Templates already wearing your photos (Moonpig shelf, not a blank
-        form): ?subject_id= scopes to the active person's confirmed photos,
+        Canonical P0 shelf: ?subject_id= scopes to that person's confirmed
+        photos, ?occasion=birthday|christmas|general filters recipes,
         ?photo_ids= uses an explicit user/AI selection. Unscoped = latest
-        photos. Designs are created once and reused; previews render lazily
-        (bounded per call). Tapping a card previews,
-        motion-plays, or reserves it — the editor below stays for tinkerers.
+        photos. Every item is an immutable revision with FRONT/INSIDE/BACK
+        views and £2.99 fixed price. Designs are created once and reused;
+        previews render lazily (bounded per call).
         """
         owner = request.card_owner
         subject_id = (request.args.get("subject_id") or "").strip()[:80]
+        occasion = (request.args.get("occasion") or "birthday").strip().lower()[:16]
+        if occasion not in ("birthday", "christmas", "general"):
+            occasion = "birthday"
         want_pids = [p.strip()[:80] for p in
                      (request.args.get("photo_ids") or "").split(",") if p.strip()][:8]
-        scope: dict = {"subject_id": subject_id, "photo_ids": []}
+        scope: dict = {"subject_id": subject_id, "occasion": occasion, "photo_ids": []}
         with db.connect() as c:
             if want_pids:
                 # explicit selection (user-picked or AI-picked): keep owned, keep order
@@ -1342,39 +1511,13 @@ def register(app,owner_denied):
                         who[p["id"]] = prof["name"]
 
         items, enqueued = [], 0
-        # Canonical shelf: exactly one product (birthday_4photo) wearing
-        # the first four photos. Archived templates never mint here.
-        need_photos = max(0, 4 - len(photos))
-        tid = "birthday_4photo"
-        tpl = scenes.TEMPLATES[tid]
-        if len(photos) >= 4:
-            use = photos[:4]
-            name = ""
-            for p in use:
-                if who.get(p["id"]):
-                    name = who[p["id"]]
-                    break
-            short = str(name).split()[0] if str(name).split() else ""
-            headline = f"Happy Birthday, {short}!" if short else tpl["headline"]
-            key = (tid, tuple(p["id"] for p in use))
-            if key in known:
-                did, rev = known[key]
-            else:
-                spec = validate(owner, {
-                    "template": tid, "format": "5x7",
-                    "headline": headline, "recipient": name,
-                    "sender": "", "inside_message": "",
-                    "photos": [{"photo_id": p["id"], "crop": [0, 0, 1, 1],
-                                "focus": [0.5, 0.5], "cutout": ""} for p in use]})
-                did, rev = "card_" + uuid.uuid4().hex, 1
-                t = time.time()
-                with db.connect() as c:
-                    c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",
-                              (did, owner, rev, t, t, owner, "ui"))
-                    c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
-                              (did, rev, json_dump(spec), t))
-                    c.commit()
-                known[key] = (did, rev)
+        # Canonical shelf ONLY: subject → brief → match → compile. The
+        # compiler owns headlines, photo choice and composition. No
+        # hand-built fallback — assets determine which finished recipes
+        # appear, never a photo-count gate, never an occasion mismatch.
+        shelf = _compiler_shelf(owner, photos, who, occasion=occasion)
+        need_photos = 0
+        for (did, rev, headline, name, tid, use) in shelf:
             with db.connect() as c:
                 job = c.execute("SELECT * FROM card_jobs WHERE owner=? AND design_id=? AND revision=? AND kind='preview' AND status IN ('queued','running','ready') ORDER BY created_at DESC LIMIT 1",
                                 (owner, did, rev)).fetchone()
@@ -1392,10 +1535,11 @@ def register(app,owner_denied):
                     pass
             items.append({
                 "design_id": did, "revision": rev, "template": tid,
-                "template_label": tpl["label"], "headline": headline,
+                "template_label": scenes.TEMPLATES.get(tid, {}).get("label", tid),
+                "headline": headline,
                 "recipient": name, "format": "5x7",
-                "price_cents": card_price()["price_cents"],
-                "price": card_price()["price"],
+                "price_cents": public_price()["price_cents"],
+                "price": public_price()["price"],
                 "price_grade": "FIXED",
                 "card_url": card_url_for(did, rev),
                 "proof_url": proof_url_for(did),
@@ -1404,8 +1548,14 @@ def register(app,owner_denied):
                 "photos": [{"id": p["id"], "url": f"/api/cards/photos/{p['id']}/image"}
                            for p in use],
                 "preview_url": url, "preview_status": status,
+                "views": {
+                    "front": f"/api/cards/{did}/r{rev}/preview",
+                    "inside": f"/api/cards/{did}/r{rev}/inside",
+                    "back": f"/api/cards/{did}/r{rev}/back",
+                    "triptych": f"/api/cards/{did}/r{rev}/triptych",
+                },
             })
-        return jsonify(ok=True, items=items, need_photos=need_photos, product=card_price(),
+        return jsonify(ok=True, items=items, need_photos=need_photos, product=public_price(),
                        scope=scope,
                        mcp_status=mcp_status(),
                        buy_hint="Done means a product_url the human can buy from — "
@@ -1733,7 +1883,7 @@ def register(app,owner_denied):
                        product=card_price(),
                        mcp_status=mcp_status(),
                        prodigi=prodigi,
-                       hint=("Card reserved at £7.99 — use POST /backend/api/cards/<id>/checkout "
+                       hint=("Card reserved at £2.99 — use POST /backend/api/cards/<id>/checkout "
                              "for the Shopify payment link. Prodigi runs on orders/paid only.")
                        if not fulfil else "Sent to Prodigi print (internal path only).")
 
@@ -1742,7 +1892,7 @@ def register(app,owner_denied):
         """P0 revenue path: freeze revision → Shopify draft → human pays → webhook prints.
 
         Checks: revision exists + belongs to owner + export ready + preflight
-        passed + fixed £7.99. Creates local card_order (awaiting_payment),
+        passed + fixed £2.99. Creates local card_order (awaiting_payment),
         then a Shopify draft with line-item customAttributes
         (oddhobb_order_id, design_id, revision, grammar, prodigi_sku).
         Returns checkout_url (Shopify invoiceUrl) + card_url (OddHobb page).
@@ -1754,6 +1904,20 @@ def register(app,owner_denied):
         ship_method = str(b.get("shipping_method") or "Standard")
         if ship_method not in ("Budget", "Standard", "StandardPlus", "Express", "Overnight"):
             raise CardError("unknown shipping method", 400)
+        route = None
+        dopt = str(b.get("delivery_option_id") or "").strip()[:32]
+        if dopt:
+            route = None
+            with db.connect() as _c:
+                _r = _c.execute("SELECT * FROM delivery_options WHERE id=? AND owner=?",
+                                (dopt, owner)).fetchone()
+                if _r:
+                    _d = dict(_r)
+                    if _d["design_id"] == did and int(_d["revision"]) == int(rev):
+                        route = _d
+            if route is None:
+                raise CardError("unknown delivery option for this card", 400)
+            ship_method = route["shipping_method"]
         recip = b.get("recipient") or {}
         recip_json = ""
         if isinstance(recip, dict) and any(str(recip.get(k) or "").strip() for k in ("name", "line1", "town", "postcode", "country")):
@@ -1769,7 +1933,7 @@ def register(app,owner_denied):
         spec = rec["spec"]
         validate(owner,spec)
         if spec.get("format", "5x7") != "5x7":
-            raise CardError("P0 sells the 5×7 folded card only (£7.99) — re-save as 5x7", 400)
+            raise CardError("P0 sells the 5×7 folded card only (£2.99) — re-save as 5x7", 400)
         with db.connect() as c:
             old=c.execute("SELECT * FROM card_orders WHERE owner=? AND idempotency_key=?",
                           (owner,idem)).fetchone()
@@ -1799,12 +1963,12 @@ def register(app,owner_denied):
             c.execute("BEGIN IMMEDIATE")
             if old is not None:
                 oid = old["id"]
-                c.execute("UPDATE card_orders SET qty=?, price_cents=?, recipient_json=?, shipping_method=? WHERE id=?",
-                          (qty, price, recip_json, ship_method, oid))
+                c.execute("UPDATE card_orders SET qty=?, price_cents=?, recipient_json=?, shipping_method=?, delivery_option_id=? WHERE id=?",
+                          (qty, price, recip_json, ship_method, dopt, oid))
             else:
                 oid="ord_card_"+uuid.uuid4().hex
-                c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at,recipient_json,shipping_method) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                          (oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"awaiting_payment",idem,time.time(),recip_json,ship_method))
+                c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at,recipient_json,shipping_method,delivery_option_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                          (oid,owner,did,rev,qty,price,json_dump(spec),key(owner,did,rev,"export"),"awaiting_payment",idem,time.time(),recip_json,ship_method,dopt))
             c.commit()
         # Shopify draft — the payment/order layer, not a second storefront.
         # One hidden product ODD-CARD-5X7; personalisation rides as
@@ -1838,7 +2002,7 @@ def register(app,owner_denied):
                        checkout_url=checkout_url,
                        shopify_draft=draft,
                        mcp_status=mcp_status(),
-                        hint="Send the human to checkout_url to pay (£7.99). "
+                        hint="Send the human to checkout_url to pay (£2.99). "
                              "Prodigi prints after Shopify orders/paid — preview alone is not done.")
 
     @bp.post("/api/cards/<did>/shipping")
@@ -1887,6 +2051,49 @@ def register(app,owner_denied):
                        note="Totals are live Prodigi quotes incl. tax where given; "
                             "card prints in the UK within 24h, courier time on top.")
 
+    @bp.get("/api/cards/<did>/delivery")
+    def delivery(did):
+        """Customer delivery choice: Value vs Speedy with customer shipping
+        charges and ESTIMATED arrival ranges. ?revision=&country=GB.
+        Returns opaque route ids only — supplier, SKU and method stay
+        server-side until checkout freezes them onto the order."""
+        from backend import delivery as _dlv
+        owner = request.card_owner
+        rev = request.args.get("revision", type=int)
+        country = (request.args.get("country") or "GB").strip().upper()[:2] or "GB"
+        if not isinstance(rev, int) or isinstance(rev, bool):
+            raise CardError("revision is required", 400)
+        rec = record(owner, did, rev)
+        validate(owner, rec["spec"])
+        routes = _dlv.build_card(country)
+        live = [o for o in routes if o["grade"] == "LIVE"]
+        if not live:
+            raise CardError("no delivery route is quotable right now", 502)
+        std = next((o for o in live if o["shipping_method"] == "Standard"), live[0])
+        exp = next((o for o in live if o["shipping_method"] == "Express"), None)
+        out = {}
+
+        def _option(route, label):
+            charge = _dlv.shipping_charge(route["supplier_ship"])
+            prod = route["dispatch"]
+            arr_from, arr_to = _dlv.arrival_range(
+                prod, route["transit"])
+            saved = save_delivery_option(
+                owner, did, rev, country, route, charge, arr_from, arr_to)
+            return {"id": saved["id"], "label": label,
+                    "price_cents": charge,
+                    "arrival_from": arr_from, "arrival_to": arr_to}
+
+        out["value"] = _option(std, "Value")
+        if exp and exp is not std:
+            out["speedy"] = _option(exp, "Speedy")
+        else:
+            out["speedy"] = _option(std, "Speedy")
+            out["speedy"]["note"] = ("only one live route — both options "
+                                     "share it for now")
+        return jsonify(ok=True, design_id=did, revision=rev, country=country,
+                       product=public_price(), **out)
+
     @bp.post("/api/cart/create")
     def shop_cart_create():
         """Guest-safe Storefront cart: freeze revision → cartCreate with
@@ -1909,11 +2116,13 @@ def register(app,owner_denied):
             if not ready:
                 raise CardError("Export the saved artwork before checkout (render export first)", 409)
         oid = "ord_card_" + uuid.uuid4().hex
+        ship_method, dopt = resolve_delivery_choice(owner, b, did, rev)
         with db.connect() as c:
-            c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                      (oid, owner, did, rev, int(qty), card_price()["price_cents"] * int(qty), json_dump(rec["spec"]), key(owner, did, rev, "export"), "in_cart", f"cart-{did}-r{rev}-{time.time():.0f}", time.time()))
+            c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at,shipping_method,delivery_option_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                      (oid, owner, did, rev, int(qty), card_price()["price_cents"] * int(qty), json_dump(rec["spec"]), key(owner, did, rev, "export"), "in_cart", f"cart-{did}-r{rev}-{time.time():.0f}", time.time(), ship_method, dopt))
             c.commit()
-        res = _cart.cart_create(did, rev, int(qty), oid)
+        res = _cart.cart_create(did, rev, int(qty), oid, shipping_method=ship_method,
+                                delivery_option_id=dopt)
         if not res.get("ok"):
             raise CardError(res.get("error", "cart failed"), 502)
         return jsonify(ok=True, order_id=oid, cart=res["cart"],
@@ -1945,11 +2154,14 @@ def register(app,owner_denied):
                 if not ready:
                     raise CardError("Export the saved artwork before checkout", 409)
             oid = "ord_card_" + uuid.uuid4().hex
+            ship_method, dopt = resolve_delivery_choice(owner, b, did, rev)
             with db.connect() as c:
-                c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                          (oid, owner, did, rev, qty, card_price()["price_cents"] * qty, json_dump(rec["spec"]), key(owner, did, rev, "export"), "in_cart", f"cart-{did}-r{rev}-{time.time():.0f}", time.time()))
+                c.execute("INSERT INTO card_orders (id,owner,design_id,revision,qty,price_cents,spec,export_key,status,idempotency_key,created_at,shipping_method,delivery_option_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                          (oid, owner, did, rev, qty, card_price()["price_cents"] * qty, json_dump(rec["spec"]), key(owner, did, rev, "export"), "in_cart", f"cart-{did}-r{rev}-{time.time():.0f}", time.time(), ship_method, dopt))
                 c.commit()
-            res = _cart.cart_lines_add(cart_id, did, rev, qty, oid)
+            res = _cart.cart_lines_add(cart_id, did, rev, qty, oid,
+                                       shipping_method=ship_method,
+                                       delivery_option_id=dopt)
         elif action == "update":
             res = _cart.cart_lines_update(cart_id, str(b.get("line_id") or ""), int(b.get("qty") or 1))
         elif action == "remove":

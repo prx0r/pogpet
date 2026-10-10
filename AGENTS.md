@@ -54,6 +54,7 @@ Browser only ever holds `window.__FIGG_TOKEN` (bridge-swapped).
 | `pi/.pi/extensions/figgsite.ts` | MCP tools for ChatGPT/Muse |
 | `data/` | **gitignored** — sqlite, meshes, productimg, videos |
 | `shopify-app/` | Remix scaffold + `scripts/sync-catalog.mjs` |
+| `catalog/` | **Product packs: the only way a product goes live** (`catalog/AGENTS.md`, validator `tools/validate_pack.py`, shelf `STATUS.md`) · standard: `docs/product-packs.md` |
 
 ## Studio products (controlled custom)
 

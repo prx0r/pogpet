@@ -87,9 +87,10 @@ def main() -> int:
     html = page.decode("utf-8", "replace")
     for needle, label in [
         ("<title>oddhobb", "title branded oddhobb"),
-        ("class=\"topbar\"", "Amazon topbar (search+account)"),
-        ("id=\"catstrip\"", "persistent category strip"),
-        ("id=\"qsearch\"", "storefront search box"),
+        ("class=\"acct-float\"", "floating account (username+basket)"),
+        ("logo-3d-black.png", "black 3D logo mark"),
+        ("id=\"acct-btn\"", "username button kept"),
+        ("id=\"cart-btn\"", "basket button kept"),
         ("id=\"shop-hero\"", "prompt-forward hero band"),
         ("id=\"people-grid\"", "my. people grid"),
         ('property="og:title"', "og meta"),
@@ -99,6 +100,11 @@ def main() -> int:
         ("data-panel", "tab panels"),
     ]:
         rec(f"page: {label}", needle in html)
+    rec("page: top banner removed",
+        '<header class="topbar">' not in html and 'id="catstrip"' not in html
+        and 'id="qsearch"' not in html)
+    rec("page: text wordmark removed",
+        "oddhobb<i>" not in html and ">oddhobb<" not in html)
     rec("page: double rail gone",
         "seclrail" not in html and "sec-rail-items" not in html
         and 'id="secchips"' not in html)

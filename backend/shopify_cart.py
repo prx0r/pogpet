@@ -83,19 +83,25 @@ _CART_FRAG = """id checkoutUrl totalQuantity estimatedCost { totalAmount { amoun
 
 
 def cart_create(design_id: str, revision: int, qty: int, oddhobb_order_id: str,
-                product: str = "greeting_card", line: str = "") -> dict:
+                product: str = "greeting_card", line: str = "",
+                shipping_method: str = "", delivery_option_id: str = "") -> dict:
     """One personalised creation → new cart. Line carries design linkage only —
     never photos, tokens or URLs."""
     gid = variant_for(product)
     if not gid:
         return {"ok": False, "error": f"no Shopify variant mapped for {product!r} — add it to SHOPIFY_VARIANTS_JSON"}
+    attrs = [{"key": "design_id", "value": design_id[:64]},
+             {"key": "revision", "value": str(revision)},
+             {"key": "oddhobb_order_id", "value": oddhobb_order_id[:64]},
+             {"key": "line", "value": (line or product)[:32]}]
+    if shipping_method:
+        attrs.append({"key": "shipping_method", "value": shipping_method[:32]})
+    if delivery_option_id:
+        attrs.append({"key": "delivery_option_id", "value": delivery_option_id[:32]})
     r = gql("""mutation cartCreate($input: CartInput!) {
       cartCreate(input: $input) { cart { %s } userErrors { field message } } }""" % _CART_FRAG,
         {"input": {"lines": [{"merchandiseId": gid, "quantity": max(1, int(qty or 1)),
-                              "attributes": [{"key": "design_id", "value": design_id[:64]},
-                                             {"key": "revision", "value": str(revision)},
-                                             {"key": "oddhobb_order_id", "value": oddhobb_order_id[:64]},
-                                             {"key": "line", "value": (line or product)[:32]}]}]}})
+                              "attributes": attrs}]}})
     if not r.get("ok"):
         return r
     cc = (r["data"].get("cartCreate") or {})
@@ -109,18 +115,24 @@ def cart_create(design_id: str, revision: int, qty: int, oddhobb_order_id: str,
 
 def cart_lines_add(cart_id: str, design_id: str, revision: int, qty: int,
                    oddhobb_order_id: str, product: str = "greeting_card",
-                   line: str = "") -> dict:
+                   line: str = "", shipping_method: str = "",
+                   delivery_option_id: str = "") -> dict:
     gid = variant_for(product)
     if not gid:
         return {"ok": False, "error": f"no Shopify variant mapped for {product!r} — add it to SHOPIFY_VARIANTS_JSON"}
+    attrs = [{"key": "design_id", "value": design_id[:64]},
+             {"key": "revision", "value": str(revision)},
+             {"key": "oddhobb_order_id", "value": oddhobb_order_id[:64]},
+             {"key": "line", "value": (line or product)[:32]}]
+    if shipping_method:
+        attrs.append({"key": "shipping_method", "value": shipping_method[:32]})
+    if delivery_option_id:
+        attrs.append({"key": "delivery_option_id", "value": delivery_option_id[:32]})
     r = gql("""mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
       cartLinesAdd(cartId: $cartId, lines: $lines) { cart { %s } userErrors { field message } } }""" % _CART_FRAG,
         {"cartId": cart_id,
          "lines": [{"merchandiseId": gid, "quantity": max(1, int(qty or 1)),
-                    "attributes": [{"key": "design_id", "value": design_id[:64]},
-                                   {"key": "revision", "value": str(revision)},
-                                   {"key": "oddhobb_order_id", "value": oddhobb_order_id[:64]},
-                                   {"key": "line", "value": (line or product)[:32]}]}]})
+                    "attributes": attrs}]})
     if not r.get("ok"):
         return r
     ca = (r["data"].get("cartLinesAdd") or {})

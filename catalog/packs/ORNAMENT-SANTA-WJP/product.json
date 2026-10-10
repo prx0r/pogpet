@@ -1,0 +1,230 @@
+{
+ "schema_version": 2,
+ "sku": "ORNAMENT-SANTA-WJP",
+ "name": "Mini-me Christmas ornament with Santa hat",
+ "family": "ornament",
+ "kind": "personalised",
+ "parents": [
+  "TPL-ORNAMENT"
+ ],
+ "geometry": {
+  "units": "mm",
+  "dims_mm": null,
+  "volume_cm3": null,
+  "faces": null,
+  "shells": null,
+  "size_variants_mm": [],
+  "locked_features": [
+   {
+    "id": "loop",
+    "note": "5.0 mm loop hole / 2.4 mm wire"
+   }
+  ],
+  "source": {}
+ },
+ "manufacture": {
+  "supplier": "jlc3dp",
+  "process": "wjp",
+  "material": "Full Color Resin",
+  "finish": "Oil Spraying (clear gloss)",
+  "colour": "Multicolor (texture)",
+  "hand_finish": [],
+  "fulfilment": "dropship",
+  "print_file": {
+   "path": null,
+   "sha256": null,
+   "format": "obj-mtl-png-zip"
+  },
+  "preflight": {
+   "report": "print/preflight.json",
+   "acknowledged": {}
+  },
+  "supplier_settings": {},
+  "lead_time_days": {
+   "build": 5,
+   "ship_min": 8,
+   "ship_max": 13
+  }
+ },
+ "cost": {
+  "currency": "USD",
+  "print": {
+   "amount": null,
+   "basis": "estimate",
+   "ref": "volume x preflight rate",
+   "date": "2026-10-10"
+  },
+  "shipping": {
+   "amount": 6.05,
+   "basis": "estimate",
+   "ref": "JLC quote 2026-10-09 for brick figures (US Global Standard); not quoted for this product",
+   "date": "2026-10-09",
+   "region": "US"
+  },
+  "packaging": {
+   "amount": 0,
+   "basis": "estimate",
+   "ref": null,
+   "date": null
+  }
+ },
+ "slots": [
+  {
+   "id": "subject",
+   "type": "mesh",
+   "label": "Their mini-me (from photos)",
+   "required": true,
+   "offered": true,
+   "validated": false,
+   "evidence": null,
+   "surface": {
+    "kind": "whole-model"
+   },
+   "method": "subject-mesh"
+  },
+  {
+   "id": "name",
+   "type": "text",
+   "label": "Name",
+   "required": true,
+   "offered": true,
+   "validated": false,
+   "evidence": null,
+   "surface": {
+    "kind": "planar",
+    "anchor": "name plate"
+   },
+   "method": "relief",
+   "text": {
+    "font": "Fraunces-SemiBold",
+    "cap_mm": 3.0,
+    "min_cap_mm": 1.5,
+    "max_chars": 10,
+    "charset": "A-Z 0-9 '&-.!",
+    "fit": "shrink-then-fallback-then-error"
+   },
+   "profile_source": [
+    "subject.display_name"
+   ]
+  }
+ ],
+ "audience": {
+  "suits": [
+   "families",
+   "first Christmas together",
+   "grandparents"
+  ],
+  "occasions": [
+   "Christmas",
+   "first Christmas"
+  ],
+  "interests": [
+   "christmas",
+   "mini-me"
+  ],
+  "relationship_to_buyer": [
+   "dad",
+   "grandad",
+   "partner",
+   "friend"
+  ],
+  "not_for": [
+   "children under 3 (small parts)"
+  ],
+  "price_band": null,
+  "tone": [
+   "funny-affectionate"
+  ]
+ },
+ "listing": {
+  "title": "Personalised 3D Christmas Ornament of Dad, Custom Photo Figure Bauble, Santa Hat Mini Me Ornament, Unique Family Christmas Gift",
+  "price": {
+   "currency": "GBP",
+   "amount": 15.0
+  },
+  "tags": [
+   "christmas ornament",
+   "custom ornament",
+   "photo ornament",
+   "3d ornament",
+   "personalised bauble",
+   "santa hat",
+   "mini me",
+   "family christmas",
+   "dad ornament",
+   "tree decoration",
+   "unique ornament",
+   "2026 ornament",
+   "keepsake ornament"
+  ],
+  "materials": [
+   "full colour resin"
+  ],
+  "short": "",
+  "description": "A 72 mm full-colour figure of them in a Santa hat, made from their photos, hanging from a printed loop. It's a tree keepsake that's funnier every year.\n\nPersonalisation: tell us the name (up to 10 letters) and, for photo pieces, send 1-3 clear front-facing photos after ordering.",
+  "spec_rows": [
+   [
+    "Size",
+    "22 × 18 × 85 mm"
+   ],
+   [
+    "Material",
+    "Full-colour resin (WJP)"
+   ],
+   [
+    "Hanger",
+    "Printed loop, 5 mm hole"
+   ],
+   [
+    "Personalised",
+    "72 mm figure from photos"
+   ]
+  ],
+  "processing": "Made to order: 5-8 working days production, then shipping",
+  "channels": [
+   "etsy",
+   "oddhobb-store"
+  ],
+  "images": [
+   {
+    "file": "01_hero.png",
+    "role": "hero",
+    "alt": "Full-colour mini-me Christmas ornament, hero"
+   },
+   {
+    "file": "02_34.png",
+    "role": "view",
+    "alt": "Full-colour mini-me Christmas ornament, 34"
+   },
+   {
+    "file": "03_front.png",
+    "role": "view",
+    "alt": "Full-colour mini-me Christmas ornament, front"
+   },
+   {
+    "file": "04_side.png",
+    "role": "view",
+    "alt": "Full-colour mini-me Christmas ornament, side"
+   },
+   {
+    "file": "05_spec.png",
+    "role": "spec",
+    "alt": "Full-colour mini-me Christmas ornament, spec"
+   }
+  ]
+ },
+ "assets": {
+  "design_parts": "etsy_samples/out/p09_ornament/",
+  "generator": "etsy_samples/g09_*.py",
+  "listing_source": "etsy_samples/listings/p09_ornament"
+ },
+ "graph": {
+  "related": [],
+  "extends_to": []
+ },
+ "samples": [],
+ "ext": {
+  "listing_images_note": "rendered in Blender from the design-part OBJs (etsy_samples/r0N_*.py), NOT from the print file; re-render from print/ and register to pass G11",
+  "blocker": "multi-part colour design; WJP needs ONE textured OBJ+MTL+PNG (bake part colours into the subject atlas)"
+ }
+}

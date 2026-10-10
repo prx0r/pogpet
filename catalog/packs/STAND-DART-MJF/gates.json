@@ -1,0 +1,79 @@
+{
+ "sku": "STAND-DART-MJF",
+ "level": "DRAFT",
+ "print_sha256": "4480b8a30a29b7e9bea51acc7c5d75af1a8b2baa9acd66e15cb38ca1670a6922",
+ "checked_at": "2026-10-10T10:32:29",
+ "validator": "catalog/tools/validate_pack.py v1",
+ "gates": {
+  "G01": {
+   "name": "structure + schema",
+   "status": "PASS",
+   "why": ""
+  },
+  "G02": {
+   "name": "supplier + process known",
+   "status": "PASS",
+   "why": ""
+  },
+  "G03": {
+   "name": "print file present + pinned",
+   "status": "PASS",
+   "why": ""
+  },
+  "G04": {
+   "name": "preflight PASS on exact file",
+   "status": "FAIL",
+   "why": "preflight FAIL: non-manifold edges (welded), watertight, shells (no floaters); unacknowledged warnings: resin volume"
+  },
+  "G05": {
+   "name": "geometry matches measurement",
+   "status": "PASS",
+   "why": ""
+  },
+  "G06": {
+   "name": "manufacture spec complete",
+   "status": "FAIL",
+   "why": "hand finish needed but fulfilment is dropship: gold paint of relief name/arc/bands (paint.obj); lead times missing"
+  },
+  "G07": {
+   "name": "real supplier cost",
+   "status": "FAIL",
+   "why": "print cost is estimate, need a supplier quote; shipping cost is estimate, need a supplier quote"
+  },
+  "G08": {
+   "name": "margin >= 30% per channel",
+   "status": "FAIL",
+   "why": "etsy margin -20% < 30% (price \u00a320.00, cost \u00a321.59, fees \u00a32.46); oddhobb-store margin -12% < 30% (price \u00a320.00, cost \u00a321.59, fees \u00a30.88)"
+  },
+  "G09": {
+   "name": "slots offered are validated",
+   "status": "FAIL",
+   "why": "slot name evidence file missing; slot tagline evidence file missing; slot arc evidence file missing"
+  },
+  "G10": {
+   "name": "listing copy complete",
+   "status": "PASS",
+   "why": ""
+  },
+  "G11": {
+   "name": "listing images from print file",
+   "status": "FAIL",
+   "why": "listing/renders.json missing (provenance)"
+  },
+  "G12": {
+   "name": "audience defined",
+   "status": "PASS",
+   "why": ""
+  },
+  "G13": {
+   "name": "graph refs resolve",
+   "status": "PASS",
+   "why": ""
+  },
+  "G14": {
+   "name": "physical sample received + passed",
+   "status": "FAIL",
+   "why": "no passed sample with photo in samples/"
+  }
+ }
+}

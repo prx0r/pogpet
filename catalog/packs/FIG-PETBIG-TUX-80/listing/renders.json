@@ -1,0 +1,24 @@
+{
+ "print_file": "print/FIG-PETBIG-TUX-80-wjp.zip",
+ "print_sha256": "18f75b31ac53cfb808db4e85486ded0688abe43133f654a96ab540ce8d2c9014",
+ "renderer": "pipeline/bl_listing.py (rendered from the unzipped print zip, 2026-10-10)",
+ "registered_at": "2026-10-10T10:16:57",
+ "images": {
+  "bigpet_hero.png": {
+   "sha256": "47dc861e5190de37837381d3f6e5b636ac97816f782c929680fc13ba41d11e78",
+   "source": "render-of-print-file"
+  },
+  "bigpet_front.png": {
+   "sha256": "d5750221e21c84562ea32a37b73c2ebd3af75d90931fac414d15e0b6de228f8b",
+   "source": "render-of-print-file"
+  },
+  "bigpet_side.png": {
+   "sha256": "dba48a84afc940ca0486ef9c1ddf4269a1ffce65fb8a95c3a36551d30fab0d4b",
+   "source": "render-of-print-file"
+  },
+  "bigpet_back.png": {
+   "sha256": "3eedf8b6d67fd51c07940f1ace53db06e613ecdc46256b9c4a5923a6416877c3",
+   "source": "render-of-print-file"
+  }
+ }
+}

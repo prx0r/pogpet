@@ -100,7 +100,7 @@ def test_registry_loads_first_published_recipe():
     reg = R.published()
     assert "birthday_four_photos_party_title_v1" in reg
     r = reg["birthday_four_photos_party_title_v1"]
-    assert r["product"]["price_cents"] == 799
+    assert r["product"]["price_cents"] == 299
     assert r["renderer"]["template"] == "birthday_4photo"
     assert S.validate_recipe({"id": "x"}) != []
 
@@ -265,3 +265,31 @@ def test_canonical_six_tiers():
     assert "oddhobb_make" in M.PUBLIC_TOOLS
     for t in ("oddhobb_recommend", "oddhobb_variants"):
         assert t not in M.PUBLIC_TOOLS, t
+
+
+def test_gallery_compiles_shelf_from_recipes(env):
+    s, _pids = _dad(env)
+    r = env["client"].get("/api/cards/gallery?owner=" + env["owner"],
+                          headers=env["headers"])
+    assert r.status_code == 200, r.json
+    d = r.json
+    assert d["need_photos"] == 0
+    assert len(d["items"]) >= 5, [it.get("template") for it in d["items"]]
+    templates = {it["template"] for it in d["items"]}
+    assert len(templates) >= 4, templates  # distinct layouts, not one product
+    for it in d["items"]:
+        assert it["price_cents"] == 299
+        assert it["design_id"].startswith("card_")
+        assert it["headline"]
+        assert it["recipient"] == "Dad"
+        assert len(it["photos"]) >= 1
+
+
+def test_gallery_single_photo_unlocks_shelf(env):
+    s, _pids = _dad(env, nphotos=1)
+    r = env["client"].get("/api/cards/gallery?owner=" + env["owner"],
+                          headers=env["headers"])
+    assert r.status_code == 200, r.json
+    d = r.json
+    assert d["need_photos"] == 0
+    assert len(d["items"]) >= 3, [it.get("template") for it in d["items"]]

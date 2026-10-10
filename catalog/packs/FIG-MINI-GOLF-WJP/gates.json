@@ -1,0 +1,79 @@
+{
+ "sku": "FIG-MINI-GOLF-WJP",
+ "level": "DRAFT",
+ "print_sha256": null,
+ "checked_at": "2026-10-10T10:32:29",
+ "validator": "catalog/tools/validate_pack.py v1",
+ "gates": {
+  "G01": {
+   "name": "structure + schema",
+   "status": "FAIL",
+   "why": "missing dir print/"
+  },
+  "G02": {
+   "name": "supplier + process known",
+   "status": "PASS",
+   "why": ""
+  },
+  "G03": {
+   "name": "print file present + pinned",
+   "status": "FAIL",
+   "why": "no print file"
+  },
+  "G04": {
+   "name": "preflight PASS on exact file",
+   "status": "FAIL",
+   "why": "nothing to preflight"
+  },
+  "G05": {
+   "name": "geometry matches measurement",
+   "status": "FAIL",
+   "why": "no measurement to compare (G04 first)"
+  },
+  "G06": {
+   "name": "manufacture spec complete",
+   "status": "PASS",
+   "why": ""
+  },
+  "G07": {
+   "name": "real supplier cost",
+   "status": "FAIL",
+   "why": "print cost missing; shipping cost is estimate, need a supplier quote"
+  },
+  "G08": {
+   "name": "margin >= 30% per channel",
+   "status": "FAIL",
+   "why": "costs missing"
+  },
+  "G09": {
+   "name": "slots offered are validated",
+   "status": "FAIL",
+   "why": "slot subject offered but not validated against real geometry; slot name offered but not validated against real geometry"
+  },
+  "G10": {
+   "name": "listing copy complete",
+   "status": "PASS",
+   "why": ""
+  },
+  "G11": {
+   "name": "listing images from print file",
+   "status": "FAIL",
+   "why": "listing/renders.json missing (provenance)"
+  },
+  "G12": {
+   "name": "audience defined",
+   "status": "PASS",
+   "why": ""
+  },
+  "G13": {
+   "name": "graph refs resolve",
+   "status": "PASS",
+   "why": ""
+  },
+  "G14": {
+   "name": "physical sample received + passed",
+   "status": "FAIL",
+   "why": "no passed sample with photo in samples/"
+  }
+ }
+}

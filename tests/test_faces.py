@@ -50,3 +50,48 @@ class RestorePlanTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class UnitsTest(unittest.TestCase):
+    def test_pixels_normalize(self):
+        self.assertEqual(F.to_unit([660, 705, 199, 268], 1200, 1600),
+                         [0.55, 0.440625, 0.16583333333333333, 0.1675])
+
+    def test_normalized_passthrough(self):
+        self.assertEqual(F.to_unit([0.3, 0.2, 0.4, 0.4], 1200, 1600),
+                         [0.3, 0.2, 0.4, 0.4])
+
+    def test_garbage_empty(self):
+        self.assertEqual(F.to_unit([], 100, 100), [])
+        self.assertEqual(F.to_unit([1, 2], 100, 100), [])
+        self.assertEqual(F.to_unit([10, 10, 5, 5], 0, 0), [])
+
+    def test_face_box_defensive(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from backend import config, db
+        from backend import cards as C
+        from backend import studio_library
+        tmp = Path(tempfile.mkdtemp())
+        patches = [patch.object(config, "DATA", tmp),
+                   patch.object(config, "DB_PATH", tmp / "t.db")]
+        for p in patches:
+            p.start()
+        try:
+            db.init()
+            studio_library.init()
+            with db.connect() as c:
+                c.execute("INSERT INTO photos (id,owner,sha256,r2_key,mime,width,height,bytes,orig_name,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                          ("p1", "o", "s", "k", "image/jpeg", 1000, 1000, 1, "a.jpg", 1.0))
+                c.execute("INSERT INTO photo_faces (id,photo_id,box,score,source) VALUES (?,?,?,?,?)",
+                          ("f1", "p1", json.dumps([100, 100, 200, 200]), 0.9, "x"))
+            boxes = C.face_box("o", "p1")
+            self.assertEqual(len(boxes), 1)
+            self.assertTrue(max(abs(v) for v in boxes[0]) <= 1.001)
+        finally:
+            for p in reversed(patches):
+                p.stop()
+            import shutil
+            shutil.rmtree(tmp, ignore_errors=True)

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oddhobb.com/schema/product/v1",
+  "title": "OddHobb product spec v1",
+  "description": "One file per SKU (products/<sku>.json). The canonical, modular source for: print pack, preflight rules, listing images, Etsy/store copy, personalisation slots and audience. Add new keys under 'ext' rather than changing existing ones; bump schema_version on breaking changes.",
+  "type": "object",
+  "required": ["schema_version", "sku", "name", "family", "status", "geometry", "manufacture", "slots", "audience", "listing", "assets"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "sku": {"type": "string", "pattern": "^[A-Z0-9-]+$"},
+    "name": {"type": "string"},
+    "family": {"enum": ["figure", "figure-with-pet", "bust", "keychain", "charm", "ornament", "golf-marker", "line-reader", "card-rack", "dart-stand", "cribbage-pegs", "keycap", "card"]},
+    "status": {"enum": ["concept", "preflight-fail", "preflight-pass", "sample-ordered", "sample-approved", "live", "retired"]},
+    "parents": {"type": "array", "items": {"type": "string"}, "description": "Base template SKUs this inherits locked interfaces from (design rule: start from the official base)."},
+    "geometry": {
+      "type": "object",
+      "required": ["source", "units", "height_mm", "dims_mm"],
+      "properties": {
+        "source": {"type": "object", "properties": {"generator": {"enum": ["meshy", "oddhobb-mcp", "manifold3d", "blender", "manual"]}, "file": {"type": "string"}, "template": {"type": "string"}}},
+        "units": {"const": "mm"},
+        "height_mm": {"type": "number"},
+        "size_variants_mm": {"type": "array", "items": {"type": "number"}},
+        "dims_mm": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+        "faces": {"type": "integer"},
+        "volume_cm3": {"type": "number"},
+        "locked_features": {"type": "array", "items": {"type": "object", "properties": {"id": {"type": "string"}, "kind": {"type": "string"}, "note": {"type": "string"}}}}
+      }
+    },
+    "manufacture": {
+      "type": "object",
+      "required": ["supplier", "process", "material", "file_format"],
+      "properties": {
+        "supplier": {"enum": ["jlc3dp", "printie", "fullcolor3dprint", "prodigi", "in-house"]},
+        "process": {"enum": ["wjp", "sla", "mjf", "fdm", "cnc", "print-2d"]},
+        "material": {"type": "string"},
+        "finish": {"type": "string"},
+        "file_format": {"enum": ["obj-mtl-png-zip", "3mf", "stl", "step", "jpg"]},
+        "jlc_settings": {"type": "object"},
+        "preflight": {"type": "object", "properties": {"verdict": {"enum": ["PASS", "PASS_WITH_WARNINGS", "FAIL"]}, "report": {"type": "string"}, "run_at": {"type": "string"}, "warnings": {"type": "array", "items": {"type": "string"}}}},
+        "cost": {"type": "object", "properties": {"currency": {"type": "string"}, "print_estimate": {"type": "number"}, "print_quoted": {"type": ["number", "null"]}, "shipping_estimate": {"type": "number"}, "basis": {"type": "string"}}},
+        "lead_time_days": {"type": "object", "properties": {"build": {"type": "integer"}, "ship_min": {"type": "integer"}, "ship_max": {"type": "integer"}}}
+      }
+    },
+    "slots": {
+      "type": "array",
+      "description": "Personalisation slots (the slot primitive). Bounds are fixed per SKU; never change per order. Fitter shrinks to min, then tries fallback_source, then hard-errors. Never silently truncate.",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "required", "surface"],
+        "properties": {
+          "id": {"type": "string"},
+          "type": {"enum": ["text", "image", "colour", "mesh"]},
+          "label": {"type": "string"},
+          "required": {"type": "boolean"},
+          "surface": {"type": "object", "properties": {"kind": {"enum": ["plane", "uv-curved", "mesh-region", "whole-model", "material"]}, "anchor": {"type": "string"}, "box_mm": {"type": "array", "items": {"type": "number"}}, "normal": {"type": "array", "items": {"type": "number"}}}},
+          "method": {"enum": ["emboss", "engrave", "texture-paint", "uv-print", "laser", "material-swap", "subject-mesh"]},
+          "text": {"type": "object", "properties": {"font": {"type": "string"}, "cap_mm": {"type": "number"}, "min_cap_mm": {"type": "number"}, "max_chars": {"type": "integer"}, "min_chars": {"type": "integer"}, "lines": {"type": "integer"}, "charset": {"type": "string"}, "relief_mm": {"type": "number"}, "fit": {"enum": ["shrink-then-fallback-then-error", "error"]}}},
+          "image": {"type": "object", "properties": {"aspect": {"type": "string"}, "min_px": {"type": "integer"}, "ai_allowed": {"type": "boolean"}, "style": {"type": "string"}}},
+          "colour": {"type": "object", "properties": {"palette": {"type": "array", "items": {"type": "string"}}, "default": {"type": "string"}}},
+          "mesh": {"type": "object", "properties": {"subject_kind": {"enum": ["person", "pet", "person+pet", "object"]}, "input": {"type": "string"}, "generator": {"type": "string"}, "cached_per": {"type": "string"}, "regen_cost_usd": {"type": ["number","null"]}}},
+          "profile_source": {"type": "array", "items": {"type": "string"}, "description": "Profile fields that fill this slot in order: nickname, first_name, relationship, pet_name, favourite_colour…"},
+          "fallback_source": {"type": "array", "items": {"type": "string"}},
+          "preview": {"enum": ["plate-homography", "plate-uv", "mesh-render", "none"]}
+        }
+      }
+    },
+    "audience": {
+      "type": "object",
+      "required": ["suits"],
+      "properties": {
+        "suits": {"type": "array", "items": {"type": "string"}, "description": "Kinds of people this is for, in plain words."},
+        "occasions": {"type": "array", "items": {"type": "string"}},
+        "interests": {"type": "array", "items": {"type": "string"}},
+        "relationship_to_buyer": {"type": "array", "items": {"type": "string"}},
+        "not_for": {"type": "array", "items": {"type": "string"}},
+        "price_band": {"enum": ["impulse <£15", "gift £15-40", "premium £40-90", "luxury £90+"]},
+        "tone": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "listing": {
+      "type": "object",
+      "properties": {
+        "title": {"type": "string", "maxLength": 140},
+        "price": {"type": "object", "properties": {"currency": {"const": "GBP"}, "amount": {"type": ["number","null"]}, "by_size": {"type": "object"}}},
+        "tags": {"type": "array", "items": {"type": "string", "maxLength": 20}, "maxItems": 13},
+        "short": {"type": "string"},
+        "description": {"type": "string"},
+        "spec_rows": {"type": "array", "items": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 2}},
+        "channels": {"type": "array", "items": {"enum": ["etsy", "oddhobb-store", "shopify"]}}
+      }
+    },
+    "assets": {
+      "type": "object",
+      "properties": {
+        "print_pack": {"type": "string"},
+        "renders": {"type": "object", "additionalProperties": {"type": "string"}},
+        "plates": {"type": "array", "items": {"type": "string"}},
+        "master": {"type": "string"}
+      }
+    },
+    "graph": {
+      "type": "object",
+      "description": "Edges for the product graph: what this composes, pairs with, upsells to.",
+      "properties": {
+        "composes": {"type": "array", "items": {"type": "string"}},
+        "pairs_with": {"type": "array", "items": {"type": "string"}},
+        "upsell_to": {"type": "array", "items": {"type": "string"}},
+        "variant_of": {"type": "string"}
+      }
+    },
+    "ext": {"type": "object", "description": "Free space for future modules (AR preview, gift wrap, packaging insert…)."}
+  }
+}

@@ -67,10 +67,12 @@ def main() -> int:
             for f in boxes:
                 x, y, w, h = (float(v) for v in f[:4])
                 fid = db.new_id("face")
+                h_px, w_px = bgr.shape[:2]
+                box = F.to_unit([x, y, w, h], w_px, h_px)
                 c.execute(
                     "INSERT OR IGNORE INTO photo_faces (id,photo_id,box,score,source)"
                     " VALUES (?,?,?,?,?)",
-                    (fid, p["id"], json.dumps([x, y, w, h]),
+                    (fid, p["id"], json.dumps(box),
                      float(f[-1]), "sface-import"))
                 vec = F.embed_face(bgr, f)
                 if vec is not None:

@@ -230,5 +230,72 @@ class FamilyTest(unittest.TestCase):
         self.assertEqual(r.status_code, 401)
 
 
+    def test_confirm_batch(self):
+        sid = self._sub("Dad")["id"]
+        with db.connect() as c:
+            p1 = db.insert_photo(c, owner=self.owner, sha256="a" * 64,
+                                 r2_key="k1", mime="image/jpeg", width=800,
+                                 height=800, bytes=10, orig_name="a.jpg")
+            p2 = db.insert_photo(c, owner=self.owner, sha256="b" * 64,
+                                 r2_key="k2", mime="image/jpeg", width=800,
+                                 height=800, bytes=10, orig_name="b.jpg")
+            p3 = db.insert_photo(c, owner=self.owner, sha256="c" * 64,
+                                 r2_key="k3", mime="image/jpeg", width=800,
+                                 height=800, bytes=10, orig_name="c.jpg")
+            c.execute("INSERT INTO photo_faces (id,photo_id,box,score,source) VALUES (?,?,?,?,?)",
+                      ("face-1", p1, "[0.2,0.2,0.3,0.3]", 0.9, "upload"))
+            c.execute("INSERT INTO photo_faces (id,photo_id,box,score,source) VALUES (?,?,?,?,?)",
+                      ("face-2a", p2, "[0.1,0.1,0.2,0.2]", 0.9, "upload"))
+            c.execute("INSERT INTO photo_faces (id,photo_id,box,score,source) VALUES (?,?,?,?,?)",
+                      ("face-2b", p2, "[0.6,0.6,0.2,0.2]", 0.8, "upload"))
+        r = self.client.post("/api/studio/confirm-batch",
+                             json={"owner": self.owner, "subject_id": sid,
+                                   "photo_ids": [p1, p2, p3, "pho_missing"]},
+                             headers=self.headers)
+        self.assertEqual(r.status_code, 200, r.json)
+        self.assertEqual(r.json["confirmed"], [p1])
+        self.assertEqual(r.json["needs_review"], [p2])
+        self.assertEqual(r.json["no_face"], [p3])
+        self.assertEqual(r.json["missing"], ["pho_missing"])
+        with db.connect() as c:
+            row = c.execute("SELECT confirmed, provenance FROM photo_subjects WHERE photo_id=? AND subject_id=?",
+                            (p1, sid)).fetchone()
+            self.assertEqual((row["confirmed"], row["provenance"]), (1, "batch-confirm"))
+        r = self.client.post("/api/studio/confirm-batch",
+                             json={"owner": self.owner, "subject_id": "sub_nope",
+                                   "photo_ids": [p1]},
+                             headers=self.headers)
+        self.assertEqual(r.status_code, 404)
+        r = self.client.post("/api/studio/confirm-batch",
+                             json={"owner": self.owner},
+                             headers=self.headers)
+        self.assertEqual(r.status_code, 400)
+
+    def test_upload_detects_faces_without_failing(self):
+        import io
+        from unittest.mock import patch as _patch
+        from PIL import Image as _Image, ImageDraw as _Draw
+        img = _Image.new("RGB", (400, 400), (250, 250, 248))
+        _Draw.Draw(img).ellipse([100, 100, 300, 300], fill=(90, 60, 40))
+        buf = io.BytesIO()
+        img.save(buf, "JPEG")
+        buf.seek(0)
+        fake_row = [[10.0, 10.0, 50.0, 50.0] + [0.0] * 10 + [0.95]]
+        with _patch("backend.faces.detect_boxes", return_value=fake_row):
+            with _patch("backend.storage.put", return_value="k"):
+                r = self.client.post("/api/photos?token=" + config.API_TOKEN,
+                                     data={"owner": self.owner,
+                                           "photo": (buf, "blank.jpg")},
+                                     headers=self.headers,
+                                     content_type="multipart/form-data")
+        self.assertEqual(r.status_code, 200, r.json)
+        pid = r.json["photo"]["id"]
+        with db.connect() as c:
+            rows = c.execute("SELECT box, source FROM photo_faces WHERE photo_id=?",
+                             (pid,)).fetchall()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["source"], "upload")
+
+
 if __name__ == "__main__":
     unittest.main()

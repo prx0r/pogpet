@@ -1,0 +1,647 @@
+{
+ "nodes": [
+  {
+   "id": "TPL-FIG-PETBIG",
+   "type": "template"
+  },
+  {
+   "id": "TPL-CROC-G07",
+   "type": "template"
+  },
+  {
+   "id": "TPL-DART-STAND",
+   "type": "template"
+  },
+  {
+   "id": "TPL-GOLF-MARKER",
+   "type": "template"
+  },
+  {
+   "id": "TPL-MAHJ-READER",
+   "type": "template"
+  },
+  {
+   "id": "TPL-CARD-RACK",
+   "type": "template"
+  },
+  {
+   "id": "TPL-CRIB-PEG",
+   "type": "template"
+  },
+  {
+   "id": "TPL-KEYCAP-MX",
+   "type": "template"
+  },
+  {
+   "id": "TPL-KEYCHAIN",
+   "type": "template"
+  },
+  {
+   "id": "TPL-ORNAMENT",
+   "type": "template"
+  },
+  {
+   "id": "TPL-MINI-FIG",
+   "type": "template"
+  },
+  {
+   "id": "SUP:jlc3dp",
+   "type": "supplier",
+   "name": "JLC3DP (JLCPCB 3D printing)"
+  },
+  {
+   "id": "SUP:printie",
+   "type": "supplier",
+   "name": "Printie"
+  },
+  {
+   "id": "CHARM-CROC-CHRIS",
+   "type": "product",
+   "name": "Personalised croc charm, cartoon face badge (Chris sample)",
+   "family": "croc-charm",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "wjp",
+   "price_gbp": 5.0,
+   "slots": [
+    "subject"
+   ],
+   "occasions": [
+    "birthday",
+    "Christmas stocking"
+   ],
+   "interests": [
+    "crocs",
+    "golf"
+   ]
+  },
+  {
+   "id": "CHARM-CROC-CLIMBER",
+   "type": "product",
+   "name": "Croc charm: hole climber",
+   "family": "croc-charm",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "wjp-tough",
+   "price_gbp": null,
+   "slots": [
+    "subject"
+   ],
+   "occasions": [],
+   "interests": []
+  },
+  {
+   "id": "CHARM-CROC-PET",
+   "type": "product",
+   "name": "Croc charm: pet head",
+   "family": "croc-charm",
+   "kind": "personalised",
+   "level": "PRINT_READY",
+   "process": "wjp-tough",
+   "price_gbp": null,
+   "slots": [
+    "subject"
+   ],
+   "occasions": [],
+   "interests": []
+  },
+  {
+   "id": "FIG-MINI-GOLF-WJP",
+   "type": "product",
+   "name": "Mini-me desk figure on putting green",
+   "family": "mini-figure",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "wjp",
+   "price_gbp": 24.99,
+   "slots": [
+    "subject",
+    "name"
+   ],
+   "occasions": [
+    "birthday",
+    "retirement",
+    "Father's Day",
+    "Christmas"
+   ],
+   "interests": [
+    "golf",
+    "mini-me"
+   ]
+  },
+  {
+   "id": "FIG-PETBIG-TUX-80",
+   "type": "product",
+   "name": "Me & My Big Pet custom figurine, 80 mm (tuxedo cat sample)",
+   "family": "figure-with-pet",
+   "kind": "personalised",
+   "level": "PRINT_READY",
+   "process": "wjp",
+   "price_gbp": null,
+   "slots": [
+    "subject"
+   ],
+   "occasions": [
+    "birthday",
+    "Christmas",
+    "gotcha day",
+    "pet memorial",
+    "moving in together",
+    "Mother's/Father's Day from the pet"
+   ],
+   "interests": [
+    "pets",
+    "cute collectibles",
+    "desk decor"
+   ]
+  },
+  {
+   "id": "KEYCAP-MX-WJP",
+   "type": "product",
+   "name": "Artisan keycap: 19th hole (Cherry MX)",
+   "family": "keycap",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "wjp",
+   "price_gbp": 15.0,
+   "slots": [
+    "name"
+   ],
+   "occasions": [
+    "birthday",
+    "Christmas stocking"
+   ],
+   "interests": [
+    "keyboards",
+    "golf"
+   ]
+  },
+  {
+   "id": "KEYCHAIN-BUST-WJP",
+   "type": "product",
+   "name": "Mini-me bust keychain from photos",
+   "family": "keychain",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "wjp",
+   "price_gbp": 15.0,
+   "slots": [
+    "subject",
+    "name"
+   ],
+   "occasions": [
+    "birthday",
+    "Father's Day",
+    "Christmas stocking"
+   ],
+   "interests": [
+    "mini-me"
+   ]
+  },
+  {
+   "id": "MAHJ-READER-WJP",
+   "type": "product",
+   "name": "Personalised mahjong line reader, jade + ivory",
+   "family": "mahjong-reader",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "wjp",
+   "price_gbp": 16.0,
+   "slots": [
+    "name",
+    "tagline"
+   ],
+   "occasions": [
+    "birthday",
+    "Christmas",
+    "Mother's Day"
+   ],
+   "interests": [
+    "mahjong",
+    "games"
+   ]
+  },
+  {
+   "id": "MARKER-GOLF-CNC",
+   "type": "product",
+   "name": "Personalised golf ball marker, black anodised aluminium",
+   "family": "golf-marker",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "cnc",
+   "price_gbp": 10.0,
+   "slots": [
+    "name",
+    "message"
+   ],
+   "occasions": [
+    "birthday",
+    "Father's Day",
+    "Christmas",
+    "retirement"
+   ],
+   "interests": [
+    "golf"
+   ]
+  },
+  {
+   "id": "ORNAMENT-SANTA-WJP",
+   "type": "product",
+   "name": "Mini-me Christmas ornament with Santa hat",
+   "family": "ornament",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "wjp",
+   "price_gbp": 15.0,
+   "slots": [
+    "subject",
+    "name"
+   ],
+   "occasions": [
+    "Christmas",
+    "first Christmas"
+   ],
+   "interests": [
+    "christmas",
+    "mini-me"
+   ]
+  },
+  {
+   "id": "PEGS-CRIB-316L",
+   "type": "product",
+   "name": "Cribbage pegs: golf-ball + flag set, engraved",
+   "family": "cribbage-pegs",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "slm-316l",
+   "price_gbp": 15.0,
+   "slots": [
+    "initials"
+   ],
+   "occasions": [
+    "birthday",
+    "Christmas"
+   ],
+   "interests": [
+    "cribbage",
+    "golf"
+   ]
+  },
+  {
+   "id": "RACK-CARD-MJF",
+   "type": "product",
+   "name": "Personalised playing-card hand rack, black PA12",
+   "family": "card-rack",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "mjf",
+   "price_gbp": 15.0,
+   "slots": [
+    "name"
+   ],
+   "occasions": [
+    "birthday",
+    "Christmas"
+   ],
+   "interests": [
+    "cards",
+    "games"
+   ]
+  },
+  {
+   "id": "STAND-DART-MJF",
+   "type": "product",
+   "name": "Personalised dart stand, dartboard relief, black PA12",
+   "family": "dart-stand",
+   "kind": "personalised",
+   "level": "DRAFT",
+   "process": "mjf",
+   "price_gbp": 20.0,
+   "slots": [
+    "name",
+    "tagline",
+    "arc"
+   ],
+   "occasions": [
+    "birthday",
+    "Father's Day",
+    "Christmas"
+   ],
+   "interests": [
+    "darts",
+    "pub games"
+   ]
+  },
+  {
+   "id": "INT:cards",
+   "type": "interest"
+  },
+  {
+   "id": "INT:christmas",
+   "type": "interest"
+  },
+  {
+   "id": "INT:cribbage",
+   "type": "interest"
+  },
+  {
+   "id": "INT:crocs",
+   "type": "interest"
+  },
+  {
+   "id": "INT:cute collectibles",
+   "type": "interest"
+  },
+  {
+   "id": "INT:darts",
+   "type": "interest"
+  },
+  {
+   "id": "INT:desk decor",
+   "type": "interest"
+  },
+  {
+   "id": "INT:games",
+   "type": "interest"
+  },
+  {
+   "id": "INT:golf",
+   "type": "interest"
+  },
+  {
+   "id": "INT:keyboards",
+   "type": "interest"
+  },
+  {
+   "id": "INT:mahjong",
+   "type": "interest"
+  },
+  {
+   "id": "INT:mini-me",
+   "type": "interest"
+  },
+  {
+   "id": "INT:pets",
+   "type": "interest"
+  },
+  {
+   "id": "INT:pub games",
+   "type": "interest"
+  }
+ ],
+ "edges": [
+  {
+   "src": "CHARM-CROC-CHRIS",
+   "dst": "TPL-CROC-G07",
+   "rel": "instance_of"
+  },
+  {
+   "src": "CHARM-CROC-CHRIS",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp"
+  },
+  {
+   "src": "CHARM-CROC-CHRIS",
+   "dst": "INT:crocs",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "CHARM-CROC-CHRIS",
+   "dst": "INT:golf",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "CHARM-CROC-CLIMBER",
+   "dst": "TPL-CROC-G07",
+   "rel": "instance_of"
+  },
+  {
+   "src": "CHARM-CROC-CLIMBER",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp-tough"
+  },
+  {
+   "src": "CHARM-CROC-PET",
+   "dst": "TPL-CROC-G07",
+   "rel": "instance_of"
+  },
+  {
+   "src": "CHARM-CROC-PET",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp-tough"
+  },
+  {
+   "src": "FIG-MINI-GOLF-WJP",
+   "dst": "TPL-MINI-FIG",
+   "rel": "instance_of"
+  },
+  {
+   "src": "FIG-MINI-GOLF-WJP",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp"
+  },
+  {
+   "src": "FIG-MINI-GOLF-WJP",
+   "dst": "INT:golf",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "FIG-MINI-GOLF-WJP",
+   "dst": "INT:mini-me",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "FIG-PETBIG-TUX-80",
+   "dst": "TPL-FIG-PETBIG",
+   "rel": "instance_of"
+  },
+  {
+   "src": "FIG-PETBIG-TUX-80",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp"
+  },
+  {
+   "src": "FIG-PETBIG-TUX-80",
+   "dst": "CHARM-CROC-PET",
+   "rel": "same-subject-smaller"
+  },
+  {
+   "src": "FIG-PETBIG-TUX-80",
+   "dst": "INT:pets",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "FIG-PETBIG-TUX-80",
+   "dst": "INT:cute collectibles",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "FIG-PETBIG-TUX-80",
+   "dst": "INT:desk decor",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "KEYCAP-MX-WJP",
+   "dst": "TPL-KEYCAP-MX",
+   "rel": "instance_of"
+  },
+  {
+   "src": "KEYCAP-MX-WJP",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp"
+  },
+  {
+   "src": "KEYCAP-MX-WJP",
+   "dst": "INT:keyboards",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "KEYCAP-MX-WJP",
+   "dst": "INT:golf",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "KEYCHAIN-BUST-WJP",
+   "dst": "TPL-KEYCHAIN",
+   "rel": "instance_of"
+  },
+  {
+   "src": "KEYCHAIN-BUST-WJP",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp"
+  },
+  {
+   "src": "KEYCHAIN-BUST-WJP",
+   "dst": "INT:mini-me",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "MAHJ-READER-WJP",
+   "dst": "TPL-MAHJ-READER",
+   "rel": "instance_of"
+  },
+  {
+   "src": "MAHJ-READER-WJP",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp"
+  },
+  {
+   "src": "MAHJ-READER-WJP",
+   "dst": "INT:mahjong",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "MAHJ-READER-WJP",
+   "dst": "INT:games",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "MARKER-GOLF-CNC",
+   "dst": "TPL-GOLF-MARKER",
+   "rel": "instance_of"
+  },
+  {
+   "src": "MARKER-GOLF-CNC",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "cnc"
+  },
+  {
+   "src": "MARKER-GOLF-CNC",
+   "dst": "INT:golf",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "ORNAMENT-SANTA-WJP",
+   "dst": "TPL-ORNAMENT",
+   "rel": "instance_of"
+  },
+  {
+   "src": "ORNAMENT-SANTA-WJP",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "wjp"
+  },
+  {
+   "src": "ORNAMENT-SANTA-WJP",
+   "dst": "INT:christmas",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "ORNAMENT-SANTA-WJP",
+   "dst": "INT:mini-me",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "PEGS-CRIB-316L",
+   "dst": "TPL-CRIB-PEG",
+   "rel": "instance_of"
+  },
+  {
+   "src": "PEGS-CRIB-316L",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "slm-316l"
+  },
+  {
+   "src": "PEGS-CRIB-316L",
+   "dst": "INT:cribbage",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "PEGS-CRIB-316L",
+   "dst": "INT:golf",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "RACK-CARD-MJF",
+   "dst": "TPL-CARD-RACK",
+   "rel": "instance_of"
+  },
+  {
+   "src": "RACK-CARD-MJF",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "mjf"
+  },
+  {
+   "src": "RACK-CARD-MJF",
+   "dst": "INT:cards",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "RACK-CARD-MJF",
+   "dst": "INT:games",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "STAND-DART-MJF",
+   "dst": "TPL-DART-STAND",
+   "rel": "instance_of"
+  },
+  {
+   "src": "STAND-DART-MJF",
+   "dst": "SUP:jlc3dp",
+   "rel": "made_by",
+   "process": "mjf"
+  },
+  {
+   "src": "STAND-DART-MJF",
+   "dst": "INT:darts",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "STAND-DART-MJF",
+   "dst": "INT:pub games",
+   "rel": "appeals_to"
+  }
+ ]
+}

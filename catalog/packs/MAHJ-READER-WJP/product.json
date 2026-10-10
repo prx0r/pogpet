@@ -1,0 +1,245 @@
+{
+ "schema_version": 2,
+ "sku": "MAHJ-READER-WJP",
+ "name": "Personalised mahjong line reader, jade + ivory",
+ "family": "mahjong-reader",
+ "kind": "personalised",
+ "parents": [
+  "TPL-MAHJ-READER"
+ ],
+ "geometry": {
+  "units": "mm",
+  "dims_mm": [
+   165.0,
+   44.0,
+   3.09
+  ],
+  "volume_cm3": 13.766,
+  "faces": null,
+  "shells": 1,
+  "size_variants_mm": [],
+  "locked_features": [
+   {
+    "id": "window",
+    "note": "reading window = one NMJL card line"
+   }
+  ],
+  "source": {}
+ },
+ "manufacture": {
+  "supplier": "jlc3dp",
+  "process": "wjp",
+  "material": "Full Color Resin",
+  "finish": "Oil Spraying (clear gloss)",
+  "colour": "jade + ivory",
+  "hand_finish": [],
+  "fulfilment": "dropship",
+  "print_file": {
+   "path": null,
+   "sha256": null,
+   "format": "obj-mtl-png-zip"
+  },
+  "preflight": {
+   "report": "print/preflight.json",
+   "acknowledged": {}
+  },
+  "supplier_settings": {},
+  "lead_time_days": {
+   "build": 5,
+   "ship_min": 8,
+   "ship_max": 13
+  }
+ },
+ "cost": {
+  "currency": "USD",
+  "print": {
+   "amount": 11.29,
+   "basis": "estimate",
+   "ref": "volume x preflight rate",
+   "date": "2026-10-10"
+  },
+  "shipping": {
+   "amount": 6.05,
+   "basis": "estimate",
+   "ref": "JLC quote 2026-10-09 for brick figures (US Global Standard); not quoted for this product",
+   "date": "2026-10-09",
+   "region": "US"
+  },
+  "packaging": {
+   "amount": 0,
+   "basis": "estimate",
+   "ref": null,
+   "date": null
+  }
+ },
+ "slots": [
+  {
+   "id": "name",
+   "type": "text",
+   "label": "Name",
+   "required": true,
+   "offered": true,
+   "validated": false,
+   "evidence": null,
+   "surface": {
+    "kind": "planar",
+    "anchor": "top bar"
+   },
+   "method": "relief",
+   "text": {
+    "font": "Fraunces-SemiBold",
+    "cap_mm": 6.0,
+    "min_cap_mm": 3.0,
+    "max_chars": 10,
+    "charset": "A-Z 0-9 '&-.!",
+    "fit": "shrink-then-fallback-then-error"
+   },
+   "profile_source": [
+    "subject.display_name"
+   ]
+  },
+  {
+   "id": "tagline",
+   "type": "text",
+   "label": "Tagline",
+   "required": false,
+   "offered": true,
+   "validated": false,
+   "evidence": null,
+   "surface": {
+    "kind": "planar",
+    "anchor": "bottom bar"
+   },
+   "method": "relief",
+   "text": {
+    "font": "Fraunces-SemiBold",
+    "cap_mm": 3.0,
+    "min_cap_mm": 2.0,
+    "max_chars": 24,
+    "charset": "A-Z 0-9 '&-.!",
+    "fit": "shrink-then-fallback-then-error"
+   },
+   "profile_source": []
+  }
+ ],
+ "audience": {
+  "suits": [
+   "mahjong players",
+   "NMJL card holders",
+   "game-night hosts"
+  ],
+  "occasions": [
+   "birthday",
+   "Christmas",
+   "Mother's Day"
+  ],
+  "interests": [
+   "mahjong",
+   "games"
+  ],
+  "relationship_to_buyer": [
+   "mum",
+   "gran",
+   "friend",
+   "dad"
+  ],
+  "not_for": [
+   "non-NMJL card sizes (check card width)"
+  ],
+  "price_band": "£15-20",
+  "tone": [
+   "playful"
+  ]
+ },
+ "listing": {
+  "title": "Personalised Mahjong Line Reader, Custom Name Mahjong Card Holder, Jade Mahjong Accessory, Gift for Mahjong Player, Mah Jongg Gift",
+  "price": {
+   "currency": "GBP",
+   "amount": 16.0
+  },
+  "tags": [
+   "mahjong line reader",
+   "mahjong gift",
+   "mah jongg",
+   "mahjong accessories",
+   "nmjl card holder",
+   "personalised mahjong",
+   "custom mahjong",
+   "mahjong player gift",
+   "jade mahjong",
+   "card line marker",
+   "game night gift",
+   "mahjong card",
+   "gift for her"
+  ],
+  "materials": [
+   "full colour resin"
+  ],
+  "short": "",
+  "description": "Slide it down your card and read one line at a time. The window frames a single line, the name sits in ivory on jade, with DAD'S TABLE - NO PEEKING and dot-tile icons.\n\nPrinted in one piece in full-colour resin, 3 mm thick, so the colour is through the print, not a sticker.\n\nPersonalisation: tell us the name (up to 10 letters) and, for photo pieces, send 1-3 clear front-facing photos after ordering.",
+  "spec_rows": [
+   [
+    "Size",
+    "165 × 44 × 3.1 mm"
+   ],
+   [
+    "Material",
+    "Full-colour resin (WJP)"
+   ],
+   [
+    "Colours",
+    "Jade with ivory lettering"
+   ],
+   [
+    "Fits",
+    "One line of a standard NMJL card"
+   ]
+  ],
+  "processing": "Made to order: 5-8 working days production, then shipping",
+  "channels": [
+   "etsy",
+   "oddhobb-store"
+  ],
+  "images": [
+   {
+    "file": "01_hero.png",
+    "role": "hero",
+    "alt": "Personalised jade mahjong line reader, hero"
+   },
+   {
+    "file": "02_high34.png",
+    "role": "view",
+    "alt": "Personalised jade mahjong line reader, high34"
+   },
+   {
+    "file": "03_top.png",
+    "role": "view",
+    "alt": "Personalised jade mahjong line reader, top"
+   },
+   {
+    "file": "04_detail.png",
+    "role": "view",
+    "alt": "Personalised jade mahjong line reader, detail"
+   },
+   {
+    "file": "05_spec.png",
+    "role": "spec",
+    "alt": "Personalised jade mahjong line reader, spec"
+   }
+  ]
+ },
+ "assets": {
+  "design_parts": "etsy_samples/out/p02_line_reader/",
+  "generator": "etsy_samples/g02_*.py",
+  "listing_source": "etsy_samples/listings/p02_line_reader"
+ },
+ "graph": {
+  "related": [],
+  "extends_to": []
+ },
+ "samples": [],
+ "ext": {
+  "listing_images_note": "rendered in Blender from the design-part OBJs (etsy_samples/r0N_*.py), NOT from the print file; re-render from print/ and register to pass G11",
+  "blocker": "multi-part design (body + relief); WJP needs ONE textured OBJ+MTL+PNG: bake the part colours into a texture"
+ }
+}

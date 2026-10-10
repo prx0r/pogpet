@@ -956,6 +956,42 @@
         ]
       }
     },
+    "/backend/api/cards/{id}/delivery": {
+      "get": {
+        "operationId": "cardDelivery",
+        "summary": "Value vs Speedy shipping charges with estimated arrival ranges",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "revision",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "country",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/backend/api/videos": {
       "post": {
         "operationId": "performVideo",

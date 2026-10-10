@@ -2,24 +2,28 @@
   "id": "birthday_four_photos_party_title_v1",
   "version": 1,
   "status": "published",
-
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
-    "price_cents": 799
+    "price_cents": 299
   },
-
   "eligibility": {
-    "occasion": ["birthday"],
-    "subjects": ["person"],
+    "occasion": [
+      "birthday"
+    ],
+    "subjects": [
+      "person"
+    ],
     "min_photos": 4
   },
-
   "ranking": {
     "interests": [],
-    "tones": ["warm", "funny", "playful"]
+    "tones": [
+      "warm",
+      "funny",
+      "playful"
+    ]
   },
-
   "inputs": {
     "photos": {
       "count": 4,
@@ -32,21 +36,23 @@
       "source": "profile"
     }
   },
-
   "generation": {
     "title_art": {
       "kind": "image",
-      "box": [285, 790, 930, 320],
+      "box": [
+        285,
+        790,
+        930,
+        320
+      ],
       "transparent": true,
       "prompt_template": "Celebration lettering reading exactly {headline}, playful party style, transparent background, no other text"
     }
   },
-
   "renderer": {
     "layout": "birthday_four_photos_v1",
     "template": "birthday_4photo"
   },
-
   "outputs": [
     "front",
     "inside",

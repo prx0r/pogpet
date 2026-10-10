@@ -12,7 +12,7 @@ server is the rebuild, already live).
 - `references/card-templates.json` — all 14 templates with paper contracts, incl. the 7 canonical birthday recipes (regenerated 2026-10-09).
 - Connected app: `https://mcp.oddhobb.com/mcp?token=<bridge-token>`
   (104 tools full tier / 6 public; install doc in `docs/chatgpt.md`).
-- Actions spec: `https://oddhobb.com/openapi.json` (38 endpoints).
+- Actions spec: `https://oddhobb.com/openapi.json` (39 endpoints).
 
 ## Migrate / install
 

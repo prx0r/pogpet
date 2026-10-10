@@ -1,0 +1,222 @@
+{
+ "schema_version": 2,
+ "sku": "RACK-CARD-MJF",
+ "name": "Personalised playing-card hand rack, black PA12",
+ "family": "card-rack",
+ "kind": "personalised",
+ "parents": [
+  "TPL-CARD-RACK"
+ ],
+ "geometry": {
+  "units": "mm",
+  "dims_mm": [
+   200.0,
+   62.0,
+   34.0
+  ],
+  "volume_cm3": 86.73,
+  "faces": null,
+  "shells": 1,
+  "size_variants_mm": [],
+  "locked_features": [
+   {
+    "id": "grooves",
+    "note": "3 grooves 2.5 mm, length 200 mm"
+   }
+  ],
+  "source": {}
+ },
+ "manufacture": {
+  "supplier": "jlc3dp",
+  "process": "mjf",
+  "material": "PA12 nylon (MJF)",
+  "finish": "dyed black",
+  "colour": "black",
+  "hand_finish": [
+   "gold paint-fill of engraved name and suits (fill.obj)"
+  ],
+  "fulfilment": "dropship",
+  "print_file": {
+   "path": "print/RACK-CARD-MJF-mjf.zip",
+   "sha256": "7a7f83771fd0f6fea60dac101513c366389ed3c0fe36c881711f0b115d02d0b9",
+   "format": "mesh-zip"
+  },
+  "preflight": {
+   "report": "print/preflight.json",
+   "acknowledged": {}
+  },
+  "supplier_settings": {},
+  "lead_time_days": {
+   "build": null,
+   "ship_min": null,
+   "ship_max": null
+  }
+ },
+ "cost": {
+  "currency": "USD",
+  "print": {
+   "amount": 30.36,
+   "basis": "estimate",
+   "ref": "volume x preflight rate",
+   "date": "2026-10-10"
+  },
+  "shipping": {
+   "amount": 6.05,
+   "basis": "estimate",
+   "ref": "JLC quote 2026-10-09 for brick figures (US Global Standard); not quoted for this product",
+   "date": "2026-10-09",
+   "region": "US"
+  },
+  "packaging": {
+   "amount": 0,
+   "basis": "estimate",
+   "ref": null,
+   "date": null
+  }
+ },
+ "slots": [
+  {
+   "id": "name",
+   "type": "text",
+   "label": "Name (engraved)",
+   "required": true,
+   "offered": true,
+   "validated": false,
+   "evidence": null,
+   "surface": {
+    "kind": "planar",
+    "anchor": "front face"
+   },
+   "method": "relief",
+   "text": {
+    "font": "Fraunces-SemiBold",
+    "cap_mm": 6.0,
+    "min_cap_mm": 3.0,
+    "max_chars": 10,
+    "charset": "A-Z 0-9 '&-.!",
+    "fit": "shrink-then-fallback-then-error"
+   },
+   "profile_source": [
+    "subject.display_name"
+   ]
+  }
+ ],
+ "audience": {
+  "suits": [
+   "card players with arthritis or small hands",
+   "cribbage and rummy regulars",
+   "grandparents who host card night"
+  ],
+  "occasions": [
+   "birthday",
+   "Christmas"
+  ],
+  "interests": [
+   "cards",
+   "games"
+  ],
+  "relationship_to_buyer": [
+   "dad",
+   "grandad",
+   "partner",
+   "friend"
+  ],
+  "not_for": [
+   "children under 3 (small parts)"
+  ],
+  "price_band": null,
+  "tone": [
+   "funny-affectionate"
+  ]
+ },
+ "listing": {
+  "title": "Personalised Playing Card Holder, Engraved Hand Rack for Cards, Custom Name Card Game Gift, Rummy Canasta Card Stand, Gift for Grandad",
+  "price": {
+   "currency": "GBP",
+   "amount": 15.0
+  },
+  "tags": [
+   "playing card holder",
+   "card hand rack",
+   "card stand",
+   "personalised cards",
+   "canasta gift",
+   "rummy card holder",
+   "gift for grandad",
+   "card game gift",
+   "engraved card rack",
+   "easy grip cards",
+   "bridge player gift",
+   "custom name gift",
+   "game night"
+  ],
+  "materials": [
+   "PA12 nylon"
+  ],
+  "short": "",
+  "description": "Three tiered grooves hold a full hand hands-free: great for big canasta hands, little hands and stiff fingers. The name is engraved 1 mm deep along the front with the four suits.\n\nIndustrial MJF nylon, matte black, 200 mm long, tough enough for years of game nights.\n\nPersonalisation: tell us the name (up to 10 letters) and, for photo pieces, send 1-3 clear front-facing photos after ordering.",
+  "spec_rows": [
+   [
+    "Size",
+    "200 × 62 × 34 mm"
+   ],
+   [
+    "Material",
+    "Nylon PA12 (MJF)"
+   ],
+   [
+    "Holds",
+    "3 tiered card grooves"
+   ],
+   [
+    "Personalised",
+    "Engraved name + card suits"
+   ]
+  ],
+  "processing": "Made to order: 5-8 working days production, then shipping",
+  "channels": [
+   "etsy",
+   "oddhobb-store"
+  ],
+  "images": [
+   {
+    "file": "01_hero.png",
+    "role": "hero",
+    "alt": "Black card hand rack engraved with a name, hero"
+   },
+   {
+    "file": "02_high34.png",
+    "role": "view",
+    "alt": "Black card hand rack engraved with a name, high34"
+   },
+   {
+    "file": "03_top.png",
+    "role": "view",
+    "alt": "Black card hand rack engraved with a name, top"
+   },
+   {
+    "file": "04_back34.png",
+    "role": "view",
+    "alt": "Black card hand rack engraved with a name, back34"
+   },
+   {
+    "file": "05_spec.png",
+    "role": "spec",
+    "alt": "Black card hand rack engraved with a name, spec"
+   }
+  ]
+ },
+ "assets": {
+  "design_parts": "etsy_samples/out/p03_card_rack/",
+  "generator": "etsy_samples/g03_*.py",
+  "listing_source": "etsy_samples/listings/p03_card_rack"
+ },
+ "graph": {
+  "related": [],
+  "extends_to": []
+ },
+ "samples": [],
+ "ext": {
+  "listing_images_note": "rendered in Blender from the design-part OBJs (etsy_samples/r0N_*.py), NOT from the print file; re-render from print/ and register to pass G11"
+ }
+}

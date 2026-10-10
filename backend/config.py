@@ -631,7 +631,7 @@ STUDIO_LINES: dict[str, dict] = {
         "scale_mm": 40,
         "hardware": "none",
         "blurb": "DAD'S DARTS, 180 CLUB. Obvious family gift, one-shot print.",
-        "status": "soon",
+        "status": "live",
         "production": "sample_pending",  # split 2026-10-08: catalog status above stays; Etsy-live needs verified
         "etsy": "draft",
         "price_cents": 2000,
@@ -1066,10 +1066,34 @@ STUDIO_CALLING_CARD = "/img/prod/prod-hero.png"
 # Controlled custom is what MCP exposes. Free-form mesh edits stay out.
 STUDIO_CUSTOM_POLICY = {
     "mode": "controlled",
-    "allowed": ["coat_color", "coat_pattern", "hat_id", "line", "qty", "amount_cents"],
-    "blocked": ["arbitrary_mesh", "unlisted_hat", "unlisted_pattern", "text_decal_until_live"],
+    "allowed": ["coat_color", "coat_pattern", "hat_id", "line", "qty", "amount_cents",
+                "text", "subject_id"],
+    "blocked": ["arbitrary_mesh", "unlisted_hat", "unlisted_pattern"],
     "note": "Agents pick from registries only. Full free custom is not enabled.",
 }
+
+# ── Text personalisation primitive (no remesh: preview grade PIL overlay,
+# production emboss). Per line: method, zone, max_chars, charset. An agent
+# auto-fills a subject's name; validation keeps it a standard product.
+TEXT_PERSONALIZATION: dict[str, dict] = {
+    "dart_stand": {"method": "emboss", "zone": "base_front", "max_chars": 14,
+                   "charset": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '&-",
+                   "note": "preview renders flat text; farm embosses at print"},
+}
+
+# ── Aesthetic onboarding pairs (maximal info, 3 taps; skip = don't care).
+# Each side votes coats; tallied into profile aesthetic.colors ranked.
+AESTHETIC_PAIRS: list[dict] = [
+    {"id": "warm_cool", "label": "Which shelf?",
+     "a": {"label": "Warm hearth", "coats": ["chocolate", "golden", "fawn"]},
+     "b": {"label": "Cool slate", "coats": ["grey", "black", "cream"]}},
+    {"id": "light_dark", "label": "Light or dark?",
+     "a": {"label": "Light", "coats": ["cream", "fawn", "golden"]},
+     "b": {"label": "Dark", "coats": ["chocolate", "black", "grey"]}},
+    {"id": "plain_pattern", "label": "Plain or patterned?",
+     "a": {"label": "Plain", "patterns": ["solid"]},
+     "b": {"label": "Patterned", "patterns": ["spots", "stripes", "fairisle"]}},
+]
 
 # ── Personal cards (Xmas etc.) — Cards tab + Etsy listings ───────────
 # Mix: dog mesh still + greeting text; or a real uploaded PNG.
@@ -1077,7 +1101,7 @@ STUDIO_CUSTOM_POLICY = {
 CARD_SIZES: dict[str, dict] = {
     "A6":    {"label": "A6 postcard",   "mm": "105 × 148", "price_cents": 399,
               "note": "Standard postcard · fits mail slots"},
-    "5x7":   {"label": "5×7 card",      "mm": "127 × 178", "price_cents": 799,
+    "5x7":   {"label": "5×7 card",      "mm": "127 × 178", "price_cents": 299,
               "note": "Fine Art greeting card · envelope included"},
     "A5":    {"label": "A5 card",       "mm": "148 × 210", "price_cents": 999,
               "note": "Larger greeting card"},
@@ -1092,11 +1116,11 @@ PERSONAL_CARDS: dict[str, dict] = {
         "sub": "from the whole pack",
         "source": "mesh",          # mesh still + text
         "theme": "christmas",
-        "price_cents": 799,
+        "price_cents": 299,
         "sizes": ["A6", "5x7", "A5"],
         "tags": ["christmas card", "personalised pet", "xmas gift", "dog card", "custom card"],
         "blurb": "Your pet's 3D render on a Christmas card. Upload once — print on cards, ornaments, keychains.",
-        "etsy_title": "Personalised Pet Christmas Card | Custom Dog Card | Merry Xmas Card | Pet Gift | Holiday Card",
+        "etsy_title": "Personalised Pet Christmas Card | Custom Dog Card | Merry Xmas Card | Pet Holiday Card | Photo Card",
         "requires": {},  # mesh render — no photo labels needed
     },
     "happy_holidays": {
@@ -1105,7 +1129,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "sub": "love, [pet name]",
         "source": "mesh",
         "theme": "christmas",
-        "price_cents": 799,
+        "price_cents": 299,
         "sizes": ["A6", "5x7"],
         "tags": ["holiday card", "personalised card", "pet gift", "christmas", "custom dog"],
         "blurb": "Neutral holiday greeting with your pet's mesh render.",
@@ -1118,7 +1142,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "sub": "— [pet name]",
         "source": "mesh",
         "theme": "everyday",
-        "price_cents": 699,
+        "price_cents": 299,
         "sizes": ["A6", "5x7"],
         "tags": ["thank you card", "personalised pet", "custom card", "dog thank you"],
         "blurb": "Thank-you card starring your pet's 3D render.",
@@ -1131,7 +1155,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "sub": "[pet name] says woof",
         "source": "mesh",
         "theme": "birthday",
-        "price_cents": 799,
+        "price_cents": 299,
         "sizes": ["A6", "5x7"],
         "tags": ["birthday card", "personalised pet", "dog birthday", "custom card"],
         "blurb": "Birthday card with your pet's mesh render.",
@@ -1144,7 +1168,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "sub": "with love",
         "source": "upload",        # customer PNG/JPEG — no mesh required
         "theme": "christmas",
-        "price_cents": 699,
+        "price_cents": 299,
         "sizes": ["A6", "5x7"],
         "tags": ["photo card", "custom photo card", "personalised card", "christmas photo"],
         "blurb": "Print your own photo on a greeting card — no 3D needed.",
@@ -1292,12 +1316,12 @@ ETSY_LISTINGS: dict[str, dict] = {
     "xmas_card": {
         "product_id": "xmas_card",
         "title": "Personalised Pet Christmas Card | Custom Dog Xmas Card | Merry Xmas Card | Pet Holiday Card | Photo Card",
-        "price_cents": 799,
+        "price_cents": 299,
         "price_band": "impulse",
         "currency": "GBP",
         "sizes": [
             {"id": "A6", "label": "A6", "mm": "105 × 148", "price_cents": 399},
-            {"id": "5x7", "label": "5×7", "mm": "127 × 178", "price_cents": 799},
+            {"id": "5x7", "label": "5×7", "mm": "127 × 178", "price_cents": 299},
             {"id": "A5", "label": "A5", "mm": "148 × 210", "price_cents": 999},
         ],
         "materials": "300–350gsm matte · full-colour print · envelope (5×7)",
@@ -1580,7 +1604,7 @@ AGENT_PERMISSIONS = {
     "products:order": "Place orders (needs Stripe — not yet)",
     "cards:read":    "See card designs, gallery, shelf and previews",
     "cards:create":   "Save cards, render, re-roll and attach art",
-    "cards:order":    "Reserve and checkout cards (£7.99 fixed)",
+    "cards:order":    "Buy and checkout cards (£2.99 fixed)",
 }
 DEFAULT_AGENT_PERMISSIONS = ["profile:read", "mesh:read", "products:read"]
 
@@ -2032,7 +2056,7 @@ GEO_PAGES: dict[str, dict] = {
         "comparison": {
             "headers": ["Gift", "Price (GBP)", "Why it works"],
             "rows": [
-                ["Greeting card", "7.99", "Personal, easy to post"],
+                ["Greeting card", "2.99", "Personal, easy to post"],
                 ["Postcard", "3.99", "Small and affordable"],
                 ["Mug", "14.99", "Daily use with their pet on it"],
                 ["Sticker sheet", "4.99", "Laptops, bottles, notebooks"],

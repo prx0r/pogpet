@@ -197,3 +197,76 @@ def build(line: str, country: str = "GB") -> dict:
             except Exception as e:
                 matrix[dest] = {"error": str(e)[:200]}
     return {"options": options, "picks": picks, "matrix": matrix}
+
+
+# ── greeting-card delivery (customer charges + estimated arrival) ──
+# Supplier totals are NEVER shown as shipping charges: the card is £2.99,
+# shipping is its own line. Charges derive from the live supplier ship
+# cost + a handling policy, charmed to 49-endings. Arrival = production +
+# carrier transit estimate + buffer, business days, labelled ESTIMATED
+# (no supplier hands us a guaranteed date; provider ETAs upgrade the
+# same UI later via confidence="provider").
+HANDLING_CENTS = 49
+ARRIVAL_BUFFER_DAYS = 1
+
+CARD_SKUS = [
+    {"sku": "CLASSIC-GRE-FEDR-7X5-BLA", "markets": ["GB"]},
+    {"sku": "GLOBAL-GRE-MOH-7X5-BLA", "markets": ["GB", "US"]},
+]
+
+# Carrier transit estimates (business days) per destination + method.
+# Estimates from carrier norms, NOT provider promises.
+CARD_TRANSIT = {
+    ("GB", "Standard"): (2, 4),
+    ("GB", "Express"): (1, 2),
+    ("US", "Standard"): (3, 7),
+    ("US", "Express"): (2, 4),
+}
+
+
+def shipping_charge(supplier_ship_gbp: float) -> int:
+    """Customer shipping charge (pence): supplier ship + handling,
+    charmed up to a 49-ending. £0.95 → 149; £8.60 → 949."""
+    base = round(supplier_ship_gbp * 100) + HANDLING_CENTS
+    low = (base // 100) * 100 + 49
+    return low if low >= base else low + 100
+
+
+def arrival_range(prod: list, transit: list, buffer: int = ARRIVAL_BUFFER_DAYS,
+                  now=None) -> tuple:
+    """Estimated [from, to] ISO dates: production + transit + buffer bdays."""
+    if now is None:
+        now = _dt.datetime.now(_dt.timezone.utc)
+    return (_add_bdays(now.date(), prod[0] + transit[0] + buffer).isoformat(),
+            _add_bdays(now.date(), prod[1] + transit[1] + buffer).isoformat())
+
+
+def build_card(country: str = "GB") -> list:
+    """Live card routes: Standard + Express per in-market SKU, first
+    quotable wins each method. Full route identity preserved."""
+    from backend import prodigi as _pdi
+    options = []
+    seen_methods = set()
+    for spec in CARD_SKUS:
+        if country not in spec["markets"]:
+            continue
+        for method in ("Standard", "Express"):
+            if method in seen_methods:
+                continue
+            try:
+                q = _pdi.quote(spec["sku"], 1, country, {},
+                               shipping_method=method)
+            except Exception:
+                continue
+            lo, hi = PROD_DAYS.get(spec["sku"], (1, 3))
+            options.append({"supplier": "prodigi", "grade": "LIVE",
+                            "sku": spec["sku"], "shipping_method": method,
+                            "currency": q["currency"],
+                            "supplier_ship": q["shipping"],
+                            "carrier": q["carrier"],
+                            "lab_country": q.get("lab_country", ""),
+                            "dispatch": [lo, hi],
+                            "transit": list(CARD_TRANSIT.get((country, method),
+                                                             (2, 5)))})
+            seen_methods.add(method)
+    return options

@@ -1,0 +1,104 @@
+{
+ "zip": "PEGS-CRIB-316L-slm-316l.zip",
+ "process": "mjf",
+ "verdict": "FAIL",
+ "volume_cm3": null,
+ "cost_estimate_usd": null,
+ "dims_mm": [
+  8.6,
+  8.6,
+  29.7
+ ],
+ "checks": [
+  {
+   "check": "zip size",
+   "status": "PASS",
+   "value": "0.2 MB",
+   "note": "limit 50.0 MB (6-7 MB proven, 14-16 MB failed)"
+  },
+  {
+   "check": "zip flat (files at root)",
+   "status": "PASS",
+   "value": [
+    "ball_peg.obj",
+    "flag_peg.obj"
+   ],
+   "note": ""
+  },
+  {
+   "check": "one OBJ",
+   "status": "FAIL",
+   "value": [
+    "ball_peg.obj",
+    "flag_peg.obj"
+   ],
+   "note": ""
+  },
+  {
+   "check": "face count",
+   "status": "PASS",
+   "value": 18650,
+   "note": ""
+  },
+  {
+   "check": "dimensions (OBJ units = mm)",
+   "status": "PASS",
+   "value": [
+    8.6,
+    8.6,
+    29.7
+   ],
+   "note": "JLC reads OBJ numbers as mm"
+  },
+  {
+   "check": "stands flat (contact patch)",
+   "status": "PASS",
+   "value": "2.5 x 2.5 mm at z=0",
+   "note": ""
+  },
+  {
+   "check": "open edges (welded)",
+   "status": "PASS",
+   "value": 0,
+   "note": ""
+  },
+  {
+   "check": "non-manifold edges (welded)",
+   "status": "WARN",
+   "value": 14,
+   "note": "WJP tolerates a few; JLC reviewer may query"
+  },
+  {
+   "check": "watertight",
+   "status": "FAIL",
+   "value": false,
+   "note": ""
+  },
+  {
+   "check": "winding consistent",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "shells (no floaters)",
+   "status": "FAIL",
+   "value": "14 shells, 13 debris",
+   "note": ""
+  },
+  {
+   "check": "resin volume",
+   "status": "WARN",
+   "value": "nan cm3",
+   "note": ""
+  },
+  {
+   "check": "cost estimate (JLC, qty 1)",
+   "status": "INFO",
+   "value": "n/a",
+   "note": "~$0.35/cm3, floor $3.0; quote is final"
+  }
+ ],
+ "print_sha256": "b3e1723b12294a609bc30ea8c53f2e0295cdae01f382eaadcf2bdc7423c5bf7d",
+ "ran_at": "2026-10-10T10:17:03"
+}

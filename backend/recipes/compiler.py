@@ -112,7 +112,8 @@ def _attempt_title_art(headline: str, vibe: str, owner: str, design_id: str):
 def compile(owner: str, recipe_id: str, *, subject: dict,
             occasion: str = "birthday", vibe: str = "", tone: str = "funny",
             message_hint: str = "", signature: str = "",
-            variation: int = 0) -> dict:
+            variation: int = 0, title_art: bool = True,
+            via: str = "mcp") -> dict:
     """Compile one finished product. Returns ok/design/proof_url/jobs/notes
     or ok False with error. Never raises on bad input."""
     owner = (owner or "anon").strip()[:80] or "anon"
@@ -166,11 +167,13 @@ def compile(owner: str, recipe_id: str, *, subject: dict,
     t = time.time()
     with _db.connect() as c:
         c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",
-                  (did, owner, 1, t, t, owner, "mcp"))
+                  (did, owner, 1, t, t, owner, via))
         c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",
                   (did, 1, _cards.json_dump(fspec), t))
         c.commit()
-    tkey, title_note = _attempt_title_art(title, "playful_balloons", owner, did)
+    tkey, title_note = (None, "skipped")
+    if title_art:
+        tkey, title_note = _attempt_title_art(title, "playful_balloons", owner, did)
     rev = 1
     if tkey:
         try:

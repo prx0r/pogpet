@@ -1,0 +1,79 @@
+{
+ "sku": "CHARM-CROC-CLIMBER",
+ "level": "DRAFT",
+ "print_sha256": "e2eb3f08cd00e995588e831d3e606a3adecce4f06e4d90436acb90109e834ad4",
+ "checked_at": "2026-10-10T10:32:29",
+ "validator": "catalog/tools/validate_pack.py v1",
+ "gates": {
+  "G01": {
+   "name": "structure + schema",
+   "status": "FAIL",
+   "why": "missing dir listing/"
+  },
+  "G02": {
+   "name": "supplier + process known",
+   "status": "PASS",
+   "why": ""
+  },
+  "G03": {
+   "name": "print file present + pinned",
+   "status": "PASS",
+   "why": ""
+  },
+  "G04": {
+   "name": "preflight PASS on exact file",
+   "status": "FAIL",
+   "why": "unacknowledged warnings: zip size"
+  },
+  "G05": {
+   "name": "geometry matches measurement",
+   "status": "FAIL",
+   "why": "dims_mm None vs measured [21.0, 21.0, 21.6]; volume None vs measured 1.34"
+  },
+  "G06": {
+   "name": "manufacture spec complete",
+   "status": "PASS",
+   "why": ""
+  },
+  "G07": {
+   "name": "real supplier cost",
+   "status": "FAIL",
+   "why": "print cost is estimate, need a supplier quote; shipping cost is estimate, need a supplier quote"
+  },
+  "G08": {
+   "name": "margin >= 30% per channel",
+   "status": "FAIL",
+   "why": "no price"
+  },
+  "G09": {
+   "name": "slots offered are validated",
+   "status": "FAIL",
+   "why": "slot subject offered but not validated against real geometry"
+  },
+  "G10": {
+   "name": "listing copy complete",
+   "status": "FAIL",
+   "why": "title length 0; 0 tags (need 13 unique); materials; description 0 chars < 200; spec rows; processing time"
+  },
+  "G11": {
+   "name": "listing images from print file",
+   "status": "FAIL",
+   "why": "0 images < 5; no hero image; listing/renders.json missing (provenance)"
+  },
+  "G12": {
+   "name": "audience defined",
+   "status": "FAIL",
+   "why": "suits < 3; occasions < 2; no buyer relationship; no not_for"
+  },
+  "G13": {
+   "name": "graph refs resolve",
+   "status": "PASS",
+   "why": ""
+  },
+  "G14": {
+   "name": "physical sample received + passed",
+   "status": "FAIL",
+   "why": "no passed sample with photo in samples/"
+  }
+ }
+}

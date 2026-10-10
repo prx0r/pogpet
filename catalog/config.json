@@ -1,0 +1,26 @@
+{
+ "catalog_version": 1,
+ "fx": {"GBP_USD": 1.33, "as_of": "2026-10-10", "note": "update monthly; margin gate uses it"},
+ "fees": {
+  "etsy": {"listing_gbp": 0.16, "transaction_pct": 6.5, "payment_pct": 4.0, "payment_fixed_gbp": 0.20, "offsite_ads_pct": 0},
+  "oddhobb-store": {"payment_pct": 2.9, "payment_fixed_gbp": 0.30}
+ },
+ "margin_min_pct": 30,
+ "quote_max_age_days": 90,
+ "listing": {"min_images": 5, "max_images": 20, "min_side_px": 2000, "title_max": 140, "tags_exact": 13, "tag_max": 20, "materials_max": 13, "desc_min": 200, "spec_rows_min": 3},
+ "processes": {
+  "wjp":  {"label": "JLC WJP full-colour resin", "print_format": "obj-mtl-png-zip", "preflight": "wjp", "min_text_cap_mm": 1.5, "min_relief_mm": 0},
+  "wjp-tough": {"label": "JLC WJP full-colour tough resin", "print_format": "obj-mtl-png-zip", "preflight": "wjp", "min_text_cap_mm": 1.5, "min_relief_mm": 0},
+  "mjf":  {"label": "JLC MJF PA12", "print_format": "mesh-zip", "preflight": "mjf", "min_text_cap_mm": 2.0, "min_relief_mm": 0.5},
+  "sla":  {"label": "JLC SLA resin", "print_format": "mesh-zip", "preflight": "sla", "min_text_cap_mm": 1.5, "min_relief_mm": 0.3},
+  "slm-316l": {"label": "JLC SLM 316L steel", "print_format": "mesh-zip", "preflight": "mjf", "min_text_cap_mm": 2.0, "min_relief_mm": 0.4},
+  "cnc":  {"label": "JLC CNC 6061 aluminium", "print_format": "step-zip", "preflight": null, "min_text_cap_mm": 1.0, "min_relief_mm": 0.1},
+  "fdm":  {"label": "Printie FDM", "print_format": "3mf", "preflight": null, "min_text_cap_mm": 3.0, "min_relief_mm": 0.6}
+ },
+ "templates": ["TPL-FIG-PETBIG", "TPL-CROC-G07", "TPL-DART-STAND", "TPL-GOLF-MARKER", "TPL-MAHJ-READER", "TPL-CARD-RACK", "TPL-CRIB-PEG", "TPL-KEYCAP-MX", "TPL-KEYCHAIN", "TPL-ORNAMENT", "TPL-MINI-FIG"],
+ "levels": {
+  "PRINT_READY": ["G01", "G02", "G03", "G04", "G05", "G06"],
+  "LISTABLE": ["G01", "G02", "G03", "G04", "G05", "G06", "G07", "G08", "G09", "G10", "G11", "G12", "G13"],
+  "PROVEN": ["G01", "G02", "G03", "G04", "G05", "G06", "G07", "G08", "G09", "G10", "G11", "G12", "G13", "G14"]
+ }
+}

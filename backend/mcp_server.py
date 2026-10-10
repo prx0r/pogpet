@@ -536,8 +536,13 @@ async def oddhobb_buy(creative_id: str='', design_id: str = "", revision: int=1,
                           api_key=key_arg, owner_sig=owner_sig)
         if not out.get("ok"):
             return [TextContent(type="text", text=_j(out))]
+        try:
+            from backend import cards as _cardsmod
+            _canon = _cardsmod.card_price().get("price_cents", 299)
+        except Exception:
+            _canon = 299
         cents = ((out.get("product") or {}).get("price_cents")
-                 or (out.get("order") or {}).get("price_cents") or 799) * 1
+                 or (out.get("order") or {}).get("price_cents") or _canon) * 1
         label = ((out.get("product") or {}).get("name")
                  or "Personalised 5×7 Greeting Card")
         return [TextContent(type="text", text=_j(_env(
@@ -991,7 +996,7 @@ async def oddhobb_checkout_card(design_id: str, revision: int, owner: str = "",
                                 qty: int = 1, idempotency_key: str = "",
                                 api_key: str = "",
                                 owner_sig: str = "") -> str:
-    """Pin a canonical revision and buy it (£7.99 → Shopify draft). 409s when
+    """Pin a canonical revision and buy it (£2.99 → Shopify draft). 409s when
     that revision has no passing export render — render first, then pay."""
     return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
                          {"owner": owner, "revision": revision, "qty": qty,
@@ -1002,7 +1007,7 @@ async def oddhobb_checkout_card(design_id: str, revision: int, owner: str = "",
                                 qty: int = 1, idempotency_key: str = "",
                                 api_key: str = "",
                                 owner_sig: str = "") -> str:
-    """Pin a canonical revision and buy it (£7.99 → Shopify draft). 409s when
+    """Pin a canonical revision and buy it (£2.99 → Shopify draft). 409s when
     that revision has no passing export render — render first, then pay."""
     return _j(await _call("POST", f"/api/cards/{design_id}/checkout",
                          {"owner": owner, "revision": revision, "qty": qty,
@@ -1487,10 +1492,15 @@ async def oddhobb_change(design_id: str = "", instruction: str = "",
     views = bundle.get("views_abs") or bundle.get("views") or {}
     if not changed:
         changed = ["revision (no visible change detected)"]
+    try:
+        from backend import cards as _cardsmod2
+        _change_cents = _cardsmod2.card_price().get("price_cents", 299)
+    except Exception:
+        _change_cents = 299
     return [TextContent(type="text", text=_j(_env(
         status="ready", id=nd["id"],
         summary=f"Changed {nd['id'][:4]}: {', '.join(changed)}.",
-        price_cents=799,
+        price_cents=_change_cents,
         next_actions=["change", "buy"],
         extra={"design_id": nd["id"], "revision": nd["revision"],
                "changed": changed,
@@ -1794,7 +1804,7 @@ owner_sig: str = "") -> str:
 async def figg_card_reserve(design_id: str, revision: int, idempotency_key: str,
                             qty: int = 1, owner: str = "", api_key: str = "",
                             owner_sig: str = "") -> str:
-    """Reserve a real card (£7.99 FIXED) with approved export. Show price first.
+    """Reserve a real card (£2.99 FIXED) with approved export. Show price first.
     Reserve-only — no payment. To sell: figg_card_checkout for Shopify checkout_url.
     Done means a product_url the human can buy from; a preview alone is not done."""
     return _j(await _call("POST", f"/api/cards/{design_id}/order",
@@ -1804,7 +1814,7 @@ async def figg_card_reserve(design_id: str, revision: int, idempotency_key: str,
 async def figg_card_checkout(design_id: str, revision: int, idempotency_key: str,
                              qty: int = 1, owner: str = "", api_key: str = "",
                              owner_sig: str = "") -> str:
-    """Buy a card (£7.99): freeze revision → Shopify draft → checkout_url.
+    """Buy a card (£2.99): freeze revision → Shopify draft → checkout_url.
     Returns product_url (OddHobb page agents hand over, never a PNG) + checkout_url
     (Shopify payment). Shopify owns payment; Prodigi prints on orders/paid only.
     Done means a product_url the human can buy from. A preview alone is not done."""
@@ -2195,6 +2205,19 @@ async def figg_card_gallery(owner: str = "", subject_id: str = "",
                          None, api_key=api_key, owner_sig=owner_sig))
 
 
+async def figg_card_delivery(design_id: str, revision: int, country: str = "GB",
+                             owner: str = "", api_key: str = "",
+                             owner_sig: str = "") -> str:
+    """Value vs Speedy for one finished card: customer shipping charges with
+    estimated arrival ranges. Returns opaque route ids — pass one as
+    delivery_option_id at checkout/cart so fulfilment uses the exact route."""
+    import urllib.parse as _up
+    qs = _up.urlencode({"revision": revision, "country": country})
+    return _j(await _call("GET", f"/api/cards/{design_id}/delivery?" + qs +
+                         ("&owner=" + _up.quote(owner) if owner else ""),
+                         None, api_key=api_key, owner_sig=owner_sig))
+
+
 async def figg_card_reroll(design_id: str, owner: str = "", subject_id: str = "",
                            api_key: str = "", owner_sig: str = "") -> list:
     """Same template, different images: rotate one gallery card to the next
@@ -2509,7 +2532,7 @@ TOOL_AREAS: dict[str, list] = {
                   figg_card_checkout, figg_card_templates, figg_card_fonts,
                   figg_card_edit, figg_card_variants, figg_card_messages,
                   figg_card_create, figg_card_update, figg_card_for_person,
-                  figg_card_gallery, figg_card_reroll],
+                  figg_card_gallery, figg_card_reroll, figg_card_delivery],
     "design":    [figg_blueprints, figg_design_validate, figg_design_base,
                   figg_constraints,
                   figg_design_save, figg_design_order, figg_blender_make],

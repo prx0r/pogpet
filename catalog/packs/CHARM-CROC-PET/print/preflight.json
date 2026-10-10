@@ -1,0 +1,136 @@
+{
+ "zip": "CHARM-CROC-PET-wjp-tough.zip",
+ "process": "wjp",
+ "verdict": "PASS",
+ "volume_cm3": 1.6,
+ "cost_estimate_usd": 6.91,
+ "dims_mm": [
+  15.62,
+  16.0,
+  22.3
+ ],
+ "checks": [
+  {
+   "check": "zip size",
+   "status": "PASS",
+   "value": "0.2 MB",
+   "note": "limit 12.0 MB (6-7 MB proven, 14-16 MB failed)"
+  },
+  {
+   "check": "zip flat (files at root)",
+   "status": "PASS",
+   "value": [
+    "croc-charm-pet.obj",
+    "material.mtl",
+    "material_0.png"
+   ],
+   "note": ""
+  },
+  {
+   "check": "one OBJ",
+   "status": "PASS",
+   "value": [
+    "croc-charm-pet.obj"
+   ],
+   "note": ""
+  },
+  {
+   "check": "MTL Kd = 1.0 (else prints dark)",
+   "status": "PASS",
+   "value": [
+    [
+     "1.0",
+     "1.0",
+     "1.0"
+    ]
+   ],
+   "note": ""
+  },
+  {
+   "check": "map_Kd texture linked",
+   "status": "PASS",
+   "value": [
+    "material_0.png"
+   ],
+   "note": ""
+  },
+  {
+   "check": "texture size",
+   "status": "PASS",
+   "value": "2048x256 RGB",
+   "note": "2048-8192"
+  },
+  {
+   "check": "OBJ has UVs (vt)",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "face count",
+   "status": "PASS",
+   "value": 12070,
+   "note": ""
+  },
+  {
+   "check": "dimensions (OBJ units = mm)",
+   "status": "PASS",
+   "value": [
+    15.62,
+    16.0,
+    22.3
+   ],
+   "note": "JLC reads OBJ numbers as mm"
+  },
+  {
+   "check": "stands flat (contact patch)",
+   "status": "PASS",
+   "value": "6.8 x 6.8 mm at z=0",
+   "note": ""
+  },
+  {
+   "check": "open edges (welded)",
+   "status": "PASS",
+   "value": 0,
+   "note": ""
+  },
+  {
+   "check": "non-manifold edges (welded)",
+   "status": "PASS",
+   "value": 0,
+   "note": "WJP tolerates a few; JLC reviewer may query"
+  },
+  {
+   "check": "watertight",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "winding consistent",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "shells (no floaters)",
+   "status": "PASS",
+   "value": "1 shells, 0 debris",
+   "note": ""
+  },
+  {
+   "check": "resin volume",
+   "status": "PASS",
+   "value": "1.6 cm3",
+   "note": ""
+  },
+  {
+   "check": "cost estimate (JLC, qty 1)",
+   "status": "INFO",
+   "value": "$6.91",
+   "note": "~$0.82/cm3, floor $6.91; quote is final"
+  }
+ ],
+ "print_sha256": "85bab4062388c6fca151e4b3249ef323a4830d43ef47c97d17a24be3eafd0797",
+ "ran_at": "2026-10-10T10:17:00"
+}

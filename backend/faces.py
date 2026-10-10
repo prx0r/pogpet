@@ -179,6 +179,21 @@ def _load_owner_vecs(owner: str) -> list:
     return out
 
 
+def to_unit(box: list, w: float, h: float) -> list:
+    """Normalize a face box to 0-1 units. Pixel boxes (YuNet native) are
+    divided by frame dims; already-normalized boxes pass through. The
+    photo_faces table contract is normalized (studio_library _box)."""
+    try:
+        x, y, bw, bh = (float(v) for v in box)
+    except (ValueError, TypeError):
+        return []
+    if max(abs(x), abs(y), abs(bw), abs(bh)) <= 1.001:
+        return [x, y, bw, bh]
+    if w > 0 and h > 0:
+        return [x / w, y / h, bw / w, bh / h]
+    return []
+
+
 def suggest(vec: list, owner: str, exclude_photo: str = "") -> dict:
     """Rank known faces for one embedding. Suggest-only — never confirms.
 

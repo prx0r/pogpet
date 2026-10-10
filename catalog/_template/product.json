@@ -1,0 +1,28 @@
+{
+ "schema_version": 2,
+ "sku": "FAMILY-VARIANT",
+ "name": "",
+ "family": "",
+ "kind": "personalised",
+ "parents": [],
+ "geometry": {"units": "mm", "dims_mm": null, "volume_cm3": null, "faces": null, "shells": null, "size_variants_mm": [], "locked_features": [], "source": {}},
+ "manufacture": {
+  "supplier": "jlc3dp", "process": "wjp", "material": null, "finish": null, "colour": null,
+  "hand_finish": [], "fulfilment": "dropship",
+  "print_file": {"path": null, "sha256": null, "format": null},
+  "preflight": {"report": "print/preflight.json", "acknowledged": {}},
+  "supplier_settings": {},
+  "lead_time_days": {"build": null, "ship_min": null, "ship_max": null}
+ },
+ "cost": {"currency": "USD",
+  "print": {"amount": null, "basis": null, "ref": null, "date": null},
+  "shipping": {"amount": null, "basis": null, "ref": null, "date": null, "region": null},
+  "packaging": {"amount": 0, "basis": "estimate", "ref": null, "date": null}},
+ "slots": [],
+ "audience": {"suits": [], "occasions": [], "interests": [], "relationship_to_buyer": [], "not_for": [], "price_band": null, "tone": []},
+ "listing": {"title": "", "price": {"currency": "GBP", "amount": null}, "tags": [], "materials": [], "short": "", "description": "", "spec_rows": [], "processing": "", "channels": ["etsy", "oddhobb-store"], "images": []},
+ "assets": {},
+ "graph": {"related": [], "extends_to": []},
+ "samples": [],
+ "ext": {}
+}

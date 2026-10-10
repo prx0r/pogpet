@@ -1,0 +1,102 @@
+{
+ "zip": "RACK-CARD-MJF-mjf.zip",
+ "process": "mjf",
+ "verdict": "PASS",
+ "volume_cm3": 86.73,
+ "cost_estimate_usd": 30.36,
+ "dims_mm": [
+  200.0,
+  62.0,
+  34.0
+ ],
+ "checks": [
+  {
+   "check": "zip size",
+   "status": "PASS",
+   "value": "0.0 MB",
+   "note": "limit 50.0 MB (6-7 MB proven, 14-16 MB failed)"
+  },
+  {
+   "check": "zip flat (files at root)",
+   "status": "PASS",
+   "value": [
+    "rack.obj"
+   ],
+   "note": ""
+  },
+  {
+   "check": "one OBJ",
+   "status": "PASS",
+   "value": [
+    "rack.obj"
+   ],
+   "note": ""
+  },
+  {
+   "check": "face count",
+   "status": "PASS",
+   "value": 3310,
+   "note": ""
+  },
+  {
+   "check": "dimensions (OBJ units = mm)",
+   "status": "PASS",
+   "value": [
+    200.0,
+    62.0,
+    34.0
+   ],
+   "note": "JLC reads OBJ numbers as mm"
+  },
+  {
+   "check": "stands flat (contact patch)",
+   "status": "PASS",
+   "value": "200.0 x 62.0 mm at z=0",
+   "note": ""
+  },
+  {
+   "check": "open edges (welded)",
+   "status": "PASS",
+   "value": 0,
+   "note": ""
+  },
+  {
+   "check": "non-manifold edges (welded)",
+   "status": "PASS",
+   "value": 0,
+   "note": "WJP tolerates a few; JLC reviewer may query"
+  },
+  {
+   "check": "watertight",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "winding consistent",
+   "status": "PASS",
+   "value": true,
+   "note": ""
+  },
+  {
+   "check": "shells (no floaters)",
+   "status": "PASS",
+   "value": "1 shells, 0 debris",
+   "note": ""
+  },
+  {
+   "check": "resin volume",
+   "status": "PASS",
+   "value": "86.7 cm3",
+   "note": ""
+  },
+  {
+   "check": "cost estimate (JLC, qty 1)",
+   "status": "INFO",
+   "value": "$30.36",
+   "note": "~$0.35/cm3, floor $3.0; quote is final"
+  }
+ ],
+ "print_sha256": "7a7f83771fd0f6fea60dac101513c366389ed3c0fe36c881711f0b115d02d0b9",
+ "ran_at": "2026-10-10T10:17:03"
+}

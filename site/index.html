@@ -39,7 +39,7 @@
     }
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Inter',sans-serif;background:var(--obsidian);color:var(--ivory);height:100dvh;overflow:hidden}
-    .app{display:grid;grid-template-rows:1fr auto;height:100dvh;padding-left:72px;padding-top:102px;background:var(--obsidian)}
+    .app{display:grid;grid-template-rows:1fr auto;height:100dvh;padding-left:72px;padding-top:14px;background:var(--obsidian)}
     .stage{position:relative;display:flex;align-items:center;justify-content:center;padding:20px}
     .barth{position:relative;width:200px;height:240px;animation:barthFloat 3s ease-in-out infinite}
     .barth img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 30px rgba(0,0,0,0.5))}
@@ -122,22 +122,11 @@
     .tabrail__sep{width:34px;height:1px;background:rgba(255,255,255,.09);margin:6px 0}
     .tabrail__soon{font-size:7px;letter-spacing:.1em;color:var(--violet);margin-top:-2px}
 
-    /* ── topbar: search + account (Amazon bones) ───────────────── */
-    .topbar{position:fixed;left:72px;right:0;top:0;z-index:70;
-      background:rgba(11,11,15,.88);backdrop-filter:blur(12px);
-      border-bottom:1px solid rgba(255,255,255,.07)}
-    .topbar__row{display:flex;align-items:center;gap:12px;padding:10px 18px}
-    .topbar__brand{font-family:'Playfair Display',serif;font-size:22px;color:var(--ivory);text-decoration:none;white-space:nowrap}
-    .topbar__brand i{color:var(--pumpkin);font-style:normal}
-    .topbar__search{flex:1;display:flex;align-items:center;gap:8px;max-width:620px;
-      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
-      border-radius:999px;padding:8px 14px;color:var(--muted)}
-    .topbar__search input{flex:1;background:none;border:none;outline:none;color:var(--ivory);
-      font-family:inherit;font-size:14px;min-width:0}
-    .topbar__search input::placeholder{color:var(--muted)}
-    .topbar__acct{display:flex;gap:8px;margin-left:auto}
-    .topbar__btn{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--ivory);
-      border-radius:999px;padding:7px 13px;font-family:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
+    /* ── floating account (banner removed — pages own the space) ── */
+    .acct-float{position:fixed;right:14px;top:12px;z-index:70;display:flex;gap:8px}
+    .topbar__btn{background:#fff;border:1px solid #e0dbd2;color:#222;
+      border-radius:999px;padding:7px 13px;font-family:inherit;font-size:12px;cursor:pointer;white-space:nowrap;
+      box-shadow:0 4px 14px rgba(0,0,0,.12)}
     .topbar__btn:hover{border-color:rgba(255,122,26,.45)}
     .catstrip{display:flex;gap:8px;overflow-x:auto;padding:0 18px 10px;scrollbar-width:none}
     .catstrip::-webkit-scrollbar{display:none}
@@ -189,9 +178,8 @@
       transition:opacity .55s ease,visibility .55s ease}
     .greet.hidden{opacity:0;visibility:hidden;pointer-events:none}
     .greet__inner{width:min(560px,100%);text-align:left}
-    .greet__mark{font-family:'Playfair Display',serif;font-size:clamp(44px,11vw,78px);
-      line-height:1;letter-spacing:-.02em;color:var(--ivory)}
-    .greet__mark i{color:var(--pumpkin);font-style:normal}
+    .greet__mark{line-height:1}
+    .greet__mark img{width:min(220px,46vw);height:auto;display:block}
     .greet__eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;
       color:var(--poison);margin:14px 0 8px}
     .greet__sub{font-size:clamp(15px,3.6vw,18px);line-height:1.55;color:var(--ivory);
@@ -344,7 +332,7 @@
       border-color:rgba(196,137,26,.35)}
     body.studio-chrome .tabrail__sep{background:#e8e4dc}
     body.studio-chrome .panel.white{left:0;right:0}
-    body.studio-chrome .panel.white .panel__inner{padding-left:86px;padding-right:18px;padding-top:104px;max-width:960px}
+    body.studio-chrome .panel.white .panel__inner{padding-left:86px;padding-right:18px;padding-top:20px;max-width:960px}
     body.studio-chrome .panel.white.model-open{padding-left:86px}
     /* search drop under the floating topbar — relevance-ranked live products */
     .search-drop{position:fixed;left:72px;right:0;top:0;z-index:75;
@@ -711,12 +699,11 @@
       padding:10px 12px;font-size:11px;color:var(--muted);background:var(--charcoal)}
     .out__bar a{color:var(--pumpkin);font-weight:600}
 
-    /* ── Domain switcher (top-left p.) ────────────────────── */
-    .brand-btn{background:transparent;border:none;font-family:'Playfair Display',serif;
-      font-size:22px;color:var(--ivory);cursor:pointer;padding:2px 8px 8px;
-      line-height:1;position:relative}
-    .brand-btn i{color:var(--pumpkin);font-style:normal}
-    .brand-btn:hover{color:var(--pumpkin)}
+    /* ── Domain switcher (top-left 3D mark) ────────────────────── */
+    .brand-btn{background:transparent;border:none;cursor:pointer;padding:2px;
+      line-height:0;position:relative}
+    .brand-btn img{width:42px;height:42px;object-fit:contain;display:block}
+    .brand-btn:hover{filter:brightness(1.15)}
     .switcher{position:absolute;left:60px;top:6px;background:var(--charcoal);
       border:1px solid rgba(255,122,26,.38);border-radius:12px;padding:6px;z-index:70;
       display:none;min-width:150px;box-shadow:0 12px 34px rgba(0,0,0,.55)}
@@ -792,6 +779,7 @@
     .pogboot__stage svg,.pogboot__stage img{position:absolute;inset:0;width:100%;height:100%}
     .pogboot__stage img{object-fit:contain;opacity:0;transition:opacity .25s ease}
     .pogboot__stage img.show{opacity:1}
+    .pogboot__stage img#pogboot-gif{opacity:1}
     /* fluid etch loop (from assets/logo/oddhobb-etch-loader.svg) */
     #pogboot-mark .etch{fill:none;stroke-dasharray:1;stroke-dashoffset:1;animation:pogetch 3s cubic-bezier(.62,0,.38,1) infinite}
     #pogboot-mark .etch-r{animation-delay:.12s}
@@ -802,12 +790,10 @@
     @media (prefers-reduced-motion: reduce){.pogboot__stage *{transition:none;animation:none}}
   </style>
   <link rel="stylesheet" href="/css/cards-studio.css">
-  <link rel="stylesheet" href="/css/viral-card-library.css?v=viral-2">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/api-client.js?v=studio-3"></script>
-  <script src="/js/viral-card-library.js?v=viral-2"></script>
   <script src="/js/cards-studio.js?v=studio-4"></script>
-  <script src="/js/card-gallery.js?v=studio-3"></script>
+  <script src="/js/card-gallery.js?v=p0-1"></script>
 
   <script src="/js/oddy.js"></script>
   <link rel="stylesheet" href="/vendor/swiper/swiper-bundle.min.css">
@@ -820,22 +806,10 @@
   <script src="/js/site-shell.js?v=studio-5"></script>
 </head>
 <body class="studio-chrome">
-  <!-- boot screen: mark draws, thickens to coin, spins, tours products, lifts -->
+  <!-- boot screen: black 3D mark emerges from plain white, then recedes -->
   <div class="pogboot" id="pogboot" aria-hidden="true">
     <div class="pogboot__stage">
-      <svg id="pogboot-mark" viewBox="0 0 1000 1000" role="img" aria-label="OddHobb">
-        <defs>
-          <clipPath id="pogboot-boundary">
-            <circle cx="500" cy="500" r="350"/>
-          </clipPath>
-        </defs>
-        <g clip-path="url(#pogboot-boundary)" fill="none" stroke="#000" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
-          <path id="pboot-l" pathLength="1" d="M378 850C363 785 355 712 360 640C366 590 388 542 410 500C430 560 458 566 477 548C498 528 497 492 476 476C458 462 430 472 410 500C370 410 360 285 360 150"/>
-          <path id="pboot-r" pathLength="1" d="M622 850C637 785 645 712 640 640C634 590 612 542 590 500C570 560 542 566 523 548C502 528 503 492 524 476C542 462 570 472 590 500C630 410 640 285 640 150"/>
-        </g>
-        <circle id="pboot-c" pathLength="1" cx="500" cy="500" r="350" fill="none" stroke="#000" stroke-width="26"/>
-      </svg>
-      <img id="pogboot-frame" alt="">
+      <img id="pogboot-gif" src="/assets/boot-emerge.gif" alt="OddHobb">
     </div>
     <div class="pogboot__cap" id="pogboot-cap">making your odd things…</div>
   </div>
@@ -843,7 +817,7 @@
   <!-- greeting page: the first thing a visitor sees -->
   <div class="greet" id="greet">
     <div class="greet__inner">
-      <div class="greet__mark">oddhobb<i>.</i></div>
+      <div class="greet__mark"><img src="/assets/logo-3d-black.png" alt="OddHobb"></div>
       <div class="greet__eyebrow">Tell us who it's for — we'll design the perfect little project</div>
       <p class="greet__sub">Start with the person — Dad, Cathy, the dog — and the occasion. We pick their best photos, match the right product, and post a gift that's already them.</p>
       <ol class="greet__steps">
@@ -870,9 +844,8 @@
 
   <!-- left tab rail -->
   <nav class="tabrail" id="tabrail" aria-label="Sections">
-    <button class="brand-btn" id="brand-btn" type="button" aria-haspopup="true" aria-expanded="false" title="Switch world">o<i>.</i></button>
+    <button class="brand-btn" id="brand-btn" type="button" aria-haspopup="true" aria-expanded="false" title="Switch world"><img src="/assets/logo-3d-black.png" alt="OddHobb"></button>
     <div class="switcher" id="switcher" role="menu" aria-label="Switch world" hidden>
-      <div class="switcher__hd">oddhobb</div>
       <a href="/" class="here" role="menuitem"><span>oddhobb.com</span><small>you are here</small></a>
     </div>
     <a class="tab active" href="/" data-route data-tab="quick">
@@ -903,18 +876,11 @@
     </a>
   </nav>
 
-  <!-- topbar: search + account. Categories live in #catstrip below (registry = GET /api/sections) -->
-  <header class="topbar">
-    <div class="topbar__row">
-      <a class="topbar__brand" href="/">oddhobb<i>.</i></a>
-      <label class="topbar__search"><span aria-hidden="true">&#x2315;</span><input id="qsearch" type="search" placeholder="Search figurines, cards, puzzles…" autocomplete="off"></label>
-      <div class="topbar__acct">
-        <button class="topbar__btn" id="acct-btn" type="button">&#x1F464; <span id="acct-name">sign in</span></button>
-        <button class="topbar__btn" id="cart-btn" type="button">&#x1F6D2; <span id="cart-n">0</span></button>
-      </div>
-    </div>
-    <nav class="catstrip" id="catstrip" aria-label="Categories"></nav>
-  </header>
+  <!-- floating account: no banner. Pages own the full space. -->
+  <div class="acct-float">
+    <button class="topbar__btn" id="acct-btn" type="button">&#x1F464; <span id="acct-name">sign in</span></button>
+    <button class="topbar__btn" id="cart-btn" type="button">&#x1F6D2; <span id="cart-n">0</span></button>
+  </div>
   <script>
   (function () {
     // Core boot lines — keep these; they already match the site voice.

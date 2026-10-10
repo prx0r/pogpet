@@ -262,6 +262,29 @@ def upload_photo():
         db.bump_uploads(c, owner, day)
         photo = db.get_photo(c, pid)
 
+    # Preprocess faces at upload (0 credits, CPU): detection is data,
+    # linking stays consent — nothing is tagged to anyone here.
+    try:
+        from backend import faces as _faces
+        import cv2 as _cv2
+        bgr = _cv2.imread(str(accepted.path))
+        if bgr is not None:
+            boxes = _faces.detect_boxes(bgr)
+            if boxes:
+                from backend import studio_library as _sl
+                _sl.init()
+                h_px, w_px = bgr.shape[:2]
+                with db.connect() as c:
+                    for f in boxes:
+                        x, y, w, h = (float(v) for v in f[:4])
+                        box = _faces.to_unit([x, y, w, h], w_px, h_px)
+                        if not box:
+                            continue
+                        c.execute("INSERT OR IGNORE INTO photo_faces (id,photo_id,box,score,source) VALUES (?,?,?,?,?)",
+                                  (db.new_id("face"), pid, json.dumps(box), float(f[-1]), "upload"))
+    except Exception:
+        pass
+
     return jsonify({"ok": True, "reused": False, "photo": db.dump(photo)})
 
 
@@ -629,6 +652,58 @@ def family_reminders():
     out.sort(key=lambda r: r["days_until"])
     return jsonify({"ok": True, "owner": owner, "within_days": within,
                     "reminders": out})
+
+
+@app.get("/api/onboarding/aesthetic")
+def onboarding_aesthetic_pairs():
+    """Aesthetic picker: 3 A/B/skip pairs for maximal signal (service-gated,
+    no owner needed to SEE the pairs; saving needs the owner)."""
+    return jsonify({"ok": True, "pairs": config.AESTHETIC_PAIRS,
+                    "hint": "pick a, b, or skip per pair — skip means don't care"})
+
+
+@app.post("/api/onboarding/aesthetic")
+def onboarding_aesthetic_save():
+    """Save aesthetic picks: {owner, subject_id, picks: {pair_id: a|b|skip}}.
+    Tallies coat + pattern votes into profile aesthetic.colors ranked.
+    Owner-enforced (profile PII)."""
+    from backend import subjects as _subjects
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    sid = (body.get("subject_id") or "").strip()[:80]
+    picks = body.get("picks") or {}
+    if not owner or not sid or not isinstance(picks, dict):
+        return _err("owner, subject_id and picks are required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    valid = {p["id"]: p for p in config.AESTHETIC_PAIRS}
+    votes: dict[str, int] = {}
+    pat_votes: dict[str, int] = {}
+    saved = {}
+    for pid, choice in picks.items():
+        if pid not in valid or choice not in ("a", "b", "skip"):
+            continue
+        saved[pid] = choice
+        if choice == "skip":
+            continue
+        side = valid[pid][choice]
+        for coat in side.get("coats", []):
+            votes[coat] = votes.get(coat, 0) + 1
+        for pat in side.get("patterns", []):
+            pat_votes[pat] = pat_votes.get(pat, 0) + 1
+    colors = sorted(votes, key=lambda c: (-votes[c], c))
+    patterns = sorted(pat_votes, key=lambda p: (-pat_votes[p], p))
+    with db.connect() as c:
+        if not _subjects.get_subject(c, owner, sid):
+            return _err("friend not found", 404)
+        prof = _subjects.set_profile(
+            c, owner, sid,
+            profile={"aesthetic": {"colors": colors, "patterns": patterns,
+                                   "picks": saved}})
+    return jsonify({"ok": True, "subject_id": sid,
+                    "aesthetic": (prof.get("profile", {}) or {}).get("aesthetic", {}),
+                    "hint": "personalise now auto-picks these colours where lines allow"})
 
 
 @app.get("/api/objects/<oid>/resolve")
@@ -3428,6 +3503,133 @@ def _studio_stills_for(line: str, coat: str, hat: str) -> dict:
     return {}
 
 
+def _check_text(line: str, text: str) -> tuple[str | None, dict | None]:
+    """Validate emboss text against TEXT_PERSONALIZATION. Returns
+    (clean_text_or_None, error_response_or_None). Uppercase, registry only —
+    no remesh, no freeform decal."""
+    text = (text or "").strip()
+    spec = config.TEXT_PERSONALIZATION.get(line)
+    if not text:
+        return None, None
+    if not spec:
+        return None, _err(f"{line} takes no text personalisation", 400)
+    clean = text.upper()[: spec.get("max_chars", 14)]
+    if len(text.strip()) > spec.get("max_chars", 14):
+        return None, _err(f"text over {spec['max_chars']} chars for {line}", 400)
+    allowed = set(spec.get("charset", ""))
+    if any(ch not in allowed for ch in clean):
+        return None, _err(f"text uses characters outside {line} charset", 400)
+    if not clean:
+        return None, None
+    return clean, None
+
+
+def _text_preview(line: str, text: str) -> str | None:
+    """Cheap name preview: flat PIL text on the line hero still, cached by
+    hash. Preview grade only — the farm embosses at print time."""
+    import hashlib as _hl
+    from PIL import Image as _Image, ImageDraw as _Draw, ImageFont as _Font
+    stills = _studio_stills_for(line, "none", "none")
+    hero = (stills.get("hero") or "").replace("/img/prod/", "")
+    src = config.DATA / "productimg" / config.STUDIO_STILL_DIR / hero
+    if not hero or not src.is_file():
+        return None
+    digest = _hl.sha1(f"{line}:{text}".encode()).hexdigest()[:12]
+    out = config.DATA / "productimg" / "text" / f"{line}-{digest}.png"
+    if out.is_file():
+        return f"/img/text/{out.name}"
+    try:
+        im = _Image.open(src).convert("RGB")
+        d = _Draw.Draw(im)
+        try:
+            font = _Font.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                max(24, im.width // 12))
+        except OSError:
+            font = _Font.load_default()
+        band_h = int(im.height * 0.16)
+        band = _Image.new("RGB", (im.width, band_h), (250, 246, 236))
+        im.paste(band, (0, im.height - band_h))
+        d = _Draw.Draw(im)
+        d.text([im.width // 2, im.height - band_h // 2], text, font=font,
+               fill=(158, 26, 38), anchor="mm")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        im.save(out, "PNG", optimize=True)
+        return f"/img/text/{out.name}"
+    except Exception:
+        return None
+
+
+def _slot_preview(line: str, resolved: dict) -> str | None:
+    """True-perspective slot composite over a blank plate (<1s, no re-render).
+    Plates: data/productimg/plates/<line>/<base>-<view>.png + .json.
+    Missing plates → None (caller falls back to the flat PIL preview)."""
+    import hashlib as _hl
+    import subprocess as _sp
+    base = (resolved.get("base") or "midnight").lower().replace(" ", "-")
+    plate = config.DATA / "productimg" / "plates" / line / f"{base}-hero.png"
+    if not plate.is_file() or not plate.with_suffix(".json").is_file():
+        return None
+    digest = _hl.sha1(json.dumps(resolved, sort_keys=True).encode()).hexdigest()[:12]
+    out = config.DATA / "productimg" / "text" / f"{line}-slot-{digest}.png"
+    if out.is_file():
+        return f"/img/text/{out.name}"
+    accent_hex = "#D7B25A"
+    try:
+        from backend import slots as _slots
+        pal = ((_slots.load_spec(line).get("colours") or {}).get("accent")
+               or {}).get("palette", {})
+        accent_hex = pal.get(resolved.get("accent", ""), accent_hex)
+    except Exception:
+        pass
+    params = {"name": resolved.get("name", ""),
+              "tagline": resolved.get("tagline", ""),
+              "arc": resolved.get("arc", ""),
+              "accent": accent_hex}
+    try:
+        r = _sp.run([sys.executable, "scripts/slot_compose.py", str(plate),
+                     json.dumps(params), str(out)],
+                    capture_output=True, text=True, timeout=30, cwd=".")
+        if r.returncode != 0 or not out.is_file():
+            return None
+        return f"/img/text/{out.name}"
+    except Exception:
+        return None
+
+
+def _aesthetic_coat(owner: str, subject_id: str, spec: dict) -> str | None:
+    """First profile-preferred coat the line allows. None = no opinion."""
+    if not subject_id:
+        return None
+    try:
+        from backend import subjects as _subjects
+        with db.connect() as c:
+            if not _subjects.get_subject(c, owner, subject_id):
+                return None
+            prof = _subjects.profile_for(c, owner, subject_id)
+        colors = ((prof.get("profile") or {}).get("aesthetic") or {}).get("colors") or []
+        allowed = set((spec.get("assets") or {}).get("coats") or ["none"])
+        for coat in colors:
+            if coat in allowed and coat != "none":
+                return coat
+    except Exception:
+        pass
+    return None
+
+
+def _resolve_subject(owner: str, subject_id: str) -> str:
+    """Explicit subject, else the owner's studio-selected friend."""
+    if subject_id:
+        return subject_id
+    try:
+        with db.connect() as c:
+            sel = c.execute("SELECT subject_id FROM studio_selection WHERE owner=?",
+                            (owner,)).fetchone()
+            return (dict(sel).get("subject_id") if sel else "") or ""
+    except Exception:
+        return ""
+
+
 def _list_studio_combos() -> dict:
     """Catalogue of pre-rendered coat/hat/pattern still sets for agents."""
     prod = config.DATA / "productimg" / config.STUDIO_STILL_DIR
@@ -4349,6 +4551,40 @@ def card_proof_image(did):
     return res
 
 
+def _fulfil_route(order, line_attrs=None):
+    """Resolve the frozen fulfilment route for a paid order.
+
+    Precedence: saved delivery_option_id row → the order row's own
+    shipping_method (checkout path) → Shopify line attributes → Standard.
+    Returns (shipping_method, route_or_None). Never raises.
+    """
+    try:
+        dopt = (order.get("delivery_option_id") or "").strip()
+        if dopt:
+            from backend import cards as _cards
+            route = _cards.get_delivery_option(order.get("owner", ""), dopt,
+                                               order.get("design_id"),
+                                               order.get("revision"))
+            if route:
+                return route["shipping_method"], route
+        own = (order.get("shipping_method") or "").strip()
+        if own and own != "Standard":
+            return own, None
+        if isinstance(line_attrs, dict):
+            dopt2 = str(line_attrs.get("delivery_option_id") or "").strip()
+            if dopt2:
+                from backend import cards as _cards
+                route = _cards.get_delivery_option(order.get("owner", ""), dopt2)
+                if route:
+                    return route["shipping_method"], route
+            sm = str(line_attrs.get("shipping_method") or "").strip()
+            if sm:
+                return sm, None
+    except Exception:
+        pass
+    return "Standard", None
+
+
 @app.post("/api/shopify/webhooks/orders-paid")
 def shopify_orders_paid():
     """Shopify orders/paid → Prodigi fulfilment. Idempotent.
@@ -4418,6 +4654,20 @@ def shopify_orders_paid():
         order = dict(row)
         if order.get("status") == "fulfilled" and order.get("prodigi_ref"):
             return
+        # Frozen fulfilment route: the customer's delivery choice travels
+        # with the order (delivery_option_id row → row method → line attrs).
+        line_attrs = {}
+        try:
+            for li in (payload.get("line_items") or payload.get("lineItems") or []):
+                props = li.get("customAttributes") or li.get("properties") or []
+                vals = {str(p.get("key") or p.get("name") or ""): str(p.get("value") or "")
+                        for p in props if isinstance(p, dict)}
+                if vals.get("oddhobb_order_id") == oid:
+                    line_attrs = vals
+                    break
+        except Exception:
+            line_attrs = {}
+        ship_method, _route = _fulfil_route(order, line_attrs)
         # shipping address from Shopify → Prodigi recipient
         ship = payload.get("shipping_address") or payload.get("shippingAddress") or {}
         recipient = {
@@ -4452,7 +4702,8 @@ def shopify_orders_paid():
                 _r2.delete(r2key)
                 return
             placed = _prodigi.create_order(_cards.CARD_PRODIGI_SKU, order["qty"],
-                                           asset_url, recipient)
+                                           asset_url, recipient,
+                                           shipping_method=ship_method)
         except Exception:  # noqa: BLE001
             return
         with db.connect() as c:
@@ -4497,7 +4748,7 @@ def shopify_webhook_register():
 
 @app.post("/api/products/personalise")
 def products_personalise():
-    """Controlled personalise: coat colour + pattern + hat on a product line."""
+    """Controlled personalise: coat colour + pattern + hat + text on a product line."""
     body = request.get_json(silent=True) or {}
     owner = (body.get("owner") or "anon").strip()[:80]
     line = (body.get("line") or "ornament").strip()
@@ -4506,12 +4757,18 @@ def products_personalise():
     pattern = (body.get("pattern") or body.get("coat_pattern") or "solid").strip().lower()
     mesh_id = (body.get("mesh_id") or "").strip()
     texture_note = (body.get("texture") or body.get("texture_note") or "")[:200]
+    subject_id = _resolve_subject(owner, (body.get("subject_id") or "").strip()[:80])
     if line not in config.STUDIO_LINES:
         return _err("unknown line", 400)
     spec = config.STUDIO_LINES[line]
     allowed = spec.get("assets") or {}
     if coat not in (allowed.get("coats") or ["none"]):
         return _err(f"coat {coat!r} is not allowed on {line}", 400)
+    if coat == "none":
+        # profile-driven colour: the friend's aesthetic picks when they have one
+        auto = _aesthetic_coat(owner, subject_id, spec)
+        if auto:
+            coat = auto
     if hat not in (allowed.get("hats") or ["none"]):
         return _err(f"hat {hat!r} is not allowed on {line}", 400)
     if pattern not in (allowed.get("patterns") or ["solid"]):
@@ -4519,9 +4776,44 @@ def products_personalise():
     if pattern != "solid" and coat == "none":
         # pattern without a coat colour is meaningless on as-printed fur
         coat = "cream"
+    text, text_err = _check_text(line, body.get("text") or "")
+    if text_err:
+        return text_err
+    # Slot primitive (spec-faithful): slots{name,tagline,arc,colours} validated
+    # against backend/slot_specs; autofill from the family profile when the
+    # agent omits fields. Legacy `text` also validates as slots.name.
+    slot_resolved = None
+    if isinstance(body.get("slots"), dict):
+        try:
+            from backend import slots as _slots
+            incoming = dict(body["slots"])
+            if "name" not in incoming and subject_id:
+                auto = _slots.autofill(owner, subject_id)
+                if auto.get("ok"):
+                    for k, v in auto["slots"].items():
+                        if k != "_name_fallbacks":
+                            incoming.setdefault(k, v)
+            slot_resolved = _slots.validate(line, incoming)["resolved"]
+            text = text or slot_resolved.get("name")
+        except ValueError as e:
+            return _err(f"slot rejected: {e} — retry a nickname or initials", 400)
+    elif text:
+        try:
+            from backend import slots as _slots
+            if _slots.load_spec(line):
+                slot_resolved = _slots.validate(line, {"name": text})["resolved"]
+        except ValueError as e:
+            return _err(f"slot rejected: {e} — retry a nickname or initials", 400)
     if spec.get("status") != "live":
         return _err(f"{line} is not live yet", 409)
     stills = _studio_stills_for(line, coat, hat)
+    text_preview = None
+    if slot_resolved:
+        text_preview = _slot_preview(line, slot_resolved)
+    if not text_preview and text:
+        text_preview = _text_preview(line, text)
+    if text_preview:
+        stills = {**stills, "text_hero": text_preview, "hero": text_preview}
     # pattern stills if pre-rendered: coat-<coat>-<pattern>-hero.png
     if pattern != "solid":
         pat = _studio_still(f"coat-{coat}-{pattern}-hero.png")
@@ -4543,6 +4835,10 @@ def products_personalise():
         "hat": hat,
         "pattern": pattern,
         "mesh_id": mesh_id,
+        "subject_id": subject_id,
+        "text": text,
+        "text_preview": text_preview,
+        "slots": slot_resolved,
         "texture_note": texture_note,
         "stills": stills,
         "available": available,
@@ -5051,6 +5347,17 @@ def products_order():
     spec = config.STUDIO_LINES[line]
     if spec.get("status") != "live":
         return _err(f"{line} is not orderable yet", 409)
+    text, text_err = _check_text(line, body.get("text") or "")
+    if text_err:
+        return text_err
+    slot_resolved = None
+    if isinstance(body.get("slots"), dict):
+        try:
+            from backend import slots as _slots
+            slot_resolved = _slots.validate(line, body["slots"])["resolved"]
+            text = text or slot_resolved.get("name")
+        except ValueError as e:
+            return _err(f"slot rejected: {e} — retry a nickname or initials", 400)
     if line == "gift_card":
         amounts = spec.get("amounts_cents") or [spec.get("price_cents", 2500)]
         if amount_cents is None:
@@ -5065,6 +5372,8 @@ def products_order():
     else:
         price = int(spec.get("price_cents") or 0) * qty
     label = f"{spec.get('label', line)}"
+    if text:
+        label = f"{text} {spec.get('label', line)}"
     if line != "gift_card":
         extras = []
         if coat != "none":
@@ -5073,6 +5382,8 @@ def products_order():
             extras.append(f"pattern:{pattern}")
         if hat != "none":
             extras.append(f"hat:{hat}")
+        if text:
+            extras.append(f"text:{text}")
         if extras:
             label += " (" + ", ".join(extras) + ")"
     # Remix royalty: designing with someone else's mesh adds a flat $1,
@@ -5089,6 +5400,15 @@ def products_order():
     if line != "gift_card":
         custom_note = (custom_note + " | " if custom_note else "") + \
             f"custom coat={coat} pattern={pattern} hat={hat}"
+        if text:
+            custom_note = (custom_note + " | " if custom_note else "") + \
+                f"emboss text={text}"
+        if slot_resolved:
+            custom_note = (custom_note + " | " if custom_note else "") + \
+                f"slots base={slot_resolved.get('base')} " \
+                f"accent={slot_resolved.get('accent')} " \
+                f"tagline={slot_resolved.get('tagline') or '-'} " \
+                f"arc={slot_resolved.get('arc') or '-'}"
     if remix_designer and line != "gift_card":
         custom_note = (custom_note + " | " if custom_note else "") + \
             f"remix $1 to {remix_designer}" + (f" for {remix_design}" if remix_design else "")

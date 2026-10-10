@@ -1,0 +1,15 @@
+{
+ "product": "oddhobb-dart-stand",
+ "version": 1,
+ "fixed_geometry": ["base", "bands"],
+ "fields": {
+  "name":    {"type": "text", "required": true, "default": "CHRIS", "charset": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '&-.!", "min_len": 1, "max_len": 10, "case": "upper", "font": "Fraunces-SemiBold.ttf", "cap_mm": 7.4, "min_cap_mm": 5.0, "max_width_mm": 58.0, "relief_mm": 1.0, "zone": "front banner", "profile_source": "subject.display_name"},
+  "tagline": {"type": "text", "required": false, "default": "180 CLUB", "charset": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '&-.!", "min_len": 0, "max_len": 16, "case": "upper", "font": "Inter-Bold.ttf", "cap_mm": 2.4, "max_width_mm": 56.0, "relief_mm": 1.0, "zone": "banner, under name"},
+  "arc":     {"type": "text", "required": false, "default": "DAD'S DARTS", "charset": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '&-.!", "min_len": 0, "max_len": 18, "case": "upper", "font": "Inter-Bold.ttf", "cap_mm": 3.4, "radius_mm": 50.9, "max_chord_mm": 78.0, "relief_mm": 0.8, "zone": "rim, front arc", "profile_source": "relation + \"'S DARTS\""}
+ },
+ "colours": {
+  "base":   {"palette": {"midnight": "#232427", "white": "#EDEBE6", "navy": "#1E2A44", "racing-green": "#1F3B2D", "oddhobb-orange": "#EE7410", "red": "#9E1B22"}, "default": "midnight", "profile_source": "subject.favourite_colour | team colour"},
+  "accent": {"palette": {"gold": "#D7B25A", "silver": "#C9CCD1", "white": "#F4F2EE", "red": "#C8242C", "green": "#127A5A", "orange": "#EE7410", "black": "#141416"}, "default": "gold", "applies_to": ["bands", "name", "tagline", "arc"], "rule": "must contrast base (deltaE > 30)"}
+ },
+ "process": {"print": "JLC MJF PA12 dyed + hand/UV paint accent, or WJP full colour", "size_mm": [110, 110, 53.5]}
+}

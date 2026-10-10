@@ -1,0 +1,213 @@
+{
+ "schema_version": 2,
+ "sku": "CHARM-CROC-CHRIS",
+ "name": "Personalised croc charm, cartoon face badge (Chris sample)",
+ "family": "croc-charm",
+ "kind": "personalised",
+ "parents": [
+  "TPL-CROC-G07"
+ ],
+ "geometry": {
+  "units": "mm",
+  "dims_mm": [
+   26.0,
+   26.0,
+   11.1
+  ],
+  "volume_cm3": 1.92,
+  "faces": null,
+  "shells": 1,
+  "size_variants_mm": [],
+  "locked_features": [
+   {
+    "id": "stem",
+    "note": "4.2 mm stem + 6.8 mm stopper (Crocs hole fit); never change"
+   },
+   {
+    "id": "face_max",
+    "note": "face <= 26 mm for this line"
+   }
+  ],
+  "source": {}
+ },
+ "manufacture": {
+  "supplier": "jlc3dp",
+  "process": "wjp",
+  "material": "Full Color Resin",
+  "finish": "Oil Spraying (clear gloss)",
+  "colour": "Multicolor (texture)",
+  "hand_finish": [],
+  "fulfilment": "dropship",
+  "print_file": {
+   "path": "print/CHARM-CROC-CHRIS-wjp.zip",
+   "sha256": "2fa36c3e47d974187199e51855356115e4a183191298d1fe1ae78ea170588da7",
+   "format": "obj-mtl-png-zip"
+  },
+  "preflight": {
+   "report": "print/preflight.json",
+   "acknowledged": {}
+  },
+  "supplier_settings": {},
+  "lead_time_days": {
+   "build": 5,
+   "ship_min": 8,
+   "ship_max": 13
+  }
+ },
+ "cost": {
+  "currency": "USD",
+  "print": {
+   "amount": 6.91,
+   "basis": "estimate",
+   "ref": "JLC WJP floor price seen 2026-10-09",
+   "date": "2026-10-09"
+  },
+  "shipping": {
+   "amount": 6.05,
+   "basis": "estimate",
+   "ref": "JLC quote 2026-10-09 for brick figures (US Global Standard); not quoted for this product",
+   "date": "2026-10-09",
+   "region": "US"
+  },
+  "packaging": {
+   "amount": 0,
+   "basis": "estimate",
+   "ref": null,
+   "date": null
+  }
+ },
+ "slots": [
+  {
+   "id": "subject",
+   "type": "image",
+   "label": "Your face / pet",
+   "required": true,
+   "offered": true,
+   "validated": false,
+   "evidence": null,
+   "surface": {
+    "kind": "whole-model"
+   },
+   "method": "subject-mesh",
+   "preview": "mesh-render"
+  }
+ ],
+ "audience": {
+  "suits": [
+   "Crocs wearers who like a laugh",
+   "golfers",
+   "people who collect Jibbitz"
+  ],
+  "occasions": [
+   "birthday",
+   "Christmas stocking"
+  ],
+  "interests": [
+   "crocs",
+   "golf"
+  ],
+  "relationship_to_buyer": [
+   "dad",
+   "grandad",
+   "partner",
+   "friend"
+  ],
+  "not_for": [
+   "children under 3 (small parts)"
+  ],
+  "price_band": null,
+  "tone": [
+   "funny-affectionate"
+  ]
+ },
+ "listing": {
+  "title": "Personalised Cartoon Face Croc Charm, Custom Photo Shoe Charm, Funny Dad Clog Charm, Golf Shoe Charm Gift, Stocking Filler",
+  "price": {
+   "currency": "GBP",
+   "amount": 5.0
+  },
+  "tags": [
+   "croc charm",
+   "shoe charm",
+   "custom croc charm",
+   "photo charm",
+   "clog charm",
+   "personalised charm",
+   "funny dad gift",
+   "stocking filler",
+   "cartoon portrait",
+   "golf charm",
+   "jibbitz style",
+   "croc accessories",
+   "face charm"
+  ],
+  "materials": [
+   "full colour resin"
+  ],
+  "short": "",
+  "description": "Their face as a cartoon badge, thumbs up on the golf course. A 4.2 mm stem and 6.8 mm stopper click into standard clog holes.\n\nFull-colour resin, 26 mm across.\n\nPersonalisation: tell us the name (up to 10 letters) and, for photo pieces, send 1-3 clear front-facing photos after ordering.",
+  "spec_rows": [
+   [
+    "Size",
+    "26 mm Ø × 11 mm"
+   ],
+   [
+    "Material",
+    "Full-colour resin (WJP)"
+   ],
+   [
+    "Fits",
+    "Standard clog holes"
+   ],
+   [
+    "Personalised",
+    "Cartoon portrait from your photo"
+   ]
+  ],
+  "processing": "Made to order: 5-8 working days production, then shipping",
+  "channels": [
+   "etsy",
+   "oddhobb-store"
+  ],
+  "images": [
+   {
+    "file": "01_hero.png",
+    "role": "hero",
+    "alt": "Croc charm with cartoon Chris badge, hero"
+   },
+   {
+    "file": "02_high34.png",
+    "role": "view",
+    "alt": "Croc charm with cartoon Chris badge, high34"
+   },
+   {
+    "file": "03_top.png",
+    "role": "view",
+    "alt": "Croc charm with cartoon Chris badge, top"
+   },
+   {
+    "file": "04_34.png",
+    "role": "view",
+    "alt": "Croc charm with cartoon Chris badge, 34"
+   },
+   {
+    "file": "05_spec.png",
+    "role": "spec",
+    "alt": "Croc charm with cartoon Chris badge, spec"
+   }
+  ]
+ },
+ "assets": {
+  "listing_source": "etsy_samples/listings/p07_croc_charm"
+ },
+ "graph": {
+  "related": [],
+  "extends_to": [
+   "golf, footy and pet charm sets"
+  ]
+ },
+ "samples": [],
+ "ext": {
+  "listing_images_note": "rendered in Blender from the design-part OBJs (etsy_samples/r0N_*.py), NOT from the print file; re-render from print/ and register to pass G11"
+ }
+}

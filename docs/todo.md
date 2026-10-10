@@ -1,3 +1,27 @@
+# OddHobb — the 10 (Round 15 · 2026-10-10, Pogtown experiment MVP)
+
+> **Focus:** endgame MVP per vision/endgame-pogtown-mvp.md +
+> actor-stack. Pogpet owns science evaluators + physicalization edge
+> only; Freaktown/FinalBuilds2/Influence own the rest. Bare minimum that
+> proves the loop once.
+
+## The 10
+
+| # | To-do | Status | Notes |
+|---|---|---|---|
+| **15-1** | **ProbeManifest + EpisodePack schemas frozen** | open | Cross-repo contract; our evaluators already speak it (experiments.py) |
+| **15-2** | **JokeBlock v1 ×5 (freaktown)** | open | misinterpreted_success + 4; executable theory, not jokes |
+| **15-3** | **Nolan CharacterGraph v1 (freaktown)** | open | canon/story/strategy; pogpet needs only id+version |
+| **15-4** | **Comment harvest → labels (influence)** | open | Threads/replies ingested; classified with our taxonomy v0 |
+| **15-5** | **Gold-run + ExplanationPlan wired (FinalBuilds2)** | open | Detection rule + E1–E7 generator exist here; needs scheduler hookup |
+| **15-6** | **First controlled probe pair published** | open | Same Nolan, one JokeBlock differs; grant-gated publish |
+| **15-7** | **Finding #1 written from evidence** | open | One claim triple promoted on real outcomes, not vibes |
+| **15-8** | **Pack API for agents** | open | Carried from 14-7: read-only product truth for Influence |
+| **15-9** | **Commercial-affinity events** | open | Order → FinalBuilds2-compatible receipt (no fictional state) |
+| **15-10** | **Commit batch when owner says push** | open | Tree holds actor-stack vision + this file |
+
+---
+
 # OddHobb — the 10 (Round 14 · 2026-10-10, studio engine live)
 
 > **Focus:** studio.oddhobb.com as a separate hardware engine (Meshy
@@ -16,7 +40,7 @@
 | **14-3** | **Enclosure cost real** | open | 65% of sunrise-c cost is estimate — JLC quote SLA dome + MJF |
 | **14-4** | **Electrical gaps closed** | open | USB-C fallback current, CC resistors in BOM, dome heat model |
 | **14-5** | **First LISTABLE pack** | open | CROC-PET: G01/G10/G11/G12 done, 5×2000px renders registered; left: G07 quotes, G08 price, G09 slot evidence, G14 sample |
-| **14-6** | **Wrapping paper renderer** | open | Recipe draft + santa prompt done; build wrap_repeat layout + tile |
+| **14-6** | **Wrapping paper renderer** | **done** | Deterministic repeat at live Prodigi px + compile_wrap path, tested |
 | **14-7** | **Pack API for agents** | open | Read-only /api/packs over product.json + levels for matcher |
 | **14-8** | **Receipt log first rows** | open | Hash-chained promotions/faces/quotes per system-os notes |
 | **14-9** | **Higgsfield key in** | open | Flip higgsfield.soul/marketing is_available; Soul ID for Dad |

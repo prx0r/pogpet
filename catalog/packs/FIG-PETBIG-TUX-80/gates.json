@@ -2,7 +2,7 @@
  "sku": "FIG-PETBIG-TUX-80",
  "level": "PRINT_READY",
  "print_sha256": "18f75b31ac53cfb808db4e85486ded0688abe43133f654a96ab540ce8d2c9014",
- "checked_at": "2026-10-10T10:32:29",
+ "checked_at": "2026-10-10T11:41:56",
  "validator": "catalog/tools/validate_pack.py v1",
  "gates": {
   "G01": {

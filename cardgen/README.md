@@ -105,6 +105,41 @@ inside message, and buys.
 Cost per card is about 3-6 image calls (front, ≤2 fixes, spot, upscale). Only
 the card the customer picks is upscaled and imposed at print size.
 
+
+## Wired to the backend (engine.py), the canonical path
+
+```
+POST /api/cardgen/recommend {subject_id, occasion}   ready: templates these photos can make, with photo ids
+                                                     blocked: "needs a happy couple photo with them in it"
+POST /api/cardgen/make {subject_id, template_id}     -> job_id (202), worker thread
+GET  /api/cardgen/jobs/<job_id>                      step: index > write > generate > qa0..2 > spot > upscale > freeze
+                                                     ready: design_id + revision, front/inside/back views, £ price, checkout
+MCP  oddhobb_make (public)                           cardgen first; legacy PIL shelf only if cardgen can't start
+     oddhobb_card_recommend / oddhobb_card_generate  keyed tier; oddhobb_get(design_id=cgj_...) polls a job
+```
+
+| Step | Backend piece it uses |
+|---|---|
+| index | `photos`, `photo_faces` (YuNet), `face_embeddings` (SFace), `photo_subjects` (confirmed tags) |
+| labels | `backend/photo_labels.py`, L5 expression and framing per face. One vision call per photo, cached, fail-closed |
+| cast | `template.wants` per role (shot, identity, people, expression, framing, min_face_px, refs) |
+| refs | the cast photo first, then the hero's clearest tagged solos (R2 presigned, 1 h) |
+| generate / fix / spot / upscale | `backend.creative.providers.fal` `_submit`/`_result`, each call logged via `log_spend` |
+| QA | tesseract OCR (no stray words), YuNet face count + SFace likeness ≥ 0.30, vision critic. Fail = targeted edit, max 2, then the job fails (never attaches a bad card) |
+| freeze | `cards.attach_art(front 5:7, inside 10:7)` → `birthday_fullbleed` revision → existing preview/spread/export jobs, £2.99, Shopify checkout, Prodigi |
+
+The fullbleed renderer in `card_scenes` owns the inside message type, the signature and the back.
+cardgen never draws type on the inside or the back.
+
+`python -m cardgen.demo_offline <photos+art dir> <out> labels.json` is the acceptance harness. It runs
+real photos through YuNet + SFace into a throwaway DB, casts, runs the engine with pre-made art in place of fal,
+attaches through the real `cards.attach_art`, and renders through the real fullbleed renderer.
+
+### Same spec for products
+`wants.to_requires(template["wants"])` gives `subject_assets.select_for_template` its `requires`, and the
+selector now honours `emotions` and `framing` (L5 is live). So a product can say "a laughing solo, waist up"
+the same way a card does.
+
 ## Files
 
 - `templates/*.json`: the card templates (immutable; a change is a new `_vN`)
@@ -112,5 +147,8 @@ the card the customer picks is upscaled and imposed at print size.
 - `providers.py`: capability router (fal), fail-closed without a key
 - `qa.py`: OCR text gate, face-count + likeness gate
 - `impose.py`: Prodigi 7×5 print master + front/inside/back previews
-- `run.py`: the agent loop
+- `engine.py`: the backend-wired pipeline (index, cast, write, generate, QA, spot, upscale, attach_art)
+- `wants.py`: the photo wants spec shared with products
+- `demo_offline.py`: the acceptance harness
+- `run.py`: the original standalone loop (superseded by engine.py)
 - `proof/`: the first four cards made with this pipeline (Chris, Oct 2026)

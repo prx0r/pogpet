@@ -55,6 +55,36 @@
    "name": "Printie"
   },
   {
+   "id": "SUP:makerfabs",
+   "type": "supplier",
+   "name": "Makerfabs"
+  },
+  {
+   "id": "SUP:seeed",
+   "type": "supplier",
+   "name": "Seeed Studio Fusion"
+  },
+  {
+   "id": "SUP:elecrow",
+   "type": "supplier",
+   "name": "Elecrow"
+  },
+  {
+   "id": "SUP:nextsmartship",
+   "type": "supplier",
+   "name": "NextSmartShip"
+  },
+  {
+   "id": "SUP:china-fulfillment",
+   "type": "supplier",
+   "name": "China Fulfillment International"
+  },
+  {
+   "id": "SUP:onebookprint",
+   "type": "supplier",
+   "name": "OneBookPrint"
+  },
+  {
    "id": "CHARM-CROC-CHRIS",
    "type": "product",
    "name": "Personalised croc charm, cartoon face badge (Chris sample)",
@@ -102,8 +132,15 @@
    "slots": [
     "subject"
    ],
-   "occasions": [],
-   "interests": []
+   "occasions": [
+    "Christmas stocking",
+    "birthday"
+   ],
+   "interests": [
+    "dogs",
+    "crocs",
+    "personalised gifts"
+   ]
   },
   {
    "id": "FIG-MINI-GOLF-WJP",
@@ -361,6 +398,10 @@
    "type": "interest"
   },
   {
+   "id": "INT:dogs",
+   "type": "interest"
+  },
+  {
    "id": "INT:games",
    "type": "interest"
   },
@@ -378,6 +419,10 @@
   },
   {
    "id": "INT:mini-me",
+   "type": "interest"
+  },
+  {
+   "id": "INT:personalised gifts",
    "type": "interest"
   },
   {
@@ -432,6 +477,21 @@
    "dst": "SUP:jlc3dp",
    "rel": "made_by",
    "process": "wjp-tough"
+  },
+  {
+   "src": "CHARM-CROC-PET",
+   "dst": "INT:dogs",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "CHARM-CROC-PET",
+   "dst": "INT:crocs",
+   "rel": "appeals_to"
+  },
+  {
+   "src": "CHARM-CROC-PET",
+   "dst": "INT:personalised gifts",
+   "rel": "appeals_to"
   },
   {
    "src": "FIG-MINI-GOLF-WJP",

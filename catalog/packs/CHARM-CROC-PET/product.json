@@ -93,31 +93,106 @@
   }
  ],
  "audience": {
-  "suits": [],
-  "occasions": [],
-  "interests": [],
-  "relationship_to_buyer": [],
-  "not_for": [],
-  "price_band": null,
-  "tone": []
+  "suits": [
+   "dog owners",
+   "croc wearers",
+   "gift buyers"
+  ],
+  "occasions": [
+   "Christmas stocking",
+   "birthday"
+  ],
+  "interests": [
+   "dogs",
+   "crocs",
+   "personalised gifts"
+  ],
+  "relationship_to_buyer": [
+   "for pet lovers"
+  ],
+  "not_for": [
+   "children under 3 (small parts)"
+  ],
+  "price_band": "impulse",
+  "tone": [
+   "fun",
+   "heartfelt"
+  ]
  },
  "listing": {
-  "title": "",
+  "title": "Personalised Pet Croc Charm | Custom Dog Face Jibbitz | Pet Shoe Charm | Dog Lover Gift",
   "price": {
    "currency": "GBP",
    "amount": null
   },
-  "tags": [],
-  "materials": [],
-  "short": "",
-  "description": "",
-  "spec_rows": [],
-  "processing": "",
+  "tags": [
+   "pet croc charm",
+   "dog jibbitz",
+   "custom shoe charm",
+   "pet face charm",
+   "dog lover gift",
+   "personalised crocs",
+   "croc charm custom",
+   "pet memorial gift",
+   "funny dog gift",
+   "stocking filler",
+   "clog charm",
+   "pet portrait gift",
+   "dog mum gift"
+  ],
+  "materials": [
+   "Full-colour resin print (WJP)",
+   "Gloss protective coat",
+   "Croc-compatible pin stem"
+  ],
+  "short": "Your pet\u2019s head, printed in full colour for your Crocs.",
+  "description": "Cliptheir favourite face onto their favourite shoes. Send us one clear photo of your pet and we sculpt a miniature glossy portrait head, printed in full colour with a sturdy Croc-compatible pin stem on the back. Each charm is made to order from your photo: big eyes, floppy ears, that exact expression. Fits standard clog ventilation holes, wipes clean with a damp cloth, and survives rain, mud and playground duty. A perfect stocking filler for dog mums, dads and anyone whose personality is 90 percent pet.",
+  "spec_rows": [
+   [
+    "Size",
+    "Approx 28 mm tall portrait head"
+   ],
+   [
+    "Fitting",
+    "Standard clog-hole pin stem, push-fit"
+   ],
+   [
+    "Material",
+    "Full-colour resin print, gloss coated"
+   ]
+  ],
+  "processing": "Made to order in 3-5 working days, then posted tracked.",
   "channels": [
    "etsy",
    "oddhobb-store"
   ],
-  "images": []
+  "images": [
+   {
+    "file": "crocpet_hero.png",
+    "role": "hero",
+    "alt": "Personalised pet-head croc charm, glossy full-colour 3D print, front three-quarter view"
+   },
+   {
+    "file": "crocpet_front.png",
+    "role": "view",
+    "alt": "Croc charm front view showing pet face and collar detail"
+   },
+   {
+    "file": "crocpet_side.png",
+    "role": "view",
+    "alt": "Croc charm side view showing charm depth and pin stem"
+   },
+   {
+    "file": "crocpet_back.png",
+    "role": "view",
+    "alt": "Croc charm back view with clog pin fitting"
+   },
+   {
+    "file": "crocpet_detail.png",
+    "role": "detail",
+    "alt": "Close-up of pet face print detail on the croc charm"
+   }
+  ]
  },
  "assets": {},
  "graph": {

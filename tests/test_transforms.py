@@ -41,7 +41,11 @@ def test_free_policy_never_spends():
         assert out["provenance"]["transform_id"] == "pet_santa_v1"
 
 
-def test_paid_without_key_fails_closed():
+def test_paid_without_key_fails_closed(monkeypatch):
+    # Hermetic: never inherit ambient provider keys from the shell.
+    for k in ("FAL_KEY", "DASHSCOPE_API_KEY", "HIGGSFIELD_API_KEY",
+              "DASHSCOPE_WORKSPACE_ID"):
+        monkeypatch.delenv(k, raising=False)
     # Pinning a paid adapter with no key must raise, never bill.
     with pytest.raises(ProviderNotConfigured):
         router.resolve_policy("subject_cutout", policy="specific",

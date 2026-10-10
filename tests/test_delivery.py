@@ -172,20 +172,49 @@ class CardDeliveryTest(unittest.TestCase):
                           {"shipping_method": "Express"})[0], "Express")
 
     def test_checkout_persists_option(self):
+        import time as _time
         from backend import cards as _cards
+        from backend import shopify_fulfil as _SF
         route = {"supplier": "prodigi", "sku": "S", "shipping_method": "Express",
                  "supplier_ship": 8.6, "carrier": "RM"}
-        with patch("backend.prodigi.quote",
-                   side_effect=_quote_for("CLASSIC-GRE-FEDR-7X5-BLA")):
-            saved = _cards.save_delivery_option(
-                self.owner, "card_t1", 1, "GB", route, 949,
-                "2026-10-13", "2026-10-14")
-            r = self.client.post("/api/cards/card_t1/checkout?token=" + _config.API_TOKEN,
-                                 json={"owner": self.owner, "revision": 1, "qty": 1,
-                                       "idempotency_key": "test-dopt-12345678",
-                                       "delivery_option_id": saved["id"]},
-                                 headers=self.headers)
-        # Shopify not configured in tests → 502, but the frozen row must carry the route
+        # Shopify stays mocked: configured gate passes, the draft itself
+        # blows up -> 502 (never a real order from a test).
+        _orig_cfg, _orig_draft = _SF.configured, _SF.create_card_draft_order
+        _SF.configured = lambda: True
+        def _boom(**kw):
+            raise RuntimeError("mocked draft failure")
+        _SF.create_card_draft_order = _boom
+        try:
+            with patch("backend.prodigi.quote",
+                       side_effect=_quote_for("CLASSIC-GRE-FEDR-7X5-BLA")):
+                saved = _cards.save_delivery_option(
+                    self.owner, "card_t1", 1, "GB", route, 949,
+                    "2026-10-13", "2026-10-14")
+                # checkout pins a revision: export artwork first (else 409),
+                # then the frozen row must carry the route even though the
+                # draft blows up (-> 502, never a real order from a test).
+                r = self.client.post("/api/cards/card_t1/render?token=" + _config.API_TOKEN,
+                                     json={"owner": self.owner, "revision": 1,
+                                           "kind": "export"},
+                                     headers=self.headers)
+                self.assertEqual(r.status_code, 200, r.json)
+                st = ""
+                for _ in range(40):
+                    s = self.client.get("/api/cards/card_t1/scene?revision=1&owner=" + self.owner + "&token=" + _config.API_TOKEN,
+                                        headers=self.headers).get_json()
+                    st = s["scene"]["outputs"]["export"]["status"]
+                    if st == "ready":
+                        break
+                    _time.sleep(0.5)
+                self.assertEqual(st, "ready")
+                r = self.client.post("/api/cards/card_t1/checkout?token=" + _config.API_TOKEN,
+                                     json={"owner": self.owner, "revision": 1, "qty": 1,
+                                           "idempotency_key": "test-dopt-12345678",
+                                           "delivery_option_id": saved["id"]},
+                                     headers=self.headers)
+        finally:
+            _SF.configured, _SF.create_card_draft_order = _orig_cfg, _orig_draft
+        # mocked draft failure → 502, but the frozen row must carry the route
         self.assertEqual(r.status_code, 502, r.json)
         from backend import db
         with db.connect() as c:

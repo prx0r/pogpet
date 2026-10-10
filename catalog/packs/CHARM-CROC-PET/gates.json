@@ -1,14 +1,14 @@
 {
  "sku": "CHARM-CROC-PET",
- "level": "DRAFT",
+ "level": "PRINT_READY",
  "print_sha256": "85bab4062388c6fca151e4b3249ef323a4830d43ef47c97d17a24be3eafd0797",
- "checked_at": "2026-10-10T10:32:35",
+ "checked_at": "2026-10-10T12:36:06",
  "validator": "catalog/tools/validate_pack.py v1",
  "gates": {
   "G01": {
    "name": "structure + schema",
-   "status": "FAIL",
-   "why": "missing dir listing/"
+   "status": "PASS",
+   "why": ""
   },
   "G02": {
    "name": "supplier + process known",
@@ -52,18 +52,18 @@
   },
   "G10": {
    "name": "listing copy complete",
-   "status": "FAIL",
-   "why": "title length 0; 0 tags (need 13 unique); materials; description 0 chars < 200; spec rows; processing time"
+   "status": "PASS",
+   "why": ""
   },
   "G11": {
    "name": "listing images from print file",
-   "status": "FAIL",
-   "why": "0 images < 5; no hero image; listing/renders.json missing (provenance)"
+   "status": "PASS",
+   "why": ""
   },
   "G12": {
    "name": "audience defined",
-   "status": "FAIL",
-   "why": "suits < 3; occasions < 2; no buyer relationship; no not_for"
+   "status": "PASS",
+   "why": ""
   },
   "G13": {
    "name": "graph refs resolve",

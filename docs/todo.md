@@ -15,7 +15,7 @@
 | **14-2** | **Supplier qualification starts** | open | JLC API application + prototype order; warehouse trial question out (docs/supplier-outreach.md 0/7) |
 | **14-3** | **Enclosure cost real** | open | 65% of sunrise-c cost is estimate — JLC quote SLA dome + MJF |
 | **14-4** | **Electrical gaps closed** | open | USB-C fallback current, CC resistors in BOM, dome heat model |
-| **14-5** | **First LISTABLE pack** | open | Quotes (G07) block every pack; CHARM-CROC-PET needs listing/ |
+| **14-5** | **First LISTABLE pack** | open | CROC-PET: G01/G10/G11/G12 done, 5×2000px renders registered; left: G07 quotes, G08 price, G09 slot evidence, G14 sample |
 | **14-6** | **Wrapping paper renderer** | open | Recipe draft + santa prompt done; build wrap_repeat layout + tile |
 | **14-7** | **Pack API for agents** | open | Read-only /api/packs over product.json + levels for matcher |
 | **14-8** | **Receipt log first rows** | open | Hash-chained promotions/faces/quotes per system-os notes |

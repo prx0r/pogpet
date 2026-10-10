@@ -1,0 +1,28 @@
+{
+ "print_file": "print/CHARM-CROC-PET-wjp-tough.zip",
+ "print_sha256": "85bab4062388c6fca151e4b3249ef323a4830d43ef47c97d17a24be3eafd0797",
+ "renderer": "pipeline/bl_listing.py",
+ "registered_at": "2026-10-10T12:35:49",
+ "images": {
+  "crocpet_hero.png": {
+   "sha256": "1f9523b44f6f5ddf2608abcbcf420c25bdf2d8e0c6261118f32d11222eb85297",
+   "source": "render-of-print-file"
+  },
+  "crocpet_front.png": {
+   "sha256": "4e5fa83508b8bc14104cec8eeeb3bf30744411aa2bc817c88be9963c5fbe0a28",
+   "source": "render-of-print-file"
+  },
+  "crocpet_side.png": {
+   "sha256": "94a04e9da05b5c82236f983b59431a8330a5c9fcb51c6db1a6ed0d35ad610cf3",
+   "source": "render-of-print-file"
+  },
+  "crocpet_back.png": {
+   "sha256": "c6749dc3d6ae45625097fe0be5a01de5af93911bbf95b09f3bd30afa3676375a",
+   "source": "render-of-print-file"
+  },
+  "crocpet_detail.png": {
+   "sha256": "33bc089ce8dd0a4db9ed031363f0a8ce12611ab50d9543bc2e74f06260765981",
+   "source": "render-of-print-file"
+  }
+ }
+}

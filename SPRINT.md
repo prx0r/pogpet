@@ -11,9 +11,9 @@
    `catalog/packs/<SKU>/`. Current: 13 packs, 1 PRINT_READY
    (`FIG-PETBIG-TUX-80`), 12 DRAFT. Gate: `validate_pack.py --preflight`
    → LISTABLE. Biggest blocker shelf-wide: G07 real supplier quotes.
-2. **Cards sorted.** Working end to end (6/6 Dad shelf, £2.99, Shopify
-   invoice proven 2026-10-10). Remaining: Christmas recipes (shelf
-   honestly empty), `test_delivery` drift fix, FAL title-art key.
+2. **Cards sorted.** Working end to end (6/6 Dad birthday shelf + 2/2
+   Christmas shelf, £2.99, Shopify invoice proven 2026-10-10). Remaining:
+   `test_delivery` drift fix (done), FAL title-art key (present).
 3. **Prodigi personalised.** WRAP SKUs live-quoted (50×70 £14.99,
    75×90 £19.99, roll £24.99). Next: `wrap_repeat` renderer + tile for
    `wrap_pet_santa_repeat_v1` (draft recipe + santa prompt already seeded).

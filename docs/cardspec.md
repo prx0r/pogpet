@@ -149,7 +149,7 @@ no fonts, no composition tools on this path:
 | make | `oddhobb_make_card` | one canonical card, full renders |
 | variants | `oddhobb_variants` (+`oddhobb_deal_cards`) | same recipe, new vibe/copy/photos |
 | get | `oddhobb_get` | status + faces + triptych + print PDF |
-| buy | `oddhobb_checkout_card` | pins revision, Shopify draft, £7.99 |
+| buy | `oddhobb_checkout_card` | pins revision, Shopify draft, £2.99 |
 
 Everything else card-shaped in MCP/REST is machinery: reachable with the
 caller's own key, never anonymous, never the documented path. The first

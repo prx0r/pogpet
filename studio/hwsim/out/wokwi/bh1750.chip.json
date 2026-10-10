@@ -1,0 +1,22 @@
+{
+ "name": "BH1750FVI-TR",
+ "author": "oddhobb hwsim (generated from part card)",
+ "pins": [
+  "VCC",
+  "GND",
+  "SCL",
+  "SDA",
+  "ADDR",
+  "DVI"
+ ],
+ "controls": [
+  {
+   "id": "lux",
+   "label": "Illuminance (lx)",
+   "type": "range",
+   "min": 0,
+   "max": 65535,
+   "step": 1
+  }
+ ]
+}

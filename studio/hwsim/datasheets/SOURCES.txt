@@ -1,0 +1,1 @@
+BH1750FVI datasheet (ROHM Technical Note No.11046EDT01), fetched 2026-10-10 from https://www.mouser.com/datasheet/2/348/bh1750fvi-e-186247.pdf

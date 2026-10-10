@@ -1,0 +1,6 @@
+{
+ "card": "oddhobb.partcard.v1", "id": "esp32c3", "mpn": "ESP32-C3-WROOM-02-N4", "lcsc": "C2934560", "maker": "Espressif",
+ "status": "DRAFT", "verified_by": null, "model": "mcu_host",
+ "interface": {"i2c_masters": 1, "rmt_channels": 2, "gpio": 15, "cite": "UNVERIFIED"},
+ "power": {"vdd_v": 3.3, "ma_avg_wifi": 80, "cite": "UNVERIFIED (part file)"}
+}

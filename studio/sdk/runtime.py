@@ -41,7 +41,9 @@ class Runtime:
                 if command == 'device.health':
                     r = ok(dict(uptime_s=round(self.dev.t, 2), led_ma=round(self.dev.ring.ma(), 1), brightness_cap=round(self.dev.bri_cap(self.dev.sensor.read(self.dev.t)), 3), firmware='sim-0.1.0'))
                 else:
-                    out = self.dev.call(name, **clean)
+                    try: out = self.dev.call(name, **clean)
+                    except Exception as e:
+                        r = error(f'device error: {e}', 'hardware fault reported by firmware'); self.audit.append(dict(t=round(self.dev.t, 2), caller=caller, command=command, params=params, ok=False)); return r
                     r = ok({'lux': out} if command == 'sensor.lux' else {'applied': clean, **({'clamped': clamped} if clamped else {})})
         self.audit.append(dict(t=round(self.dev.t, 2), caller=caller, command=command, params=params, ok=r['ok']))
         return r

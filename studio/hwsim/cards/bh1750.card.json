@@ -1,0 +1,48 @@
+{
+ "card": "oddhobb.partcard.v1", "id": "bh1750", "mpn": "BH1750FVI-TR", "lcsc": "C78960", "maker": "ROHM",
+ "datasheet": {"title": "BH1750FVI Technical Note No.11046EDT01", "url": "https://www.mouser.com/datasheet/2/348/bh1750fvi-e-186247.pdf"},
+ "status": "EXTRACTED", "verified_by": null, "extracted_by": "LLM (Hark), 2026-10-10",
+ "model": "i2c_command_device",
+ "interface": {
+  "bus": "i2c", "max_scl_hz": 400000,
+  "addresses": {"ADDR_L": "0x23", "ADDR_H": "0x5C"},
+  "write_format": "one opcode per transaction (STOP after each)",
+  "read_format": {"bytes": 2, "order": "big_endian", "register": "data"},
+  "cite": "§I2C Bus Access 2)-4); §Electrical Characteristics fSCL"
+ },
+ "registers": {
+  "data": {"bits": 16, "reset": 0, "cite": "§Block Diagram Descriptions"},
+  "mtreg": {"bits": 8, "reset": 69, "min": 31, "max": 254, "cite": "§Adjust measurement result"}
+ },
+ "states": ["power_down", "power_on", "measuring_cont", "measuring_once"],
+ "initial_state": "power_down",
+ "opcodes": [
+  {"mask": "0xFF", "value": "0x00", "name": "power_down", "goto": "power_down"},
+  {"mask": "0xFF", "value": "0x01", "name": "power_on", "goto": "power_on"},
+  {"mask": "0xFF", "value": "0x07", "name": "reset", "effect": "data=0", "rejected_in": ["power_down"]},
+  {"mask": "0xFF", "value": "0x10", "name": "cont_h", "goto": "measuring_cont", "mode": "H"},
+  {"mask": "0xFF", "value": "0x11", "name": "cont_h2", "goto": "measuring_cont", "mode": "H2"},
+  {"mask": "0xFF", "value": "0x13", "name": "cont_l", "goto": "measuring_cont", "mode": "L"},
+  {"mask": "0xFF", "value": "0x20", "name": "once_h", "goto": "measuring_once", "mode": "H"},
+  {"mask": "0xFF", "value": "0x21", "name": "once_h2", "goto": "measuring_once", "mode": "H2"},
+  {"mask": "0xFF", "value": "0x23", "name": "once_l", "goto": "measuring_once", "mode": "L"},
+  {"mask": "0xF8", "value": "0x40", "name": "mt_high", "effect": "mtreg[7:5]=op[2:0]"},
+  {"mask": "0xE0", "value": "0x60", "name": "mt_low", "effect": "mtreg[4:0]=op[4:0]"}
+ ],
+ "opcodes_cite": "§Instruction Set Architecture (\"Don't input the other opecode\")",
+ "modes": {
+  "H":  {"t_typ_ms": 120, "t_max_ms": 180, "lx_per_count": "1/1.2*(69/mtreg)"},
+  "H2": {"t_typ_ms": 120, "t_max_ms": 180, "lx_per_count": "1/1.2*(69/mtreg)/2"},
+  "L":  {"t_typ_ms": 16,  "t_max_ms": 24,  "lx_per_count": "4/1.2*(69/mtreg)"},
+  "time_scales_with": "mtreg/69",
+  "cite": "§Electrical Characteristics tHR,tLR; §Adjust measurement result formula; §Measurement mode explanation"
+ },
+ "measurement": {"range_lx": [1, 65535], "accuracy_ratio": {"min": 0.96, "typ": 1.2, "max": 1.44}, "dark_counts_max": 3,
+                 "cite": "§Features 4); §Electrical Characteristics S/A, S0"},
+ "power": {"vcc_v": {"min": 2.4, "typ": 3.0, "max": 3.6}, "abs_max_v": 4.5,
+           "i_active_ua": {"typ": 120, "max": 190}, "i_powerdown_ua": {"typ": 0.01, "max": 1.0},
+           "cite": "§Absolute Maximum Ratings; §Operating Conditions; §Electrical Characteristics Icc1, Icc2"},
+ "faults": {"nack": "device does not ACK (unpowered, wrong address, broken trace)",
+            "stuck": "data register frozen at last value",
+            "unknown_opcode": "undefined behaviour per datasheet; model NACKs and logs"}
+}

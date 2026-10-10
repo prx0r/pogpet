@@ -1,0 +1,9 @@
+{
+ "card": "oddhobb.partcard.v1", "id": "ws2812b", "mpn": "WS2812B-B/T", "lcsc": "C2761795", "maker": "Worldsemi",
+ "status": "DRAFT", "verified_by": null, "extracted_by": "carried over from studio/parts/ws2812b.json; datasheet not yet extracted",
+ "model": "addressable_led_chain",
+ "interface": {"bus": "single_wire", "bitrate_hz": 800000, "bits_per_led": 24, "byte_order": "GRB", "latch_us_min": 280,
+               "cite": "UNVERIFIED (common WS2812B-V5 values) — extract from LCSC C2761795 datasheet"},
+ "power": {"vdd_v": 5.0, "ma_per_channel_full": 20, "idle_ma": 1.0, "cite": "UNVERIFIED (part file)"},
+ "optics": {"gamma": 2.6, "cite": "design choice, not datasheet"}
+}

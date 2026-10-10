@@ -108,20 +108,38 @@ def start_mesh(photo_id: str, *, single: bool = False) -> dict:
                 f"{person or 'this subject'} on file — sculpt needs 3 angles "
                 "or explicit single:true. Upload 2 more views (or label them "
                 "via people), then sculpt once instead of three times.", 400)
-        ok, used = db.spend_credit(c, owner, day, "mesh", config.FREE_DAILY["mesh"])
-        if not ok:
-            raise PipelineError(
-                f"Free sculpt limit reached ({config.FREE_DAILY['mesh']}/day). "
-                "Your mesh from earlier is still ready to use — or come back tomorrow.",
-                429,
-            )
+        # New sculpt = one mesh credit. Order: genesis hook (first pet mesh
+        # free, once per owner ever) → credit balance (pay once per pet) →
+        # daily allowance (0 by default; promos only). Cached hits above
+        # never reach here and never charge — products bind to the one mesh.
+        genesis = db.claim_genesis_mesh(c, owner)
+        if genesis:
+            mesh_note = "genesis"
+            balance = db.credit_balance(c, owner)
+        else:
+            balance = db.credit_balance(c, owner)
+            if balance > 0:
+                balance = db.grant_credits(c, owner, -1, f"mesh:{photo_id}")
+                mesh_note = "credits"
+            else:
+                ok, used = db.spend_credit(c, owner, day, "mesh", config.FREE_DAILY["mesh"])
+                if not ok:
+                    raise PipelineError(
+                        "This pet's free first mesh is used — top up OddHobb "
+                        "credits to sculpt another (earn them in the funnier "
+                        "flow). Meshes you already own stay free forever.",
+                        402,
+                    )
+                mesh_note = "daily"
+                balance = db.credit_balance(c, owner)
 
         mid = db.create_mesh(c, photo_id)
         db.enqueue(c, "mesh.generate", mid,
                    {"multi": angles[:4] if multi else []})
         mesh = db.get_mesh(c, mid)
         out = db.dump(mesh)
-        out["credits_remaining"] = config.FREE_DAILY["mesh"] - used
+        out["credits_remaining"] = balance
+        out["mesh_funding"] = mesh_note
         out["angles"] = len(angles) if multi else 1
         out["multi_image"] = multi
     return {"mesh": out, "reused": False}

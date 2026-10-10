@@ -180,6 +180,24 @@ CREATE TABLE IF NOT EXISTS credits (
   used    INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (owner, day, kind)
 );
+-- Genesis hook: one free pet mesh per owner, ever. After it is claimed,
+-- meshes spend credit balance (pay once per pet, never per product:
+-- cached meshes and product bindings never charge).
+CREATE TABLE IF NOT EXISTS mesh_grants (
+  owner        TEXT PRIMARY KEY,
+  genesis_used INTEGER NOT NULL DEFAULT 0,
+  granted_at   REAL
+);
+-- OddHobb credit ledger: purchases/funneries earn (+), meshes spend (-).
+-- Balance is the sum; rows are append-only, never updated.
+CREATE TABLE IF NOT EXISTS credit_ledger (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  owner      TEXT NOT NULL,
+  delta      INTEGER NOT NULL,
+  reason     TEXT NOT NULL DEFAULT '',
+  created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_credit_ledger_owner ON credit_ledger(owner);
 
 -- Studio one-click orders. Checkout (Stripe/Shopify) lands later; this
 -- table is the intent + quote so nothing is lost between click and pay.
@@ -758,6 +776,39 @@ def credit_status(c: sqlite3.Connection, owner: str, day: str) -> dict:
             "remaining": max(0, limit - credit_used(c, owner, day, k))}
         for k, limit in config.FREE_DAILY.items()
     }
+
+
+def claim_genesis_mesh(c: sqlite3.Connection, owner: str) -> bool:
+    """One free pet mesh per owner, ever. True exactly once (atomic:
+    concurrent claims race on genesis_used=0, exactly one wins)."""
+    import time as _time
+    c.execute("INSERT OR IGNORE INTO mesh_grants (owner, genesis_used, granted_at)"
+              " VALUES (?, 0, ?)", (owner, _time.time()))
+    cur = c.execute("UPDATE mesh_grants SET genesis_used=1 WHERE owner=?"
+                    " AND genesis_used=0", (owner,))
+    return (cur.rowcount or 0) == 1
+
+
+def genesis_used(c: sqlite3.Connection, owner: str) -> bool:
+    row = c.execute("SELECT genesis_used FROM mesh_grants WHERE owner=?",
+                    (owner,)).fetchone()
+    return bool(row and row["genesis_used"])
+
+
+def grant_credits(c: sqlite3.Connection, owner: str, delta: int,
+                  reason: str = "") -> int:
+    """Append a ledger row (earn +, spend -) and return the new balance."""
+    import time as _time
+    c.execute("INSERT INTO credit_ledger (owner, delta, reason, created_at)"
+              " VALUES (?,?,?,?)",
+              (owner, int(delta), str(reason)[:120], _time.time()))
+    return credit_balance(c, owner)
+
+
+def credit_balance(c: sqlite3.Connection, owner: str) -> int:
+    row = c.execute("SELECT COALESCE(SUM(delta),0) FROM credit_ledger"
+                    " WHERE owner=?", (owner,)).fetchone()
+    return int(row[0]) if row else 0
 
 
 def enqueue(c: sqlite3.Connection, kind: str, subject_id: str, payload: dict | None = None) -> str:

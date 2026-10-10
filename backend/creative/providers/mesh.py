@@ -43,3 +43,40 @@ class BlenderAdapter(BaseAdapter):
     def run(self, payload: dict) -> dict:
         return {"ok": True, "mode": "local blender op",
                 "note": "emboss via /api/design/make; repair via factory validate"}
+
+
+@register
+class TrellisAdapter(BaseAdapter):
+    """Self-hosted TRELLIS.2 (MIT): PNG -> GLB on our own 24 GB GPU.
+    $0 marginal per mesh once running — the Meshy exit: generate once in
+    Meshy, then render per person for free. STAGED until TRELLIS_ENDPOINT
+    is set (no GPU on this box). Same photo->mesh contract as Meshy."""
+    capability = "mesh"
+    name = "trellis.selfhost"
+    paid = False
+    key_envs = ("TRELLIS_ENDPOINT",)
+
+    def is_available(self) -> bool:
+        import os
+        return bool(os.environ.get("TRELLIS_ENDPOINT", "").strip())
+
+    def run(self, payload: dict) -> dict:
+        import os
+        import json as _json
+        import urllib.request as _url
+        ep = os.environ.get("TRELLIS_ENDPOINT", "").strip().rstrip("/")
+        if not ep:
+            raise ProviderNotConfigured(
+                "trellis.selfhost: staged — set TRELLIS_ENDPOINT to a "
+                "host with a 24 GB GPU running TRELLIS.2")
+        photo_url = str(payload.get("photo_url") or "")
+        if not photo_url:
+            raise ProviderNotConfigured("mesh: needs photo_url")
+        body = {"image_url": photo_url,
+                "single": bool(payload.get("single", True))}
+        req = _url.Request(ep + "/generate", data=_json.dumps(body).encode(),
+                           method="POST",
+                           headers={"Content-Type": "application/json"})
+        with _url.urlopen(req, timeout=600) as r:
+            return {"ok": True, "mode": "trellis",
+                    "result": _json.loads(r.read().decode() or "{}")}

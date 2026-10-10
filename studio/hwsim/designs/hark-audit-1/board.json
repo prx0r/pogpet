@@ -1,0 +1,40 @@
+{
+ "board": "hark-audit-1",
+ "template": "DSN-HARK-AUDIT-1",
+ "device_manifest": "/home/ubuntu/figgsite/studio/hwsim/designs/hark-audit-1/device.json",
+ "rails": {
+  "5V": {
+   "source": "usb2_500",
+   "limit_ma": 500
+  },
+  "3V3": {
+   "source": "LDO from 5V",
+   "limit_ma": 300,
+   "parent": "5V"
+  }
+ },
+ "parts": [
+  {
+   "ref": "U1",
+   "card": "esp32c3",
+   "rail": "3V3"
+  },
+  {
+   "ref": "U2",
+   "card": "bh1750",
+   "rail": "3V3",
+   "bus": "i2c0",
+   "strap": {
+    "ADDR": "L"
+   }
+  },
+  {
+   "ref": "LED1-12",
+   "card": "ws2812b",
+   "rail": "5V",
+   "bus": "rmt0",
+   "qty": 12
+  }
+ ],
+ "firmware": "firmware/lamp_fw.py"
+}

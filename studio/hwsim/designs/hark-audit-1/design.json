@@ -1,0 +1,12 @@
+{
+ "params": {
+  "name": "hark-audit-1",
+  "base": "mood_lamp",
+  "led_count": 12,
+  "ring_d_mm": 52,
+  "supply": "usb2_500",
+  "enclosure": "sla"
+ },
+ "errors": [],
+ "warnings": []
+}

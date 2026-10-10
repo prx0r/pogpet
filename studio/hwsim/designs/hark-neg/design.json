@@ -1,0 +1,16 @@
+{
+ "params": {
+  "name": "hark-neg",
+  "base": "mood_lamp",
+  "led_count": 999,
+  "ring_d_mm": 52,
+  "supply": "usb2_500",
+  "enclosure": "sla"
+ },
+ "errors": [
+  "LED pitch 0.2 mm < 6.5 mm: use \u226425 LEDs or a ring \u22652067 mm"
+ ],
+ "warnings": [
+  "cap 380 mA is 1% of full-white draw (60939 mA): colours will be dim"
+ ]
+}

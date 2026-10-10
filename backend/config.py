@@ -62,11 +62,14 @@ DAILY_UPLOAD_LIMIT = int(os.environ.get("DAILY_UPLOAD_LIMIT", 30))
 
 # ── free tier ─────────────────────────────────────────────────────────
 # The wedge: generation is free, physical is the revenue.
-#   mesh   — Meshy credits are the scarce thing, so it's the tightest limit
+#   mesh   — one FREE genesis mesh per owner ever (the signup hook), then
+#            OddHobb credits (pay once per pet, never per product: cached
+#            meshes and product bindings never charge). The daily mesh
+#            allowance defaults to 0; raise FREE_MESH_PER_DAY only for promos.
 #   video  — our stack (edge-tts + ffmpeg + 2.5D) costs nothing, so this is
 #            only a rate/abuse limit, not a cost limit
 FREE_DAILY = {
-    "mesh":   int(os.environ.get("FREE_MESH_PER_DAY", "3")),
+    "mesh":   int(os.environ.get("FREE_MESH_PER_DAY", "0")),
     "video":  int(os.environ.get("FREE_VIDEO_PER_DAY", "5")),
     "upload": DAILY_UPLOAD_LIMIT,
 }
@@ -1062,6 +1065,31 @@ STUDIO_BRICK_MESH_MAP = {
 STUDIO_STILL_DIR = "prod"  # data/productimg/prod → /img/prod/
 # Calling-card portrait under the character select (exact product still)
 STUDIO_CALLING_CARD = "/img/prod/prod-hero.png"
+
+# ── Template slots: generate the template once, drop the pet's ONE mesh in.
+# Every product keeps its fixed template (croc stem, stand base, big-pet
+# pose, locked interfaces); the subject mesh fills the "subject_mesh" slot,
+# so no product ever needs a fresh generation. Derived from STUDIO_LINES —
+# the locked list is the template contract, personalization is the slot.
+def _mesh_slots() -> dict[str, dict]:
+    out: dict[str, dict] = {}
+    for line, rec in STUDIO_LINES.items():
+        dc = rec.get("design_contract") or {}
+        origin = dc.get("origin") or ""
+        if origin not in ("mesh", "reference"):
+            continue
+        out[line] = {
+            "template": f"studio:{line}",
+            "slot": "subject_mesh",
+            "origin": origin,
+            "fixed": list(dc.get("locked") or []),
+            "personalization": (rec.get("personalization") or {}).get("method", ""),
+            "status": rec.get("status", ""),
+        }
+    return out
+
+
+MESH_SLOTS: dict[str, dict] = _mesh_slots()
 
 # Controlled custom is what MCP exposes. Free-form mesh edits stay out.
 STUDIO_CUSTOM_POLICY = {

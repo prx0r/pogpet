@@ -19,7 +19,7 @@ ROUTES: dict[str, list[str]] = {
     "voice_clone":     ["alibaba.qwen_enroll"],
     "cloned_tts":      ["alibaba.qwen_tts_vc"],
     "realtime_voice":  ["local.stub", "alibaba.qwen_omni", "gemini.live"],
-    "mesh":            ["local.meshy", "fal.tripo"],
+    "mesh":            ["local.meshy", "trellis.selfhost", "fal.tripo"],
     "music":           ["local.procedural"],
     "scene_plate":     ["fal.flux_plate"],
     "identity_plate":  ["local.composite", "fal.phota"],

@@ -1,0 +1,24 @@
+{
+  "id": "christmas_badge_v1",
+  "version": 1,
+  "status": "published",
+  "capability": "identity_transform",
+  "references": {
+    "subject": "any",
+    "min_images": 1,
+    "preferred_images": 2
+  },
+  "instruction": {
+    "template": "Place the same subject's face inside a festive circular badge: ornament ring, holly sprig, snow dots. Face likeness exact, badge centred, plain background."
+  },
+  "preserve": ["face likeness", "eye colour", "markings"],
+  "output": {
+    "aspect_ratio": "1:1",
+    "background": "plain"
+  },
+  "qc": {
+    "identity": true,
+    "no_extra_text": true
+  },
+  "products": ["wrap", "labels", "stickers"]
+}

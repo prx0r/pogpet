@@ -21,4 +21,4 @@ different person, photorealistic skin texture change.
 
 - Square portrait, subject head + hat with margin for tile bleed.
 - Likeness preserved: same eyes, nose, mouth geometry as the reference.
-- Used by: `wrap_pet_santa_repeat_v1` (motif), future card/graphic recipes.
+- Used by: transform `pet_santa_v1`, recipe `wrap_pet_santa_repeat_v1` (motif), future card/graphic recipes.

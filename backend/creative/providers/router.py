@@ -24,6 +24,19 @@ ROUTES: dict[str, list[str]] = {
     "scene_plate":     ["fal.flux_plate"],
     "identity_plate":  ["local.composite", "fal.phota"],
     "upscale":         ["fal.upscale"],
+    # transformation library (vision/multimedia.md): providers change,
+    # capabilities don't. Soul ID wins when a persistent identity exists;
+    # direct Alibaba is the cheap high-volume default; fal hosts the exotic.
+    "subject_cutout":      ["fal.birefnet"],
+    "identity_transform":  ["local.composite", "higgsfield.soul",
+                            "alibaba.qwen_image", "fal.flux_edit"],
+    "multi_reference_edit": ["alibaba.qwen_image", "fal.flux_edit"],
+    "brand_style":         ["local.composite", "alibaba.qwen_image"],
+    "text_heavy_art":      ["alibaba.qwen_image", "fal.flux_edit"],
+    "consistent_image_set": ["alibaba.wan_3", "fal.wan_3"],
+    "local_edit":          ["fal.flux_edit", "alibaba.qwen_image"],
+    "product_packshot":    ["local.composite", "higgsfield.marketing"],
+    "marketplace_image":   ["higgsfield.marketing", "local.composite"],
 }
 
 _ADAPTERS: dict[str, BaseAdapter] = {}

@@ -1,0 +1,24 @@
+{
+  "id": "subject_cutout_v1",
+  "version": 1,
+  "status": "published",
+  "capability": "subject_cutout",
+  "references": {
+    "subject": "any",
+    "min_images": 1,
+    "preferred_images": 1
+  },
+  "instruction": {
+    "template": "Segment the main subject cleanly from its background. High-resolution edge, hair/fur refined, transparent background with alpha mask."
+  },
+  "preserve": ["subject outline", "fine edge detail"],
+  "output": {
+    "aspect_ratio": "source",
+    "background": "transparent"
+  },
+  "qc": {
+    "identity": true,
+    "clean_alpha": true
+  },
+  "products": ["wrap_pet_santa_repeat_v1", "stickers", "tags", "cards"]
+}

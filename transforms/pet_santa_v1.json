@@ -1,0 +1,25 @@
+{
+  "id": "pet_santa_v1",
+  "version": 1,
+  "status": "published",
+  "capability": "identity_transform",
+  "references": {
+    "subject": "pet",
+    "min_images": 1,
+    "preferred_images": 3
+  },
+  "instruction": {
+    "template": "Transform the same pet into a tasteful Christmas portrait wearing a small classic Santa hat. Preserve eye colour, fur markings, face proportions and ear shape exactly. Plain background, no other animals, no text."
+  },
+  "preserve": ["eye colour", "fur markings", "face proportions", "ear shape"],
+  "output": {
+    "aspect_ratio": "1:1",
+    "background": "transparent-preferred"
+  },
+  "qc": {
+    "identity": true,
+    "no_extra_animals": true
+  },
+  "prompt_id": "xmas/santa-hat-v1",
+  "products": ["wrap_pet_santa_repeat_v1"]
+}

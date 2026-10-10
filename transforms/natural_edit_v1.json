@@ -1,0 +1,24 @@
+{
+  "id": "natural_edit_v1",
+  "version": 1,
+  "status": "published",
+  "capability": "local_edit",
+  "references": {
+    "subject": "asset",
+    "min_images": 1,
+    "preferred_images": 1
+  },
+  "instruction": {
+    "template": "Apply the customer's plain-language edit to the finished asset (e.g. brown paper background, fewer decorations) without regenerating the subject. Subject pixels stay untouched."
+  },
+  "preserve": ["subject pixels", "composition"],
+  "output": {
+    "aspect_ratio": "source",
+    "background": "as-directed"
+  },
+  "qc": {
+    "identity": true,
+    "subject_untouched": true
+  },
+  "products": ["wrap", "cards", "posters"]
+}

@@ -230,3 +230,25 @@ class UpscaleAdapter(_Fal):
         log_spend(owner=owner, adapter=self.name, endpoint=self.endpoint,
                   est_cost_usd=0.016, request_id=out.get("request_id", ""))
         return {**out, "cost_note": "~$0.016/MP, face-detail tuned"}
+
+
+@register
+class BirefnetAdapter(_Fal):
+    """Subject cutout before motif work (BiRefNet v2, portrait-refined,
+    masks included). Pet photo in, clean transparent subject out."""
+    capability = "subject_cutout"
+    name = "fal.birefnet"
+    endpoint = "fal-ai/birefnet/v2"
+
+    def run(self, payload: dict) -> dict:
+        imgs = payload.get("images") or []
+        url = payload.get("image_url") or (imgs[0] if imgs else "")
+        if not url:
+            raise ProviderNotConfigured("subject_cutout: needs a reference image")
+        owner = str(payload.get("owner") or "anon")
+        out = self.submit(payload, {"image_url": url,
+                                    "refine_foreground": True,
+                                    "return_mask": True})
+        log_spend(owner=owner, adapter=self.name, endpoint=self.endpoint,
+                  est_cost_usd=0.02, request_id=out.get("request_id", ""))
+        return {**out, "cost_note": "cutout + mask, bills on success only"}

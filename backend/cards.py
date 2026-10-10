@@ -2187,4 +2187,7 @@ def register(app,owner_denied):
         return jsonify(ok=True, cart=res["cart"],
                        checkout_url=(res["cart"] or {}).get("checkoutUrl", ""))
 
+    # canonical generative engine (cardgen/): recommend -> make job -> fullbleed revision
+    from backend import cardgen_api as _cardgen_api
+    _cardgen_api.attach(bp, CardError, card_price, card_url_for, proof_url_for)
     app.register_blueprint(bp)

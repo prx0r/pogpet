@@ -191,6 +191,19 @@ class PipelineTest(Base):
                 E.start(self.owner, self.sid, "golf_lip_v1")
         self.assertEqual(e.exception.code, 503)
 
+    def test_spend_needs_explicit_switch_and_has_daily_cap(self):
+        with patch.dict("os.environ", {"FAL_KEY": "x", "CARDGEN_LIVE": ""}):
+            with self.assertRaises(E.EngineError) as e:
+                E.start(self.owner, self.sid, "golf_lip_v1")
+            self.assertIn("CARDGEN_LIVE", str(e.exception))
+        with patch.dict("os.environ", {"FAL_KEY": "x", "CARDGEN_LIVE": "1", "CARDGEN_DAILY_CAP": "1"}), \
+             patch.object(E.threading, "Thread") as th:
+            E.start(self.owner, self.sid, "golf_lip_v1")
+            th.assert_called_once()
+            with self.assertRaises(E.EngineError) as e:
+                E.start(self.owner, self.sid, "golf_lip_v1")
+            self.assertEqual(e.exception.code, 429)
+
 
 if __name__ == "__main__":
     unittest.main()

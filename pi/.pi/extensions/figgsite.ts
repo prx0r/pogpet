@@ -12,6 +12,31 @@ import { Type } from "typebox";
 
 const BASE = (process.env.FIGG_API_BASE ?? "http://127.0.0.1:8798").replace(/\/$/, "");
 const TOKEN = process.env.FIGG_API_TOKEN ?? "";
+const INFLUENCE_BASE = (process.env.INFLUENCE_API_BASE ?? "http://127.0.0.1:8793").replace(/\/$/, "");
+const INFLUENCE_TOKEN = process.env.INFLUENCE_API_TOKEN ?? TOKEN;
+
+async function callInfluence(
+	method: string,
+	path: string,
+	body?: unknown,
+): Promise<{ status: number; json: any }> {
+	const headers: Record<string, string> = { "Content-Type": "application/json" };
+	const sep = path.includes("?") ? "&" : "?";
+	const url = `${INFLUENCE_BASE}${path}${INFLUENCE_TOKEN ? `${sep}token=${encodeURIComponent(INFLUENCE_TOKEN)}` : ""}`;
+	const res = await fetch(url, {
+		method,
+		headers,
+		body: body !== undefined ? JSON.stringify(body) : undefined,
+	});
+	const text = await res.text();
+	let json: any = {};
+	try {
+		json = text ? JSON.parse(text) : {};
+	} catch {
+		json = { raw: text.slice(0, 300) };
+	}
+	return { status: res.status, json };
+}
 const FIGG_TOKEN = process.env.FIGG_TOKEN ?? "";
 const ACTOR = process.env.FIGG_OWNER ?? "";
 const OWNER_SIG = process.env.FIGG_OWNER_SIG ?? "";
@@ -596,6 +621,83 @@ export default function (pi: ExtensionAPI) {
 					: "";
 				const { status, json } = await call("GET", `/api/etsy/listings${q}`);
 				return status === 200 && json.ok ? ok(json) : fail(json.error ?? "etsy failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "influence_pack_compile",
+		label: "Compile pack (dry-run preview)",
+		description:
+			"Dry-run compile a catalog SKU into a ChannelRelease preview: payload " +
+			"fields, price source, media, warnings. Read-only — never pushes. " +
+			"Use before creating a release.",
+		promptSnippet: "influence_pack_compile({sku, brand?, channel?}) → preview",
+		parameters: Type.Object({
+			sku: Type.String({ description: "catalog SKU e.g. CHARM-CROC-PET" }),
+			brand: Type.Optional(Type.String({ description: "brand slug, default oddhobb" })),
+			channel: Type.Optional(Type.String({ description: "etsy | shopify | pinterest | x | instagram | tiktok | youtube" })),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const q = `?sku=${encodeURIComponent(params.sku)}` +
+					(params.brand ? `&brand=${encodeURIComponent(params.brand)}` : "") +
+					(params.channel ? `&channel=${encodeURIComponent(params.channel)}` : "");
+				const { status, json } = await callInfluence("GET", `/api/compile${q}`);
+				return status === 200 && !json.error ? ok(json) : fail(json.error ?? "compile failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "influence_release_create",
+		label: "Create draft release + review task",
+		description:
+			"Compile a catalog SKU into a draft ChannelRelease with ReviewBundle " +
+			"and human approval task. Never publishes — publishing needs human " +
+			"approval via the dash, then runtime.execute with a grant.",
+		promptSnippet: "influence_release_create({sku, brand?, channel?, campaign?}) → release + task",
+		parameters: Type.Object({
+			sku: Type.String({ description: "catalog SKU e.g. CHARM-CROC-PET" }),
+			brand: Type.Optional(Type.String()),
+			channel: Type.Optional(Type.String()),
+			campaign: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const { status, json } = await callInfluence("POST", "/api/release/create", {
+					sku: params.sku,
+					brand: params.brand ?? "oddhobb",
+					channel: params.channel ?? "etsy",
+					campaign: params.campaign ?? null,
+				});
+				return status === 200 && !json.error ? ok(json) : fail(json.error ?? json.reason ?? "release failed", status);
+			} catch (e) {
+				return fail(String(e));
+			}
+		},
+	});
+
+	pi.registerTool({
+		name: "influence_task_status",
+		label: "Poll approval task state",
+		description:
+			"Check an effect approval task: PROPOSED → REVIEW_READY → APPROVED → " +
+			"GRANTED → EXECUTING → VERIFYING → PROVEN_TRUE/FALSE. Approval binds " +
+			"the exact payload hash — never prose.",
+		promptSnippet: "influence_task_status({task_id}) → state + hash + receipt",
+		parameters: Type.Object({
+			task_id: Type.Integer({ description: "effect task id from release_create" }),
+		}),
+		execute: async (_id, params) => {
+			try {
+				const { status, json } = await callInfluence(
+					"GET", `/api/task/status?task_id=${encodeURIComponent(String(params.task_id))}`);
+				return status === 200 && !json.error ? ok(json) : fail(json.error ?? "task lookup failed", status);
 			} catch (e) {
 				return fail(String(e));
 			}

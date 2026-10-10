@@ -1,0 +1,13 @@
+{
+ "params": {
+  "name": "sunrise-c",
+  "led_count": 24,
+  "ring_d_mm": 60,
+  "supply": "usbc_1500",
+  "enclosure": "sla"
+ },
+ "errors": [],
+ "warnings": [
+  "usbc_1500 only holds when the charger advertises it; on a plain USB port firmware must fall back to 380 mA (not modelled yet)"
+ ]
+}

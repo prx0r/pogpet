@@ -1,0 +1,11 @@
+{
+ "params": {
+  "name": "sunrise",
+  "led_count": 24,
+  "ring_d_mm": 60,
+  "supply": "usb2_500",
+  "enclosure": "sla"
+ },
+ "errors": [],
+ "warnings": []
+}

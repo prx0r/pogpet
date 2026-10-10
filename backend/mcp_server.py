@@ -2391,6 +2391,64 @@ async def figg_supplier_quote(line: str, material: str = "",
         "line": line, "material": material, "colors": colors}))
 
 
+# ── studio: hardware engine (studio.oddhobb.com, Meshy model) ──────────
+# Design → simulate → quote for ESP32 hardware, in-process via studio/hwsim.
+# design_create writes studio/hwsim/designs/<name>/; quote reads live LCSC
+# prices (read-only, no spend, no key). Orders stay hard-gated in studio.
+async def studio_options() -> str:
+    """What you can design: base templates, parameters with limits, power
+    supplies, design rules. Start here before design_create."""
+    try:
+        from studio.hwsim import design as _D
+        return _j({"ok": True, "params": _D.PARAMS, "supplies": _D.SUPPLIES,
+                   "engine": "https://studio.oddhobb.com/mcp"})
+    except Exception as e:  # noqa: BLE001
+        return _j({"ok": False, "error": str(e)[:200]})
+
+
+async def studio_design_create(name: str, led_count: int = 12,
+                               ring_d_mm: float = 52,
+                               supply: str = "usb2_500",
+                               enclosure: str = "sla") -> str:
+    """Create a hardware variant from the mood-lamp template. Runs design-rule
+    checks (LED pitch, current cap); errors must be fixed, warnings noted.
+    Then simulate it at studio.oddhobb.com and price it with studio_quote."""
+    try:
+        from studio.hwsim import design as _D
+        return _j(_D.create({"name": name, "base": "mood_lamp",
+                             "led_count": led_count, "ring_d_mm": ring_d_mm,
+                             "supply": supply, "enclosure": enclosure}))
+    except Exception as e:  # noqa: BLE001
+        return _j({"ok": False, "error": str(e)[:200]})
+
+
+async def studio_design_quote(name: str, units: int = 5) -> str:
+    """Price a design for N units. LCSC parts are LIVE quotes; PCB/assembly/
+    enclosure are JLC estimates until the JLC API is approved. Read-only."""
+    try:
+        from studio.hwsim import design as _D
+        return _j(_D.quote(name, max(1, min(1000, int(units or 5)))))
+    except Exception as e:  # noqa: BLE001
+        return _j({"ok": False, "error": str(e)[:200]})
+
+
+async def studio_status() -> str:
+    """Hardware engine status: templates, saved designs, tool count, links."""
+    try:
+        import os as _os
+        _here = os.path.dirname(os.path.abspath(__file__))
+        _ddir = os.path.join(os.path.dirname(_here), "studio", "hwsim", "designs")
+        designs = sorted(d for d in os.listdir(_ddir)
+                         if os.path.isdir(os.path.join(_ddir, d))) if os.path.isdir(_ddir) else []
+        return _j({"ok": True, "engine": "https://studio.oddhobb.com/mcp",
+                   "designs": designs,
+                   "tools": ["design_create", "design_quote", "sim_*",
+                             "read_*", "do_*"],
+                   "note": "full 18-tool surface lives on studio.oddhobb.com/mcp"})
+    except Exception as e:  # noqa: BLE001
+        return _j({"ok": False, "error": str(e)[:200]})
+
+
 # ── the manifest: adding a tool = adding it to an area. One place. ───────────
 async def figg_upload_chatgpt_file(file: dict, owner: str = "") -> str:
     """Pet photo attached in ChatGPT -> photo_id. ChatGPT populates `file`
@@ -2552,6 +2610,8 @@ TOOL_AREAS: dict[str, list] = {
     "stage":     [figg_acts, figg_perform, figg_greeting, figg_rooms,
                   figg_video_share, figg_write_premise, figg_write_riff],
     "company":   [figg_companygraph],
+    "studio":    [studio_options, studio_design_create, studio_design_quote,
+                  studio_status],
     "creative":  [figg_creative_catalog, figg_creative_templates,
                   figg_creative_brief, figg_creative_match, figg_creative_revision],
     "oddhobb":   [oddhobb_people, oddhobb_families, oddhobb_reminders,

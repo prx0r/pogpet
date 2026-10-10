@@ -24,7 +24,7 @@ async def main(argv):
             for part in r.content:
                 if part.type == 'text': print(f'{name} →', part.text)
                 elif part.type == 'image':
-                    k += 1; p = f'{H}/out/{name}_{k}.png'; open(p, 'wb').write(base64.b64decode(part.data)); print(f'{name} → image saved {os.path.relpath(p, H)}')
+                    k += 1; p = f'{H}/out/{name}_{int(__import__("time").time()*1000)%10**7}.png'; open(p, 'wb').write(base64.b64decode(part.data)); print(f'{name} → image saved {os.path.relpath(p, H)}')
             if r.is_error: print(f'{name} !! is_error')
 
 if __name__ == '__main__': asyncio.run(main(sys.argv[1:]))

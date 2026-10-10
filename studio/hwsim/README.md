@@ -12,6 +12,7 @@ Quick test without an LLM: `python3 studio/hwsim/client.py --stdio list`.
 Needs `pip install "mcp[cli]"` (tested with mcp 2.3.0; client.py uses the legacy initialize handshake).
 
 ## Tools the agent gets
+- Design: `design_options`, `design_create` (DRC), `design_layout` (PNG), `design_quote` (LCSC live + JLC estimates, read-only). Every call is schema-validated.
 - Device tools, compiled from the WoT TD by vendored thingwire. These are the same tools the real product will expose: `read_ambient_lux`, `read_device_health`, `do_light_express`, `do_light_set`.
 - World tools: `sim_parts`, `sim_state`, `sim_advance`, `sim_set_ambient`, `sim_inject_fault`, `sim_snapshot` (PNG), `sim_bus_log`, `sim_checks`, `sim_reset`, `sim_save_trace`.
 

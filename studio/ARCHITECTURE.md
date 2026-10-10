@@ -41,3 +41,4 @@ prompt ─► template (templates/*.json: real parts + enclosure + capabilities 
 
 ## hwsim (2026-10-10 night): supplier spec → simulated board → MCP
 See hwsim/README.md. Cards (bh1750 EXTRACTED from ROHM datasheet; others DRAFT) → generic models → firmware/lamp_fw.py on a HAL → WoT TD → thingwire compiler (vendored, MIT) → MCP server (stdio + HTTP) with device tools + sim_* tools. Tested: datasheet conformance 11/11; real MCP client sessions over stdio and HTTP. Findings: 5V rail 459/500 mA at full white (LEDs 379 + LDO-fed ESP32 80 avg); Wi-Fi TX peaks likely exceed it. Never `pkill -f mcp_server` from the shell (it matches and kills the shell).
+2026-10-10 18:55: design_* tools added; Hark agent test passed end to end (hwsim/AGENT_TEST_2026-10-10.md). Pick sunrise-c $31.98/unit x5.

@@ -1,3 +1,29 @@
+# OddHobb — the 10 (Round 14 · 2026-10-10, studio engine live)
+
+> **Focus:** studio.oddhobb.com as a separate hardware engine (Meshy
+> model) + v3 import. Engine :8765 live behind bridge token, 18 tools
+> public; main MCP carries 4 studio_* tools (120 total). Agent-tested:
+> sunrise-c SLA wins ($31.98/u at 5), replay 14/14 identical frames.
+> **Open edge:** USB-C fallback current, CC resistors, ~6.7W dome heat,
+> enclosure cost still estimate, no orders placed.
+
+## The 10
+
+| # | To-do | Status | Notes |
+|---|---|---|---|
+| **14-1** | **GlowBase reference standard** | open | Mechanical interface + BOM + sim + reproducible files (30-day W2) |
+| **14-2** | **Supplier qualification starts** | open | JLC API application + prototype order; warehouse trial question out (docs/supplier-outreach.md 0/7) |
+| **14-3** | **Enclosure cost real** | open | 65% of sunrise-c cost is estimate — JLC quote SLA dome + MJF |
+| **14-4** | **Electrical gaps closed** | open | USB-C fallback current, CC resistors in BOM, dome heat model |
+| **14-5** | **First LISTABLE pack** | open | Quotes (G07) block every pack; CHARM-CROC-PET needs listing/ |
+| **14-6** | **Wrapping paper renderer** | open | Recipe draft + santa prompt done; build wrap_repeat layout + tile |
+| **14-7** | **Pack API for agents** | open | Read-only /api/packs over product.json + levels for matcher |
+| **14-8** | **Receipt log first rows** | open | Hash-chained promotions/faces/quotes per system-os notes |
+| **14-9** | **Higgsfield key in** | open | Flip higgsfield.soul/marketing is_available; Soul ID for Dad |
+| **14-10** | **Commit batch when owner says push** | open | Tree holds v3 + bridge studio route + studio_* tools + this file |
+
+---
+
 # OddHobb — the 10 (Round 13 · 2026-10-05, worked 2026-10-06)
 
 > **Focus:** full audit integrated — P0s fixed, shelf honest.

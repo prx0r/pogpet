@@ -9,13 +9,14 @@ H = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, os.path.dirna
 import mcp_types as types
 from mcp.server.lowlevel import Server
 from hwsim.sim import Board
+from hwsim import design as D
 from hwsim.td import manifest_to_td, td_input_schema
 from hwsim.vendor.thingwire.td_loader import parse_thing_description_dict
 from hwsim.vendor.thingwire.tool_compiler import compile_tools
 
 A = argparse.ArgumentParser(); A.add_argument('--board', default='mood_lamp'); A.add_argument('--http', type=int); A.add_argument('--seed', type=int, default=7)
 args = A.parse_args()
-S = {'board': Board.load(args.board, args.seed)}
+S = {'board': Board.load(args.board, args.seed), 'design': args.board}
 TD = manifest_to_td(S['board'].manifest); TOOLS = compile_tools(parse_thing_description_dict(TD))
 ROUTE = {t.name: (t.tool_type, t.source_name) for t in TOOLS}
 CMD = {'ambientLux': 'sensor.lux', 'deviceHealth': 'device.health', 'lightExpress': 'light.express', 'lightSet': 'light.set'}
@@ -33,7 +34,13 @@ SIM = {
  'sim_snapshot': ('Picture of the lamp right now (LED ring as rendered from the actual WS2812B data stream) plus the last few seconds of colour.', obj({'seconds': {'type': 'number', 'minimum': 1, 'maximum': 60}})),
  'sim_bus_log': ('Last N I2C transactions between the ESP32 firmware and the sensor (addr, data, ACK/NACK).', obj({'last': {'type': 'integer', 'minimum': 1, 'maximum': 200}})),
  'sim_checks': ('Run the safety and hardware acceptance checks over everything simulated so far (LED current, flash rate, night cap, rail limit, bus health, card verification).', obj()),
- 'sim_reset': ('Fresh board, time zero.', obj({'seed': {'type': 'integer'}})),
+ 'sim_reset': ('Fresh board, time zero. Pass design=<name> to load a design made with design_create (or mood_lamp for the stock board).', obj({'design': {'type': 'string'}, 'seed': {'type': 'integer'}})),
+ 'design_options': ('What you can design: base templates, parameters with limits, supplies, design rules.', obj()),
+ 'design_create': ('Create or overwrite a design variant from a base template. Runs design-rule checks; returns errors (must fix) and warnings. Then sim_reset(design=name) to simulate it and design_quote to price it.',
+                   obj(D.PARAMS, ['name', 'led_count', 'ring_d_mm', 'supply'])),
+ 'design_layout': ('Top-down PCB/ring layout preview of a design (PNG) with its key numbers.', obj({'name': {'type': 'string'}}, ['name'])),
+ 'design_quote': ('Price a design for N units: LCSC parts are LIVE quotes; PCB, assembly and enclosure are JLC estimates until the JLC API is approved. Read-only, orders nothing.',
+                  obj({'name': {'type': 'string'}, 'units': {'type': 'integer', 'minimum': 1, 'maximum': 1000}}, ['name', 'units'])),
  'sim_save_trace': ('Save this session (every device call, frame and check) to a JSON trace that can be replayed in Blender or against hardware.', obj({'name': {'type': 'string'}}, ['name'])),
 }
 
@@ -47,8 +54,15 @@ async def list_tools(ctx, params):
 
 def text(x, err=False): return types.CallToolResult(content=[types.TextContent(type='text', text=json.dumps(x, default=str))], is_error=err)
 
+SCHEMAS = {}
 async def call_tool(ctx, params):
     n, a, b = params.name, params.arguments or {}, S['board']
+    if not SCHEMAS: SCHEMAS.update({t.name: t.input_schema for t in (await list_tools(None, None)).tools})
+    if n in SCHEMAS:   # validate every call against the advertised schema; agents get a fixable message, never a stack trace
+        import jsonschema
+        try: jsonschema.validate(a, SCHEMAS[n])
+        except jsonschema.ValidationError as e:
+            return text(dict(ok=False, error=f'invalid arguments: {e.message}', hint=f'field {"/".join(map(str, e.path)) or "(root)"}; see the tool schema'), True)
     if n in ROUTE:
         r = b.invoke(CMD[ROUTE[n][1]], a, caller='mcp'); return text(r, not r['ok'])
     if n == 'sim_parts':
@@ -65,7 +79,24 @@ async def call_tool(ctx, params):
                                              types.TextContent(type='text', text=json.dumps(b.state()))])
     if n == 'sim_bus_log': return text(b.i2c.log[-int(a.get('last', 20)):])
     if n == 'sim_checks': return text([dict(check=c[0], result=c[1], value=c[2]) for c in b.checks()])
-    if n == 'sim_reset': S['board'] = Board.load(args.board, int(a.get('seed', args.seed))); return text(dict(ok=True, t=0))
+    if n == 'sim_reset':
+        nm = a.get('design', S['design'])
+        try: S['board'] = Board.load(nm, int(a.get('seed', args.seed))); S['design'] = nm
+        except FileNotFoundError: return text(dict(ok=False, error=f'no design {nm!r}', hint='design_create first, or use mood_lamp'), True)
+        return text(dict(ok=True, t=0, design=nm, leds=S['board'].leds.n, supply_ma=S['board'].rails['5V'].limit, max_led_ma=S['board'].manifest['safety']['max_led_ma']))
+    if n == 'design_options':
+        return text(dict(bases=['mood_lamp'], params=D.PARAMS, supplies=D.SUPPLIES, rules=dict(reserve_ma=D.RESERVE_MA, led_pitch_min_mm=D.LED_PITCH_MIN_MM, pcb_cheap_tier_max_mm=100)))
+    if n == 'design_create':
+        try: r = D.create(a)
+        except Exception as e: return text(dict(ok=False, error=str(e)), True)
+        return text(r, not r['ok'])
+    if n in ('design_layout', 'design_quote') and not os.path.exists(f'{H}/designs/{a.get("name")}/template.json'):
+        return text(dict(ok=False, error=f'no design {a.get("name")!r}', hint='call design_create first'), True)
+    if n == 'design_layout':
+        return types.CallToolResult(content=[types.ImageContent(type='image', data=base64.b64encode(D.layout_png(a['name'])).decode(), mime_type='image/png')])
+    if n == 'design_quote':
+        try: return text(D.quote(a['name'], int(a['units'])))
+        except Exception as e: return text(dict(ok=False, error=f'pricing failed: {e}'), True)
     if n == 'sim_save_trace':
         p = f'{H}/out/trace_{"".join(c for c in a["name"] if c.isalnum() or c in "-_")}.json'
         json.dump(dict(board=b.spec['board'], calls=b.calls, checks=b.checks(), frames=b.frames[::2]), open(p, 'w')); return text(dict(ok=True, path=os.path.relpath(p, os.path.dirname(H)), frames=len(b.frames)))

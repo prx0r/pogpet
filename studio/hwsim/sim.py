@@ -18,10 +18,12 @@ class HAL:
 
 class Board:
     @classmethod
-    def load(cls, name, seed=7): return cls(json.load(open(f'{H}/board.{name}.json')), seed)
+    def load(cls, name, seed=7):
+        f = f'{H}/designs/{name}/board.json' if os.path.exists(f'{H}/designs/{name}/board.json') else f'{H}/board.{name}.json'
+        return cls(json.load(open(f)), seed)
     def __init__(self, spec, seed=7):
         self.spec = spec; self.rng = random.Random(seed); self.t = 0.0; self.amb = [(0.0, 300.0)]
-        self.manifest = json.load(open(os.path.normpath(f'{H}/{spec["device_manifest"]}')))
+        self.manifest = json.load(open(os.path.normpath(os.path.join(H, spec["device_manifest"]))))
         self.i2c = I2CBus(); self.rails = {k: Rail(k, v) for k, v in spec['rails'].items()}
         self.cards = {}; self.parts = {}
         for p in spec['parts']:

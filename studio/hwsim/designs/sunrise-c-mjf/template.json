@@ -1,0 +1,85 @@
+{
+ "id": "DSN-SUNRISE-C-MJF",
+ "name": "sunrise-c-mjf",
+ "version": 0,
+ "pitch": "A desk light that shows how your agent feels, and dims itself to the room.",
+ "parts": [
+  {
+   "ref": "LED1-24",
+   "part": "ws2812b",
+   "qty": 24,
+   "role": "ring",
+   "layout": {
+    "ring_d_mm": 60.0
+   }
+  },
+  {
+   "ref": "U2",
+   "part": "bh1750",
+   "qty": 1,
+   "role": "ambient",
+   "placement": "top window, behind clear diffuser"
+  },
+  {
+   "ref": "U1",
+   "part": "esp32c3",
+   "qty": 1,
+   "role": "brain"
+  }
+ ],
+ "power": {
+  "source": "usbc_1500",
+  "budget_ma": 1500,
+  "reserve_ma": 120,
+  "led_cap_ma": 1380
+ },
+ "pcb": {
+  "layers": 2,
+  "w_mm": 70,
+  "h_mm": 70,
+  "shape": "round",
+  "passives_joints": 108,
+  "extra_joints": 20
+ },
+ "enclosure": {
+  "process": "mjf",
+  "material": "PA12 nylon base + separate diffuser",
+  "volume_cm3": 83.2,
+  "note": "volume estimated from ring size"
+ },
+ "capabilities": {
+  "light.set": {
+   "args": {
+    "rgb": "hex",
+    "brightness": "0-1",
+    "transition_ms": "int>=150"
+   },
+   "desc": "Set the ring colour"
+  },
+  "light.express": {
+   "args": {
+    "emotion": "joy|calm|sad|stressed|surprised|thinking|neutral",
+    "intensity": "0-1"
+   },
+   "desc": "Show an emotion"
+  },
+  "sensor.lux": {
+   "returns": "lux float",
+   "desc": "Ambient light level"
+  },
+  "event.ambient_changed": {
+   "payload": {
+    "lux": "float"
+   },
+   "desc": "Fires on a >25% ambient change"
+  }
+ },
+ "invariants": {
+  "max_flash_hz": 3.0,
+  "min_transition_ms": 150,
+  "max_led_ma": 380,
+  "night_lux": 10,
+  "night_max_brightness": 0.12,
+  "min_big_change_gap_ms": 400
+ }
+}

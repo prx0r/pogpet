@@ -79,6 +79,7 @@ class LampFirmware:
             px.append(tuple(int(255 * x + 0.5) for x in (r, g, b)))
         m = sum(IDLE_MA + (r + g + b) / 255 * MA_PER_CH for r, g, b in px)
         if m > self.S['max_led_ma']:
-            k = self.S['max_led_ma'] / m * 0.99; px = [tuple(int(x * k) for x in p) for p in px]
+            idle = IDLE_MA * self.n   # idle draw can't be dimmed: scale only the colour current (bug found by sim on 24-LED design)
+            k = max(0.0, (self.S['max_led_ma'] - idle) / (m - idle)) * 0.99; px = [tuple(int(x * k) for x in p) for p in px]
         self.px = px
         self.hal.led_write(bytes(v for r, g, b in px for v in (g, r, b)))   # WS2812B wants GRB

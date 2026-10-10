@@ -217,6 +217,24 @@ class Handler(BaseHTTPRequestHandler):
             return True
         return False
 
+    def _host(self) -> str:
+        return (self.headers.get("Host") or "").split(":")[0].lower()
+
+    def _studio_route(self, method: str) -> None:
+        """studio.oddhobb.com: the hardware-sim engine front door. /mcp goes
+        to :8765 behind the bridge token (same gate as everything else);
+        any other path gets a small engine card, never the main site."""
+        raw = urlparse(self.path).path
+        if raw.startswith("/mcp"):
+            if not self._gated():
+                return
+            self._mcp_proxy(method, backend="studio")
+            return
+        self._json({"engine": "oddhobb-studio",
+                    "mcp": "https://studio.oddhobb.com/mcp",
+                    "designs": ["mood_lamp", "sunrise", "sunrise-c"],
+                    "docs": "studio/ARCHITECTURE.md"}, 200)
+
     # GETs safe for the whole internet: read-only catalog/design data.
     # Everything else under /backend still needs the bridge token or the
     # caller's own API key.
@@ -270,6 +288,7 @@ class Handler(BaseHTTPRequestHandler):
         backend="pogtown" routes /pog to the joke MCP (:8801) instead.
         backend="public" routes tokenless callers to the read-only MCP
         (:8800, PUBLIC_MCP=1 — spend tools never registered there).
+        backend="studio" routes the studio.oddhobb.com engine (:8765).
 
         MCP streamable HTTP needs headers BOTH ways (mcp-session-id) and a
         text/event-stream that never sets Content-Length — so this proxies
@@ -284,6 +303,12 @@ class Handler(BaseHTTPRequestHandler):
             sub = raw.path[len("/pog"):] or "/mcp"
         elif backend == "public":
             port = os.environ.get("MCP_PUBLIC_PORT", "8800")
+            sub = raw.path
+        elif backend == "studio":
+            # studio.oddhobb.com: separate hardware-sim engine (:8765, Meshy
+            # model — own process, own tools). Host header is rewritten to
+            # loopback by urllib, satisfying the engine's DNS-rebinding guard.
+            port = os.environ.get("STUDIO_PORT", "8765")
             sub = raw.path
         else:
             port = os.environ.get("MCP_PORT", "8799")
@@ -426,6 +451,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         raw = urlparse(self.path).path
+        if self._host() == "studio.oddhobb.com":
+            self._studio_route("GET")
+            return
         if raw == "/pog" or raw.startswith("/pog/"):
             if not self._gated():
                 self.close_connection = True
@@ -579,6 +607,9 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
+        if self._host() == "studio.oddhobb.com":
+            self._studio_route("POST")
+            return
         if urlparse(self.path).path == "/pog" or urlparse(self.path).path.startswith("/pog/"):
             if not self._gated():
                 self.close_connection = True

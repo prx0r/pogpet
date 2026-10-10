@@ -1,0 +1,40 @@
+{
+ "board": "sunrise-c",
+ "template": "DSN-SUNRISE-C",
+ "device_manifest": "/workspace/projects/791a7153-8d05-4c9b-b767-8f281ad46eb0/studio/hwsim/designs/sunrise-c/device.json",
+ "rails": {
+  "5V": {
+   "source": "usbc_1500",
+   "limit_ma": 1500
+  },
+  "3V3": {
+   "source": "LDO from 5V",
+   "limit_ma": 300,
+   "parent": "5V"
+  }
+ },
+ "parts": [
+  {
+   "ref": "U1",
+   "card": "esp32c3",
+   "rail": "3V3"
+  },
+  {
+   "ref": "U2",
+   "card": "bh1750",
+   "rail": "3V3",
+   "bus": "i2c0",
+   "strap": {
+    "ADDR": "L"
+   }
+  },
+  {
+   "ref": "LED1-24",
+   "card": "ws2812b",
+   "rail": "5V",
+   "bus": "rmt0",
+   "qty": 24
+  }
+ ],
+ "firmware": "firmware/lamp_fw.py"
+}

@@ -1,0 +1,66 @@
+{
+ "template": "DSN-SUNRISE-C",
+ "units": 5,
+ "lines": [
+  {
+   "supplier": "lcsc",
+   "service": "parts",
+   "item": "WS2812B-B/T",
+   "qty": 120,
+   "usd": 10.46,
+   "basis": "quote",
+   "note": "stock 64700, MOQ 5"
+  },
+  {
+   "supplier": "lcsc",
+   "service": "parts",
+   "item": "BH1750FVI-TR",
+   "qty": 5,
+   "usd": 4.63,
+   "basis": "quote",
+   "note": "stock 45734, MOQ 1"
+  },
+  {
+   "supplier": "lcsc",
+   "service": "parts",
+   "item": "ESP32-C3-WROOM-02-N4",
+   "qty": 5,
+   "usd": 16.61,
+   "basis": "quote",
+   "note": "stock 1634, MOQ 1"
+  },
+  {
+   "supplier": "jlc",
+   "service": "pcb",
+   "item": "2L PCB 70x70",
+   "qty": 5,
+   "usd": 2.0,
+   "basis": "estimate",
+   "note": "assumption: JLC advertised 2-layer 100x100 5pcs price; quote decides"
+  },
+  {
+   "supplier": "jlc",
+   "service": "pcba",
+   "item": "assembly",
+   "qty": 5,
+   "usd": 10.12,
+   "basis": "estimate",
+   "note": "assumption; quote decides"
+  },
+  {
+   "supplier": "jlc",
+   "service": "tdp",
+   "item": "enclosure",
+   "qty": 5,
+   "usd": 104.0,
+   "basis": "estimate",
+   "note": "assumption"
+  }
+ ],
+ "shipping_usd": 12.1,
+ "total_usd": 159.92,
+ "per_unit_usd": 31.98,
+ "quoted_share": 0.2,
+ "joints_per_board": 249,
+ "jlc_api": "not approved yet: PCB/PCBA/enclosure lines are estimates"
+}

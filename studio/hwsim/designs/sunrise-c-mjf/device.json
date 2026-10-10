@@ -1,0 +1,115 @@
+{
+ "contract": "oddhobb.device.v1",
+ "device_type": "oddhobb.mood_lamp.v1",
+ "version": "0.1.0",
+ "template": "mood_lamp",
+ "display_name": "OddHobb mood lamp",
+ "commands": {
+  "light.express": {
+   "description": "Show an emotion on the lamp. The lamp decides colour, motion and brightness, and dims itself to the room.",
+   "params": {
+    "emotion": {
+     "type": "string",
+     "required": true,
+     "enum": [
+      "joy",
+      "calm",
+      "sad",
+      "stressed",
+      "surprised",
+      "thinking",
+      "neutral"
+     ]
+    },
+    "intensity": {
+     "type": "number",
+     "required": false,
+     "min": 0,
+     "max": 1,
+     "default": 0.7,
+     "clamp": true
+    }
+   },
+   "permissions": [
+    "muse",
+    "mcp",
+    "pogtown",
+    "studio_sim",
+    "home_assistant"
+   ]
+  },
+  "light.set": {
+   "description": "Set the ring to one colour.",
+   "params": {
+    "rgb": {
+     "type": "string",
+     "required": true,
+     "pattern": "^#?[0-9a-fA-F]{6}$"
+    },
+    "brightness": {
+     "type": "number",
+     "required": false,
+     "min": 0,
+     "max": 1,
+     "default": 0.5,
+     "clamp": true
+    },
+    "transition_ms": {
+     "type": "integer",
+     "required": false,
+     "min": 150,
+     "max": 10000,
+     "default": 400,
+     "clamp": true
+    }
+   },
+   "permissions": [
+    "muse",
+    "mcp",
+    "studio_sim",
+    "home_assistant"
+   ]
+  },
+  "sensor.lux": {
+   "description": "Ambient light level in lux (BH1750).",
+   "params": {},
+   "permissions": [
+    "muse",
+    "mcp",
+    "pogtown",
+    "studio_sim",
+    "home_assistant"
+   ]
+  },
+  "device.health": {
+   "description": "Uptime, LED current, brightness cap, firmware version.",
+   "params": {},
+   "permissions": [
+    "muse",
+    "mcp",
+    "studio_sim",
+    "home_assistant"
+   ]
+  }
+ },
+ "events": {
+  "ambient_changed": {
+   "lux": "number"
+  }
+ },
+ "safety": {
+  "max_flash_hz": 3.0,
+  "min_transition_ms": 150,
+  "max_led_ma": 1380,
+  "night_lux": 10,
+  "night_max_brightness": 0.12,
+  "min_big_change_gap_ms": 400
+ },
+ "integrations": [
+  "muse",
+  "mcp",
+  "pogtown",
+  "home_assistant",
+  "studio_sim"
+ ]
+}

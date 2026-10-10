@@ -43,6 +43,18 @@ def ensure_tables(c: sqlite3.Connection) -> None:
     );
     CREATE INDEX IF NOT EXISTS idx_assets_owner ON assets(owner);
     CREATE INDEX IF NOT EXISTS idx_assets_parent ON assets(parent_id);
+    CREATE TABLE IF NOT EXISTS families (
+      id         TEXT PRIMARY KEY,
+      owner      TEXT NOT NULL,
+      name       TEXT NOT NULL DEFAULT '',
+      created_at REAL NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS family_members (
+      family_id  TEXT NOT NULL REFERENCES families(id),
+      subject_id TEXT NOT NULL REFERENCES studio_subjects(id),
+      role       TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (family_id, subject_id)
+    );
     """)
     c.commit()
 
@@ -148,6 +160,98 @@ def profile_for_photo(c: sqlite3.Connection, owner: str, photo_id: str) -> dict:
     if not subs:
         return {}
     return {"subject": subs[0], "profile": profile_for(c, owner, subs[0]["id"])}
+
+
+# ── families ──────────────────────────────────────────────────────────
+# A family is a named set of subjects (people AND pets — kind lives on the
+# subject). Image-first: members carry no required name; the roster renders
+# face emblems and names only when given. Roles (mum/dad/…) live on the
+# membership; relationship detail lives in the subject profile.
+
+def create_family(c: sqlite3.Connection, owner: str, name: str) -> dict:
+    fid = _new_id(c, "fam")
+    c.execute("INSERT INTO families (id,owner,name,created_at) VALUES (?,?,?,?)",
+              (fid, owner, (name or "").strip()[:80], _now()))
+    c.commit()
+    return {"id": fid, "owner": owner, "name": (name or "").strip()[:80]}
+
+
+def families_for(c: sqlite3.Connection, owner: str) -> list[dict]:
+    return [dict(r) for r in c.execute(
+        "SELECT * FROM families WHERE owner=? ORDER BY created_at", (owner,))]
+
+
+def add_member(c: sqlite3.Connection, owner: str, family_id: str,
+               subject_id: str, role: str = "") -> dict:
+    fam = c.execute("SELECT * FROM families WHERE id=? AND owner=?",
+                    (family_id, owner)).fetchone()
+    if not fam:
+        raise KeyError("family not found")
+    sub = get_subject(c, owner, subject_id)
+    if not sub:
+        raise KeyError("subject not found")
+    c.execute("INSERT INTO family_members (family_id,subject_id,role)"
+              " VALUES (?,?,?) ON CONFLICT(family_id,subject_id) DO UPDATE SET"
+              " role=excluded.role",
+              (family_id, subject_id, (role or "").strip()[:40]))
+    c.commit()
+    return {"family_id": family_id, "subject_id": subject_id,
+            "role": (role or "").strip()[:40]}
+
+
+def remove_member(c: sqlite3.Connection, owner: str, family_id: str,
+                  subject_id: str) -> None:
+    fam = c.execute("SELECT * FROM families WHERE id=? AND owner=?",
+                    (family_id, owner)).fetchone()
+    if not fam:
+        raise KeyError("family not found")
+    c.execute("DELETE FROM family_members WHERE family_id=? AND subject_id=?",
+              (family_id, subject_id))
+    c.commit()
+
+
+def family_detail(c: sqlite3.Connection, owner: str, family_id: str) -> dict:
+    """Family + members with profiles and a cover chip each (first confirmed
+    photo face → thumbnail endpoint params; pets fall back to mesh photo)."""
+    fam = c.execute("SELECT * FROM families WHERE id=? AND owner=?",
+                    (family_id, owner)).fetchone()
+    if not fam:
+        return {}
+    members = []
+    for r in c.execute(
+            "SELECT s.*, fm.role FROM family_members fm"
+            " JOIN studio_subjects s ON s.id=fm.subject_id"
+            " WHERE fm.family_id=? AND s.owner=?", (family_id, owner,)):
+        s = dict(r)
+        prof = profile_for(c, owner, s["id"])
+        cover = c.execute(
+            "SELECT ps.photo_id, ps.face_id FROM photo_subjects ps"
+            " JOIN photos p ON p.id=ps.photo_id"
+            " WHERE ps.subject_id=? AND ps.confirmed=1 AND p.owner=?"
+            " ORDER BY ps.face_id DESC LIMIT 1",
+            (s["id"], owner)).fetchone()
+        if not cover:
+            # Pets (and fresh subjects) link via mesh, not photos — cover
+            # falls back to the mesh's source photo, faceless.
+            cover = c.execute(
+                "SELECT m.photo_id AS photo_id, '' AS face_id FROM mesh_subjects ms"
+                " JOIN meshes m ON m.id=ms.mesh_id"
+                " JOIN photos p ON p.id=m.photo_id"
+                " WHERE ms.subject_id=? AND p.owner=? LIMIT 1",
+                (s["id"], owner)).fetchone()
+        members.append({
+            "id": s["id"], "name": s["name"], "kind": s.get("kind", "person"),
+            "role": r["role"] or "",
+            "relationship": prof.get("relationship", ""),
+            "birthday": prof.get("birthday", ""),
+            "interests": (prof.get("profile", {}) or {}).get("interests", []),
+            "cover": ({"photo_id": cover["photo_id"],
+                       "face_id": cover["face_id"] or None}
+                      if cover else None),
+        })
+    d = dict(fam)
+    d["members"] = members
+    return d
 
 
 # ── migration from mesh-keyed profiles ────────────────────────────────

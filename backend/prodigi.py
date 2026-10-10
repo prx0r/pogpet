@@ -99,8 +99,13 @@ def quote(sku: str, copies: int = 1, country: str = "GB",
         "currencyCode": "GBP",
         "items": [item],
     })
-    if d.get("outcome") != "Created":
+    if d.get("outcome") not in ("Created", "CreatedWithIssues"):
         raise ProdigiError(str(d.get("failures") or d.get("outcome"))[:300])
+    # CreatedWithIssues still quotes (e.g. US sales-tax warning) — surface
+    # the warnings instead of failing: location-dependent pricing depends
+    # on accepting them. Issues shape: [{errorCode, description}].
+    warnings = [i.get("description", i.get("errorCode", ""))
+                for i in (d.get("issues") or []) if isinstance(i, dict)]
     q = (d.get("quotes") or [{}])[0]
     cs = q.get("costSummary") or {}
     # Real shape is {items, shipping, branding, totalCost, totalTax}, each
@@ -114,13 +119,17 @@ def quote(sku: str, copies: int = 1, country: str = "GB",
     _, ship = money("shipping")
     _, tax = money("totalTax")
     carrier = ""
+    lab = ""
     ships = q.get("shipments") or []
     if ships:
         car = (ships[0].get("carrier") or {})
         carrier = f"{car.get('name', '')} {car.get('service', '')}".strip()
+        lab = ((ships[0].get("fulfillmentLocation") or {}).get("countryCode")
+               or "")
     return {"ok": True, "sku": sku, "currency": cur,
             "total": total, "item": item, "shipping": ship, "tax": tax,
             "carrier": carrier, "grade": "LIVE",
+            "lab_country": lab, "warnings": warnings,
             "country": country, "copies": copies}
 
 
@@ -172,22 +181,25 @@ def create_order(sku: str, copies: int, asset_url: str, recipient: dict,
     for k in ("name", "line1", "town", "postcode", "country"):
         if not str((recipient or {}).get(k) or "").strip():
             raise ProdigiError(f"recipient.{k} is required")
+    addr = {
+        "line1": recipient["line1"][:100],
+        "postalOrZipCode": recipient["postcode"][:20],
+        "countryCode": recipient["country"][:2].upper(),
+        "townOrCity": recipient["town"][:60],
+    }
+    if str(recipient.get("line2") or "").strip():
+        addr["line2"] = str(recipient["line2"])[:100]
     body = {
         "shippingMethod": shipping_method,
         "currencyCode": currency,
         "recipient": {
             "name": recipient["name"][:60],
-            "address": {
-                "line1": recipient["line1"][:100],
-                "line2": str(recipient.get("line2") or "")[:100],
-                "postalOrZipCode": recipient["postcode"][:20],
-                "countryCode": recipient["country"][:2].upper(),
-                "townOrCity": recipient["town"][:60],
-            },
+            "address": addr,
         },
         "items": [{
             "sku": sku,
             "copies": max(1, int(copies)),
+            "sizing": "fillPrintArea",
             "assets": [{"printArea": "default", "url": asset_url}],
         }],
     }

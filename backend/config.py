@@ -1097,6 +1097,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "tags": ["christmas card", "personalised pet", "xmas gift", "dog card", "custom card"],
         "blurb": "Your pet's 3D render on a Christmas card. Upload once — print on cards, ornaments, keychains.",
         "etsy_title": "Personalised Pet Christmas Card | Custom Dog Card | Merry Xmas Card | Pet Gift | Holiday Card",
+        "requires": {},  # mesh render — no photo labels needed
     },
     "happy_holidays": {
         "label": "Happy Holidays card",
@@ -1109,6 +1110,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "tags": ["holiday card", "personalised card", "pet gift", "christmas", "custom dog"],
         "blurb": "Neutral holiday greeting with your pet's mesh render.",
         "etsy_title": "Personalised Holiday Card | Custom Pet Card | Happy Holidays | Dog Christmas Card | Pet Gift",
+        "requires": {},  # mesh render — no photo labels needed
     },
     "thank_you": {
         "label": "Thank you card",
@@ -1121,6 +1123,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "tags": ["thank you card", "personalised pet", "custom card", "dog thank you"],
         "blurb": "Thank-you card starring your pet's 3D render.",
         "etsy_title": "Personalised Thank You Card | Custom Dog Card | Pet Thank You | Custom Pet Gift",
+        "requires": {},  # mesh render — no photo labels needed
     },
     "happy_birthday": {
         "label": "Birthday card",
@@ -1133,6 +1136,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "tags": ["birthday card", "personalised pet", "dog birthday", "custom card"],
         "blurb": "Birthday card with your pet's mesh render.",
         "etsy_title": "Personalised Dog Birthday Card | Custom Pet Birthday | Birthday Gift | Pet Card",
+        "requires": {},  # mesh render — no photo labels needed
     },
     "real_photo": {
         "label": "Your photo card",
@@ -1145,6 +1149,7 @@ PERSONAL_CARDS: dict[str, dict] = {
         "tags": ["photo card", "custom photo card", "personalised card", "christmas photo"],
         "blurb": "Print your own photo on a greeting card — no 3D needed.",
         "etsy_title": "Personalised Photo Card | Custom Christmas Card | Photo Greeting Card | Pet Photo Card",
+        "requires": {"solos": 1, "min_face_score": 0.5},  # any good single-subject shot
     },
 }
 
@@ -1308,6 +1313,39 @@ ETSY_LISTINGS: dict[str, dict] = {
         "photo_slots": ETSY_PHOTO_SLOTS,
         "fulfilment": "print_farm",
         "source_repo": "prx0r/oddhobbies ETSY-SETUP photo strategy + SEO sizing",
+    },
+    "wrapping_paper": {
+        "product_id": "wrapping_paper",
+        "title": "Personalised Pet Wrapping Paper | Custom Dog Gift Wrap | Pet Face Xmas Wrap | Christmas Gift Wrap | Photo Wrapping Paper",
+        "price_cents": 1499,
+        "price_band": "treat/gift",
+        "currency": "GBP",
+        "sizes": [
+            {"id": "sheet", "label": "Single sheet 50×70cm", "mm": "500 × 700",
+             "sku": "WRAP-1-50X70", "price_cents": 1499,
+             "note": "one FSC sheet — wraps 1–2 small gifts"},
+            {"id": "large", "label": "Large sheet 75×90cm", "mm": "750 × 900",
+             "sku": "WRAP-1-75X90", "price_cents": 1999,
+             "note": "one large FSC sheet — wraps big boxes"},
+            {"id": "roll", "label": "Roll 70cm × 1m", "mm": "700 × 1000",
+             "sku": "WRAP-ROL-70X100", "price_cents": 2499,
+             "note": "FSC roll — the whole Christmas pile"},
+        ],
+        "materials": "FSC gift wrap paper · full-colour print · ships UK/EU/US",
+        "personalization": ["your pet's face tiled", "berry / forest / cream background"],
+        "processing_days": "2–5",
+        "ships_from": "UK print farm",
+        "tags": ["personalised wrapping paper", "custom dog gift wrap",
+                 "pet face wrapping paper", "christmas gift wrap",
+                 "photo wrapping paper", "funny dog gift wrap"],
+        "blurb": (
+            "Your pet's face, tiled all over real gift wrap. One photo becomes "
+            "a repeating half-drop pattern with gold stars — berry, forest or cream. "
+            "Printed on demand, ships from the UK."
+        ),
+        "photo_slots": ETSY_PHOTO_SLOTS,
+        "fulfilment": "print_farm",
+        "source_repo": "Prodigi WRAP range · verified live 2026-10-10 (check+quote, no order)",
     },
 }
 
@@ -1579,8 +1617,13 @@ PRODIGI_PRODUCTS: dict[str, dict] = {
                       "sku": "GLOBAL-CAN-10X10", "sku_attrs": {"wrap": "White"},
                       "sku_note": "GLOBAL-CAN-10X10 \u00b7 verified live", "shape": "print",
                       "free": False},
-    "wrapping_paper": {"label": "Wrapping Paper", "price_cents": 899,
-                       "sku_note": "cards & stationery · grade Q — SKU unverified",
+    "wrapping_paper": {"label": "Wrapping Paper", "price_cents": 1499,
+                       "sku": "WRAP-1-50X70", "sku_attrs": {},
+                       "requires": {"solos": 1, "min_face_score": 0.5},  # hero tile source
+                       "alt_skus": {"large_sheet": "WRAP-1-75X90",
+                                    "sheet_3pack": "WRAP-3-50X70",
+                                    "roll": "WRAP-ROL-70X100"},
+                       "sku_note": "WRAP-1-50X70 single 50x70cm sheet · verified live 2026-10-10 (alt: 75X90 large, 3-pack, 70x1m roll)",
                        "shape": "paper", "free": False},
 }
 

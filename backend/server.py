@@ -517,6 +517,157 @@ def set_subject_profile():
                     "suggestion": _suggest_motif(prof.get("interests", []))})
 
 
+def _parse_birthday(raw: str):
+    """Canonical house format is MM-DD (guide.py writes it). Tolerates
+    YYYY-MM-DD and MM/DD; anything else → None. Returns (month, day)."""
+    import re as _re
+    s = (raw or "").strip()
+    m = _re.fullmatch(r"(\d{2})-(\d{2})", s)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = _re.fullmatch(r"\d{4}-(\d{2})-(\d{2})", s)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = _re.fullmatch(r"(\d{2})/(\d{2})", s)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    return None
+
+
+@app.get("/api/family/reminders")
+def family_reminders():
+    """Birthday countdowns: who, when, gift + funny-card suggestions.
+
+    Birthdays are PII — owner-enforced (key, sig, or session), unlike the
+    open catalog reads. Email composes but does not send: no mail provider
+    key is configured, so the response carries the ready-to-send draft.
+    """
+    import datetime as _dt
+    owner = (request.args.get("owner") or "").strip()[:80]
+    try:
+        within = max(1, min(120, int(request.args.get("within_days") or 30)))
+    except (TypeError, ValueError):
+        return _err("within_days must be 1-120", 400)
+    if not owner:
+        return _err("owner is required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    try:
+        from backend import card_scenes as _scenes
+        templates = list(_scenes.BIRTHDAY_TEMPLATES)
+    except Exception:
+        templates = ["birthday_4photo", "birthday_wall", "birthday_dots"]
+    from backend import subjects as _subjects
+    today = _dt.date.today()
+    with db.connect() as c:
+        prof = db.get_profile(c, owner)
+        active = prof.get("active_mesh_id") or ""
+        try:
+            user = c.execute("SELECT email FROM users WHERE handle=?",
+                             (owner,)).fetchone()
+            email = (dict(user).get("email") or "") if user else ""
+        except Exception:
+            email = ""
+        out = []
+        _subjects.ensure_tables(c)
+        for s in _subjects.subjects_for(c, owner):
+            full = _subjects.profile_for(c, owner, s["id"])
+            parsed = _parse_birthday(full.get("birthday", ""))
+            if not parsed:
+                continue
+            mm, dd = parsed
+            try:
+                nxt = _dt.date(today.year, mm, dd)
+            except ValueError:
+                continue
+            if nxt < today:
+                try:
+                    nxt = _dt.date(today.year + 1, mm, dd)
+                except ValueError:
+                    continue
+            days = (nxt - today).days
+            if days > within:
+                continue
+            prof_json = full.get("profile", {}) or {}
+            subject = {"name": s["name"],
+                       "interests": prof_json.get("interests", []),
+                       "birthday": full.get("birthday", "")}
+            gifts = _derive_gifts(subject, active)
+            try:
+                from backend import subject_assets as _sa
+                res = _sa.resolve(s["id"], owner)
+                hero = (res.get("face_candidates") or [{}])[0].get("asset_id")
+            except Exception:
+                hero = None
+            fams = [r["name"] for r in c.execute(
+                "SELECT f.name FROM family_members fm JOIN families f"
+                " ON f.id=fm.family_id WHERE fm.subject_id=? AND f.owner=?",
+                (s["id"], owner,)).fetchall()]
+            name = s["name"] or "someone"
+            lines = ", ".join(g["label"] for g in gifts[:3])
+            out.append({
+                "subject_id": s["id"], "name": s["name"],
+                "kind": s.get("kind", "person"),
+                "relationship": full.get("relationship", ""),
+                "birthday": full.get("birthday", ""),
+                "date": nxt.isoformat(), "days_until": days,
+                "families": fams, "hero_photo": hero,
+                "gifts": gifts, "card_templates": templates,
+                "email": {
+                    "ready": bool(email),
+                    "to": email,
+                    "subject": f"{name}'s birthday in {days} day(s) — gift idea inside",
+                    "body": (f"{name}'s birthday is {nxt.isoformat()} ({days} day(s)). "
+                             f"Top picks: {lines}. "
+                             f"Card templates: {', '.join(templates[:3])}. "
+                             + ("" if email else "Add an email to this account to receive pings.")),
+                    "note": ("staged — no mail provider key configured" if not email
+                             else "staged — sending not yet wired to a provider"),
+                },
+            })
+    out.sort(key=lambda r: r["days_until"])
+    return jsonify({"ok": True, "owner": owner, "within_days": within,
+                    "reminders": out})
+
+
+@app.get("/api/orders/track")
+def orders_track():
+    """Track one order by id: status, lines, price, checkout links.
+    Owner-enforced (order PII). Provider tracking refs surface when the
+    order note carries them; external carrier tracking stays provider-side.
+    """
+    owner = (request.args.get("owner") or "").strip()[:80]
+    oid = (request.args.get("order_id") or "").strip()[:80]
+    if not owner or not oid:
+        return _err("owner and order_id are required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    with db.connect() as c:
+        order = None
+        row = c.execute("SELECT * FROM orders WHERE id=? AND owner=?",
+                        (oid, owner)).fetchone()
+        if row:
+            order = {"kind": "product", **dict(row)}
+        else:
+            try:
+                cols = [r[1] for r in
+                        c.execute("PRAGMA table_info(card_orders)").fetchall()]
+                if cols:
+                    r2 = c.execute(
+                        "SELECT * FROM card_orders WHERE id=? AND owner=?",
+                        (oid, owner)).fetchone()
+                    if r2:
+                        order = {"kind": "card", **dict(r2)}
+            except Exception:
+                pass
+    if not order:
+        return _err("order not found", 404)
+    return jsonify({"ok": True, "order": order,
+                    "note": "provider tracking refs ride in note/checkout_url"})
+
+
 # ── guided personal shopper ───────────────────────────────────────────
 # Person first, no search bar: ramble -> profile -> photos -> mesh -> packs.
 
@@ -3920,6 +4071,137 @@ def products_for_subject(subject: str):
     return jsonify(ok=True, subject=sub.get("name", subject),
                    interests=prof.get("interests") or [],
                    lines=ranked)
+
+
+@app.get("/api/quotes/compare")
+def quotes_compare():
+    """Value / speed / balanced across suppliers for one product line.
+
+    ?line=<id>&country=GB. Picks derive value (cheapest live total),
+    speed (quickest dispatch) and balanced (best cost-per-day ratio).
+    Speed carries an order-by countdown (cutoff- or open-mode, business
+    days, dispatch dates — delivery per carrier). Mapped lines only.
+    """
+    line = (request.args.get("line") or "").strip()
+    country = (request.args.get("country") or "GB").strip()[:2]
+    from backend import delivery as _dlv
+    if line not in _dlv.ROUTES:
+        return _err("no supplier mapping for line (mapped: %s)"
+                    % ", ".join(sorted(_dlv.ROUTES)), 400)
+    built = _dlv.build(line, country)
+    return jsonify({"ok": True, "line": line, "country": country,
+                    "options": built["options"], "picks": built["picks"],
+                    "matrix": built["matrix"],
+                    "duty_note": "US: quote excludes sales tax; de-minimis "
+                                 "ended Aug 2025 — confirm landed cost at checkout"})
+
+
+@app.get("/api/recipes/check")
+def recipes_check():
+    """Can this warehouse build N boxes today? ?recipe=&warehouse=&qty=."""
+    from backend import components as _comp
+    recipe = (request.args.get("recipe") or "").strip()
+    warehouse = (request.args.get("warehouse") or "Shenzhen").strip()[:40]
+    try:
+        qty = max(1, min(500, int(request.args.get("qty") or 1)))
+    except (TypeError, ValueError):
+        return _err("qty must be 1-500", 400)
+    if not recipe:
+        return _err("recipe is required", 400)
+    r = _comp.check_recipe(recipe, warehouse, qty)
+    if not r.get("ok"):
+        return _err(r.get("error", "check failed"), 400)
+    return jsonify(r)
+
+
+@app.post("/api/gifts/compile")
+def gifts_compile():
+    """Compile a gift recipe: resolve lines, apply the postage rule, score
+    feasibility. Body: {recipe, warehouse?, ship_cents?}."""
+    from backend import components as _comp
+    from backend import feasibility as _fea
+    body = request.get_json(silent=True) or {}
+    recipe = str(body.get("recipe") or "")
+    warehouse = str(body.get("warehouse") or "Shenzhen")[:40]
+    ship = body.get("ship_cents")
+    try:
+        ship_cents = None if ship is None else max(0, int(ship))
+    except (TypeError, ValueError):
+        return _err("ship_cents must be a number", 400)
+    if not recipe:
+        return _err("recipe is required", 400)
+    safety = body.get("safety_flags") if isinstance(body.get("safety_flags"), list) else []
+    r = _comp.compile_gift(recipe, warehouse, ship_cents)
+    if not r.get("ok"):
+        return _err(r.get("error", "compile failed"), 400)
+    r["feasibility"] = _fea.score_gift(r, [str(s) for s in safety][:6])
+    return jsonify(r)
+
+
+@app.post("/api/projects/check")
+def projects_check():
+    """Run a kit idea through every supplier lane: parts_3d[] (live
+    estimates), paper_skus[] (live Prodigi quotes), components_std[]
+    (AliExpress staged), kitting (US station staged). Verdict: producible
+    / staged / blocked. Paste an idea, get the manufacturing truth."""
+    body = request.get_json(silent=True) or {}
+    idea = body.get("idea") or body
+    if not isinstance(idea, dict) or not idea:
+        return _err("idea object is required", 400)
+    from backend import project_check as _pc
+    return jsonify(_pc.check_idea(idea))
+
+
+@app.get("/api/templates/fill")
+def templates_fill():
+    """Fill a layout template (wrap_solo/trio_card/photo_card) from an
+    owner's labelled photos. ?owner=&template_id=&subjects=a,b (optional).
+    Photo PII — owner-enforced."""
+    owner = (request.args.get("owner") or "").strip()[:80]
+    if not owner:
+        return _err("owner is required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    template_id = (request.args.get("template_id") or "").strip()
+    if not template_id:
+        return _err("template_id is required", 400)
+    subjects = [s.strip()[:60] for s in
+                (request.args.get("subjects") or "").split(",") if s.strip()]
+    from backend import template_engine as _te
+    r = _te.fill(owner, template_id, subjects=subjects or None)
+    if not r.get("ok"):
+        return _err(r.get("error", "fill failed"), 400)
+    return jsonify({"ok": True, "owner": owner, **r})
+
+
+@app.get("/api/products/candidates")
+def products_candidates():
+    """Ranked photo shortlist behind one product line's tag requirements.
+
+    ?owner=&kind=prodigi|card&line=<id>&n=8. Best first by label score
+    (quality/emotion layers as they land); the arrow UI cycles the rest.
+    Photo PII — owner-enforced.
+    """
+    owner = (request.args.get("owner") or "").strip()[:80]
+    if not owner:
+        return _err("owner is required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    kind = (request.args.get("kind") or "prodigi").strip()
+    if kind not in ("prodigi", "card"):
+        return _err("kind must be prodigi|card", 400)
+    line = (request.args.get("line") or "").strip()
+    if not line:
+        return _err("line is required", 400)
+    try:
+        n = max(1, min(20, int(request.args.get("n") or 8)))
+    except (TypeError, ValueError):
+        return _err("n must be 1-20", 400)
+    from backend import subject_assets as _sa
+    return jsonify({"ok": True,
+                    **_sa.product_assets(owner, kind, line, per_slot=n)})
 
 
 @app.get("/api/mcp/health")

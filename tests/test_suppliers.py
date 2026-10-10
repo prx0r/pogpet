@@ -16,8 +16,8 @@ from backend import suppliers as sup  # noqa: E402
 
 
 class TestRegistry(unittest.TestCase):
-    def test_fourteen_suppliers(self):
-        self.assertEqual(len(sup.SUPPLIERS), 14)
+    def test_supplier_count(self):
+        self.assertEqual(len(sup.SUPPLIERS), 27)
         for sid, s in sup.SUPPLIERS.items():
             for k in ("label", "ships", "materials", "order", "est"):
                 self.assertIn(k, s, sid)
@@ -25,6 +25,23 @@ class TestRegistry(unittest.TestCase):
     def test_home_farm_present(self):
         self.assertIn("PLA", sup.SUPPLIERS["makr3d"]["materials"])
         self.assertEqual(sup.SUPPLIERS["makr3d"]["est"]["kind"], "band")
+
+    def test_resin_matrix(self):
+        # Only JLC does resin. FDM lanes must say so in their gaps.
+        r = sup.estimate("jlc3dp", material="Resin", weight_g=5)
+        self.assertTrue(r["feasible"])
+        self.assertEqual(r["ccy"], "USD")
+        for sid in ("makr3d", "slant3d", "printie"):
+            r = sup.estimate(sid, material="Resin", weight_g=5)
+            self.assertFalse(r["feasible"], sid)
+            self.assertTrue(any("Resin" in g for g in r["gaps"]), sid)
+
+    def test_printie_usd_quote_model(self):
+        self.assertEqual(sup.SUPPLIERS["printie"]["est"]["kind"], "quote")
+        self.assertEqual(sup.SUPPLIERS["printie"]["est"]["ccy"], "USD")
+        r = sup.estimate("printie", material="PLA", weight_g=5)
+        self.assertTrue(r["feasible"])
+        self.assertIsNone(r["est_cents"])  # live calc, never faked
 
 
 class TestEstimate(unittest.TestCase):
@@ -83,7 +100,7 @@ if __name__ == "__main__":
 
 
 FARM_IDS = {"makr3d", "yorkshire3d", "3dfarm", "treatstock", "craftcloud", "dapi3d", "sculpteo",
-            "slant3d", "shapeways", "xometry", "gelato", "mixam", "printify", "printie", "fdfarm"}
+            "slant3d", "shapeways", "xometry", "gelato", "mixam", "printify", "printie", "fdfarm", "jlc3dp", "jlc"}
 
 
 class TestStorefrontAnonymity(unittest.TestCase):
@@ -106,12 +123,20 @@ class TestStorefrontAnonymity(unittest.TestCase):
 
 
 class TestNoCommitment(unittest.TestCase):
+    # Bulk lanes state their MOQ openly (1688 wholesale 20, Seeed kitting 5,
+    # GotPrint cards 25). Everything else takes single orders.
+    BULK_MIN = {"1688": 20, "seeed": 5, "gotprint": 25}
+
     def test_qty1_everywhere(self):
         from backend import suppliers as sup
         for sid in sup.SUPPLIERS:
             r = sup.can_single_order(sid)
-            self.assertTrue(r["ok"], sid)
-            self.assertEqual(r["min_qty"], 1, sid)
+            if sid in self.BULK_MIN:
+                self.assertFalse(r["ok"], sid)
+                self.assertEqual(r["min_qty"], self.BULK_MIN[sid], sid)
+            else:
+                self.assertTrue(r["ok"], sid)
+                self.assertEqual(r["min_qty"], 1, sid)
 
     def test_registry_fields(self):
         from backend import suppliers as sup

@@ -13,7 +13,9 @@ def test_plate_prompt_guards_typography():
     assert F.plate_prompt("", style="") == F.NO_TEXT_GUARD
 
 
-def test_plate_needs_scene_and_key():
+def test_plate_needs_scene_and_key(monkeypatch):
+    # Hermetic: the key may be configured in .env — this test pins it absent.
+    monkeypatch.delenv("FAL_KEY", raising=False)
     try:
         F.FluxPlateAdapter().run({"owner": "anon"})
     except ProviderNotConfigured as e:

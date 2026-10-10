@@ -664,6 +664,276 @@
         ]
       }
     },
+    "/backend/api/products/candidates": {
+      "get": {
+        "operationId": "listCandidates",
+        "summary": "Ranked face shortlist behind one product line (best first, arrows cycle the rest)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "line",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "n",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/quotes/compare": {
+      "get": {
+        "operationId": "compareQuotes",
+        "summary": "Speed vs value across suppliers for one line (grades + cost breakdowns)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "line",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "country",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/templates/fill": {
+      "get": {
+        "operationId": "fillTemplate",
+        "summary": "Fill a layout template from labelled photos + provider payloads",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "template_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subjects",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/studio/families": {
+      "get": {
+        "operationId": "listFamilies",
+        "summary": "Family groups with members, roles, face-emblem covers",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/family/reminders": {
+      "get": {
+        "operationId": "listReminders",
+        "summary": "Birthday countdowns with gifts, card templates, staged email draft",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "within_days",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/projects/check": {
+      "post": {
+        "operationId": "checkProject",
+        "summary": "Run a kit idea through every supplier lane (verdict + costs)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idea": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backend/api/recipes/check": {
+      "get": {
+        "operationId": "checkRecipe",
+        "summary": "Can this warehouse build N boxes today (stock + box quote)",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "recipe",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "warehouse",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "qty",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/backend/api/gifts/compile": {
+      "post": {
+        "operationId": "compileGift",
+        "summary": "Compile a gift recipe: lines, postage rule, feasibility score",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recipe": {
+                    "type": "string"
+                  },
+                  "warehouse": {
+                    "type": "string"
+                  },
+                  "ship_cents": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/backend/api/orders/track": {
+      "get": {
+        "operationId": "trackOrder",
+        "summary": "Track one order: status, lines, price, checkout links",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "owner",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/backend/api/videos": {
       "post": {
         "operationId": "performVideo",

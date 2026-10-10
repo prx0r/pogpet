@@ -419,6 +419,58 @@ async def oddhobb_people(owner: str = "", api_key: str = "") -> str:
     return _j(await _call("GET", "/api/oddhobb/people?owner=" + (owner or "anon"), api_key=api_key))
 
 
+async def oddhobb_families(owner: str = "", api_key: str = "", owner_sig: str = "") -> str:
+    """Family groups with members, roles, face-emblem covers (people + pets). Image-first roster; names optional."""
+    return _j(await _call("GET", "/api/studio/families?owner=" + owner, api_key=api_key, owner_sig=owner_sig))
+
+
+async def oddhobb_reminders(owner: str = "", within_days: int = 30, api_key: str = "", owner_sig: str = "") -> str:
+    """Birthday countdowns: who, days until, gift lines, funny-card templates, staged email draft. Birthdays are PII — owner-enforced."""
+    return _j(await _call("GET", f"/api/family/reminders?owner={owner}&within_days={within_days}", api_key=api_key, owner_sig=owner_sig))
+
+
+async def oddhobb_candidates(line: str, kind: str = "prodigi", n: int = 8, owner: str = "", api_key: str = "", owner_sig: str = "") -> str:
+    """Ranked face shortlist behind one product line's tags — best first, arrows cycle the rest. Powers the site carousel and provider fills."""
+    return _j(await _call("GET", f"/api/products/candidates?owner={owner}&kind={kind}&line={line}&n={n}", api_key=api_key, owner_sig=owner_sig))
+
+
+async def oddhobb_fill_template(template_id: str, subjects: list | None = None, owner: str = "", api_key: str = "", owner_sig: str = "") -> str:
+    """Fill a layout template (wrap_solo/trio_card/photo_card) from labelled photos: distinct picks, min_px print truth, per-provider payloads (Gelato/Printify staged, Prodigi renderable)."""
+    qs = f"/api/templates/fill?owner={owner}&template_id={template_id}"
+    if subjects:
+        from urllib.parse import quote as _q
+        qs += "&subjects=" + _q(",".join(subjects))
+    return _j(await _call("GET", qs, api_key=api_key, owner_sig=owner_sig))
+
+
+async def oddhobb_quotes(line: str = "wrapping_paper", country: str = "GB") -> str:
+    """Speed vs value across suppliers for one product line: grades, cost breakdowns, picks."""
+    return _j(await _call("GET", f"/api/quotes/compare?line={line}&country={country}"))
+
+
+async def oddhobb_project_check(idea: dict | None = None) -> str:
+    """Paste a kit idea, get the manufacturing truth: per-lane verdicts across 3D/paper/AliExpress/kitting, known costs, staged unknowns. Verdict: producible / staged / blocked."""
+    return _j(await _call("POST", "/api/projects/check", {"idea": idea or {}}))
+
+
+async def oddhobb_recipe_check(recipe: str, warehouse: str = "Shenzhen", qty: int = 1) -> str:
+    """Can this warehouse build N boxes today? Per-component stock status + box quote from published base rates."""
+    return _j(await _call("GET", f"/api/recipes/check?recipe={recipe}&warehouse={warehouse}&qty={qty}"))
+
+
+async def oddhobb_gift_compile(recipe: str, warehouse: str = "Shenzhen", ship_cents: int | None = None) -> str:
+    """Compile a gift recipe: resolve registry + product lines, apply the postage rule, feasibility score. Ship unknown → viability pending the parcel quote."""
+    body: dict = {"recipe": recipe, "warehouse": warehouse}
+    if ship_cents is not None:
+        body["ship_cents"] = ship_cents
+    return _j(await _call("POST", "/api/gifts/compile", body))
+
+
+async def oddhobb_track_order(order_id: str, owner: str = "", api_key: str = "", owner_sig: str = "") -> str:
+    """Track one order by id: status, lines, price, checkout links. Owner-enforced."""
+    return _j(await _call("GET", f"/api/orders/track?owner={owner}&order_id={order_id}", api_key=api_key, owner_sig=owner_sig))
+
+
 async def oddhobb_ideas(person: str='', occasion: str='general', request: str='', owner: str='', subject_id: str='', context: list | None=None, tone: str='funny', budget_cents: int=0, api_key: str='', owner_sig: str='') -> str:
     """Person + occasion + request (+ your relevant agent_memory context facts)
     → ranked creative ideas with reasons. Send facts, never whole memories."""
@@ -2469,7 +2521,11 @@ TOOL_AREAS: dict[str, list] = {
     "company":   [figg_companygraph],
     "creative":  [figg_creative_catalog, figg_creative_templates,
                   figg_creative_brief, figg_creative_match, figg_creative_revision],
-    "oddhobb":   [oddhobb_people, oddhobb_ideas, oddhobb_create,
+    "oddhobb":   [oddhobb_people, oddhobb_families, oddhobb_reminders,
+                  oddhobb_candidates, oddhobb_fill_template, oddhobb_quotes,
+                  oddhobb_project_check, oddhobb_recipe_check,
+                  oddhobb_gift_compile, oddhobb_track_order,
+                  oddhobb_ideas, oddhobb_create,
                   oddhobb_render, oddhobb_status, oddhobb_buy,
                   oddhobb_providers, oddhobb_capsule,
                   oddhobb_make_card, oddhobb_attach_card_art,

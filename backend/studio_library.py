@@ -67,6 +67,89 @@ def _box(value):
     return value
 
 
+def _box_json(raw):
+    try:
+        v = json.loads(raw)
+        return v if isinstance(v, list) and len(v) == 4 else []
+    except (ValueError, TypeError):
+        return []
+
+
+def _has_vec(owner, face_id):
+    from backend import faces as _faces
+    _faces.ensure_schema()
+    with db.connect() as c:
+        return bool(c.execute(
+            "SELECT 1 FROM face_embeddings WHERE face_id=? AND owner=?",
+            (face_id, owner)).fetchone())
+
+
+def _get_vec(owner, face_id):
+    import struct as _st
+    from backend import faces as _faces
+    _faces.ensure_schema()
+    with db.connect() as c:
+        r = c.execute(
+            "SELECT vec, dim FROM face_embeddings WHERE face_id=? AND owner=?",
+            (face_id, owner)).fetchone()
+    if not r:
+        return None
+    try:
+        return list(_st.unpack(f"{r['dim']}f", r["vec"]))
+    except Exception:
+        return None
+
+
+def _embed_missing(owner, pid, rows):
+    """Compute+store embeddings for faces lacking them (owner's own photo)."""
+    from backend import faces as _faces
+    from backend import pipeline as _pipeline
+    with db.connect() as c:
+        p = c.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
+    if not p:
+        return
+    try:
+        local = _pipeline._local_photo(dict(p))
+    except Exception:
+        return
+    if not local:
+        return
+    try:
+        import cv2 as _cv2
+        bgr = _cv2.imread(str(local))
+    except Exception:
+        return
+    if bgr is None:
+        return
+    boxes = {tuple(round(float(v), 4) for v in f[:4]): f
+             for f in _faces.detect_boxes(bgr)}
+    with db.connect() as c:
+        for r in rows:
+            if _has_vec(owner, r["id"]):
+                continue
+            try:
+                box = json.loads(r["box"])
+            except (ValueError, TypeError):
+                continue
+            key = tuple(round(float(v), 4) for v in box)
+            f = boxes.get(key)
+            if f is None:
+                continue
+            vec = _faces.embed_face(bgr, f)
+            if vec is not None:
+                import struct as _st
+                import time as _t
+                c.execute(
+                    "INSERT INTO face_embeddings"
+                    " (face_id,photo_id,owner,model,dim,vec,created_at)"
+                    " VALUES (?,?,?,?,?,?,?) ON CONFLICT(face_id) DO UPDATE SET"
+                    " vec=excluded.vec, created_at=excluded.created_at",
+                    (r["id"], pid, owner, _faces.MODEL, len(vec),
+                     _st.pack(f"{len(vec)}f", *[float(v) for v in vec]),
+                     _t.time()))
+        c.commit()
+
+
 def _legacy(c, owner):
     """Import old named groups once as review suggestions, not identities."""
     for p in c.execute('SELECT id,person FROM photos WHERE owner=? AND person IS NOT NULL', (owner,)).fetchall():
@@ -181,8 +264,7 @@ def register(app, owner_denied):
     @bp.post('/api/studio/subjects')
     def subject():
         b=request.get_json(silent=True) or {}; name=str(b.get('name') or '').strip()[:60]
-        if not name:
-            return jsonify(ok=False,error='Give your friend a name.'),400
+        # Names are optional — the roster renders face emblems. Empty is fine.
         with db.connect() as c:
             sid=b.get('id') or db.new_id('person')
             if b.get('id'):
@@ -194,6 +276,77 @@ def register(app, owner_denied):
                 c.execute('INSERT INTO studio_subjects VALUES (?,?,?,?,?)',(sid,request.studio_owner,name,kind,time.time()))
             c.commit()
         return jsonify(ok=True,subject={'id':sid,'name':name})
+
+    @bp.post('/api/studio/subjects/<sid>/profile')
+    def subject_profile(sid):
+        """Onboard a person: birthday + what they enjoy are the key bits.
+        Body: {relationship?, birthday? (MM-DD), interests?[]}. Merges."""
+        from backend import subjects as _subjects
+        b=request.get_json(silent=True) or {}; owner=request.studio_owner
+        with db.connect() as c:
+            if not _owned(c,'studio_subjects',sid,owner):
+                return jsonify(ok=False,error='Friend not found.'),404
+            _subjects.ensure_tables(c)
+            interests=b.get('interests')
+            if interests is not None and not isinstance(interests,list):
+                return jsonify(ok=False,error='interests must be a list'),400
+            prof=_subjects.set_profile(c,owner,sid,
+                relationship=str(b.get('relationship') or '').strip()[:40],
+                birthday=str(b.get('birthday') or '').strip()[:10],
+                profile=({"interests":[str(i)[:40] for i in interests[:12]]}
+                         if interests is not None else None))
+        return jsonify(ok=True,subject_id=sid,relationship=prof.get('relationship',''),
+                       birthday=prof.get('birthday',''),
+                       interests=(prof.get('profile',{}) or {}).get('interests',[]))
+
+    @bp.get('/api/studio/families')
+    def families_list():
+        from backend import subjects as _subjects
+        owner=request.studio_owner
+        with db.connect() as c:
+            _subjects.ensure_tables(c)
+            out=[_subjects.family_detail(c,owner,f['id'])
+                 for f in _subjects.families_for(c,owner)]
+        return jsonify(ok=True,families=out)
+
+    @bp.post('/api/studio/families')
+    def family_create():
+        from backend import subjects as _subjects
+        b=request.get_json(silent=True) or {}; owner=request.studio_owner
+        name=str(b.get('name') or '').strip()
+        if not name:
+            return jsonify(ok=False,error='Give the family a name.'),400
+        with db.connect() as c:
+            _subjects.ensure_tables(c)
+            fam=_subjects.create_family(c,owner,name)
+        return jsonify(ok=True,family=fam)
+
+    @bp.post('/api/studio/families/<fid>/members')
+    def family_add(fid):
+        from backend import subjects as _subjects
+        b=request.get_json(silent=True) or {}; owner=request.studio_owner
+        sid=str(b.get('subject_id') or '')
+        if not sid:
+            return jsonify(ok=False,error='subject_id is required'),400
+        with db.connect() as c:
+            _subjects.ensure_tables(c)
+            try:
+                m=_subjects.add_member(c,owner,fid,sid,str(b.get('role') or ''))
+            except KeyError as e:
+                return jsonify(ok=False,error=str(e)),404
+        return jsonify(ok=True,member=m)
+
+    @bp.delete('/api/studio/families/<fid>/members/<sid>')
+    def family_remove(fid,sid):
+        from backend import subjects as _subjects
+        owner=request.studio_owner
+        with db.connect() as c:
+            _subjects.ensure_tables(c)
+            try:
+                _subjects.remove_member(c,owner,fid,sid)
+            except KeyError as e:
+                return jsonify(ok=False,error=str(e)),404
+        return jsonify(ok=True,removed=True)
 
     @bp.post('/api/studio/photos/<pid>')
     def annotate(pid):
@@ -346,6 +499,43 @@ def register(app, owner_denied):
                 c.commit()
                 return jsonify(ok=True,updated=bool(hit),qty=q)
             return jsonify(ok=False,error="action must be remove or qty"),400
+
+    @bp.get('/api/studio/faces/suggest')
+    def faces_suggest():
+        """Who is this? Per-face identity suggestions for one photo.
+
+        Query: ?photo_id=<pid>. Suggest-only: scores + ranked subjects,
+        never auto-confirms (user confirm writes photo_subjects as today).
+        Missing embeddings are computed inline (owner's own photo) so the
+        endpoint is self-healing after the backfill.
+        """
+        from backend import faces as _faces
+        owner = request.studio_owner
+        pid = (request.args.get("photo_id") or "").strip()
+        if not pid:
+            return jsonify(ok=False, error="photo_id is required"), 400
+        with db.connect() as c:
+            p = _owned(c, 'photos', pid, owner)
+            if not p:
+                return jsonify(ok=False, error="Photo not found."), 404
+            _faces.ensure_schema()
+            rows = [dict(r) for r in c.execute(
+                "SELECT * FROM photo_faces WHERE photo_id=?", (pid,))]
+        out = []
+        vecs = {}
+        if rows and any(not _has_vec(owner, r["id"]) for r in rows):
+            _embed_missing(owner, pid, rows)
+        for r in rows:
+            vec = _get_vec(owner, r["id"])
+            if vec is None:
+                out.append({"face_id": r["id"], "box": _box_json(r["box"]),
+                            "suggestions": [], "strong": False,
+                            "new_person": False, "unreadable": True})
+                continue
+            vecs[r["id"]] = vec
+            s = _faces.suggest(vec, owner, exclude_photo=pid)
+            out.append({"face_id": r["id"], "box": _box_json(r["box"]), **s})
+        return jsonify(ok=True, photo_id=pid, faces=out)
 
     @bp.get('/api/studio/photos/<pid>/image')
     def image(pid):

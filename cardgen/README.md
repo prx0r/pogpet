@@ -128,6 +128,8 @@ MCP  oddhobb_make (public)                           cardgen first; legacy PIL s
 | QA | tesseract OCR (no stray words), YuNet face count + SFace likeness ≥ 0.30, vision critic. Fail = targeted edit, max 2, then the job fails (never attaches a bad card) |
 | freeze | `cards.attach_art(front 5:7, inside 10:7)` → `birthday_fullbleed` revision → existing preview/spread/export jobs, £2.99, Shopify checkout, Prodigi |
 
+Spend switches: `FAL_KEY` **and** `CARDGEN_LIVE=1` are both required, plus `CARDGEN_DAILY_CAP` (12 jobs per owner per 24 h by default). Without them, `oddhobb_make` keeps serving the legacy shelf.
+
 The fullbleed renderer in `card_scenes` owns the inside message type, the signature and the back.
 cardgen never draws type on the inside or the back.
 

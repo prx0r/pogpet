@@ -1,0 +1,72 @@
+{
+  "id": "movie_poster_couple_v1",
+  "occasions": [
+    "birthday",
+    "anniversary",
+    "valentines"
+  ],
+  "interests": [],
+  "tones": [
+    "funny",
+    "romantic"
+  ],
+  "cast": {
+    "hero": {
+      "from": [
+        "couple",
+        "solo"
+      ]
+    },
+    "partner": {
+      "from": [
+        "couple"
+      ],
+      "with": "hero"
+    }
+  },
+  "style": "1950s Hollywood romance movie poster, painted, Technicolor palette",
+  "scene": "{hero} in a tuxedo grinning proudly, very pleased with himself; {partner} in an elegant gown glancing at the viewer with a long-suffering raised eyebrow; sunset over {place}.",
+  "copy": {
+    "title": {
+      "max": 28,
+      "examples": [
+        "STILL PUTTING UP WITH HIM",
+        "SHE SAID YES (EVENTUALLY)"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "NOW SHOWING · ANOTHER YEAR"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Happy birthday to the star of the show. Your co-star deserves an award."
+      ]
+    }
+  },
+  "spot": "an old cinema ticket stub with a single red rose across it",
+  "qa": {
+    "faces": 2,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people"
+}

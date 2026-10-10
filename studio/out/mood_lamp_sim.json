@@ -98,7 +98,7 @@
   [
    "flash rate < 3 Hz (photosensitive safety)",
    "PASS",
-   "0.04 Hz"
+   "worst 1 s window 1.5 flashes"
   ],
   [
    "night brightness cap",

@@ -1,0 +1,51 @@
+{
+  "id": "wrap_pet_santa_repeat_v1",
+  "version": 1,
+  "status": "draft",
+  "product": {
+    "type": "wrapping_paper",
+    "sku": "WRAP-1-50X70",
+    "price_cents": 1499
+  },
+  "eligibility": {
+    "occasion": ["christmas"],
+    "subjects": ["person", "pet"],
+    "min_photos": 1
+  },
+  "ranking": {
+    "interests": [],
+    "tones": ["festive", "funny", "warm"]
+  },
+  "inputs": {
+    "photos": {
+      "count": 1,
+      "strategy": "best_face"
+    },
+    "title": {
+      "source": "profile"
+    },
+    "inside_copy": {
+      "source": "none"
+    }
+  },
+  "generation": {
+    "santa_transform": {
+      "kind": "transform",
+      "capability": "face_styled_variant",
+      "method": "reference_image_to_image",
+      "prompt_id": "xmas/santa-hat-v1",
+      "note": "categorised face in, santa-hat face out. Provider-agnostic: fal.ai or Alibaba satisfy the capability. Prompt text lives in prompts/, never in the recipe."
+    }
+  },
+  "renderer": {
+    "layout": "wrap_repeat_v1",
+    "template": "wrap_repeat",
+    "tile": "face motif + holly/snowflake sprigs on colourway, deterministic repeat"
+  },
+  "outputs": [
+    "motif",
+    "tile",
+    "sheet_preview",
+    "print_master"
+  ]
+}

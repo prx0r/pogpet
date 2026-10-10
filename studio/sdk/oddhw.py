@@ -46,7 +46,7 @@ class LedRing:
             px.append(tuple(int(255 * x + 0.5) for x in (r, g, b)))
         m = self.ma(px)
         if m > self.cap:  # firmware power limiter: scale down, never brown out
-            k = self.cap / m; px = [tuple(int(x * k) for x in p) for p in px]
+            k = self.cap / m * 0.99; px = [tuple(int(x * k) for x in p) for p in px]
         self.px = px; return px
 
 class SimDevice:
@@ -66,18 +66,30 @@ class SimDevice:
             self._set(e, 0.6)
         elif name == 'light.set':
             h, s, v = colorsys.rgb_to_hsv(*(int(a['rgb'].lstrip('#')[i:i + 2], 16) / 255 for i in (0, 2, 4)))
-            self._set(dict(hue=h * 360, sat=s, bri=float(a.get('brightness', v)), breath=0.0), max(int(a.get('transition_ms', 400)), self.inv['min_transition_ms']) / 1000)
+            self._set(dict(hue=h * 360, sat=s, bri=float(a.get('brightness', 1.0)) * v, breath=0.0), max(int(a.get('transition_ms', 400)), self.inv['min_transition_ms']) / 1000)
         elif name == 'sensor.lux': return self.sensor.read(self.t)
         self.log.append(dict(t=round(self.t, 2), call=name, args=a)); return 'ok'
     def _set(self, target, trans):
         target['breath'] = min(target.get('breath', 0), self.inv['max_flash_hz'])  # safety clamp, firmware-side
+        # flash governor (firmware): big brightness changes are spaced >= 1/(2*max_flash_hz) apart; extra ones are coalesced
+        big = abs(target.get('bri', 0) - self.ring.target.get('bri', 0)) > 0.1
+        gap = self.inv.get("min_big_change_gap_ms", 400) / 1000
+        if big and self.t - getattr(self, '_last_big', -9) < gap:
+            self._pending = (target, trans); return
+        if big: self._last_big = self.t
+        self._pending = None
+        # fades to/from black keep the lit colour: HSV interpolation through desaturated tones caused luminance blips
+        if target.get('bri', 0) < 0.02: target.update(hue=self.ring.cur['hue'], sat=self.ring.cur['sat'])
+        elif self.ring.cur['bri'] < 0.02: self.ring.cur.update(hue=target['hue'], sat=target['sat'])
         self.ring.target = target; self.ring.trans = max(trans, self.inv['min_transition_ms'] / 1000); self.ring.t0 = self.t
     def bri_cap(self, lux):
         inv = self.inv  # ambient-adaptive: dark room -> gentle, bright room -> full
         if lux <= inv['night_lux']: return inv['night_max_brightness']
         return min(1.0, inv['night_max_brightness'] + (math.log10(lux) - math.log10(inv['night_lux'])) / 2.0)
     def step(self, dt):
-        self.t += dt; lux = self.sensor.read(self.t)
+        self.t += dt
+        if getattr(self, '_pending', None) and self.t - self._last_big >= self.inv.get("min_big_change_gap_ms", 400) / 1000: self._set(*self._pending)
+        lux = self.sensor.read(self.t)
         if self._last_lux and abs(lux - self._last_lux) / self._last_lux > 0.25: self.events.append(dict(t=round(self.t, 2), event='ambient_changed', lux=lux))
         self._last_lux = lux; px = self.ring.render(self.t, self.bri_cap(lux))
         return dict(t=self.t, lux=lux, px=px, ma=self.ring.ma(), cap=self.bri_cap(lux))
@@ -86,10 +98,15 @@ def check_invariants(frames, inv, dt):
     """Deterministic acceptance tests on a sim trace. Returns list of (name, PASS/FAIL, value)."""
     out = []
     mx = max(f['ma'] for f in frames); out.append(('LED current <= cap', 'PASS' if mx <= inv['max_led_ma'] + 1 else 'FAIL', f'{mx:.0f} mA'))
-    lum = [sum(sum(p) for p in f['px']) for f in frames]; flashes = 0
-    for i in range(2, len(lum)):
-        if lum[i - 1] > 1.3 * max(lum[i - 2], 1) and lum[i - 1] > 1.3 * max(lum[i], 1): flashes += 1
-    hz = flashes / (len(frames) * dt); out.append(('flash rate < 3 Hz (photosensitive safety)', 'PASS' if hz < inv['max_flash_hz'] else 'FAIL', f'{hz:.2f} Hz'))
+    # WCAG-style: a flash = a pair of opposing luminance swings of >= 10% of full scale; worst 1 s window counts.
+    lum = [sum(0.2126 * r + 0.7152 * g + 0.0722 * b for r, g, b in f['px']) / (255 * len(f['px'])) for f in frames]
+    ext, d, ref = [], 0, lum[0]
+    for i, v in enumerate(lum):
+        if d >= 0 and v < ref - 0.1: ext.append(i); d = -1; ref = v
+        elif d <= 0 and v > ref + 0.1: ext.append(i); d = 1; ref = v
+        elif (d > 0 and v > ref) or (d < 0 and v < ref): ref = v
+    win = int(1 / dt); hz = max((sum(1 for e in ext if s0 <= e < s0 + win) / 2 for s0 in range(0, max(1, len(lum) - win), 2)), default=0)
+    out.append(('flash rate < 3 Hz (photosensitive safety)', 'PASS' if hz < inv['max_flash_hz'] else 'FAIL', f'worst 1 s window {hz:.1f} flashes'))
     night = [f for f in frames if f['lux'] <= inv['night_lux']]
     nb = max((max(max(p) for p in f['px']) / 255 for f in night), default=0)
     out.append(('night brightness cap', 'PASS' if nb <= inv['night_max_brightness'] + 0.02 else 'FAIL', f'{nb:.2f} (cap {inv["night_max_brightness"]})'))

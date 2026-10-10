@@ -29,3 +29,11 @@ prompt ─► template (templates/*.json: real parts + enclosure + capabilities 
 ## Status
 - Mood lamp template: 12× WS2812B (C2761795), BH1750 (C78960), ESP32-C3-WROOM-02 (C2934560). Sim passes all 3 invariants. Estimate is about $19/unit at 5 units, 27% live-quoted.
 - To do: apply for JLC API → plug credentials in via vault; enclosure mesh (diffuser) → real volume; KiCad/EasyEDA schematic + gerber gen; RealDevice firmware; LLM agent in place of ScriptedAgent; more templates (presence sensor, e-ink, haptics).
+
+## oddhobb.device.v1 + one-trace replay (2026-10-10 evening)
+- contract/oddhobb.device.v1.md; devices/mood_lamp.device.json (commands, params with enum/min/max/clamp, per-integration permissions, safety).
+- sdk/runtime.py: validate → permission → clamp → execute; result shape {ok,payload}|{ok:false,error,hint} = Muse link.result shape.
+- adapters/muse.py (link.register commands_v2 + link.invoke/link.result, u32-LE framed; local LoopbackVM only, no live Muse), adapters/mcp.py (tools/list, tools/call), adapters/pogtown.py (character mood → bounded intent).
+- replay.py: same 56 s trace through direct/Muse/MCP/Pogtown → identical frame hash; Layer A (10 contract tests), Layer B (strobe attacks, sensor failure).
+- Sim found + fixed: (1) black at brightness 1 rendered white; (2) HSV fades through desaturated tones made luminance blips that let a 150 ms toggle attack hit 5 flashes/s → firmware flash governor (min_big_change_gap_ms 400) + dark-end colour hold → 1.5.
+- Layer C: blender/bl_replay.py (12 emitters under frosted dome, room light follows lux) + compare_c.py: hue holds (≤10° drift) but this diffuser keeps only 3-29% of the saturation in room light. Model-dependent; needs a bench photo to confirm.

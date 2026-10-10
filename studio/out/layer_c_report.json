@@ -1,0 +1,66 @@
+[
+ {
+  "t": 2.5,
+  "intent": "express(neutral, 0.6)",
+  "lux": 406.0,
+  "hue_drift_deg": 9,
+  "saturation_kept": 0.08,
+  "verdict": "DRIFT"
+ },
+ {
+  "t": 6.5,
+  "intent": "express(joy, 0.9)",
+  "lux": 407.0,
+  "hue_drift_deg": 0,
+  "saturation_kept": 0.13,
+  "verdict": "DRIFT"
+ },
+ {
+  "t": 14,
+  "intent": "express(thinking, 0.6)",
+  "lux": 405.0,
+  "hue_drift_deg": 10,
+  "saturation_kept": 0.03,
+  "verdict": "DRIFT"
+ },
+ {
+  "t": 22,
+  "intent": "express(stressed, 0.6)",
+  "lux": 183.0,
+  "hue_drift_deg": 3,
+  "saturation_kept": 0.12,
+  "verdict": "DRIFT"
+ },
+ {
+  "t": 28.5,
+  "intent": "express(surprised, 0.9)",
+  "lux": 90.0,
+  "hue_drift_deg": 1,
+  "saturation_kept": 0.12,
+  "verdict": "DRIFT"
+ },
+ {
+  "t": 33,
+  "intent": "express(calm, 0.6)",
+  "lux": 92.0,
+  "hue_drift_deg": 1,
+  "saturation_kept": 0.08,
+  "verdict": "DRIFT"
+ },
+ {
+  "t": 41,
+  "intent": "express(sad, 0.6)",
+  "lux": 89.0,
+  "hue_drift_deg": 2,
+  "saturation_kept": 0.04,
+  "verdict": "DRIFT"
+ },
+ {
+  "t": 53,
+  "intent": "express(calm, 0.6)",
+  "lux": 4.0,
+  "hue_drift_deg": 1,
+  "saturation_kept": 0.29,
+  "verdict": "DRIFT"
+ }
+]

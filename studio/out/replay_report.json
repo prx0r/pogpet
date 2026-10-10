@@ -1,0 +1,279 @@
+{
+ "contract": "oddhobb.device.v1",
+ "device": "oddhobb.mood_lamp.v1",
+ "replay": [
+  {
+   "path": "direct",
+   "frame_hash": "6efb5ef11d1eb1fe",
+   "calls_ok": 8,
+   "calls": 8,
+   "checks": [
+    [
+     "LED current <= cap",
+     "PASS",
+     "365 mA"
+    ],
+    [
+     "flash rate < 3 Hz (photosensitive safety)",
+     "PASS",
+     "worst 1 s window 1.5 flashes"
+    ],
+    [
+     "night brightness cap",
+     "PASS",
+     "0.12 (cap 0.12)"
+    ]
+   ]
+  },
+  {
+   "path": "muse",
+   "frame_hash": "6efb5ef11d1eb1fe",
+   "calls_ok": 8,
+   "calls": 8,
+   "checks": [
+    [
+     "LED current <= cap",
+     "PASS",
+     "365 mA"
+    ],
+    [
+     "flash rate < 3 Hz (photosensitive safety)",
+     "PASS",
+     "worst 1 s window 1.5 flashes"
+    ],
+    [
+     "night brightness cap",
+     "PASS",
+     "0.12 (cap 0.12)"
+    ]
+   ]
+  },
+  {
+   "path": "mcp",
+   "frame_hash": "6efb5ef11d1eb1fe",
+   "calls_ok": 8,
+   "calls": 8,
+   "checks": [
+    [
+     "LED current <= cap",
+     "PASS",
+     "365 mA"
+    ],
+    [
+     "flash rate < 3 Hz (photosensitive safety)",
+     "PASS",
+     "worst 1 s window 1.5 flashes"
+    ],
+    [
+     "night brightness cap",
+     "PASS",
+     "0.12 (cap 0.12)"
+    ]
+   ]
+  },
+  {
+   "path": "pogtown",
+   "frame_hash": "6efb5ef11d1eb1fe",
+   "calls_ok": 8,
+   "calls": 8,
+   "checks": [
+    [
+     "LED current <= cap",
+     "PASS",
+     "365 mA"
+    ],
+    [
+     "flash rate < 3 Hz (photosensitive safety)",
+     "PASS",
+     "worst 1 s window 1.5 flashes"
+    ],
+    [
+     "night brightness cap",
+     "PASS",
+     "0.12 (cap 0.12)"
+    ]
+   ]
+  }
+ ],
+ "identical": true,
+ "layer_a": [
+  [
+   "unknown command rejected with list",
+   "PASS",
+   "{\"ok\": false, \"error\": \"unknown command light.dance\", \"hint\": \"supported: light.express, light.set, sensor.lux"
+  ],
+  [
+   "bad emotion returns allowed list",
+   "PASS",
+   "{\"ok\": false, \"error\": \"emotion='excited' not supported\", \"hint\": \"choose one of: joy, calm, sad, stressed, su"
+  ],
+  [
+   "missing required param",
+   "PASS",
+   "{\"ok\": false, \"error\": \"missing emotion\", \"hint\": \"{\\\"type\\\": \\\"string\\\", \\\"enum\\\": [\\\"joy\\\", \\\"calm\\\", \\\"sad\\"
+  ],
+  [
+   "unexpected param rejected",
+   "PASS",
+   "{\"ok\": false, \"error\": \"unexpected param strobe\", \"hint\": \"allowed: emotion, intensity\"}"
+  ],
+  [
+   "intensity 1.7 clamped to 1.0",
+   "PASS",
+   "{\"ok\": true, \"payload\": {\"applied\": {\"emotion\": \"joy\", \"intensity\": 1}, \"clamped\": {\"intensity\": [1.7, 1]}}}"
+  ],
+  [
+   "transition 20 ms clamped to 150",
+   "PASS",
+   "{\"ok\": true, \"payload\": {\"applied\": {\"rgb\": \"#ff0000\", \"brightness\": 0.5, \"transition_ms\": 150}, \"clamped\": {\""
+  ],
+  [
+   "pogtown may not set raw colour",
+   "PASS",
+   "{\"ok\": false, \"error\": \"pogtown may not call light.set\", \"hint\": \"permission denied by device manifest\"}"
+  ],
+  [
+   "pogtown unknown mood gives hint",
+   "PASS",
+   "{\"ok\": false, \"error\": \"mood 'hangry' has no device expression\", \"hint\": \"known: happy, excited, content, slee"
+  ],
+  [
+   "agent recovers from error using hint",
+   "PASS",
+   "{\"ok\": true, \"payload\": {\"applied\": {\"emotion\": \"joy\", \"intensity\": 0.7}}}"
+  ],
+  [
+   "muse register carries 4 commands",
+   "PASS",
+   "{\"ok\": true, \"n\": 4}"
+  ]
+ ],
+ "layer_b": [
+  [
+   "strobe attack: flash rate stays < 3 Hz",
+   "PASS",
+   "worst 1 s window 1.5 flashes"
+  ],
+  [
+   "strobe attack: current stays under cap",
+   "PASS",
+   "362 mA"
+  ],
+  [
+   "150 ms toggle attack: flash rate stays < 3 Hz",
+   "PASS",
+   "worst 1 s window 1.5 flashes"
+  ],
+  [
+   "sensor dead: falls back to night-safe brightness",
+   "PASS",
+   "max 0.12"
+  ]
+ ],
+ "muse_register": {
+  "type": "req",
+  "id": "reg-1",
+  "method": "link.register",
+  "params": {
+   "node_id": "oddhobb-lamp-0001",
+   "display_name": "OddHobb mood lamp",
+   "platform": "linux",
+   "version": "0.1.0",
+   "device_family": "homehub",
+   "model_id": "oddhobb.mood_lamp.v1",
+   "is_wakeup_supported": false,
+   "commands_v2": {
+    "light.express": {
+     "description": "Show an emotion on the lamp. The lamp decides colour, motion and brightness, and dims itself to the room.",
+     "required": {
+      "emotion": {
+       "type": "string",
+       "description": "string, one of: joy, calm, sad, stressed, surprised, thinking, neutral"
+      }
+     },
+     "optional": {
+      "intensity": {
+       "type": "number",
+       "description": "number, 0..1 (clamped), default 0.7"
+      }
+     }
+    },
+    "light.set": {
+     "description": "Set the ring to one colour.",
+     "required": {
+      "rgb": {
+       "type": "string",
+       "description": "string"
+      }
+     },
+     "optional": {
+      "brightness": {
+       "type": "number",
+       "description": "number, 0..1 (clamped), default 0.5"
+      },
+      "transition_ms": {
+       "type": "integer",
+       "description": "integer, 150..10000 (clamped), default 400"
+      }
+     }
+    },
+    "sensor.lux": {
+     "description": "Ambient light level in lux (BH1750).",
+     "required": {},
+     "optional": {}
+    },
+    "device.health": {
+     "description": "Uptime, LED current, brightness cap, firmware version.",
+     "required": {},
+     "optional": {}
+    }
+   }
+  }
+ },
+ "commands_v2": {
+  "light.express": {
+   "description": "Show an emotion on the lamp. The lamp decides colour, motion and brightness, and dims itself to the room.",
+   "required": {
+    "emotion": {
+     "type": "string",
+     "description": "string, one of: joy, calm, sad, stressed, surprised, thinking, neutral"
+    }
+   },
+   "optional": {
+    "intensity": {
+     "type": "number",
+     "description": "number, 0..1 (clamped), default 0.7"
+    }
+   }
+  },
+  "light.set": {
+   "description": "Set the ring to one colour.",
+   "required": {
+    "rgb": {
+     "type": "string",
+     "description": "string"
+    }
+   },
+   "optional": {
+    "brightness": {
+     "type": "number",
+     "description": "number, 0..1 (clamped), default 0.5"
+    },
+    "transition_ms": {
+     "type": "integer",
+     "description": "integer, 150..10000 (clamped), default 400"
+    }
+   }
+  },
+  "sensor.lux": {
+   "description": "Ambient light level in lux (BH1750).",
+   "required": {},
+   "optional": {}
+  },
+  "device.health": {
+   "description": "Uptime, LED current, brightness cap, firmware version.",
+   "required": {},
+   "optional": {}
+  }
+ }
+}

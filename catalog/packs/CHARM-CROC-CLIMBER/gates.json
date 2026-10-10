@@ -2,7 +2,7 @@
  "sku": "CHARM-CROC-CLIMBER",
  "level": "DRAFT",
  "print_sha256": "e2eb3f08cd00e995588e831d3e606a3adecce4f06e4d90436acb90109e834ad4",
- "checked_at": "2026-10-10T10:32:29",
+ "checked_at": "2026-10-10T14:16:31",
  "validator": "catalog/tools/validate_pack.py v1",
  "gates": {
   "G01": {

@@ -1,7 +1,7 @@
 {
-  "id": "birthday_dots_1photo_v1",
-  "version": 1,
-  "status": "retired",
+  "id": "birthday_four_photos_party_title_v2",
+  "version": 2,
+  "status": "published",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -14,17 +14,19 @@
     "subjects": [
       "person"
     ],
-    "min_photos": 1
+    "min_photos": 4
   },
   "ranking": {
     "interests": [],
     "tones": [
+      "warm",
+      "funny",
       "playful"
     ]
   },
   "inputs": {
     "photos": {
-      "count": 1,
+      "count": 4,
       "strategy": "best_distinct_memories"
     },
     "title": {
@@ -48,13 +50,23 @@
     }
   },
   "renderer": {
-    "layout": "birthday_dots_v1",
-    "template": "birthday_dots"
+    "layout": "birthday_four_photos_v1",
+    "template": "birthday_4photo"
   },
   "outputs": [
     "front",
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "Four Rounds For {label}",
+    "inside": [
+      "Four photos. Zero dignity. Happy birthday, {name}, you absolute legend."
+    ],
+    "title_vibe": "playful_balloons"
+  },
+  "typography": {
+    "vibe": "playful_balloons"
+  }
 }

@@ -23,6 +23,7 @@ from .providers.base import ProviderNotConfigured
 
 # Import for side effect: adapters self-register on import. No network.
 from .providers import alibaba as _ali  # noqa: F401
+from .providers import cfworker as _cfw  # noqa: F401
 from .providers import fal as _fal  # noqa: F401
 from .providers import higgsfield as _hf  # noqa: F401
 from .providers import local as _local  # noqa: F401

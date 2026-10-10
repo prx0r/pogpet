@@ -1,7 +1,7 @@
 {
   "id": "birthday_news_1photo_v1",
   "version": 1,
-  "status": "published",
+  "status": "retired",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -57,16 +57,5 @@
     "inside",
     "back",
     "print_master"
-  ],
-  "copy": {
-    "headline": "{label} Makes Headlines",
-    "inside": [
-      "Stop the presses: {name} is another year older and still dodging retirement.",
-      "Extra! Extra! {name} caught being lovely again. Happy birthday!"
-    ],
-    "title_vibe": "broadcast_sober"
-  },
-  "typography": {
-    "vibe": "broadcast_sober"
-  }
+  ]
 }

@@ -21,7 +21,7 @@ ROUTES: dict[str, list[str]] = {
     "realtime_voice":  ["local.stub", "alibaba.qwen_omni", "gemini.live"],
     "mesh":            ["local.meshy", "trellis.selfhost", "fal.tripo"],
     "music":           ["local.procedural"],
-    "scene_plate":     ["fal.flux_plate"],
+    "scene_plate":     ["fal.flux_plate", "cfworker.flux_plate"],
     "identity_plate":  ["local.composite", "fal.phota"],
     "upscale":         ["fal.upscale"],
     # transformation library (vision/multimedia.md): providers change,
@@ -31,7 +31,8 @@ ROUTES: dict[str, list[str]] = {
     # only previews and must never satisfy this route (pretend-success ban).
     "subject_cutout":      ["fal.birefnet"],
     "identity_transform":  ["higgsfield.soul",
-                            "alibaba.qwen_image", "fal.flux_edit"],
+                            "alibaba.qwen_image", "fal.flux_edit",
+                            "cfworker.klein_edit"],
     "multi_reference_edit": ["alibaba.qwen_image", "fal.flux_edit"],
     "brand_style":         ["local.composite", "alibaba.qwen_image"],
     "text_heavy_art":      ["alibaba.qwen_image", "fal.flux_edit"],

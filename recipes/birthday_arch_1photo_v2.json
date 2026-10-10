@@ -1,7 +1,7 @@
 {
-  "id": "birthday_dots_1photo_v1",
-  "version": 1,
-  "status": "retired",
+  "id": "birthday_arch_1photo_v2",
+  "version": 2,
+  "status": "published",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -19,7 +19,7 @@
   "ranking": {
     "interests": [],
     "tones": [
-      "playful"
+      "warm"
     ]
   },
   "inputs": {
@@ -48,13 +48,23 @@
     }
   },
   "renderer": {
-    "layout": "birthday_dots_v1",
-    "template": "birthday_dots"
+    "layout": "birthday_arch_v1",
+    "template": "birthday_arch"
   },
   "outputs": [
     "front",
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "{label} Takes The Arch",
+    "inside": [
+      "Stand back. {name} is entering birthday mode. Grand entrance only."
+    ],
+    "title_vibe": "gold_serif"
+  },
+  "typography": {
+    "vibe": "gold_serif"
+  }
 }

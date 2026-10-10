@@ -154,8 +154,8 @@ def test_make_returns_finished_options(env, monkeypatch):
     assert len(body["options"]) == 2
     for opt in body["options"]:
         assert set(opt["views"]) == {"front", "inside", "back"}, opt
-        assert opt["price_cents"] == 799 and opt["proof_url"]
-    assert body["price"] == {"amount_cents": 799, "currency": "GBP"}
+        assert opt["price_cents"] == 299 and opt["proof_url"]
+    assert body["price"] == {"amount_cents": 299, "currency": "GBP"}
     assert body["next_actions"] == ["change", "buy"]
 
 
@@ -164,7 +164,7 @@ def test_change_rewrites_copy(env, monkeypatch):
     from backend import mcp_server as M
     from backend.recipes import compiler as C
     s, _pids = _dad(env)
-    base = C.compile(env["owner"], "birthday_four_photos_party_title_v1",
+    base = C.compile(env["owner"], "birthday_four_photos_party_title_v2",
                      subject={"id": s["id"], "name": "Dad",
                               "relationship": "father",
                               "interests": ["golf"], "memories": []},
@@ -252,7 +252,7 @@ def test_buy_means_checkout_and_needs_signer(env, monkeypatch):
     from backend import mcp_server as M
     from backend.recipes import compiler as C
     s, _pids = _dad(env)
-    base = C.compile(env["owner"], "birthday_four_photos_party_title_v1",
+    base = C.compile(env["owner"], "birthday_four_photos_party_title_v2",
                      subject={"id": s["id"], "name": "Dad",
                               "relationship": "father",
                               "interests": ["golf"], "memories": []},
@@ -271,8 +271,8 @@ def test_buy_means_checkout_and_needs_signer(env, monkeypatch):
         if path.endswith("/checkout"):
             return {"ok": True, "checkout_url": "https://checkout/x",
                     "product_url": "https://oddhobb.com/cards/x",
-                    "product": {"price_cents": 799, "name": "Personalised 5×7 Greeting Card"},
-                    "order": {"price_cents": 799}}
+                    "product": {"price_cents": 299, "name": "Personalised 5×7 Greeting Card"},
+                    "order": {"price_cents": 299}}
         raise AssertionError(f"unexpected call {method} {path}")
     monkeypatch.setattr(M, "_call", fake_call)
 
@@ -281,7 +281,7 @@ def test_buy_means_checkout_and_needs_signer(env, monkeypatch):
     assert needb["status"] == "needs_input"
     assert needb["requires_action"]["type"] == "signature"
     # signed design buys
-    signed = C.compile(env["owner"], "birthday_four_photos_party_title_v1",
+    signed = C.compile(env["owner"], "birthday_four_photos_party_title_v2",
                        subject={"id": s["id"], "name": "Dad",
                                 "relationship": "father",
                                 "interests": ["golf"], "memories": []},
@@ -292,4 +292,4 @@ def test_buy_means_checkout_and_needs_signer(env, monkeypatch):
     gotb = json.loads(got[0].text)
     assert gotb["status"] == "checkout_ready", gotb
     assert gotb["checkout_url"] == "https://checkout/x"
-    assert gotb["price"] == {"amount_cents": 799, "currency": "GBP"}
+    assert gotb["price"] == {"amount_cents": 299, "currency": "GBP"}

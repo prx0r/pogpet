@@ -1,7 +1,7 @@
 {
-  "id": "birthday_dots_1photo_v1",
-  "version": 1,
-  "status": "retired",
+  "id": "birthday_news_1photo_v2",
+  "version": 2,
+  "status": "published",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -19,7 +19,8 @@
   "ranking": {
     "interests": [],
     "tones": [
-      "playful"
+      "dry",
+      "funny"
     ]
   },
   "inputs": {
@@ -48,13 +49,24 @@
     }
   },
   "renderer": {
-    "layout": "birthday_dots_v1",
-    "template": "birthday_dots"
+    "layout": "birthday_news_v1",
+    "template": "birthday_news"
   },
   "outputs": [
     "front",
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "{label} Makes Headlines",
+    "inside": [
+      "Stop the presses: {name} is another year older and still dodging retirement.",
+      "Extra! Extra! {name} caught being lovely again. Happy birthday!"
+    ],
+    "title_vibe": "broadcast_sober"
+  },
+  "typography": {
+    "vibe": "broadcast_sober"
+  }
 }

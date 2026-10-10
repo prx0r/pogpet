@@ -155,3 +155,14 @@ def test_dispatch_and_cache_reuse_with_stub(tmp_path, monkeypatch):
     finally:
         router.ROUTES["identity_transform"] = old
         del router._ADAPTERS["test.stub_transform"]
+
+
+def test_cfworker_routes_registered_and_fail_closed(monkeypatch):
+    from backend.creative.providers import cfworker  # noqa: F401 (registers)
+    assert "cfworker.klein_edit" in router.ROUTES["identity_transform"]
+    assert "cfworker.flux_plate" in router.ROUTES["scene_plate"]
+    for k in ("CF_API_TOKEN", "CF_ACCOUNT_ID"):
+        monkeypatch.delenv(k, raising=False)
+    with pytest.raises(ProviderNotConfigured):
+        router.resolve_policy("scene_plate", policy="specific",
+                              route="cfworker.flux_plate", keychain=None)

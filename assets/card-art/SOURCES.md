@@ -16,3 +16,16 @@ with the art: every file here must be CC0/public-domain.
 
 Rule (AGENTS.md money rules apply to art too): only files listed here may be
 used in renders. New art = new row first.
+
+## Generated backdrops (OddHobb-owned, Cloudflare flux-1-schnell, Oct 2026)
+
+One paid generation per template, reused for every card forever. Text-free
+by prompt contract; renderer composites photo slots + live type on top.
+
+| File | What | Source |
+|---|---|---|
+| `backdrops/birthday_arch.png` | balloon sky, cream bokeh, empty center | Workers AI, TEMPLATE_BACKDROPS prompt |
+| `backdrops/birthday_dots.png` | pastel confetti field, empty cream space | Workers AI, TEMPLATE_BACKDROPS prompt |
+| `backdrops/birthday_news.png` | navy broadcast studio glow, empty center | Workers AI, TEMPLATE_BACKDROPS prompt |
+| `backdrops/birthday_gold.png` | champagne bokeh, golden spots, empty center | Workers AI, TEMPLATE_BACKDROPS prompt |
+| `backdrops/birthday_wall.png` | cream garland top edge, rest empty | Workers AI, TEMPLATE_BACKDROPS prompt |

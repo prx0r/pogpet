@@ -1,7 +1,7 @@
 {
-  "id": "christmas_family_v1",
-  "version": 1,
-  "status": "retired",
+  "id": "christmas_family_v2",
+  "version": 2,
+  "status": "published",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -47,5 +47,15 @@
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "A {label} Family Christmas",
+    "inside": [
+      "Same family. Same chaos. Same excellent roast potatoes. Merry Christmas, {name}."
+    ],
+    "title_vibe": "festive_serif"
+  },
+  "typography": {
+    "vibe": "festive_serif"
+  }
 }

@@ -2,7 +2,7 @@
  "sku": "CHARM-CROC-PET",
  "level": "PRINT_READY",
  "print_sha256": "85bab4062388c6fca151e4b3249ef323a4830d43ef47c97d17a24be3eafd0797",
- "checked_at": "2026-10-10T12:36:06",
+ "checked_at": "2026-10-10T14:16:31",
  "validator": "catalog/tools/validate_pack.py v1",
  "gates": {
   "G01": {

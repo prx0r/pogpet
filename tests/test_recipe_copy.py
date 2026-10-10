@@ -29,7 +29,7 @@ def _subject_db(tmp_path, monkeypatch):
 
 def test_news_recipe_owns_copy(tmp_path, monkeypatch):
     sub = _subject_db(tmp_path, monkeypatch)
-    r = C.compile("oc", "birthday_news_1photo_v1", subject=sub,
+    r = C.compile("oc", "birthday_news_1photo_v2", subject=sub,
                   occasion="birthday", tone="dry", title_art=False, via="ui")
     assert r["ok"], r
     spec = r["design"]["spec"]
@@ -38,22 +38,22 @@ def test_news_recipe_owns_copy(tmp_path, monkeypatch):
     assert "Happy Birthday, Dad!" not in spec["headline"]
 
 
-def test_default_headline_without_copy_block(tmp_path, monkeypatch):
+def test_recipe_copy_overrides_default(tmp_path, monkeypatch):
     sub = _subject_db(tmp_path, monkeypatch)
-    r = C.compile("oc", "birthday_dots_1photo_v1", subject=sub,
+    r = C.compile("oc", "birthday_dots_1photo_v2", subject=sub,
                   occasion="birthday", tone="funny", title_art=False, via="ui")
     assert r["ok"], r
-    assert r["design"]["spec"]["headline"] == "Happy Birthday, Dad!"
+    assert r["design"]["spec"]["headline"] == "Dots For Dad"
 
 
 def test_title_vibe_from_recipe(tmp_path, monkeypatch):
     # validate() persists title_vibe on the canonical template and accepts
     # recipe vibes everywhere (used at title-art generation time).
     sub = _subject_db(tmp_path, monkeypatch)
-    r = C.compile("oc", "birthday_gold_1photo_v1", subject=sub,
+    r = C.compile("oc", "birthday_gold_1photo_v2", subject=sub,
                   occasion="birthday", title_art=False, via="ui")
     assert r["ok"], r  # custom vibe must not raise in validate()
-    r4 = C.compile("oc", "birthday_four_photos_party_title_v1", subject=sub,
+    r4 = C.compile("oc", "birthday_four_photos_party_title_v2", subject=sub,
                    occasion="birthday", title_art=False, via="ui")
     assert r4["ok"], r4
     assert r4["design"]["spec"]["title_vibe"] == "playful_balloons"

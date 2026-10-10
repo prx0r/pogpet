@@ -1,7 +1,7 @@
 {
   "id": "christmas_1photo_v1",
   "version": 1,
-  "status": "published",
+  "status": "retired",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -47,15 +47,5 @@
     "inside",
     "back",
     "print_master"
-  ],
-  "copy": {
-    "headline": "Merry Christmas, {label}!",
-    "inside": [
-      "Wishing {name} mince pies, mild weather, and zero flat-pack furniture. Merry Christmas!"
-    ],
-    "title_vibe": "festive_serif"
-  },
-  "typography": {
-    "vibe": "festive_serif"
-  }
+  ]
 }

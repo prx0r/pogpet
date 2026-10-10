@@ -1,7 +1,7 @@
 {
   "id": "birthday_gold_1photo_v1",
   "version": 1,
-  "status": "published",
+  "status": "retired",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -56,15 +56,5 @@
     "inside",
     "back",
     "print_master"
-  ],
-  "copy": {
-    "headline": "{label}, A Vintage Year",
-    "inside": [
-      "Some people age like paperwork. You aged like the good stuff. Happy birthday, {name}."
-    ],
-    "title_vibe": "gold_serif"
-  },
-  "typography": {
-    "vibe": "gold_serif"
-  }
+  ]
 }

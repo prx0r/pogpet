@@ -98,8 +98,8 @@ def test_registry_loads_first_published_recipe():
     from backend.recipes import registry as R
     from backend.recipes import schemas as S
     reg = R.published()
-    assert "birthday_four_photos_party_title_v1" in reg
-    r = reg["birthday_four_photos_party_title_v1"]
+    assert "birthday_four_photos_party_title_v2" in reg
+    r = reg["birthday_four_photos_party_title_v2"]
     assert r["product"]["price_cents"] == 299
     assert r["renderer"]["template"] == "birthday_4photo"
     assert S.validate_recipe({"id": "x"}) != []
@@ -109,7 +109,7 @@ def test_matcher_eligibility_and_ranking():
     from backend.recipes import matcher as M
     from backend.recipes import registry as R
     reg = R.published()
-    rid = "birthday_four_photos_party_title_v1"
+    rid = "birthday_four_photos_party_title_v2"
     brief = {"occasion": "birthday", "subject_kind": "person",
              "photo_count": 4,
              "recipient": {"relationship": "father", "interests": ["golf"]},
@@ -133,14 +133,14 @@ def test_compiler_compiles_finished_product(env):
     subject = {"id": s["id"], "name": p.get("name", "Dad"),
                "relationship": p.get("relationship", "father"),
                "interests": p.get("interests", []), "memories": []}
-    out = C.compile(env["owner"], "birthday_four_photos_party_title_v1",
+    out = C.compile(env["owner"], "birthday_four_photos_party_title_v2",
                     subject=subject, occasion="birthday", tone="funny",
                     message_hint="", signature="Love, Pete")
     assert out["ok"], out
     assert out["design"]["spec"]["template"] == "birthday_4photo"
-    assert out["design"]["spec"]["recipe_id"] == "birthday_four_photos_party_title_v1"
+    assert out["design"]["spec"]["recipe_id"] == "birthday_four_photos_party_title_v2"
     assert out["proof_url"].endswith("/proof/" + out["design"]["id"])
-    assert out["copy_source"] in ("caller-hint", "server-llm", "template-fallback")
+    assert out["copy_source"] in ("caller-hint", "server-llm", "template-fallback", "recipe-copy")
 
 
 def test_compiler_refuses_without_signature_or_photos(env):
@@ -152,7 +152,7 @@ def test_compiler_refuses_without_signature_or_photos(env):
     p = prof.get("profile", {})
     subject = {"id": s["id"], "name": "Dad", "relationship": "father",
                "interests": [], "memories": []}
-    unsigned = C.compile(env["owner"], "birthday_four_photos_party_title_v1",
+    unsigned = C.compile(env["owner"], "birthday_four_photos_party_title_v2",
                          subject=subject, signature="")
     assert unsigned["ok"] is False and "need 4 photos" in unsigned["error"]
     s4, _p4 = _dad(env, nphotos=4)
@@ -162,7 +162,7 @@ def test_compiler_refuses_without_signature_or_photos(env):
     subject4 = {"id": s4["id"], "name": p4.get("name", "Dad"),
                 "relationship": p4.get("relationship", "father"),
                 "interests": p4.get("interests", []), "memories": []}
-    free = C.compile(env["owner"], "birthday_four_photos_party_title_v1",
+    free = C.compile(env["owner"], "birthday_four_photos_party_title_v2",
                      subject=subject4, signature="")
     assert free["ok"] is True
     assert any("unsigned" in w for w in free.get("warnings", [])), free
@@ -192,7 +192,7 @@ def test_recommend_unsigned_and_make_flow(monkeypatch, env):
     body = json.loads(rec[0].text)
     assert body["ok"] and body["ideas"], body
     assert body["ideas"][0]["preview_status"] == "needs-signature"
-    assert body["ideas"][0]["recipe"] == "birthday_four_photos_party_title_v1"
+    assert body["ideas"][0]["recipe"] == "birthday_four_photos_party_title_v2"
 
     rec2 = asyncio.run(M.oddhobb_recommend(
         person="Dad", occasion="birthday", vibe="dry funny",
@@ -241,7 +241,7 @@ def test_variants_and_get(monkeypatch, env):
     monkeypatch.setattr(M, "_call", fake_call)
 
     v = asyncio.run(M.oddhobb_variants(
-        idea_id="idea_birthday_four_photos_party_title_v1",
+        idea_id="idea_birthday_four_photos_party_title_v2",
         vibe="dry understated", signature="Love, Pete", n=2, owner=env["owner"]))
     vb = json.loads(v[0].text)
     assert vb["ok"] and len(vb["variants"]) == 2, vb

@@ -1,25 +1,27 @@
 {
   "id": "birthday_arch_1photo_v1",
   "version": 1,
-  "status": "published",
-
+  "status": "retired",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
     "price_cents": 299
   },
-
   "eligibility": {
-    "occasion": ["birthday"],
-    "subjects": ["person"],
+    "occasion": [
+      "birthday"
+    ],
+    "subjects": [
+      "person"
+    ],
     "min_photos": 1
   },
-
   "ranking": {
     "interests": [],
-    "tones": ["warm"]
+    "tones": [
+      "warm"
+    ]
   },
-
   "inputs": {
     "photos": {
       "count": 1,
@@ -32,21 +34,23 @@
       "source": "profile"
     }
   },
-
   "generation": {
     "title_art": {
       "kind": "image",
-      "box": [285, 790, 930, 320],
+      "box": [
+        285,
+        790,
+        930,
+        320
+      ],
       "transparent": true,
       "prompt_template": "Celebration lettering reading exactly {headline}, playful party style, transparent background, no other text"
     }
   },
-
   "renderer": {
     "layout": "birthday_arch_v1",
     "template": "birthday_arch"
   },
-
   "outputs": [
     "front",
     "inside",

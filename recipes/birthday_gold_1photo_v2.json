@@ -1,7 +1,7 @@
 {
-  "id": "birthday_dots_1photo_v1",
-  "version": 1,
-  "status": "retired",
+  "id": "birthday_gold_1photo_v2",
+  "version": 2,
+  "status": "published",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -19,7 +19,7 @@
   "ranking": {
     "interests": [],
     "tones": [
-      "playful"
+      "warm"
     ]
   },
   "inputs": {
@@ -48,13 +48,23 @@
     }
   },
   "renderer": {
-    "layout": "birthday_dots_v1",
-    "template": "birthday_dots"
+    "layout": "birthday_gold_v1",
+    "template": "birthday_gold"
   },
   "outputs": [
     "front",
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "{label}, A Vintage Year",
+    "inside": [
+      "Some people age like paperwork. You aged like the good stuff. Happy birthday, {name}."
+    ],
+    "title_vibe": "gold_serif"
+  },
+  "typography": {
+    "vibe": "gold_serif"
+  }
 }

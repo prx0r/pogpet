@@ -2,7 +2,7 @@
  "sku": "KEYCAP-MX-WJP",
  "level": "DRAFT",
  "print_sha256": null,
- "checked_at": "2026-10-10T10:32:29",
+ "checked_at": "2026-10-10T14:16:31",
  "validator": "catalog/tools/validate_pack.py v1",
  "gates": {
   "G01": {

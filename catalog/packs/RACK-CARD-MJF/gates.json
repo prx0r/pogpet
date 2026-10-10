@@ -2,7 +2,7 @@
  "sku": "RACK-CARD-MJF",
  "level": "DRAFT",
  "print_sha256": "7a7f83771fd0f6fea60dac101513c366389ed3c0fe36c881711f0b115d02d0b9",
- "checked_at": "2026-10-10T10:32:29",
+ "checked_at": "2026-10-10T14:16:31",
  "validator": "catalog/tools/validate_pack.py v1",
  "gates": {
   "G01": {

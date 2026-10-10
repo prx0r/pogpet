@@ -1,7 +1,7 @@
 {
-  "id": "birthday_dots_1photo_v1",
-  "version": 1,
-  "status": "retired",
+  "id": "birthday_dots_1photo_v2",
+  "version": 2,
+  "status": "published",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -56,5 +56,15 @@
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "Dots For {label}",
+    "inside": [
+      "Another year, another constellation of questionable decisions. Love you, {name}."
+    ],
+    "title_vibe": "comic_burst"
+  },
+  "typography": {
+    "vibe": "comic_burst"
+  }
 }

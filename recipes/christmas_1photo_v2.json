@@ -1,7 +1,7 @@
 {
-  "id": "christmas_family_v1",
-  "version": 1,
-  "status": "retired",
+  "id": "christmas_1photo_v2",
+  "version": 2,
+  "status": "published",
   "product": {
     "type": "greeting_card",
     "sku": "card_5x7",
@@ -13,22 +13,22 @@
     ],
     "subjects": [
       "person",
-      "pet",
-      "family"
+      "pet"
     ],
-    "min_photos": 3
+    "min_photos": 1
   },
   "ranking": {
     "interests": [],
     "tones": [
       "warm",
+      "funny",
       "festive"
     ]
   },
   "inputs": {
     "photos": {
-      "count": 3,
-      "strategy": "best_distinct_memories"
+      "count": 1,
+      "strategy": "best_face"
     },
     "title": {
       "source": "occasion"
@@ -39,7 +39,7 @@
   },
   "generation": {},
   "renderer": {
-    "layout": "christmas_family_v1",
+    "layout": "christmas_1photo_v1",
     "template": "christmas"
   },
   "outputs": [
@@ -47,5 +47,15 @@
     "inside",
     "back",
     "print_master"
-  ]
+  ],
+  "copy": {
+    "headline": "Merry Christmas, {label}!",
+    "inside": [
+      "Wishing {name} mince pies, mild weather, and zero flat-pack furniture. Merry Christmas!"
+    ],
+    "title_vibe": "festive_serif"
+  },
+  "typography": {
+    "vibe": "festive_serif"
+  }
 }

@@ -135,6 +135,8 @@ curl -s -o /dev/null -w '%{http_code}\n' https://oddhobb.com/#products
 | `docs/etsy-listings.md` | Etsy packs + sizing |
 | `docs/meshy.md` | Meshy money rules |
 | `docs/standup-p0.md` | lipsync research (parked) |
+| `docs/product-packs.md` | pack = the only way a product goes live; agent outputs; graph next |
+| `vision/system-os-verification-gates.md` | system-OS gate notes (dash/influence/qprivately) |
 
 ## Brick meshes (user generating)
 

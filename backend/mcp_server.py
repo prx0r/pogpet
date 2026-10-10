@@ -1157,6 +1157,65 @@ async def oddhobb_recommend(person: str = "", subject_id: str = "",
                  "oddhobb_variants deals more; oddhobb_checkout_card buys."}))]
 
 
+async def _cardgen_make(who, key_arg, owner_sig, sub, prof, occasion, tone, count):
+    """Start cardgen jobs for the best castable templates. None = fall back."""
+    profile = {**prof, "tone": tone, "occasion": occasion,
+               "recipient": (prof.get("relationship") or "").title() or prof.get("name", "")}
+    rec = await _call("POST", "/api/cardgen/recommend",
+                      {"owner": who, "subject_id": sub.get("id", ""), "occasion": occasion,
+                       "profile": profile}, api_key=key_arg, owner_sig=owner_sig)
+    if not rec.get("ok"):
+        return None
+    ready = rec.get("ready") or []
+    if not ready:
+        need = sorted({s for b in (rec.get("blocked") or []) for s in b.get("shortfall", [])})
+        return _env(status="needs_input", summary=rec.get("tip") or
+                    f"I need different photos of {prof.get('name') or 'them'}.",
+                    requires_action={"type": "add_media", "subject_id": sub.get("id", ""),
+                                     "message": "; ".join(need)[:300] or "Add a few clear photos."},
+                    next_actions=[])
+    jobs = []
+    for r in ready[:max(1, min(int(count or 4), 4))]:
+        mk = await _call("POST", "/api/cardgen/make",
+                         {"owner": who, "subject_id": sub.get("id", ""), "template_id": r["template_id"],
+                          "occasion": occasion, "profile": profile}, api_key=key_arg, owner_sig=owner_sig)
+        if not mk.get("ok"):
+            if not jobs:
+                return None          # e.g. 503 FAL_KEY missing -> legacy shelf
+            continue
+        jobs.append({"id": mk["job_id"], "template": r["template_id"], "status": "rendering",
+                     "photos": r.get("photos")})
+    if not jobs:
+        return None
+    return _env(status="working", id=jobs[0]["id"],
+                summary=f"Painting {len(jobs)} cards of {prof.get('name') or 'them'} from their photos (about a minute each).",
+                next_actions=["get"],
+                extra={"options": jobs, "engine": "cardgen",
+                       "hint": "Call oddhobb_get(design_id=<job id>) for each; it returns the finished card when ready."})
+
+
+async def oddhobb_card_recommend(subject_id: str, occasion: str = "birthday",
+                                 owner: str = "", api_key: str = "", owner_sig: str = "") -> str:
+    """Which card templates this person's uploaded photos can make, and what the
+    others still need ("needs a happy solo photo of them"). Labels photos once."""
+    return _j(await _call("POST", "/api/cardgen/recommend",
+                          {"owner": owner, "subject_id": subject_id, "occasion": occasion},
+                          api_key=api_key, owner_sig=owner_sig))
+
+
+async def oddhobb_card_generate(subject_id: str, template_id: str, occasion: str = "birthday",
+                                title: str = "", inside: str = "", sender: str = "", recipient: str = "",
+                                owner: str = "", api_key: str = "", owner_sig: str = "") -> str:
+    """Generate one card with cardgen from the person's real photos. Optional
+    copy overrides. Returns a job id; oddhobb_get(design_id=job_id) polls it."""
+    copy = {k: v for k, v in {"title": title, "inside": inside}.items() if v}
+    return _j(await _call("POST", "/api/cardgen/make",
+                          {"owner": owner, "subject_id": subject_id, "template_id": template_id,
+                           "occasion": occasion, "copy": copy,
+                           "profile": {"sender": sender, "recipient": recipient}},
+                          api_key=api_key, owner_sig=owner_sig))
+
+
 async def oddhobb_make(subject_id: str = "", person: str = "",
                         request: str = "", product_type: str = "greeting_card",
                         budget_cents: int = 0, count: int = 4,
@@ -1199,6 +1258,11 @@ async def oddhobb_make(subject_id: str = "", person: str = "",
     prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
             "interests": sub.get("interests", []), "memories": sub.get("memories", [])}
     subject = {"id": sub.get("id", ""), **prof}
+    # Canonical path: cardgen (generative, cast from the person's real photos).
+    # The legacy PIL shelf below runs only when cardgen can't start (no FAL_KEY).
+    cg = await _cardgen_make(who, key_arg, owner_sig, sub, prof, occasion, tone, count)
+    if cg is not None:
+        return [TextContent(type="text", text=_j(cg))]
     try:
         from backend import subject_assets as _sa
         pool = _sa.resolve(sub.get("id", ""), who)
@@ -1342,6 +1406,12 @@ async def oddhobb_get(design_id: str, revision: int = 0, owner: str = "",
     """Status + final artifacts for one card: faces, triptych, print PDF,
     proof URL, checkout readiness. Read-only."""
     from mcp.types import TextContent
+    if (design_id or "").startswith("cgj_"):
+        j = await _call("GET", f"/api/cardgen/jobs/{design_id}?owner=" + (owner or "anon"),
+                        api_key=api_key, owner_sig=owner_sig)
+        if not j.get("ok") or j.get("status") != "ready":
+            return [TextContent(type="text", text=_j(j))]
+        design_id, revision = j["design_id"], j["revision"]
     if revision:
         spath = f"/api/cards/{design_id}/scene?revision={revision}&owner=" + (owner or "anon")
     else:
@@ -2623,6 +2693,7 @@ TOOL_AREAS: dict[str, list] = {
                   oddhobb_render, oddhobb_status, oddhobb_buy,
                   oddhobb_providers, oddhobb_capsule,
                   oddhobb_make_card, oddhobb_attach_card_art,
+                  oddhobb_card_recommend, oddhobb_card_generate,
                   oddhobb_deal_cards,
                   oddhobb_recommend, oddhobb_make, oddhobb_variants,
                   oddhobb_get, oddhobb_change, oddhobb_add_media,

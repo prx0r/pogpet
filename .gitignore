@@ -38,3 +38,7 @@ pi/.artifacts/
 
 # local assets that live in R2, not git
 assets/style/*.png
+
+# SFace embedding model (38MB) — download on demand, never commit.
+# backend/faces.py fetches it automatically; YuNet (227KB) stays tracked.
+assets/face/face_recognition_sface_2021dec.onnx

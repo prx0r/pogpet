@@ -155,3 +155,14 @@ Everything else card-shaped in MCP/REST is machinery: reachable with the
 caller's own key, never anonymous, never the documented path. The first
 published recipe is `birthday_four_photos_party_title_v1`
 (`recipes/`). New recipes ship as new immutable versions, never edits.
+
+## Shipping money truth (P0)
+
+Shopify owns shipping selection and payment. OddHobb shows **estimated**
+Value/Speedy ranges pre-checkout only (`/cards/:id/delivery`, GB/US
+selector) — those numbers are never charged by us. Configure matching
+`Value` and `Speedy` rates in Shopify; the paid webhook reads the paid
+shipping line (Value → Prodigi Standard, Speedy → Express) and fulfils
+the frozen route, which owns **sku + shipping_method + market** (US
+orders print the GLOBAL sku, never CLASSIC). Do not run a second
+shipping-charge system.

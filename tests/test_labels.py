@@ -79,10 +79,19 @@ class SelectForTemplateTest(unittest.TestCase):
 
     def test_reserved_layers_shortfall(self):
         r = subject_assets.select_for_template(
-            self.owner, {"solos": 1, "emotions": ["happy"]})
-        self.assertIn("emotions labelling reserved — vision call not wired",
+            self.owner, {"solos": 1, "occasion": "xmas"})
+        self.assertIn("occasion labelling reserved — vision call not wired",
                       r["shortfall"])
         self.assertEqual(r["slots"]["solo_1"]["photo_id"], "p-solo")
+
+    def test_emotions_live_never_silently_wrong(self):
+        # L5 is live (photo_labels). Without a vision key the label is
+        # 'unknown', which never satisfies "happy": shortfall, not a wrong photo.
+        with patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}):
+            r = subject_assets.select_for_template(
+                self.owner, {"solos": 1, "emotions": ["happy"]})
+        self.assertEqual(r["slots"], {})
+        self.assertIn("solo 0/1", r["shortfall"])
 
     def test_subject_filter(self):
         r = subject_assets.select_for_template(

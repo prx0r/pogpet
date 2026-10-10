@@ -11,22 +11,6 @@
     "funny",
     "family"
   ],
-  "cast": {
-    "hero": {
-      "from": [
-        "group"
-      ]
-    },
-    "band": {
-      "from": [
-        "group"
-      ],
-      "with": "hero",
-      "min": 1,
-      "max": 4,
-      "unnamed_ok": true
-    }
-  },
   "style": "1970s rock LP gatefold cover, painted illustration, stage smoke, amber and magenta light, film grain",
   "scene": "the people from the reference photo as a rock band; {hero} front and centre as the frontman holding {hero_prop} like a guitar; the others on drums, bass and keys.",
   "copy": {
@@ -70,5 +54,23 @@
     "inside_right": "live_message",
     "back": "oddhobb_mark"
   },
-  "negative": "no other text, no logos, no watermark, no border, no extra people"
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "band": {
+      "shot": [
+        "group"
+      ],
+      "identity": "with_hero",
+      "people": [
+        3,
+        5
+      ],
+      "min_face_px": 60,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the main person from the reference photos"
+  },
+  "schema": "cardgen.template.v2"
 }

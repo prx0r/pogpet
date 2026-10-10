@@ -14,13 +14,15 @@
 | L2 subjects | confirmed subject ids; unnamed clusters | `photo_subjects` + `faces.suggest` | auto-roster |
 | L3 quality | sharpness, exposure, `print_sizes` (card/poster/wrap/canvas eligibility), `rescued` flag | on-box pass; `restore` chain promotes | Alibaba quality + aesthetics scores |
 | L4 mesh_fit | single clear subject, fills frame, unoccluded → 0–1 (the makeability rubric for 3D) | rule-based on L1+L3 | model-judged |
-| L5 emotion | `happy`, `silly`, `sleepy`, … (reserved) | — | vision call per face |
+| L5 expression + framing | `happy` `laughing` `silly` `shocked` `neutral` `serious` `sleepy` · `close_up` `head_shoulders` `waist_up` `full_body` | **LIVE** `backend/photo_labels.py`: one vision call per photo (OpenRouter, cached in `photo_labels`); heuristic framing without a key, expression `unknown` (never satisfies an ask) | same |
 | L6 occasion | `xmas`, `birthday`, `holiday`… from date clusters + object cues (tree, cake) | EXIF date bursts | Qwen-VL / tags |
 | L7 safety | moderation flags, watermark, screenshot-vs-camera | Sightengine / heuristics | same |
 
-Queryable today: L1, L2, L3 (face score/area), L6-dates. Reserved in the
-`requires` schema but not yet queried: L5 emotion, L4 mesh_fit score,
-L6-objects, L7 (blocks at intake instead).
+Queryable today: L1, L2, L3 (face score/area), **L5 expression + framing**, L6-dates. Reserved in the
+`requires` schema but not yet queried: L4 mesh_fit score, L6-objects, L7 (blocks at intake instead).
+
+Cards declare the richer per-role form in `cardgen/templates/*.json` → `wants` (see `cardgen/wants.py`);
+`wants.to_requires()` turns it into this `requires` dict for products, so cards and products share one vocabulary.
 
 ## Template `requires` spec
 
@@ -30,7 +32,8 @@ L6-objects, L7 (blocks at intake instead).
     "faces": 1,             # L1 shot_type == face (or any photo with 1 big face)
     "solos": 0, "couples": 0,
     "subjects": ["dad"],    # L2 names (optional; unnamed fill otherwise)
-    "emotions": ["happy"],  # L5 — reserved until the vision call lands
+    "emotions": ["happy"],  # L5 — live: photo_labels (happy also accepts laughing)
+    "framing": ["waist_up", "full_body"],  # L5 framing
     "min_face_score": 0.5,  # L3 quality floor
     "occasion": "xmas",     # L6 (optional)
 }

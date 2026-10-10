@@ -11,13 +11,6 @@
   "tones": [
     "funny"
   ],
-  "cast": {
-    "pet": {
-      "from": [
-        "pet"
-      ]
-    }
-  },
   "style": "Renaissance oil portrait, dark varnished background, gilt frame painted into the art",
   "scene": "{pet} as a pompous royal in an ermine cape and a small crown, one paw on a velvet cushion.",
   "copy": {
@@ -61,5 +54,21 @@
     "inside_right": "live_message",
     "back": "oddhobb_mark"
   },
-  "negative": "no other text, no logos, no watermark, no border, no extra people"
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "pet": {
+      "shot": [
+        "pet"
+      ],
+      "identity": "anyone",
+      "people": [
+        0,
+        0
+      ]
+    }
+  },
+  "names": {
+    "pet": "the pet from the reference photo"
+  },
+  "schema": "cardgen.template.v2"
 }

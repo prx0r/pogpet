@@ -116,7 +116,12 @@ def embed_face(bgr, face_row) -> list | None:
         return None
     try:
         import numpy as _np
-        aligned = rec.alignCrop(bgr, face_row)
+        # alignCrop needs a float32 (1, 15) row. A float64 row (what YuNet rows
+        # become after numpy reshaping in detect_boxes) silently aligns a
+        # constant grey patch, so EVERY face embedded to the same vector and
+        # every suggestion scored ~1.0. Cast explicitly.
+        row = _np.asarray(face_row, dtype=_np.float32).reshape(1, 15)
+        aligned = rec.alignCrop(bgr, row)
         feat = rec.feature(aligned)
         v = _np.asarray(feat, dtype=_np.float64).ravel()[:DIM]
         n = float((v ** 2).sum() ** 0.5)

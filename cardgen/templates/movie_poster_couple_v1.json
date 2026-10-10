@@ -10,27 +10,13 @@
     "funny",
     "romantic"
   ],
-  "cast": {
-    "hero": {
-      "from": [
-        "couple",
-        "solo"
-      ]
-    },
-    "partner": {
-      "from": [
-        "couple"
-      ],
-      "with": "hero"
-    }
-  },
   "style": "1950s Hollywood romance movie poster, painted, Technicolor palette",
-  "scene": "{hero} in a tuxedo grinning proudly, very pleased with himself; {partner} in an elegant gown glancing at the viewer with a long-suffering raised eyebrow; sunset over {place}.",
+  "scene": "{hero} in their finest evening wear grinning proudly, very pleased with themselves; {partner} glancing at the viewer with a long-suffering raised eyebrow; sunset over {place}.",
   "copy": {
     "title": {
       "max": 28,
       "examples": [
-        "STILL PUTTING UP WITH HIM",
+        "STILL PUTTING UP WITH YOU",
         "SHE SAID YES (EVENTUALLY)"
       ]
     },
@@ -68,5 +54,27 @@
     "inside_right": "live_message",
     "back": "oddhobb_mark"
   },
-  "negative": "no other text, no logos, no watermark, no border, no extra people"
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "pair": {
+      "shot": [
+        "couple"
+      ],
+      "identity": "with_hero",
+      "people": [
+        2,
+        2
+      ],
+      "expression": [
+        "happy"
+      ],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos",
+    "partner": "the other person in the couple photo"
+  },
+  "schema": "cardgen.template.v2"
 }

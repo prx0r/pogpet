@@ -104,8 +104,9 @@ def _area_frac(box: list, w: float, h: float) -> float:
 
 
 # Label layers the selector cannot query yet (docs/photo-labels.md).
+# emotions/framing are answered by backend.photo_labels (vision call, cached).
 # Requesting them yields shortfall reasons, never silent wrong photos.
-RESERVED_LAYERS = ("emotions", "occasion", "mesh_fit")
+RESERVED_LAYERS = ("occasion", "mesh_fit")   # L5 emotions + framing are live (photo_labels)
 
 _SLOT_OF = {"groups": "group", "couples": "couple", "solos": "solo",
             "faces": "face"}
@@ -116,7 +117,8 @@ def select_for_template(owner: str, requires: dict, per_slot: int = 1,
     """Fill template slots from an owner's labelled photos.
 
     requires: {groups/faces/solos/couples: int, subjects: [names]? (optional),
-    min_face_score: float?}. Returns {"slots": {name: pick}, "hero": pick|None,
+    min_face_score: float?, emotions: [happy|laughing|silly|shocked|...]?,
+    framing: [close_up|head_shoulders|waist_up|full_body]?}. Returns {"slots": {name: pick}, "hero": pick|None,
     "shortfall": [reasons], "candidates": {slot: [picks...]}}. Picks are
     {photo_id, shot_type, score}. Best-first by face score then recency;
     distinct photos per slot (plus `exclude` photo ids, for multi-slot
@@ -178,6 +180,26 @@ def select_for_template(owner: str, requires: dict, per_slot: int = 1,
                 biggest = max(scored, key=lambda s: s["area"])
                 if biggest["area"] >= 0.04:  # close-up: face fills the frame
                     cands["face"].append({**entry, "shot_type": "face"})
+    emo = [str(e) for e in (requires.get("emotions") or [])]
+    frm = [str(f) for f in (requires.get("framing") or [])]
+    if emo or frm:
+        # L5: label lazily (one vision call per photo, cached), then keep only
+        # photos whose chosen face shows what the template asked for.
+        from backend import photo_labels as _pl
+        pool = sorted({e["photo_id"] for v in cands.values() for e in v})
+        try:
+            _pl.ensure(owner, pool)
+        except Exception as e:  # noqa: BLE001 - labelling never breaks selection
+            shortfall.append(f"labels unavailable: {str(e)[:80]}")
+        labs = _pl.for_photos(pool)
+        def _ok(e):
+            lab = labs.get(e.get("face_id") or "") or {}
+            return (_pl.satisfies(lab.get("expression", "unknown"), emo)
+                    and (not frm or lab.get("framing") in frm))
+        for k in cands:
+            cands[k] = [dict(e, labels={x: (labs.get(e.get("face_id") or "") or {}).get(x)
+                                        for x in ("expression", "framing")})
+                        for e in cands[k] if _ok(e)]
     for k in cands:
         cands[k].sort(key=lambda e: (-e["score"], -(e["created_at"] or 0)))
 

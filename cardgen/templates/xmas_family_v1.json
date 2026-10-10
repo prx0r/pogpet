@@ -8,17 +8,6 @@
     "warm",
     "family"
   ],
-  "cast": {
-    "family": {
-      "from": [
-        "group",
-        "couple"
-      ],
-      "min": 2,
-      "max": 6,
-      "unnamed_ok": true
-    }
-  },
   "style": "storybook gouache, cosy warm light, falling snow",
   "scene": "the family from the reference photo inside a snow globe on a mantelpiece, wearing matching festive jumpers, one of them tangled in fairy lights.",
   "copy": {
@@ -62,5 +51,25 @@
     "inside_right": "live_message",
     "back": "oddhobb_mark"
   },
-  "negative": "no other text, no logos, no watermark, no border, no extra people"
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "family": {
+      "shot": [
+        "group",
+        "couple"
+      ],
+      "identity": "with_hero",
+      "people": [
+        2,
+        6
+      ],
+      "expression": [
+        "happy"
+      ],
+      "min_face_px": 60,
+      "refs": 1
+    }
+  },
+  "names": {},
+  "schema": "cardgen.template.v2"
 }

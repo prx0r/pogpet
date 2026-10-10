@@ -1,6 +1,8 @@
 # AGENTS.md — oddhobb / figgsite
 
-> **Read `HANDOVER.md` first** — session status. This file = map + rules.
+> **Start here: `SPRINT.md`** — the current execution focus (packs → cards
+> → Prodigi → transformations). Then `HANDOVER.md` (session status).
+> This file = map + rules.
 > Product truth: `README.md` · studio/custom: `docs/studio.md`, `docs/studio-custom.md` ·
 > Etsy packs: `docs/etsy-listings.md` (config `ETSY_LISTINGS`) · money: `docs/meshy.md`.
 > **Card invariant: for a personalised card request, the external agent

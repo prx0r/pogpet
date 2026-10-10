@@ -6,10 +6,12 @@ Reference only. **No secrets live in this file.** Real credentials are in
 > LIVE TARGET 2026-10-09: `byg8sv-p6.myshopify.com` ("OddHobb" — 15
 > products). `.env` still points at the dev store
 > (`oddhobb-oufybzg3.myshopify.com`) until live credentials land. Do NOT
-> treat dev-store drafts/webhooks as production. Needed for the switch:
-> live Admin API token (draft orders + webhooks scopes), live Storefront
-> access token (cart API), then create the ODD-CARD-5X7 variant and set
-> `SHOPIFY_CARD_VARIANT_ID`. History below is the dev store.
+> treat dev-store drafts/webhooks as production. Status: ODD-CARD-5X7
+> £2.99 variant `gid://shopify/ProductVariant/58870309552509` stored in
+> `.env` (verified resolving). Still needed: live Admin API token (draft
+> orders + webhooks scopes) and live Storefront access token (cart API) —
+> without the latter, /api/cart/* answers the exact missing piece instead
+> of guessing. History below is the dev store.
 
 Last verified (dev): 2026-09-30 — shop query OK,
 13 products active on `oddhobb-oufybzg3.myshopify.com` (GBP).

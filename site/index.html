@@ -844,14 +844,14 @@
   <div class="greet" id="greet">
     <div class="greet__inner">
       <div class="greet__mark">oddhobb<i>.</i></div>
-      <div class="greet__eyebrow">Personalised gifts · made from your photos</div>
-      <p class="greet__sub">Upload Dad, the dog, anyone — then browse a shop where everything already features them. Cards, keychains, ornaments and mugs, made to order.</p>
+      <div class="greet__eyebrow">Tell us who it's for — we'll design the perfect little project</div>
+      <p class="greet__sub">Start with the person — Dad, Cathy, the dog — and the occasion. We pick their best photos, match the right product, and post a gift that's already them.</p>
       <ol class="greet__steps">
-        <li><div><b>Upload someone</b><span>One photo, front-on, good light. We sort the rest.</span></div></li>
-        <li><div><b>Browse their versions</b><span>Every product renders your person or pet. What you see is what ships.</span></div></li>
-        <li><div><b>Gift it</b><span>Card, mug, ornament or keychain — posted to the door.</span></div></li>
+        <li><div><b>Say who it's for</b><span>A name and an occasion — birthday, Christmas, just because.</span></div></li>
+        <li><div><b>We find their best photos</b><span>Faces ranked by quality. Add pictures any time.</span></div></li>
+        <li><div><b>Gift the project</b><span>Card, wrap, ornament or keychain — posted to the door.</span></div></li>
       </ol>
-      <button class="greet__cta" id="greet-cta" type="button">Make something odd <span aria-hidden="true">→</span></button>
+      <button class="greet__cta" id="greet-cta" type="button">Start with someone <span aria-hidden="true">→</span></button>
 
       <div class="greet__auth">
         <span class="greet__or">or</span>
@@ -863,7 +863,7 @@
       </div>
       <div class="greet__who" id="g-who" hidden></div>
 
-      <p class="greet__fine">Know the person, not the product? Tell us about them — we'll find the thing.</p>
+      <p class="greet__fine">No photo handy? Start with a name — add pictures later.</p>
       <p class="greet__fine"><a href="/privacy">Privacy</a> · <a href="mailto:support@oddhobb.com">support@oddhobb.com</a></p>
     </div>
   </div>
@@ -1564,6 +1564,7 @@
 
       <div class="qk-label">Prints &amp; gifts · mesh on the face</div>
       <div class="etsy" id="pr-prints"></div>
+      <div id="pr-print-cands" style="display:none;margin:0 0 10px;padding:10px;border:1px solid #e8e4dc;border-radius:14px;background:#fff"></div>
       <p class="panel__fine">Paper greeting cards live under <b>cards</b>. Ramble lives under <b>quick</b>.</p>
     </div>
   </section>
@@ -4271,10 +4272,126 @@
       { id: "notebook", label: "Notebook", price_cents: 1199, img: "/img/notebook_70edae28.png", blurb: "Ideas for the star", section: "gifts" },
       { id: "jigsaw", label: "Jigsaw", price_cents: 1699, img: "/img/jigsaw_70edae28.png", blurb: "Puzzle them back together", section: "board-games" },
       { id: "photo_tile", label: "Photo Tile", price_cents: 999, img: "/img/photo_tile_70edae28.png", blurb: "Ceramic tile print", section: "gifts" },
-      { id: "wrapping_paper", label: "Wrapping Paper", price_cents: 899, img: "/img/wrapping_paper_70edae28.png", blurb: "Grade Q · festive wrap", section: "gifts" },
+      { id: "wrapping_paper", label: "Wrapping Paper", price_cents: 1499, img: "/img/wrapping_paper_70edae28.png", blurb: "Their face, tiled · LIVE", section: "gifts" },
       { id: "canvas", label: "Canvas", price_cents: 2799, img: "/img/canvas_70edae28.png", blurb: "Gallery wrap", section: "gifts" }
     ];
     var prPrintSel = null;
+    var prPrintCands = [];
+    var prPrintCandI = 0;
+    var prQuoteText = "";
+
+    function candThumbUrl(c) {
+      var u = "/api/studio/photos/" + encodeURIComponent(c.photo_id) + "/image?size=320";
+      if (c.face_id) u += "&face_id=" + encodeURIComponent(c.face_id);
+      try { return studioAsset(u); } catch (e) { return u; }
+    }
+
+    function paintPrintCands() {
+      var box = $("pr-print-cands");
+      if (!box) return;
+      if (!prPrintCands.length) { box.style.display = "none"; box.innerHTML = ""; return; }
+      var c = prPrintCands[prPrintCandI];
+      box.style.display = "";
+      box.innerHTML = "";
+      var wrap = document.createElement("div");
+      wrap.style.cssText = "display:flex;gap:10px;align-items:center";
+      var prev = document.createElement("button");
+      prev.type = "button"; prev.className = "btn btn-ghost-dark"; prev.textContent = "◀";
+      prev.setAttribute("aria-label", "Previous face option");
+      prev.onclick = function () {
+        prPrintCandI = (prPrintCandI + prPrintCands.length - 1) % prPrintCands.length;
+        paintPrintCands();
+      };
+      var next = document.createElement("button");
+      next.type = "button"; next.className = "btn btn-ghost-dark"; next.textContent = "▶";
+      next.setAttribute("aria-label", "Next face option");
+      next.onclick = function () {
+        prPrintCandI = (prPrintCandI + 1) % prPrintCands.length;
+        paintPrintCands();
+      };
+      var img = document.createElement("img");
+      img.src = candThumbUrl(c); img.alt = "face option";
+      img.style.cssText = "width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid #eee";
+      img.onclick = function () {
+        pr.artPhoto = { photo_id: c.photo_id, face_id: c.face_id || null };
+        msg("pr-msg", "Artwork source set · " + (c.shot_type || "photo") +
+            " (score " + (c.score != null ? c.score : "—") + ") — used by wrap/cards/fills.", "ok");
+      };
+      var lab = document.createElement("div");
+      lab.style.cssText = "font-size:12px;color:#6b5b3e";
+      lab.textContent = "Option " + (prPrintCandI + 1) + " of " + prPrintCands.length +
+        " · best by quality first, arrows for the rest — click to use on this product.";
+      var mid = document.createElement("div");
+      mid.appendChild(img); mid.appendChild(lab);
+      wrap.appendChild(prev); wrap.appendChild(mid); wrap.appendChild(next);
+      box.appendChild(wrap);
+      if (prQuoteText) {
+        var qd = document.createElement("div");
+        qd.id = "pr-quote";
+        qd.style.cssText = "font-size:12px;color:#6b5b3e;margin-top:8px";
+        qd.textContent = prQuoteText;
+        box.appendChild(qd);
+      }
+    }
+
+    function loadPrintQuotes(lineId) {
+      prQuoteText = "";
+      get(API + "/quotes/compare?line=" + encodeURIComponent(lineId))
+        .then(function (d) {
+          if (!d || !d.ok || !d.picks || !d.picks.value) return;
+          var box = $("pr-print-cands");
+          if (!box) return;
+          var v = d.picks.value, s = d.picks.speed, b = d.picks.balanced;
+          var m = d.matrix || {};
+          var lanes = ["GB", "US"].filter(function (k) { return m[k] && m[k].total != null; })
+            .map(function (k) { return k + " £" + m[k].total.toFixed(2); }).join(" · ");
+          var cd = (s && s.countdown) || {};
+          var clock = "";
+          if (cd.mode === "cutoff" && cd.order_within) {
+            clock = " · order in " + cd.order_within + " for dispatch by " + (cd.dispatch_guaranteed || "?");
+          } else if (cd.dispatch_guaranteed) {
+            clock = " · dispatch by " + cd.dispatch_guaranteed;
+          }
+          prQuoteText = "Value £" + v.total.toFixed(2) + " (" + v.supplier + ")" +
+            " · Speed £" + s.total.toFixed(2) + " (" + s.supplier + ")" +
+            (b ? " · Balanced £" + b.total.toFixed(2) + " (" + b.supplier + ")" : "") +
+            clock +
+            (lanes ? " · ship " + lanes : "") +
+            (s.note ? " — " + s.note : "") +
+            " · " + d.options.length + " suppliers compared";
+          var old = $("pr-quote");
+          if (old && old.parentNode) old.parentNode.removeChild(old);
+          var qd = document.createElement("div");
+          qd.id = "pr-quote";
+          qd.style.cssText = "font-size:12px;color:#6b5b3e;margin-top:8px";
+          qd.textContent = prQuoteText;
+          box.appendChild(qd);
+        })
+        .catch(function () {});
+    }
+
+    function loadPrintCands(lineId) {
+      prPrintCands = []; prPrintCandI = 0; paintPrintCands();
+      get(API + "/products/candidates?owner=" + encodeURIComponent(state.owner) +
+          "&kind=prodigi&line=" + encodeURIComponent(lineId) + "&n=8")
+        .then(function (d) {
+          if (!d || !d.ok) return;
+          var order = ["face", "solo", "group", "couple"];
+          var seen = {}, list = [];
+          order.forEach(function (slot) {
+            ((d.candidates || {})[slot] || []).forEach(function (c) {
+              if (c && c.photo_id && !seen[c.photo_id]) { seen[c.photo_id] = 1; list.push(c); }
+            });
+          });
+          // fallback: filled slots when requires named none of the four
+          Object.keys(d.slots || {}).forEach(function (k) {
+            var s = d.slots[k];
+            if (s && s.photo_id && !seen[s.photo_id]) { seen[s.photo_id] = 1; list.push(s); }
+          });
+          if (list.length) { prPrintCands = list; prPrintCandI = 0; paintPrintCands(); }
+        })
+        .catch(function () {});
+    }
 
     function loadPrints() {
       var grid = $("pr-prints"); if (!grid) return;
@@ -4295,6 +4412,8 @@
         tile.addEventListener("click", function () {
           prPrintSel = it.id;
           loadPrints();
+          loadPrintCands(it.id);
+          loadPrintQuotes(it.id);
           msg("pr-msg", it.label + " £" + (it.price_cents / 100).toFixed(2) +
               " — mesh on the face · order via shop / agent (2D print path).", "");
         });

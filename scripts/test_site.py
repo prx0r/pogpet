@@ -232,6 +232,11 @@ def main() -> int:
             and lower.get("x-frame-options") == "SAMEORIGIN"
             and lower.get("referrer-policy"),
             f"{lower.get('x-content-type-options')}/{lower.get('x-frame-options')}")
+        home = body.decode("utf-8", "replace")
+        rec("greet leads with recipient, not upload",
+            "who it&#x27;s for" in home or "who it's for" in home
+            and "Upload someone" not in home,
+            "recipient-first positioning")
         rec("trademark doc exists",
             (ROOT / "docs" / "trademark.md").is_file())
         # SEO / agent-discovery pack (docs/seo.md)

@@ -1,0 +1,52 @@
+{
+  "hooks": [
+    {"id": "rack_focus", "label": "Rack focus reveal", "duration": [1.5, 2.5],
+     "lens_mm": 85, "aperture": "f/1.4-2.8", "focus_pull": "background-to-product",
+     "motion_blur": true, "shake_deg": 0.3, "works_on": ["mesh", "flat"],
+     "product_enter_s": 0.5, "props": ["foreground ribbon (blurred)"],
+     "notes": "Foreground prop blurred; focus snaps to product."},
+    {"id": "macro_slide", "label": "Macro slide", "duration": [1.5, 2.5],
+     "lens_mm": 100, "aperture": "f/2.0", "focus_pull": "tracking",
+     "motion_blur": true, "shake_deg": 0.2, "works_on": ["mesh"],
+     "product_enter_s": 0.0, "props": [],
+     "notes": "Glide across personalised name, pull back to whole object."},
+    {"id": "crane_down", "label": "Crane down", "duration": [2.0, 2.5],
+     "lens_mm": 50, "aperture": "f/2.8", "focus_pull": "background-to-product",
+     "motion_blur": true, "shake_deg": 0.3, "works_on": ["mesh", "flat"],
+     "product_enter_s": 0.5, "props": ["bokeh fairy lights"],
+     "notes": "Start on bokeh background, tilt and drop onto product."},
+    {"id": "push_dolly", "label": "Push-in + dolly zoom", "duration": [1.5, 2.0],
+     "lens_mm": 85, "aperture": "f/2.0", "focus_pull": "locked-on-face",
+     "motion_blur": true, "shake_deg": 0.2, "works_on": ["mesh", "flat"],
+     "product_enter_s": 0.0, "props": [],
+     "notes": "Vertigo effect on the face; figures and pets."},
+    {"id": "drop_in", "label": "Drop-in", "duration": [1.5, 2.0],
+     "lens_mm": 50, "aperture": "f/2.8", "focus_pull": "locked",
+     "motion_blur": true, "shake_deg": 0.5, "works_on": ["mesh"],
+     "product_enter_s": 0.3, "props": ["dust puff on impact"],
+     "notes": "Product falls in, squash, micro-shake on impact."},
+    {"id": "orbit_whip", "label": "Orbit whip", "duration": [1.5, 2.0],
+     "lens_mm": 85, "aperture": "f/2.8", "focus_pull": "tracking",
+     "motion_blur": true, "shake_deg": 0.3, "works_on": ["mesh"],
+     "product_enter_s": 0.0, "props": [],
+     "notes": "Fast 90deg orbit settling to hero angle; match-cut friendly."},
+    {"id": "lid_lift", "label": "Lid lift", "duration": [2.0, 2.5],
+     "lens_mm": 50, "aperture": "f/2.0", "focus_pull": "box-to-product",
+     "motion_blur": true, "shake_deg": 0.3, "works_on": ["mesh"],
+     "product_enter_s": 0.5, "props": ["gift box + lid", "light spill"],
+     "notes": "Lid rises, light spills, product revealed."},
+    {"id": "photo_match", "label": "Photo to product match cut", "duration": [1.5, 2.0],
+     "lens_mm": 50, "aperture": "f/2.8", "focus_pull": "n/a",
+     "motion_blur": false, "shake_deg": 0.0, "works_on": ["mesh", "flat"],
+     "product_enter_s": 0.5, "props": ["customer photo full-frame"],
+     "notes": "Photo fills frame, cut on same silhouette to rendered mesh."}
+  ],
+  "body": [
+    {"id": "spin360", "label": "360 spin", "notes": "One full turntable rotation."},
+    {"id": "detail", "label": "Detail push", "notes": "Macro push to personalisation zone."}
+  ],
+  "end": [
+    {"id": "logo", "label": "Logo end card", "notes": "Black 3D mark on white, 0.5 s."}
+  ],
+  "moods": ["xmas", "birthday", "neutral"]
+}

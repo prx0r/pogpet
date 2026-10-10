@@ -1,1 +1,429 @@
-{"theories": [{"conditions": [], "counterexamples": [], "evidence_external": ["https://plato.stanford.edu/entries/humor/"], "experiments": [], "hypothesis": "Humor arises when an established mental model is violated by facts that refuse to fit it.", "id": "incongruity", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": [], "experiments": [], "hypothesis": "A reveal that forces the audience to reinterpret everything that came before outperforms bare surprise.", "id": "resolution", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": ["https://www.psychologicalscience.org/journals/psychological-science/0956797610376073/"], "experiments": [], "hypothesis": "A violation is funny only when simultaneously perceived as safe, distant, or alternatively interpretable; distance moves the sweet spot.", "id": "benign_violation", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": ["https://books.google.com/books/about/The_Act_of_Creation.html?id=tJC5pDXFY8oC"], "experiments": [], "hypothesis": "Creativity and humor arise when two previously separate conceptual frames collide on a shared structure.", "id": "bisociation", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": ["https://arxiv.org/abs/2602.12763"], "experiments": [], "hypothesis": "A character whose defining trait conflicts with their role, species or job outperforms generic absurdity.", "id": "identity_contradiction", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": [], "experiments": [], "hypothesis": "The powerful diminished beats the weak mocked; inversion of who controls whom is inherently comic.", "id": "status_reversal", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": ["https://www.folger.edu/blogs/shakespeare-and-beyond/shakespeare-quotes-about-fools/"], "experiments": [], "hypothesis": "A character who understands the absurdity of its own identity and exploits it beats one who is merely absurd.", "id": "self_awareness", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": ["https://www.gutenberg.org/files/4352/4352-h/4352-h.htm"], "experiments": [], "hypothesis": "A person or institution mechanically following a rule after reality makes it absurd is inherently comic (Bergson).", "id": "rigidity", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": [], "experiments": [], "hypothesis": "Letting the audience share privileged knowledge against someone in the scene multiplies any other mechanism.", "id": "audience_alliance", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": [], "experiments": [], "hypothesis": "Establish a rule, repeat it, mutate it, escalate it; the third beat must break the pattern.", "id": "repetition_variation", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": [], "experiments": [], "hypothesis": "What a character claims to be diverging from what everyone can see it is creates sustained comic tension.", "id": "mask_collision", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": ["https://academic.oup.com/book/41037/chapter/349334548"], "experiments": [], "hypothesis": "Replacing a generic category with an unusually concrete person, object, place or detail upgrades any joke (GTVH script opposition needs specific scripts).", "id": "specificity", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": [], "experiments": [], "hypothesis": "Treating metaphor, rhetoric or policy language as physically true generates comic collisions for free.", "id": "literalise", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": [], "experiments": [], "hypothesis": "Placing two states side by side (before/after, expectation/reality) lets the gap do the joking.", "id": "contrast", "support": 0.5}, {"conditions": [], "counterexamples": [], "evidence_external": [], "experiments": [], "hypothesis": "Following a pattern to step 2, 3 and 10 finds premises hiding past the obvious stop.", "id": "escalation", "support": 0.5}]}
+{
+ "theories": [
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [
+    "https://plato.stanford.edu/entries/humor/"
+   ],
+   "experiments": [],
+   "hypothesis": "Humor arises when an established mental model is violated by facts that refuse to fit it.",
+   "id": "incongruity",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [],
+   "experiments": [],
+   "hypothesis": "A reveal that forces the audience to reinterpret everything that came before outperforms bare surprise.",
+   "id": "resolution",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [
+    "https://www.psychologicalscience.org/journals/psychological-science/0956797610376073/"
+   ],
+   "experiments": [],
+   "hypothesis": "A violation is funny only when simultaneously perceived as safe, distant, or alternatively interpretable; distance moves the sweet spot.",
+   "id": "benign_violation",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [
+    "https://books.google.com/books/about/The_Act_of_Creation.html?id=tJC5pDXFY8oC"
+   ],
+   "experiments": [],
+   "hypothesis": "Creativity and humor arise when two previously separate conceptual frames collide on a shared structure.",
+   "id": "bisociation",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [
+    "https://arxiv.org/abs/2602.12763"
+   ],
+   "experiments": [],
+   "hypothesis": "A character whose defining trait conflicts with their role, species or job outperforms generic absurdity.",
+   "id": "identity_contradiction",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [],
+   "experiments": [],
+   "hypothesis": "The powerful diminished beats the weak mocked; inversion of who controls whom is inherently comic.",
+   "id": "status_reversal",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [
+    "https://www.folger.edu/blogs/shakespeare-and-beyond/shakespeare-quotes-about-fools/"
+   ],
+   "experiments": [],
+   "hypothesis": "A character who understands the absurdity of its own identity and exploits it beats one who is merely absurd.",
+   "id": "self_awareness",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [
+    "https://www.gutenberg.org/files/4352/4352-h/4352-h.htm"
+   ],
+   "experiments": [],
+   "hypothesis": "A person or institution mechanically following a rule after reality makes it absurd is inherently comic (Bergson).",
+   "id": "rigidity",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [],
+   "experiments": [],
+   "hypothesis": "Letting the audience share privileged knowledge against someone in the scene multiplies any other mechanism.",
+   "id": "audience_alliance",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [],
+   "experiments": [],
+   "hypothesis": "Establish a rule, repeat it, mutate it, escalate it; the third beat must break the pattern.",
+   "id": "repetition_variation",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [],
+   "experiments": [],
+   "hypothesis": "What a character claims to be diverging from what everyone can see it is creates sustained comic tension.",
+   "id": "mask_collision",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [
+    "https://academic.oup.com/book/41037/chapter/349334548"
+   ],
+   "experiments": [],
+   "hypothesis": "Replacing a generic category with an unusually concrete person, object, place or detail upgrades any joke (GTVH script opposition needs specific scripts).",
+   "id": "specificity",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [],
+   "experiments": [],
+   "hypothesis": "Treating metaphor, rhetoric or policy language as physically true generates comic collisions for free.",
+   "id": "literalise",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [],
+   "experiments": [],
+   "hypothesis": "Placing two states side by side (before/after, expectation/reality) lets the gap do the joking.",
+   "id": "contrast",
+   "support": 0.5
+  },
+  {
+   "conditions": [],
+   "counterexamples": [],
+   "evidence_external": [],
+   "experiments": [],
+   "hypothesis": "Following a pattern to step 2, 3 and 10 finds premises hiding past the obvious stop.",
+   "id": "escalation",
+   "support": 0.5
+  },
+  {
+   "id": "superiority",
+   "family": "tendentious",
+   "hypothesis": "A butt diminished before an audience that endorses the belittling produces triumph-laughter; without an endorsed butt there is no superiority laugh.",
+   "conditions": [
+    {
+     "question": "Is there an identifiable butt (person, institution, belief) whose belittling the laugh endorses?",
+     "needs_judge": true,
+     "check": null
+    },
+    {
+     "question": "Would direct insult have been blocked (manners, morals, power fear), making the joke form necessary?",
+     "needs_judge": true,
+     "check": null
+    },
+    {
+     "question": "Does the audience side with the teller against the butt, not the reverse?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "butt",
+    "shared inhibition",
+    "neutral-or-allied third"
+   ],
+   "fails_when": [
+    "hearer sides with victim",
+    "piety/party loyalty",
+    "indignation costs exceed discharge"
+   ],
+   "counterexamples": [
+    "chicken-road (no butt, still funny)",
+    "pretended clumsiness admired"
+   ],
+   "evidence_external": [
+    "Freud, Jokes ch.3-5 (tendentious/hostile/cynical/skeptical)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "condensation",
+   "family": "freud-technique",
+   "hypothesis": "Two thoughts fused into one composite word/form discharge wording-effort as laughter, provided the fusion stays intelligible.",
+   "conditions": [
+    {
+     "question": "Does one fused word/form carry two otherwise separate meanings?",
+     "needs_judge": true,
+     "check": null
+    },
+    {
+     "question": "If paraphrased away with full meaning kept, does the laugh vanish?",
+     "needs_judge": true,
+     "check": "paraphrase_test"
+    }
+   ],
+   "depends_on": [
+    "shared language",
+    "overlapping sounds",
+    "intelligible fusion"
+   ],
+   "fails_when": [
+    "fusion unintelligible",
+    "needs explanation",
+    "topical link dead"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Freud, Jokes ch.2 (Verdichtung)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "same_word_switch",
+   "family": "freud-technique",
+   "hypothesis": "One acoustic form short-circuits two remote idea-fields; the saved detour discharges as laughter.",
+   "conditions": [
+    {
+     "question": "Does one identical/near-identical sound jump fields with no extra machinery?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "homonymy in audience dialect",
+    "live interest in both fields"
+   ],
+   "fails_when": [
+    "hearer lacks second meaning",
+    "link is word-only with no sense-kinship"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Freud, Jokes ch.2 (Doppelsinn)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "displacement",
+   "family": "freud-technique",
+   "hypothesis": "Shifting accent from the loaded point to a side-track lets the unsayable be answered while dodging its real point.",
+   "conditions": [
+    {
+     "question": "Does the reply logically answer a displaced version of the question while dodging its real point?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "taboo/greedy premise unstated",
+    "hearer reconstructs the shift"
+   ],
+   "fails_when": [
+    "displacement too far (unintelligible) or too near (no inhibition lifted)"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Freud, Jokes ch.2 (Verschiebung)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "bogus_logic",
+   "family": "freud-technique",
+   "hypothesis": "A faulty inference wearing valid-proof dress smuggles a forbidden truth past criticism.",
+   "conditions": [
+    {
+     "question": "On reduction, does an explicit fallacy remain that the story presents as valid proof?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "audience logic to detect flaw",
+    "unsayable cynical truth"
+   ],
+   "fails_when": [
+    "flaw spotted instantly with no surplus",
+    "audience demands real proof"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Freud, Jokes ch.2 (sophistry)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "opposite_says_it",
+   "family": "freud-technique",
+   "hypothesis": "Asserting the contrary and letting tone/context flip it outsources negation and saves judgment.",
+   "conditions": [
+    {
+     "question": "Does the literal statement mean its contrary once tone/situation is added, with no other change?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "hearer prepared for opposite",
+    "shared knowledge literal is false"
+   ],
+   "fails_when": [
+    "hearer takes it literally",
+    "contrary has no forbidden edge"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Freud, Jokes ch.2 (irony/overstatement)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "degrading_analogy",
+   "family": "freud-technique",
+   "hypothesis": "Yoking the sublime to the low-concrete discharges solemn restraint and exposes automatism behind dignity.",
+   "conditions": [
+    {
+     "question": "Does the comparison drag something exalted down to bodily/professional low without changing doctrine?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "prior respect for target",
+    "audience not identified with it"
+   ],
+   "fails_when": [
+    "reverence holds",
+    "analogy inapt",
+    "disgust/pity instead of discharge"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Freud, Jokes ch.2 (Herabsetzung/Entlarvung)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "garden_path",
+   "family": "attardo-lm",
+   "hypothesis": "Setup builds one isotopy via a connector; the punch forces backtracking to a second isotopy.",
+   "conditions": [
+    {
+     "question": "Does the punch force re-reading an earlier word the other way?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "script opposition + overlap"
+   ],
+   "fails_when": [
+    "second reading available upfront"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Attardo, Linguistics of Humor (LM catalogue)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "figure_ground",
+   "family": "attardo-lm",
+   "hypothesis": "The same string re-profiles: what counted as figure flips, and the flip is the joke.",
+   "conditions": [
+    {
+     "question": "Can the joke be stated as: same words, what counts as figure flipped?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "shared string, LA/syntax ambiguity"
+   ],
+   "fails_when": [
+    "no shared string"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Attardo, Linguistics of Humor (LM catalogue)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  },
+  {
+   "id": "exaggeration",
+   "family": "attardo-lm",
+   "hypothesis": "Scale blown up then treated literally; shrinking the scale would dissolve the incongruity.",
+   "conditions": [
+    {
+     "question": "If scaled to normal size, would the incongruity vanish?",
+     "needs_judge": true,
+     "check": null
+    }
+   ],
+   "depends_on": [
+    "situational quantities"
+   ],
+   "fails_when": [
+    "literal reading already normal"
+   ],
+   "counterexamples": [],
+   "evidence_external": [
+    "Attardo, Linguistics of Humor (LM catalogue)"
+   ],
+   "experiments": [],
+   "support": 0.5
+  }
+ ]
+}

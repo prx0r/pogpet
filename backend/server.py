@@ -326,10 +326,26 @@ def start_mesh():
     if denied is not None:
         return denied
     try:
-        res = pipeline.start_mesh(photo_id, single=bool(body.get("single")))
+        _single = body.get("single")
+        res = pipeline.start_mesh(photo_id,
+                                  single=None if _single is None else bool(_single))
     except pipeline.PipelineError as e:
-        return _err(str(e), e.code)
+        out = {"ok": False, "error": str(e)}
+        if getattr(e, "data", None):
+            out.update(e.data)
+        return jsonify(out), e.code
     return jsonify({"ok": True, **res})
+
+
+@app.get("/api/credits/balance")
+def credits_balance():
+    """Balance + genesis + earn routes for an owner. Machine-readable top-up."""
+    from backend import pipeline as _pipe
+    owner = _own(request.args.get("owner") or "")
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    return jsonify({"ok": True, "owner": owner, **_pipe.credit_top_up(owner)})
 
 
 @app.get("/api/meshes")
@@ -4639,6 +4655,20 @@ def shopify_orders_paid():
     if order.get("status") == "fulfilled" and order.get("prodigi_ref"):
         return jsonify(ok=True, reused=True, order_id=oid,
                        prodigi_ref=order.get("prodigi_ref")), 200
+    # Earn path: +1 mesh credit per paid order, idempotent on order id.
+    # Fast (one INSERT) and safe under webhook retries — repeat deliveries
+    # find the existing order: row and change nothing.
+    try:
+        with db.connect() as _c:
+            if not _c.execute("SELECT 1 FROM credit_ledger WHERE owner=? AND reason=?",
+                              (order.get("owner", ""), f"order:{oid}")).fetchone():
+                _c.execute("INSERT INTO credit_ledger (owner, delta, reason, created_at)"
+                           " VALUES (?,?,?,?)",
+                           (order.get("owner", ""), 1, f"order:{oid}",
+                            __import__("time").time()))
+                _c.commit()
+    except Exception:
+        pass  # earn must never fail the payment ack
     if os.environ.get("CARD_PANEL_CONFIRMED", "") != "1":
         return _err("card panel order not confirmed against Prodigi template yet "
                     "(CARD_PANEL_CONFIRMED=1 blocks live print)", 409)

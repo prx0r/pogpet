@@ -26,7 +26,9 @@ class MeshyAdapter(BaseAdapter):
         photo_id = str(payload.get("photo_id") or "")
         if not photo_id:
             raise ProviderNotConfigured("mesh: needs photo_id")
-        return pipeline.start_mesh(photo_id, single=bool(payload.get("single")))
+        _single = payload.get("single")
+        return pipeline.start_mesh(
+            photo_id, single=None if _single is None else bool(_single))
 
 
 @register

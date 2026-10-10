@@ -311,15 +311,21 @@ async def figg_flow(owner: str = "") -> str:
     return _j(await _call("GET", "/api/flow?owner=" + owner))
 
 
-async def figg_start_mesh(photo_id: str, owner: str = "", single: bool = False) -> str:
+async def figg_start_mesh(photo_id: str, owner: str = "",
+                            single: bool | None = None) -> str:
     """Start sculpting an uploaded photo (photo_id from figg_upload_photo) -> returns the mesh job.
 
     Pass `owner` when acting for a known handle — without FIGG_OWNER/API key
     matching that owner the backend refuses non-anon credit burns.
-    Sculpts want 3 angles of the same person (auto multi-image build, same 1
-    credit); fewer needs explicit single=true. Provider failures refund.
+    single=None (default): one photo sculpts single-view; 3 angles of the
+    same subject auto-upgrade to a multi-image build (same 1 credit).
+    single=True forces single-view; single=False demands 3 angles.
+    Funding order: genesis (first mesh free, once per owner) → credit
+    balance → daily. Provider failures refund the exact funding source, once.
     """
-    payload = {"photo_id": photo_id, "single": single}
+    payload = {"photo_id": photo_id}
+    if single is not None:
+        payload["single"] = single
     if owner:
         payload["owner"] = owner
     return _j(await _call("POST", "/api/meshes", payload))

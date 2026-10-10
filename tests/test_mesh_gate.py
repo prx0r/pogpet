@@ -22,15 +22,21 @@ class TestMeshGate(CardsJourney):
             c.commit()
             return pid
 
-    def test_single_photo_needs_explicit_single(self):
+    def test_single_photo_defaults_to_single(self):
+        # Single-photo onboarding: one angle sculpts single-view by default
+        # (no 400). Explicit single=False still demands 3 angles.
         pid = self._photo()
-        with self.assertRaises(pipeline.PipelineError) as cm:
-            pipeline.start_mesh(pid)
-        self.assertEqual(cm.exception.code, 400)
-        out = pipeline.start_mesh(pid, single=True)
+        out = pipeline.start_mesh(pid)
         self.assertFalse(out["reused"])
         self.assertEqual(out["mesh"]["status"], "queued")
         self.assertFalse(out["mesh"].get("multi_image"))
+        self.assertEqual(out["mesh"].get("angles"), 1)
+
+    def test_explicit_single_false_still_demands_angles(self):
+        pid = self._photo()
+        with self.assertRaises(pipeline.PipelineError) as cm:
+            pipeline.start_mesh(pid, single=False)
+        self.assertEqual(cm.exception.code, 400)
 
     def test_three_angles_auto_multi(self):
         pids = [self._photo(person="Dad") for _ in range(3)]

@@ -45,7 +45,12 @@ CREATE TABLE IF NOT EXISTS meshes (
   print_ready   INTEGER NOT NULL DEFAULT 0,
   stub          INTEGER NOT NULL DEFAULT 0,
   created_at    REAL NOT NULL,
-  updated_at    REAL NOT NULL
+  updated_at    REAL NOT NULL,
+  mesh_funding  TEXT NOT NULL DEFAULT '',
+  funding_ref   INTEGER NOT NULL DEFAULT 0,
+  refunded      INTEGER NOT NULL DEFAULT 0,
+  route         TEXT NOT NULL DEFAULT '',
+  route_cost_cents INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_meshes_photo ON meshes(photo_id);
 CREATE INDEX IF NOT EXISTS idx_meshes_status ON meshes(status);
@@ -180,7 +185,7 @@ CREATE TABLE IF NOT EXISTS credits (
   used    INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (owner, day, kind)
 );
--- Genesis hook: one free pet mesh per owner, ever. After it is claimed,
+-- Genesis hook: one free first mesh per owner, ever. After it is claimed,
 -- meshes spend credit balance (pay once per pet, never per product:
 -- cached meshes and product bindings never charge).
 CREATE TABLE IF NOT EXISTS mesh_grants (
@@ -350,6 +355,7 @@ def init() -> None:
         from backend import subjects as _subjects
         _subjects.ensure_tables(c)
         _subjects.migrate_mesh_profiles(c)
+        _migrate_mesh_funding(c)
 
 
 def _migrate_users_email_unique(c: sqlite3.Connection) -> None:
@@ -377,6 +383,25 @@ def _migrate_photos_person(c: sqlite3.Connection) -> None:
     cols = [r[1] for r in c.execute("PRAGMA table_info(photos)")]
     if "person" not in cols:
         c.execute("ALTER TABLE photos ADD COLUMN person TEXT")
+
+
+def _migrate_mesh_funding(c: sqlite3.Connection) -> None:
+    """meshes.mesh_funding/funding_ref/refunded — refund-by-source.
+
+    funding: genesis|credits|daily. funding_ref: credit_ledger row id for
+    credits, else 0. refunded: idempotency flag (one refund per mesh).
+    """
+    cols = [r[1] for r in c.execute("PRAGMA table_info(meshes)")]
+    if "mesh_funding" not in cols:
+        c.execute("ALTER TABLE meshes ADD COLUMN mesh_funding TEXT NOT NULL DEFAULT ''")
+    if "funding_ref" not in cols:
+        c.execute("ALTER TABLE meshes ADD COLUMN funding_ref INTEGER NOT NULL DEFAULT 0")
+    if "refunded" not in cols:
+        c.execute("ALTER TABLE meshes ADD COLUMN refunded INTEGER NOT NULL DEFAULT 0")
+    if "route" not in cols:
+        c.execute("ALTER TABLE meshes ADD COLUMN route TEXT NOT NULL DEFAULT ''")
+    if "route_cost_cents" not in cols:
+        c.execute("ALTER TABLE meshes ADD COLUMN route_cost_cents INTEGER NOT NULL DEFAULT 0")
 
 
 def new_id(prefix: str) -> str:
@@ -702,15 +727,74 @@ def get_photo(c: sqlite3.Connection, pid: str) -> sqlite3.Row | None:
     return c.execute("SELECT * FROM photos WHERE id=?", (pid,)).fetchone()
 
 
-def create_mesh(c: sqlite3.Connection, photo_id: str, provider: str = "meshy") -> str:
+def create_mesh(c: sqlite3.Connection, photo_id: str, provider: str = "meshy",
+                funding: str = "", funding_ref: int = 0) -> str:
     mid = new_id("msh")
     ts = now()
     c.execute(
-        "INSERT INTO meshes (id,photo_id,provider,status,created_at,updated_at)"
-        " VALUES (?,?,?,'queued',?,?)",
-        (mid, photo_id, provider, ts, ts),
+        "INSERT INTO meshes (id,photo_id,provider,status,created_at,updated_at,"
+        " mesh_funding,funding_ref)"
+        " VALUES (?,?,?,'queued',?,?,?,?)",
+        (mid, photo_id, provider, ts, ts, funding, funding_ref),
     )
     return mid
+
+
+def refund_mesh(c: sqlite3.Connection, mid: str) -> bool:
+    """Refund a failed mesh by its funding source. Idempotent: True once.
+
+    genesis → reset genesis_used. credits → +1 ledger row (reason refund:<mid>).
+    daily → decrement the day/kind usage. Unknown/empty funding → False.
+    """
+    row = c.execute("SELECT mesh_funding,funding_ref,refunded FROM meshes"
+                    " WHERE id=?", (mid,)).fetchone()
+    if row is None:
+        return False
+    d = dict(row)
+    if d.get("refunded"):
+        return False
+    funding = d.get("mesh_funding") or ""
+    prow = c.execute("SELECT p.owner FROM meshes m JOIN photos p ON p.id=m.photo_id"
+                     " WHERE m.id=?", (mid,)).fetchone()
+    owner = (dict(prow)["owner"] if prow else "") or "anon"
+    ok = False
+    if funding == "genesis":
+        c.execute("UPDATE mesh_grants SET genesis_used=0 WHERE owner=?", (owner,))
+        ok = True
+    elif funding == "credits":
+        import time as _time
+        c.execute("INSERT INTO credit_ledger (owner, delta, reason, created_at)"
+                  " VALUES (?,?,?,?)",
+                  (owner, 1, f"refund:{mid}"[:120], _time.time()))
+        ok = True
+    elif funding == "daily":
+        import datetime as _dt
+        day = _dt.datetime.now(_dt.timezone.utc).date().isoformat()
+        c.execute(
+            "UPDATE credits SET used = CASE WHEN used > 0 THEN used - 1 ELSE 0 END"
+            " WHERE owner=? AND day=? AND kind=?",
+            (owner, day, "mesh"),
+        )
+        ok = True
+    if ok:
+        c.execute("UPDATE meshes SET refunded=1 WHERE id=? AND refunded=0", (mid,))
+    return ok
+
+
+def credit_pack_redeem(c: sqlite3.Connection, owner: str, order_id: str,
+                       packs: int) -> int:
+    """Redeem a credit pack purchase. Idempotent on order_id: repeat calls
+    with the same order_id return the balance unchanged."""
+    import time as _time
+    reason = f"pack:{order_id}"[:120]
+    existing = c.execute("SELECT 1 FROM credit_ledger WHERE owner=? AND reason=?",
+                         (owner, reason)).fetchone()
+    if existing:
+        return credit_balance(c, owner)
+    c.execute("INSERT INTO credit_ledger (owner, delta, reason, created_at)"
+              " VALUES (?,?,?,?)",
+              (owner, int(packs), reason, _time.time()))
+    return credit_balance(c, owner)
 
 
 def get_mesh(c: sqlite3.Connection, mid: str) -> sqlite3.Row | None:

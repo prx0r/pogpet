@@ -20,6 +20,12 @@ __pycache__/
 # local pipeline state: sqlite, staged photos, downloaded meshes
 data/
 
+# studio runtime designs (review/test artifacts, not templates).
+# Seed templates (sunrise, sunrise-c, sunrise-c-mjf) stay tracked.
+studio/hwsim/designs/hark-*
+studio/hwsim/designs/*-neg/
+studio/hwsim/designs/*-audit-*/
+
 # reference clones (read-only research copies, re-clone anytime)
 backend/resources/repos/
 

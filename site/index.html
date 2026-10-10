@@ -775,8 +775,8 @@
       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
       transition:opacity .7s ease,visibility .7s ease}
     .pogboot.hidden{opacity:0;visibility:hidden;pointer-events:none}
-    .pogboot__stage{position:relative;width:min(220px,52vw);height:min(220px,52vw)}
-    .pogboot__stage svg,.pogboot__stage img{position:absolute;inset:0;width:100%;height:100%}
+    .pogboot__stage{position:relative;width:72px;height:72px;--pulse-size:72px}
+    .pogboot__stage svg,.pogboot__stage img,.pogboot__stage canvas{position:absolute;inset:0;width:100%;height:100%}
     .pogboot__stage img{object-fit:contain;opacity:0;transition:opacity .25s ease}
     .pogboot__stage img.show{opacity:1}
     .pogboot__stage img#pogboot-gif{opacity:1}
@@ -789,6 +789,8 @@
       letter-spacing:.14em;text-transform:uppercase;color:#a08c5b;min-height:1.5em}
     @media (prefers-reduced-motion: reduce){.pogboot__stage *{transition:none;animation:none}}
   </style>
+  <link rel="preload" as="image" href="/assets/pulse/emerge.webp" fetchpriority="high">
+  <script src="/js/pulse-loader.js?v=1" defer></script>
   <link rel="stylesheet" href="/css/cards-studio.css">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/api-client.js?v=studio-3"></script>
@@ -809,9 +811,8 @@
   <!-- boot screen: black 3D mark emerges from plain white, then recedes -->
   <div class="pogboot" id="pogboot" aria-hidden="true">
     <div class="pogboot__stage">
-      <img id="pogboot-gif" src="/assets/boot-emerge.gif" alt="OddHobb">
+      <div id="pogboot-pulse" data-pulse="emerge" aria-label="Loading OddHobb"></div>
     </div>
-    <div class="pogboot__cap" id="pogboot-cap">making your odd things…</div>
   </div>
 
   <!-- greeting page: the first thing a visitor sees -->
@@ -988,6 +989,8 @@
       if (done) return;
       done = true;
       boot.classList.add("hidden");
+      var pe = document.getElementById("pogboot-pulse");   // stop the heartbeat once faded
+      setTimeout(function () { if (pe && pe._pulse) pe._pulse.destroy(); }, 800);
       document.dispatchEvent(new CustomEvent("pogboot:done"));
     }
     boot.addEventListener("click", finish);
@@ -1055,7 +1058,6 @@
     } else {
       // fluid etch: one draw-in, then loop the etch while loading
       drawMark(900, 0);
-      if (cap) cap.textContent = "making your odd things…";
       setTimeout(function () {
         if (done) return;
         ["pboot-l", "pboot-r", "pboot-c"].forEach(function (id, i) {

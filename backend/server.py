@@ -631,6 +631,65 @@ def family_reminders():
                     "reminders": out})
 
 
+@app.get("/api/objects/<oid>/resolve")
+def objects_resolve(oid: str):
+    """Resolve for AR clients (QR/NFC scan → this URL with service token).
+    No owner needed and no PII in the response: digital asset,
+    capabilities, live event state, compatible worlds."""
+    from backend import objects as _ob
+    rec = _ob.get(oid.strip()[:80])
+    if not rec:
+        return _err("object not found", 404)
+    return jsonify({"ok": True, "object_id": rec["object_id"],
+                    "kind": rec["kind"], "digital_asset": rec["digital_asset"],
+                    "physical_revision": rec["physical_revision"],
+                    "capabilities": rec["capabilities"], "state": rec["state"],
+                    "compatible_worlds": rec["compatible_worlds"],
+                    "manufacturing_status": rec["manufacturing_status"]})
+
+
+@app.post("/api/objects")
+def objects_register():
+    """Register an agent-addressable object. Owner-enforced."""
+    from backend import objects as _ob
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    if not owner:
+        return _err("owner is required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    rec = _ob.register(
+        owner, kind=str(body.get("kind") or "room"),
+        digital_asset=str(body.get("digital_asset") or ""),
+        recipe_id=str(body.get("recipe_id") or ""),
+        capabilities=body.get("capabilities") if isinstance(
+            body.get("capabilities"), list) else [],
+        compatible_worlds=body.get("compatible_worlds") if isinstance(
+            body.get("compatible_worlds"), list) else [])
+    return jsonify({"ok": True, **rec})
+
+
+@app.post("/api/objects/<oid>/state")
+def objects_state(oid: str):
+    """Record an agent event (working/finished_artwork/visitor/...).
+    Owner-enforced — actuation-adjacent."""
+    from backend import objects as _ob
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "").strip()[:80]
+    if not owner:
+        return _err("owner is required", 400)
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    r = _ob.set_state(owner, oid.strip()[:80], str(body.get("event") or ""),
+                      body.get("detail") if isinstance(body.get("detail"), dict)
+                      else None)
+    if not r.get("ok"):
+        return _err(r.get("error", "state failed"), 400)
+    return jsonify(r)
+
+
 @app.get("/api/orders/track")
 def orders_track():
     """Track one order by id: status, lines, price, checkout links.

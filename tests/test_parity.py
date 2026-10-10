@@ -27,6 +27,9 @@ PARITY = [
      "/backend/api/projects/check"),
     ("/api/orders/track", "oddhobb_track_order",
      "/backend/api/orders/track"),
+    ("/api/objects/<oid>/resolve", "oddhobb_object_get",
+     "/backend/api/objects/{object_id}/resolve"),
+    ("/api/objects/<oid>/state", "oddhobb_object_state", None),
 ]
 
 
@@ -40,7 +43,9 @@ class ParityTest(unittest.TestCase):
         for endpoint, tool, path in PARITY:
             self.assertIn(tool, names, tool)
             self.assertNotIn(tool, M.PUBLIC_TOOLS, tool)
-            self.assertIn(path, spec["paths"], path)
+            if path is not None:
+                # POST owner-enforced actions ride MCP only, not the public spec
+                self.assertIn(path, spec["paths"], path)
             self.assertTrue(any(endpoint in r for r in routes), endpoint)
 
 

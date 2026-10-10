@@ -13,6 +13,12 @@ project-compiler-learnings · oddhobb-vision · factory-vision ·
 stonedoorway-thesis · product-pricing · product-supplier-system ·
 fulfilment-automation · vendor/{gelato,printify,slant}.md.
 
+**Visions, verbatim** (founder pastes, word for word — source of record):
+vision-atlas-jlc · physical-world-opportunity · canonical-foundation ·
+famous-rooms-robots · living-worlds · vision-living-house. Condensed imports live alongside
+(glimling-suppliers, project-compiler-learnings); verbatim wins on
+conflict.
+
 **Status** (point-in-time, never contract): HANDOVER.md · todo.md ·
 test-report.md · audit.md · base-contracts.md (measured) · fit-problems ·
 card-audit · card-review-fixes · hark-beta-tests · BUILD_NOTES.md ·

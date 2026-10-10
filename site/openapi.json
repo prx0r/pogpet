@@ -934,6 +934,28 @@
         ]
       }
     },
+    "/backend/api/objects/{object_id}/resolve": {
+      "get": {
+        "operationId": "resolveObject",
+        "summary": "Resolve an agent-addressable object for AR clients (public)",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "object_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
     "/backend/api/videos": {
       "post": {
         "operationId": "performVideo",

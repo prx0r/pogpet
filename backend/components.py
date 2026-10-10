@@ -74,6 +74,26 @@ COMPONENTS = {
                      "inventory": {"Shenzhen": 0, "UK-01": 0},
                      "compatible_projects": ["grimoire_maker"],
                      "packing": {"bag": "B", "label": "B02"}},
+    "OH-SHELL-COTTAGE": {"name": "Cottage shell (personalised exterior)",
+                         "kind": "made",
+                         "suppliers": [{"supplier": "jlc3dp",
+                                        "sku": "SLA-RESIN", "moq": 1}],
+                         "inventory": {"Shenzhen": 0, "UK-01": 0},
+                         "compatible_projects": ["living_cottage_001"],
+                         "packing": {"bag": "B", "label": "B03"}},
+    "OH-LED-STRIP": {"name": "Addressable LED strip, USB", "kind": "stocked",
+                     "suppliers": [{"supplier": "1688", "sku": "LED-WS2812-1M",
+                                    "moq": 20}],
+                     "inventory": {"Shenzhen": 150, "UK-01": 0},
+                     "compatible_projects": ["living_cottage_001"],
+                     "packing": {"bag": "A", "label": "A06"}},
+    "OH-VOICE-MOD": {"name": "Voice module (speaker + mic)",
+                     "kind": "special",
+                     "suppliers": [{"supplier": "m5stack",
+                                    "sku": "ATOM-ECHO-CLASS", "moq": 1}],
+                     "inventory": {"Shenzhen": 0, "UK-01": 0},
+                     "compatible_projects": ["living_cottage_001"],
+                     "packing": {"bag": "B", "label": "B04"}},
 }
 
 RECIPES = {
@@ -89,6 +109,12 @@ RECIPES = {
     "tiny_room_starter": {"label": "Tiny Room Starter", "target_cents": 4999,
                           "target_ccy": "GBP",
                           "components": {"OH-CHARM-SIG": 1, "OH-BOOKLET-8": 1}},
+    "living_cottage_001": {"label": "Living Cottage 001 — Jenny's House",
+                           "target_cents": 3900, "target_ccy": "GBP",
+                           "components": {"OH-SHELL-COTTAGE": 1,
+                                          "OH-LED-STRIP": 1,
+                                          "OH-VOICE-MOD": 1,
+                                          "OH-BOOKLET-8": 1}},
 }
 
 # Gift recipes: component-first, product-second. A line is either a

@@ -471,6 +471,16 @@ async def oddhobb_track_order(order_id: str, owner: str = "", api_key: str = "",
     return _j(await _call("GET", f"/api/orders/track?owner={owner}&order_id={order_id}", api_key=api_key, owner_sig=owner_sig))
 
 
+async def oddhobb_object_get(object_id: str) -> str:
+    """Resolve an agent-addressable object (QR scan): digital asset, capabilities, live event state. Public, no PII."""
+    return _j(await _call("GET", f"/api/objects/{object_id}/resolve"))
+
+
+async def oddhobb_object_state(object_id: str, event: str, owner: str = "", api_key: str = "", owner_sig: str = "") -> str:
+    """Record an agent event on an owned object (working/needs_approval/finished_artwork/visitor/offline/new_message/idle). Owner-enforced."""
+    return _j(await _call("POST", f"/api/objects/{object_id}/state", {"owner": owner, "event": event}, api_key=api_key, owner_sig=owner_sig))
+
+
 async def oddhobb_ideas(person: str='', occasion: str='general', request: str='', owner: str='', subject_id: str='', context: list | None=None, tone: str='funny', budget_cents: int=0, api_key: str='', owner_sig: str='') -> str:
     """Person + occasion + request (+ your relevant agent_memory context facts)
     → ranked creative ideas with reasons. Send facts, never whole memories."""
@@ -2525,6 +2535,7 @@ TOOL_AREAS: dict[str, list] = {
                   oddhobb_candidates, oddhobb_fill_template, oddhobb_quotes,
                   oddhobb_project_check, oddhobb_recipe_check,
                   oddhobb_gift_compile, oddhobb_track_order,
+                  oddhobb_object_get, oddhobb_object_state,
                   oddhobb_ideas, oddhobb_create,
                   oddhobb_render, oddhobb_status, oddhobb_buy,
                   oddhobb_providers, oddhobb_capsule,

@@ -73,6 +73,16 @@ class ComponentsTest(unittest.TestCase):
         done = C.run_status(rid)
         self.assertTrue(done["eligible_to_pack"])
 
+    def test_living_cottage_recipe(self):
+        from backend import components as C
+        r = C.check_recipe("living_cottage_001", "Shenzhen")
+        self.assertTrue(r["ok"])
+        self.assertTrue(r["ready_to_pack"])
+        kinds = {l["component_id"]: l["kind"] for l in r["lines"]}
+        self.assertEqual(kinds["OH-SHELL-COTTAGE"], "made")
+        self.assertEqual(kinds["OH-LED-STRIP"], "stocked")
+        self.assertEqual(kinds["OH-VOICE-MOD"], "special")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -489,8 +489,16 @@ def start(owner: str, subject_id: str, template_id: str, profile: dict | None = 
     template(template_id)  # 404 early
     if not (os.environ.get("FAL_KEY") or "").strip():
         raise EngineError("FAL_KEY not set: generation is fail-closed", 503)
-    jid = "cgj_" + uuid.uuid4().hex[:20]
+    if os.environ.get("CARDGEN_LIVE") != "1":
+        raise EngineError("cardgen spend is off: set CARDGEN_LIVE=1 to let it generate", 503)
+    cap = int(os.environ.get("CARDGEN_DAILY_CAP") or 12)
     t = time.time()
+    with _db() as c:
+        n = c.execute("SELECT COUNT(*) FROM cardgen_jobs WHERE owner=? AND created_at>?",
+                      (owner, t - 86400)).fetchone()[0]
+    if n >= cap:
+        raise EngineError(f"daily card generation cap reached ({cap}/24h)", 429)
+    jid = "cgj_" + uuid.uuid4().hex[:20]
     with _db() as c:
         c.execute("INSERT INTO cardgen_jobs (id,owner,subject_id,template_id,status,created_at,updated_at)"
                   " VALUES (?,?,?,?,?,?,?)", (jid, owner, subject_id, template_id, "queued", t, t))

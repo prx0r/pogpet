@@ -1,6 +1,7 @@
 """REST for the canonical card engine (cardgen). Mounted on the cards blueprint,
 so it inherits its owner resolution, key permissions and CardError handling.
 
+  GET  /api/cardgen/status                         can this server generate? (keys/flags present, no secrets)
   GET  /api/cardgen/templates                      the roster and what each wants from photos
   POST /api/cardgen/recommend {subject_id, occasion, profile?}
        -> ready: templates these photos can make (with the photo ids cast)
@@ -9,6 +10,8 @@ so it inherits its owner resolution, key permissions and CardError handling.
   GET  /api/cardgen/jobs/<job_id>                  status, step, then design + views + price
 """
 from __future__ import annotations
+
+import os
 
 from flask import jsonify, request
 
@@ -22,6 +25,21 @@ def _profile(owner: str, subject_id: str, extra: dict | None) -> dict:
                           (subject_id, owner)).fetchone()
         if r:
             prof["name"] = r["name"]
+            if r["kind"] == "pet":
+                prof["kind"] = "pet"
+                prof["pet_name"] = r["name"]
+    except Exception:
+        pass
+    try:  # what /studio/subjects/<sid>/profile saved: relationship + interests
+        from backend import subjects as S
+        with db.connect() as c:
+            S.ensure_tables(c)
+            saved = S.profile_for(c, owner, subject_id) or {}
+        if saved.get("relationship"):
+            prof["relationship"] = saved["relationship"]
+        ints = (saved.get("profile") or {}).get("interests")
+        if ints:
+            prof["interests"] = list(ints)
     except Exception:
         pass
     for k, v in (extra or {}).items():
@@ -47,6 +65,21 @@ def attach(bp, CardError, card_price, card_url_for, proof_url_for):
             {"id": t["id"], "occasions": t["occasions"], "interests": t["interests"],
              "wants": {k: W.describe(v) for k, v in t["wants"].items()},
              "wants_spec": t["wants"]} for t in E.templates()])
+
+    @bp.get("/api/cardgen/status")
+    def cardgen_status():
+        """Deployment readiness, no secrets: what generation still needs on this server."""
+        import shutil
+        env = lambda k: bool((os.environ.get(k) or "").strip())
+        checks = {"fal_key": env("FAL_KEY"), "openrouter_key": env("OPENROUTER_API_KEY"),
+                  "cardgen_live": os.environ.get("CARDGEN_LIVE") == "1",
+                  "tesseract": bool(shutil.which("tesseract"))}
+        need = [k for k in ("fal_key", "cardgen_live") if not checks[k]]
+        ts = E.templates()
+        return jsonify(ok=True, can_generate=not need, missing=need, checks=checks,
+                       optional_missing=[k for k in ("openrouter_key", "tesseract") if not checks[k]],
+                       templates=len(ts), pet_templates=sum(E.is_pet_template(t) for t in ts),
+                       daily_cap=int(os.environ.get("CARDGEN_DAILY_CAP") or 12))
 
     @bp.post("/api/cardgen/recommend")
     def cardgen_recommend():

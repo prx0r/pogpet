@@ -91,7 +91,17 @@ def attach(bp, CardError, card_price, card_url_for, proof_url_for):
             raise CardError("subject_id is required", 400)
         occ = str(b.get("occasion") or "birthday").strip().lower()[:20]
         prof = _profile(owner, sid, b.get("profile"))
-        return _wrap(lambda: jsonify(E.recommend(owner, sid, occ, prof)))
+        out = _wrap(lambda: E.recommend(owner, sid, occ, prof))
+        # the photo-grid card is offered FIRST: instant, no generation, no daily cap
+        if occ == "birthday":
+            try:
+                from backend import photo_grid_api as PGA
+                out["photo_grid"] = PGA.offer(owner, sid)
+                out["offers"] = ["photo_grid"] + [r["template_id"] for r in out.get("ready") or []]
+            except Exception as e:  # noqa: BLE001
+                out["photo_grid"] = {"template_id": "photo_grid", "ready": False,
+                                     "error": f"{type(e).__name__}: {str(e)[:120]}"}
+        return jsonify(out)
 
     @bp.post("/api/cardgen/make")
     def cardgen_make():

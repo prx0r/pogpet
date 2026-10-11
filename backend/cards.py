@@ -791,6 +791,36 @@ def validate(owner,b):
         if tkey and (not isinstance(tkey, str) or len(tkey) > 200):
             raise CardError("title_art_key must be a short storage key")
         spec["title_art_key"] = tkey if isinstance(tkey, str) else ""
+    if tid == "photo_grid":
+        # photo-grid card (backend/photo_grid.py): the photos ARE the card. Grid,
+        # lettering style and age are closed enums; the header plate is fixed art
+        # so the headline is fixed too. Crops come from photo_select (faces whole).
+        from backend import photo_grid as _pg
+        grid = b.get("grid", len(items))
+        if not isinstance(grid, int) or isinstance(grid, bool) or grid not in _pg.GRIDS:
+            raise CardError(f"grid must be one of {list(_pg.GRIDS)}")
+        if len(slots) != grid:
+            raise CardError(f"A {grid}-photo grid needs exactly {grid} photos")
+        if len({s["photo_id"] for s in slots}) != len(slots):
+            raise CardError("The same photo can't be on the card twice")
+        style = b.get("grid_style", "classic")
+        if not isinstance(style, str) or style not in _pg.STYLE_IDS:
+            raise CardError(f"grid_style must be one of {list(_pg.STYLE_IDS)}")
+        age = b.get("age", 0)
+        if not isinstance(age, int) or isinstance(age, bool) or not 0 <= age <= 120:
+            raise CardError("age must be a whole number 0-120 (0 = no age)")
+        if len(spec["recipient"]) > 30:
+            raise CardError("Photo-grid name max 30 characters")
+        if len(spec["inside"]["right"]["message"]) > 240:
+            raise CardError("Photo-grid inside message max 240 characters")
+        if len(spec["sender"]) > 40:
+            raise CardError("Photo-grid signature max 40 characters")
+        spec["headline"] = "Happy Birthday"
+        spec.update(grid=grid, grid_style=style, age=age)
+        sid = b.get("subject_id", "")
+        spec["subject_id"] = sid[:80] if isinstance(sid, str) else ""
+        ex = b.get("exclude", [])
+        spec["exclude"] = [str(x)[:60] for x in ex][:40] if isinstance(ex, list) else []
     if tid == "birthday_fullbleed":
         # fullbleed product: attached art + bounded copy. Same tight caps;
         # front art is mandatory (attach-art first), other faces optional.
@@ -1383,7 +1413,7 @@ def register(app,owner_denied):
         cols=1 if count<=1 else 2
         rows=max(1,math.ceil(count/cols))
         mm=scenes.FORMATS[spec["format"]]["mm"]
-        for slot in spec["photos"]:
+        for slot in (spec["photos"] if spec["template"]!="photo_grid" else []):
             p=photo(owner,slot["photo_id"])
             cw,ch=slot["crop"][2:]
             dpi=round(min(p["width"]*cw/(mm[0]*.84/cols/25.4),p["height"]*ch/(mm[1]*.49/rows/25.4)))
@@ -2196,4 +2226,6 @@ def register(app,owner_denied):
     # canonical generative engine (cardgen/): recommend -> make job -> fullbleed revision
     from backend import cardgen_api as _cardgen_api
     _cardgen_api.attach(bp, CardError, card_price, card_url_for, proof_url_for)
+    from backend import photo_grid_api as _photo_grid_api
+    _photo_grid_api.attach(bp, CardError)
     app.register_blueprint(bp)

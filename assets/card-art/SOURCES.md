@@ -29,3 +29,15 @@ by prompt contract; renderer composites photo slots + live type on top.
 | `backdrops/birthday_news.png` | navy broadcast studio glow, empty center | Workers AI, TEMPLATE_BACKDROPS prompt |
 | `backdrops/birthday_gold.png` | champagne bokeh, golden spots, empty center | Workers AI, TEMPLATE_BACKDROPS prompt |
 | `backdrops/birthday_wall.png` | cream garland top edge, rest empty | Workers AI, TEMPLATE_BACKDROPS prompt |
+
+## Photo-grid "Happy Birthday" lettering plates (OddHobb-owned, Oct 2026)
+
+`photo-grid/hb_<style>.png`: six transparent header plates for the photo-grid
+card (backend/photo_grid.py), one per lettering style: classic (gold serif +
+copperplate), bold (heavy sans + coral bar), playful (brush script + confetti),
+botanical (calligraphy + watercolour sprigs), sporty (varsity block), kids
+(bubble letters + balloons). Generated ONCE at build time (Hark generate_image,
+2026-10-11) on pure white, un-matted to alpha so they composite exactly over
+white paper, trimmed, max 1600px wide. Every plate was checked by eye: each
+reads exactly "Happy Birthday". Never regenerated at render time; the age and
+the name are typeset from bundled fonts.

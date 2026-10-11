@@ -4615,6 +4615,43 @@ def card_proof_image(did):
     return res
 
 
+_PROOF_FACES = {"front": ("preview", "spread-front"), "inside": ("inside",),
+                "back": ("back", "spread-back")}
+
+
+@app.get("/api/cards/proof/<did>/r<int:rev>/<face>.png")
+def card_proof_face(did, rev, face):
+    """Public front/inside/back of one frozen revision, same capability model as
+    og-image.png: the unguessable design id is the link. This is what MCP hands to
+    ChatGPT/Hark, which cannot send X-API-Key when it displays an image."""
+    from backend import cards as _cards
+    if face not in _PROOF_FACES:
+        return _err("Unknown face — front, inside or back", 404)
+    with db.connect() as c:
+        row = c.execute("SELECT owner FROM card_designs WHERE id=?", (did,)).fetchone()
+        if row is None:
+            return _err("Card not found", 404)
+        owner = row["owner"]
+        if not c.execute("SELECT 1 FROM card_revisions WHERE design_id=? AND revision=?",
+                         (did, rev)).fetchone():
+            return _err("Card not found", 404)
+        ready = c.execute("SELECT 1 FROM card_jobs WHERE owner=? AND design_id=? AND revision=? "
+                          "AND kind IN ('preview','spread') AND status='ready'",
+                          (owner, did, rev)).fetchone()
+    if not ready:
+        return _err("Preview not rendered yet", 409)
+    for kind in _PROOF_FACES[face]:
+        try:
+            p = _cards.local_asset(_cards.key(owner, did, rev, kind))
+        except Exception:
+            continue
+        res = send_file(p, mimetype="image/png", max_age=3600)
+        # a revision never changes once frozen, so the face is cacheable
+        res.headers["Cache-Control"] = "public, max-age=86400, immutable"
+        return res
+    return _err("Preview not rendered yet", 409)
+
+
 def _fulfil_route(order, line_attrs=None):
     """Resolve the frozen fulfilment route for a paid order.
 

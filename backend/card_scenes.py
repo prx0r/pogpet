@@ -41,6 +41,10 @@ TEMPLATES = {
     # No photo slots, no PIL composition. Art is attached (generated or
     # agent-supplied) and stored per revision; live type is set by the
     # renderer in real fonts. Agent supplies art + bounded copy only.
+    # ── photo grid: lettering plate + typeset age/name above the best photos on
+    # white (backend/photo_grid.py). Grids 1/4/6/10, six lettering styles. The
+    # default, can't-fail card: no generation at render time.
+    "photo_grid": {"label": "Birthday photo grid", "headline": "Happy Birthday", "max_photos": 10, "min_photos": 1, "motion": "photo reveal", "bg": "#ffffff", "ink": "#23201b", "accent": "#a8842f", "fonts": {"headline": "fraunces", "body": "fraunces"}},
     "birthday_fullbleed": {"label": "Birthday full-bleed", "headline": "Happy Birthday!", "max_photos": 0, "min_photos": 0, "motion": "art reveal", "bg": "#faf6ee", "ink": "#1e2a3a", "accent": "#b34a30", "fonts": {"headline": "fraunces", "body": "fraunces"}},
 }
 
@@ -669,6 +673,9 @@ def front(design, assets, width=720, height=None, progress=1.0):
     """Designed covers: every template is a real composition — masked photo
     zones slotted into graphics, type in flat zones that never sit on faces.
     Same signature in/out so print, motion, gallery and MCP keep working."""
+    if design.get("template") == "photo_grid":
+        from backend import photo_grid as _pg
+        return _pg.front(design, assets, width, height, progress)
     fmt = FORMATS[design["format"]]
     height = height or round(width * fmt["mm"][1] / fmt["mm"][0])
     tpl = TEMPLATES[design["template"]]
@@ -937,6 +944,9 @@ def inside(design, width=720, height=None, assets=None):
     templates read attached spread art from assets (may be None → cream).
     A fullbleed spread is 10:7 landscape by construction, so an omitted
     height derives from the width — never the portrait ratio."""
+    if design.get("template") == "photo_grid":
+        from backend import photo_grid as _pg
+        return _pg.inside(design, width, height, assets)
     fmt = FORMATS[design["format"]]
     if design.get("template") == "birthday_fullbleed" and height is None:
         height = round(width * 7 / 10)
@@ -1049,7 +1059,7 @@ def print_pdf(design, assets, dest):
     a = front(design,assets,w,h)
     back_img = back(design, w, h, assets=assets)
     pages=[]
-    if design.get("template") == "birthday_fullbleed":
+    if design.get("template") in ("birthday_fullbleed", "photo_grid"):
         # inside spread is landscape (two portrait pages); split it into
         # real halves instead of squeezing it into one portrait panel
         inner = inside(design, w * 2, assets=assets).convert("RGB")

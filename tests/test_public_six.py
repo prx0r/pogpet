@@ -108,6 +108,45 @@ def _people_fake(s):
     return fake_call
 
 
+def _client_call(env):
+    """_call stand-in that hits the real Flask app (owner-signed test headers)."""
+    async def call(method, path, body=None, api_key="", owner_sig=""):
+        r = env["client"].open(path, method=method, json=body, headers=env["headers"])
+        d = r.get_json(silent=True) or {"ok": False, "error": r.get_data(as_text=True)[:200]}
+        if r.status_code >= 400 and isinstance(d, dict):
+            d.setdefault("http_status", r.status_code)
+        return d
+    return call
+
+
+def _no_legacy(monkeypatch):
+    """oddhobb_make must never fall back to the legacy PIL recipe shelf."""
+    from backend.recipes import compiler as C
+
+    def boom(*a, **k):
+        raise AssertionError("legacy PIL shelf called")
+    monkeypatch.setattr(C, "compile", boom)
+
+
+def _cardgen_fake(s, *, ready=None, blocked=None, make=None, seen=None):
+    people = _people_fake(s)
+    seen = seen if seen is not None else []
+
+    async def fake_call(method, path, body=None, api_key="", owner_sig=""):
+        if path.startswith("/api/oddhobb/people"):
+            return await people(method, path, body)
+        if path == "/api/cardgen/recommend":
+            seen.append(("recommend", body))
+            return {"ok": True, "ready": ready or [], "blocked": blocked or [], "photos_indexed": 1}
+        if path == "/api/cardgen/make":
+            seen.append(("make", body))
+            if make:
+                return make(body)
+            return {"ok": True, "job_id": "cgj_" + body["template_id"], "status": "queued"}
+        raise AssertionError(f"unexpected call {method} {path}")
+    return fake_call
+
+
 def test_make_needs_photos_not_errors(env, monkeypatch):
     import json as _json
     from backend import mcp_server as M
@@ -115,48 +154,139 @@ def test_make_needs_photos_not_errors(env, monkeypatch):
     with db.connect() as conn:
         s = sub.create_subject(conn, env["owner"], "Dad")
         conn.commit()
-    monkeypatch.setattr(M, "_call", _people_fake({"id": s["id"]}))
-
-    async def fake_bundle(*a, **k):
-        raise AssertionError("no renders on needs_input")
-    monkeypatch.setattr(M, "_card_spread_bundle", fake_bundle)
-
+    _no_legacy(monkeypatch)
+    monkeypatch.setattr(M, "_call", _cardgen_fake(
+        {"id": s["id"]}, blocked=[{"template_id": "golf_lip_v1",
+                                   "shortfall": ["needs a clear, happy solo photo of them"]}]))
     out = asyncio.run(M.oddhobb_make(
-        subject_id=s["id"], request="birthday, golf, dry funny", count=4,
+        subject_id=s["id"], request="birthday, golf, dry funny", count=4, painted=True,
         owner=env["owner"]))
     body = _json.loads(out[0].text)
-    assert body["ok"] is True and body["status"] == "needs_input", body
+    assert body["status"] == "needs_input" and body["error_code"] == "NEEDS_PHOTO", body
     assert body["requires_action"]["type"] == "add_media"
     assert body["requires_action"]["subject_id"] == s["id"]
+    assert body["shortfall"] == ["needs a clear, happy solo photo of them"]
 
 
-def test_make_returns_finished_options(env, monkeypatch):
+def test_make_reads_interests_and_joke_and_paints(env, monkeypatch):
     import json as _json
     from backend import mcp_server as M
     s, _pids = _dad(env)
-    monkeypatch.setattr(M, "_call", _people_fake(s))
-
-    async def fake_bundle(design_id, revision, owner, api_key="", owner_sig="", timeout_s=90):
-        base = f"https://oddhobb.com/backend/api/cards/{design_id}/r{revision}"
-        return {"ok": True,
-                "views": {"front": base + "/preview", "inside": base + "/inside",
-                          "back": base + "/back"},
-                "views_abs": {"front": base + "/preview", "inside": base + "/inside",
-                              "back": base + "/back"},
-                "proof_url": f"https://oddhobb.com/proof/{design_id}"}
-    monkeypatch.setattr(M, "_card_spread_bundle", fake_bundle)
-
+    seen = []
+    _no_legacy(monkeypatch)
+    monkeypatch.setattr(M, "_call", _cardgen_fake(s, seen=seen, ready=[
+        {"template_id": "solo_magazine_cover_v1", "fit": 1.5, "photos": {}},
+        {"template_id": "golf_lip_v1", "fit": 1.5, "photos": {}},
+        {"template_id": "comic_shock_v1", "fit": 1.5, "photos": {}}]))
     out = asyncio.run(M.oddhobb_make(
-        subject_id=s["id"], request="birthday golf dry funny", count=2,
-        owner=env["owner"]))
+        subject_id=s["id"], request="funny birthday card for Dad, he loves golf but is terrible at it",
+        count=2, painted=True, owner=env["owner"]))
+    body = _json.loads(out[0].text)
+    assert body["ok"] is True and body["status"] == "working", body
+    assert body["engine"] == "cardgen"
+    assert [o["template"] for o in body["options"]] == ["golf_lip_v1", "solo_magazine_cover_v1"]
+    assert body["request_read"]["interests"][0] == "golf"
+    assert "terrible at golf" in body["request_read"]["joke"]
+    prof = [b for k, b in seen if k == "make"][0]["profile"]
+    assert "golf" in prof["interests"] and any("terrible at golf" in m for m in prof["memories"])
+    assert [b for k, b in seen if k == "recommend"][0]["profile"]["tone"] == "funny"
+
+
+def test_make_daily_cap_is_typed_not_legacy(env, monkeypatch):
+    import json as _json
+    from backend import mcp_server as M
+    s, _pids = _dad(env)
+    _no_legacy(monkeypatch)
+    monkeypatch.setattr(M, "_call", _cardgen_fake(
+        s, ready=[{"template_id": "golf_lip_v1", "fit": 3}],
+        make=lambda b: {"ok": False, "error": "daily card generation cap reached (6/24h)", "http_status": 429}))
+    body = _json.loads(asyncio.run(M.oddhobb_make(
+        subject_id=s["id"], request="birthday golf", painted=True, owner=env["owner"]))[0].text)
+    assert body["ok"] is False and body["error_code"] == "CARDGEN_DAILY_CAP", body
+    assert "options" not in body
+
+
+def test_make_unavailable_is_typed_not_legacy(env, monkeypatch):
+    import json as _json
+    from backend import mcp_server as M
+    s, _pids = _dad(env)
+    _no_legacy(monkeypatch)
+    monkeypatch.setattr(M, "_call", _cardgen_fake(
+        s, ready=[{"template_id": "golf_lip_v1", "fit": 3}],
+        make=lambda b: {"ok": False, "error": "FAL_KEY not set: generation is fail-closed", "http_status": 503}))
+    body = _json.loads(asyncio.run(M.oddhobb_make(
+        subject_id=s["id"], request="birthday golf", painted=True, owner=env["owner"]))[0].text)
+    assert body["ok"] is False and body["error_code"] == "CARDGEN_UNAVAILABLE", body
+    assert "FAL_KEY" in body["reason"]
+
+
+def _painted_card(env):
+    img = Image.new("RGB", (1000, 1400), (40, 120, 60))
+    ins = Image.new("RGB", (1400, 980), (255, 253, 247))
+    design, _w, _j = cards.attach_art(env["owner"], "", {"front": img, "inside": ins},
+                                      copy={"headline": "STILL ON THE LIP.", "recipient": "Dad",
+                                            "sender": "", "inside_message": "Another year older."},
+                                      art_source="cardgen:golf_lip_v1")
+    return design
+
+
+def test_change_painted_card_edits_words_not_art(env, monkeypatch):
+    import json as _json
+    from backend import mcp_server as M
+    d = _painted_card(env)
+    monkeypatch.setattr(M, "_call", _client_call(env))
+    before = cards.record(env["owner"], d["id"], d["revision"])["spec"]
+    out = asyncio.run(M.oddhobb_change(
+        design_id=d["id"], owner=env["owner"],
+        instruction="change the inside message to 'Happy birthday Dad. Lots of love, Tom'"))
     body = _json.loads(out[0].text)
     assert body["ok"] is True and body["status"] == "ready", body
-    assert len(body["options"]) == 2
-    for opt in body["options"]:
-        assert set(opt["views"]) == {"front", "inside", "back"}, opt
-        assert opt["price_cents"] == 299 and opt["proof_url"]
+    assert body["revision"] == d["revision"] + 1 and body["art_regenerated"] is False
+    assert body["inside_message"] == "Happy birthday Dad." and body["signature"] == "Lots of love, Tom"
+    after = cards.record(env["owner"], d["id"], body["revision"])["spec"]
+    assert after["front_art_key"] == before["front_art_key"]
+    assert after["inside_art_key"] == before["inside_art_key"]
+    assert set(body["views"]) == {"front", "inside", "back"}
+    for v in body["views"].values():
+        assert "/backend/api/cards/proof/" + d["id"] + "/r" + str(body["revision"]) in v
+        assert "api_key" not in v and "owner=" not in v
+    # the public face URL opens with no key at all
+    path = body["views"]["inside"].split("/backend", 1)[1]
+    r = app.test_client().get(path)
+    assert r.status_code == 200 and r.data[:4] == b"\x89PNG"
+
+
+def test_change_painted_card_without_words_asks(env, monkeypatch):
+    import json as _json
+    from backend import mcp_server as M
+    d = _painted_card(env)
+    monkeypatch.setattr(M, "_call", _client_call(env))
+    body = _json.loads(asyncio.run(M.oddhobb_change(
+        design_id=d["id"], owner=env["owner"], instruction="make it nicer"))[0].text)
+    assert body["error_code"] == "NEEDS_TEXT" and body["status"] == "needs_input", body
+
+
+def test_get_job_returns_three_public_views(env, monkeypatch):
+    import json as _json
+    from backend import mcp_server as M
+    d = _painted_card(env)
+    real = _client_call(env)
+
+    async def fake_call(method, path, body=None, api_key="", owner_sig=""):
+        if path.startswith("/api/cardgen/jobs/cgj_running"):
+            return {"ok": True, "status": "running", "step": "generate", "template_id": "golf_lip_v1"}
+        if path.startswith("/api/cardgen/jobs/cgj_ready"):
+            return {"ok": True, "job_id": "cgj_ready", "status": "ready", "step": "done",
+                    "template_id": "golf_lip_v1", "design_id": d["id"], "revision": d["revision"]}
+        return await real(method, path, body)
+    monkeypatch.setattr(M, "_call", fake_call)
+    run = _json.loads(asyncio.run(M.oddhobb_get(design_id="cgj_running", owner=env["owner"]))[0].text)
+    assert run["status"] == "working" and run["next_actions"] == ["get"], run
+    body = _json.loads(asyncio.run(M.oddhobb_get(design_id="cgj_ready", owner=env["owner"]))[0].text)
+    assert body["status"] == "ready" and body["template"] == "golf_lip_v1", body
+    assert [a["kind"] for a in body["artifacts"]] == ["front", "inside", "back"]
     assert body["price"] == {"amount_cents": 299, "currency": "GBP"}
-    assert body["next_actions"] == ["change", "buy"]
+    assert body["inside_message"] == "Another year older."
 
 
 def test_change_rewrites_copy(env, monkeypatch):

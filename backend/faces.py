@@ -84,15 +84,11 @@ def _recognizer_get():
     return _recognizer
 
 
-def detect_boxes(bgr, min_score: float = 0.5) -> list:
-    """YuNet face rows for one BGR image. Empty list when unavailable."""
-    try:
-        from backend.cards import _face_detector_get
-        det = _face_detector_get()
-    except Exception:
-        return []
-    if det is None:
-        return []
+DETECT_SIDES = (1280, None, 640)   # max image side per pass; None = native size
+
+
+def _detect_once(det, bgr, min_score: float) -> list:
+    import numpy as _np
     try:
         h, w = bgr.shape[:2]
         det.setInputSize((w, h))
@@ -102,11 +98,57 @@ def detect_boxes(bgr, min_score: float = 0.5) -> list:
     if raw is None:
         return []
     try:
-        import numpy as _np
         arr = _np.asarray(raw, dtype=_np.float64).reshape(-1, 15)
     except Exception:
         return []
     return [row for row in arr if float(row[-1]) >= min_score]
+
+
+def _iou(a, b) -> float:
+    ax, ay, aw, ah = a[:4]
+    bx, by, bw, bh = b[:4]
+    ix = max(0.0, min(ax + aw, bx + bw) - max(ax, bx))
+    iy = max(0.0, min(ay + ah, by + bh) - max(ay, by))
+    inter = ix * iy
+    return inter / max(aw * ah + bw * bh - inter, 1e-6)
+
+
+def detect_boxes(bgr, min_score: float = 0.5) -> list:
+    """YuNet face rows (x,y,w,h, 5 landmarks, score) in the image's own pixels.
+
+    YuNet's anchors top out around 300 px faces, so a close-up phone selfie at
+    full 2048 px often returns NOTHING. Detect on a <=1280 px copy first, then
+    native and 640 px, scale rows back and merge (IoU > 0.4 = same face).
+    Deterministic, so a re-run maps to the same boxes. Empty when unavailable.
+    """
+    try:
+        from backend.cards import _face_detector_get
+        det = _face_detector_get()
+    except Exception:
+        return []
+    if det is None:
+        return []
+    try:
+        import cv2 as _cv2
+    except Exception:
+        return _detect_once(det, bgr, min_score)
+    h, w = bgr.shape[:2]
+    found: list = []
+    for side in DETECT_SIDES:
+        s = 1.0 if side is None else min(1.0, side / max(h, w))
+        if side is not None and s >= 1.0 and any(x is None for x in DETECT_SIDES):
+            continue  # this pass would just repeat the native one
+        img = bgr if s == 1.0 else _cv2.resize(bgr, (max(1, round(w * s)), max(1, round(h * s))),
+                                               interpolation=_cv2.INTER_AREA)
+        for row in _detect_once(det, img, min_score):
+            row = row.copy()
+            row[:14] = row[:14] / s
+            dup = next((i for i, f in enumerate(found) if _iou(f, row) > 0.4), None)
+            if dup is None:
+                found.append(row)
+            elif float(row[-1]) > float(found[dup][-1]):
+                found[dup] = row
+    return found
 
 
 def embed_face(bgr, face_row) -> list | None:

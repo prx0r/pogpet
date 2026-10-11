@@ -95,3 +95,26 @@ class UnitsTest(unittest.TestCase):
                 p.stop()
             import shutil
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class MultiScaleDetect(unittest.TestCase):
+    def test_rows_scale_back_to_native_pixels(self):
+        import numpy as np
+        from unittest import mock
+        from backend import faces as FC
+        calls = []
+
+        class Det:
+            def setInputSize(self, wh): self.wh = wh
+            def detect(self, img):
+                calls.append(img.shape[:2])
+                if max(img.shape[:2]) == 1280:   # only the downscaled pass "sees" the big face
+                    s = 1280 / 2048
+                    return 1, np.array([[600 * s, 300 * s, 500 * s, 600 * s] + [0] * 10 + [0.9]])
+                return 0, None
+        with mock.patch("backend.cards._face_detector_get", return_value=Det()):
+            rows = FC.detect_boxes(np.zeros((1536, 2048, 3), np.uint8))
+        self.assertEqual(len(rows), 1)
+        self.assertAlmostEqual(rows[0][0], 600, places=3)
+        self.assertAlmostEqual(rows[0][3], 600, places=3)
+        self.assertGreaterEqual(len(calls), 2)

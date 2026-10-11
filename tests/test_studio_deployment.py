@@ -38,7 +38,8 @@ class StudioDeployment(unittest.TestCase):
                 self.assertEqual(len(failures),1);self.assertIn('Studio backend not ready',failures[0])
                 with urlopen(base+'/studio') as response:html=response.read().decode()
                 self.assertLess(html.index('window.__FIGG_TOKEN'),html.index('function cardReady'))
-                self.assertIn('/js/cards-studio.js?v=studio-2',html)
+                self.assertIn('/js/cards-studio.js?v=',html);self.assertIn('/js/cards-auto.js?v=',html)
+                self.assertNotIn('/js/card-gallery.js',html)
         finally:
             for server in (bridge,old):server.shutdown();server.server_close()
             for thread in threads:thread.join(timeout=2)

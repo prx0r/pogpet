@@ -1,5 +1,11 @@
 # AGENTS.md: OddHobb product packs
 
+> **Live and die by this file.** The pack is the first thing, not the site,
+> not the listing copy, not a render. Every product is its specs
+> (`product.json`), its exact-mesh PNGs (`listing/*.png` from the print
+> file + `renders.json`), and its ready-to-print OBJ zip — the exact file
+> sent to JLC (`print/<SKU>-<process>.zip` + `preflight.json` on that sha).
+
 You are designing, changing or shipping an OddHobb product. **A product exists only as a pack in `catalog/packs/<SKU>/`.** A product is "finished" only when `tools/validate_pack.py` says so. Your opinion, a nice render, or a passing preflight on its own is not the gate.
 
 ## The one rule
@@ -57,7 +63,7 @@ SKU = `FAMILY-VARIANT[-...]`, upper case, matches the folder name.
 ## Workflow for a new product
 1. `python3 catalog/tools/new_pack.py <SKU> "<name>" <family> personalised|fixed <supplier> <process>`
 2. Build the geometry from the product line's official template; keep its locked interfaces (record them in `geometry.locked_features`).
-3. Produce the print file with the pipeline (`pipeline/run_product.sh` for meshes: prep → repair → pack). Put it in `print/`, write its sha256 into product.json.
+3. Produce the print file with the pipeline (`scripts/product-pipeline/run_product.sh` for meshes: prep → repair → pack). Put it in `print/`, write its sha256 into product.json.
 4. `validate_pack.py --preflight`. Fix or acknowledge (in writing) every WARN. Copy measured dims/volume into `geometry`.
 5. Render the listing images **from the zip in print/** (`pipeline/bl_listing.py`), save PNGs into listing/, declare them in `listing.images`, then `tools/register_renders.py`.
 6. Measure every slot on the real geometry (free area, surface, min cap height for the process). Save the measurement to `evidence/`, then set `validated: true`. Only then `offered: true`.

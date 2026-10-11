@@ -172,6 +172,23 @@ def render(shape: str, photo: Path | None, label: str, out_path: Path,
             for x in range(70, 650, 22):
                 d.line([x, y, x + 11, y], fill=(150, 144, 160), width=3)
 
+    elif shape == "tattoo":
+        # skin-tone patch + waterslide sheen: the transfer look
+        d.rounded_rectangle([110, 150, 610, 570], radius=26, fill=(232, 190, 160),
+                            outline=(210, 165, 135), width=4)
+        paste([190, 210, 530, 510], radius=18)
+        d.rounded_rectangle([190, 210, 530, 510], radius=18, outline=(255, 255, 255), width=3)
+        d.text([360, 545], "peels on · lasts ~a week", font=_font(22), fill=(120, 85, 65), anchor="mm")
+
+    elif shape == "magnet":
+        # fridge magnet: thick rounded slab, gloss bar, photo window
+        d.rounded_rectangle([130, 140, 590, 580], radius=40, fill=PAPER,
+                            outline=(226, 220, 230), width=5)
+        paste([175, 185, 545, 505], radius=28)
+        d.rounded_rectangle([175, 185, 545, 505], radius=28, outline=VIOLET, width=4)
+        d.line([210, 230, 420, 230], fill=(255, 255, 255), width=10)
+        d.text([360, 545], "2×3in · fridge-ready", font=_font(22), fill=(150, 146, 158), anchor="mm")
+
     elif shape == "paper":
         d.rounded_rectangle([40, 130, 680, 590], radius=8, fill=(38, 32, 50),
                             outline=(70, 62, 86), width=4)

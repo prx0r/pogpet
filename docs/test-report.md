@@ -1,6 +1,6 @@
 # Test report — oddhobb
 
-> Run 2026-10-10 14:11 · `scripts/test_site.py` · **80/82 passed** · 0 credits
+> Run 2026-10-11 10:34 · `scripts/test_site.py` · **80/82 passed** · 0 credits
 
 | # | Result | Test | Detail |
 |---|---|---|---|
@@ -43,12 +43,12 @@
 | 37 | PASS | security headers on public pages | nosniff/SAMEORIGIN |
 | 38 | PASS | greet leads with recipient, not upload | recipient-first positioning |
 | 39 | PASS | trademark doc exists |  |
-| 40 | PASS | GET /api/seo/products.json (public) | 13 products |
+| 40 | PASS | GET /api/seo/products.json (public) | 15 products |
 | 41 | PASS | GET /api/seo/faq.json (public) | 422 pairs |
 | 42 | PASS | GET /guides/greeting_card (FAQPage schema) | HTTP 200 10792b |
 | 43 | PASS | google feed carries AI attributes | HTTP 200 |
 | 44 | PASS | shopify feed Q&A in body_html | greeting-card |
-| 45 | PASS | GET /api/companygraph (public) | 20 products, 7 caps |
+| 45 | PASS | GET /api/companygraph (public) | 22 products, 7 caps |
 | 46 | PASS | page names bobdod as helper |  |
 | 47 | PASS | robots.txt allows AI crawlers | HTTP 200 |
 | 48 | PASS | GET /learn/ hub | HTTP 200 |
@@ -57,28 +57,28 @@
 | 51 | PASS | Q&A volume >= 200 pairs (GEO bank) | 422 pairs |
 | 52 | PASS | sitemap.xml lists learn + guides | HTTP 200 28 urls |
 | 53 | PASS | GET /sections | 5 sections |
-| 54 | PASS | GET /catalog | 21 products |
+| 54 | PASS | GET /catalog | 23 products |
 | 55 | PASS | autosort groups (person/photos/r2_key/mesh_id) | 4 groups |
 | 56 | PASS | rename round-trip (who's this? -> saved) | Nibble -> NibbleTmp -> Nibble |
 | 57 | PASS | GET /flow (sample owner) | stage=ready active=msh_70edae28a4 |
 | 58 | PASS | flow hint present | Ready — every product below previews against this  |
 | 59 | PASS | sample mesh products (inheritance) | 8 bound |
-| 60 | PASS | GET /products (13 previews, cached) | 13 items |
+| 60 | PASS | GET /products (15 previews, cached) | 15 items |
 | 61 | PASS | preview image fetchable | HTTP 200 image/png |
 | 62 | PASS | GET styles |  |
 | 63 | PASS | GET acts |  |
 | 64 | PASS | GET credits |  |
 | 65 | PASS | GET me |  |
-| 66 | PASS | FEED google.xml (public) | HTTP 200, 13 items |
+| 66 | PASS | FEED google.xml (public) | HTTP 200, 15 items |
 | 67 | PASS | FEED image_link fetchable (no token) | HTTP 200 image/png |
-| 68 | PASS | FEED shopify.json (public) | HTTP 200, 13 products |
+| 68 | PASS | FEED shopify.json (public) | HTTP 200, 15 products |
 | 69 | PASS | llms.txt served | HTTP 200 |
 | 70 | PASS | shopify-app scaffold | scopes=write_products,read_products,write_product_listings,read_product_listings,write_pub |
 | 71 | PASS | sync-catalog.mjs syntax | clean |
 | 72 | PASS | API catalog public -> 200 | HTTP 200 |
 | 73 | PASS | API bad token -> 401 | HTTP 401 |
 | 74 | PASS | POST /premesh (passthrough recipe) | HTTP 200 x-premesh-ok=1 bytes=7643 |
-| 75 | PASS | MCP initialize (token) | session 434cd6e2 |
+| 75 | PASS | MCP initialize (token) | session 363926f8 |
 | 76 | PASS | MCP tools/list >= 30 | 120 tools |
 | 77 | PASS | MCP foundation tools present |  |
 | 78 | PASS | MCP tools/call figg_flow | stage=ready mesh=msh_70edae28a4 |

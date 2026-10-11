@@ -1,5 +1,14 @@
 # AGENTS.md — oddhobb / figgsite
 
+> **Live and die by the product pack.** The very first thing is the pack:
+> `catalog/packs/<SKU>/` with full product specs (`product.json`), PNG
+> images rendered from the exact mesh (`listing/*.png` + `renders.json`
+> provenance), and the ready-to-print OBJ zip — the exact file sent to JLC
+> (`print/<SKU>-<process>.zip` + `print/preflight.json` on that sha).
+> A product exists only as a pack. Finished only when
+> `python3 catalog/tools/validate_pack.py catalog/packs/<SKU> --preflight`
+> says LISTABLE/PROVEN. Rules: `catalog/AGENTS.md`.
+>
 > **Start here: `SPRINT.md`** — the current execution focus (packs → cards
 > → Prodigi → transformations). Then `HANDOVER.md` (session status).
 > This file = map + rules.

@@ -1261,6 +1261,18 @@ def register(app,owner_denied):
                            "headlines use use_for=headline, inside body uses body.",
                        mcp_status=mcp_status())
 
+    @bp.get("/api/cards/slots/<template_id>")
+    def slots(template_id):
+        """Editable slots, limits, defaults + approved joke shelf for a
+        template. Served by the canonical card service (same source MCP
+        uses). Jokes are template data: pick joke_id, don't freestyle."""
+        from backend import card_service as _svc
+        try:
+            return jsonify(ok=True, **_svc.get_slots(template_id),
+                           mcp_status=mcp_status())
+        except _svc.ServiceError as e:
+            return jsonify(ok=False, code=e.code, error=str(e)), e.status
+
     @bp.get("/api/cards/photos")
     def photos():
         owner=request.card_owner
@@ -1346,29 +1358,23 @@ def register(app,owner_denied):
             via=str(b.get("via") or "").strip().lower()[:10]
             if via not in ("ui", "rest"):
                 via = "rest"
-        with db.connect() as c:
-            c.execute("BEGIN IMMEDIATE")
-            spec=validate(owner,b.get("spec",{}))
-            old=c.execute("SELECT * FROM card_designs WHERE id=?",(did,)).fetchone()
-            if old:
-                if old["owner"]!=owner:
-                    raise CardError("Card not found",404)
-                if b.get("expected_revision")!=old["latest"]:
-                    raise CardError("This card changed elsewhere. Reload before saving.",409)
-                prev=c.execute("SELECT spec FROM card_revisions WHERE design_id=? AND revision=?",(did,old["latest"])).fetchone()
-                if prev["spec"]==json_dump(spec):
-                    rev=old["latest"]
-                else:
-                    rev=old["latest"]+1
-                    c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",(did,rev,json_dump(spec),time.time()))
-                    c.execute("UPDATE card_designs SET latest=?,updated_at=?,via=? WHERE id=?",(rev,time.time(),via,did))
-            else:
-                if b.get("id"):
-                    raise CardError("Card not found",404)
-                rev=1;t=time.time()
-                c.execute("INSERT INTO card_designs (id,owner,latest,created_at,updated_at,storage_owner,via) VALUES (?,?,?,?,?,?,?)",(did,owner,rev,t,t,owner,via))
-                c.execute("INSERT INTO card_revisions VALUES (?,?,?,?)",(did,rev,json_dump(spec),t))
-            c.commit()
+        from backend import card_service as _svc
+        _via = "mcp" if request.headers.get("X-MCP", "") == "1" else \
+            (str(b.get("via") or "").strip().lower()[:10] or "rest")
+        if _via not in ("ui", "rest", "mcp"):
+            _via = "rest"
+        try:
+            out = _svc.save(owner, None if not b.get("id") else did,
+                            b.get("spec", {}),
+                            expected_revision=None if not b.get("id") else b.get("expected_revision"),
+                            via=_via)
+        except _svc.ServiceError as e:
+            if e.code == "CHECKOUT_NOT_READY" and "changed elsewhere" in str(e):
+                raise CardError("This card changed elsewhere. Reload before saving.", 409)
+            if "not found" in str(e).lower():
+                raise CardError("Card not found", 404)
+            raise CardError(str(e), e.status)
+        did, rev, spec = out["id"], out["revision"], out["spec"]
         warnings=[]
         locked = (scenes.TEMPLATES.get(spec["template"], {}).get("fonts") or {})
         if isinstance(locked, dict) and locked:

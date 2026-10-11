@@ -3276,6 +3276,54 @@ def videos_feed():
     return jsonify({"ok": True, "items": items, "count": len(items)})
 
 
+@app.post("/api/pog/laugh")
+def pog_laugh():
+    """Pog button: a laugh happened at t_seconds in this video. Returns the
+    laugh id; follow with /api/pog/why to say what got you."""
+    import time as _t
+    import uuid as _u
+    body = request.get_json(silent=True) or {}
+    owner = (body.get("owner") or "anon").strip()[:80] or "anon"
+    vid = str(body.get("video_id") or "")[:80]
+    if not vid:
+        return jsonify(ok=False, error="video_id required"), 400
+    try:
+        t = max(0.0, float(body.get("t_seconds") or 0))
+    except (TypeError, ValueError):
+        t = 0.0
+    lid = "pog_" + _u.uuid4().hex[:16]
+    with db.connect() as c:
+        c.execute("INSERT INTO pog_feedback (id,owner,video_id,t_seconds,kind,why,why_labels,created_at) VALUES (?,?,?,?,?,?,?,?)",
+                  (lid, owner, vid, t, "pog", "", "[]", _t.time()))
+        c.commit()
+    return jsonify(ok=True, laugh_id=lid, t_seconds=t)
+
+
+@app.post("/api/pog/why")
+def pog_why():
+    """Why did you laugh: free text + auto theory labels (mechanism refs).
+    Stored on the laugh row; feeds the experiments evidence loop."""
+    import json as _j
+    body = request.get_json(silent=True) or {}
+    lid = str(body.get("laugh_id") or "")[:80]
+    why = str(body.get("why") or "").strip()[:2000]
+    if not lid or not why:
+        return jsonify(ok=False, error="laugh_id and why are required"), 400
+    try:
+        from backend.creative import theory as _th
+        labels = _th.classify_comment(why)
+    except Exception:  # noqa: BLE001
+        labels = {"label": "GENERIC_POSITIVE", "confidence": 0.0}
+    with db.connect() as c:
+        row = c.execute("SELECT * FROM pog_feedback WHERE id=?", (lid,)).fetchone()
+        if not row:
+            return jsonify(ok=False, error="unknown laugh — Pog first, then explain"), 404
+        c.execute("UPDATE pog_feedback SET kind='explained', why=?, why_labels=? WHERE id=?",
+                  (why, _j.dumps(labels), lid))
+        c.commit()
+    return jsonify(ok=True, laugh_id=lid, labels=labels)
+
+
 @app.post("/api/standup/render")
 def standup_render():
     """Render a shareable standup video (pose bake + edge-tts). CPU only."""

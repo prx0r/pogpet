@@ -338,7 +338,7 @@ def main() -> int:
     try:
         c = jget("/catalog")
         ids = {p["id"] for p in c["products"]}
-        rec("GET /catalog", c["ok"] and c["count"] == 21 and "jigsaw" in ids
+        rec("GET /catalog", c["ok"] and c["count"] == 23 and "jigsaw" in ids and "tattoo" in ids and "magnet" in ids
             and all("emoji" in p and "section" in p for p in c["products"]),
             f"{c['count']} products")
     except Exception as e:  # noqa: BLE001
@@ -407,8 +407,8 @@ def main() -> int:
     try:
         pr = jget("/products?owner=anon")
         items = pr.get("items", [])
-        rec("GET /products (13 previews, cached)",
-            pr["ok"] and len(items) == 13 and pr.get("active_mesh_id"),
+        rec("GET /products (15 previews, cached)",
+            pr["ok"] and len(items) == 15 and pr.get("active_mesh_id"),
             f"{len(items)} items")
         if items:
             img = items[0]["image"]
@@ -420,7 +420,7 @@ def main() -> int:
                 ic == 200 and ih.get("Content-Type", "").startswith("image"),
                 f"HTTP {ic} {ih.get('Content-Type', '')}")
     except Exception as e:  # noqa: BLE001
-        rec("GET /products (13 previews, cached)", False, e)
+        rec("GET /products (15 previews, cached)", False, e)
     for path, label in [("/styles", "styles"), ("/acts", "acts"),
                         ("/credits?owner=anon", "credits"),
                         ("/me?owner=anon", "me")]:

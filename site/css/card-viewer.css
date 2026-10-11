@@ -1,0 +1,42 @@
+/* OddHobb card/product viewer: middle stage + arrows. Smooth slide, no deps. */
+.cv { position: relative; margin: 0 0 18px; }
+.cv--hidden { display: none; }
+.cv-head { margin: 0 0 8px; }
+.cv-head h3 { margin: 0 0 2px; font-size: 1.05rem; }
+.cv-head p { margin: 0; opacity: .7; font-size: .9rem; }
+.cv-stage-wrap { position: relative; display: flex; align-items: stretch; gap: 6px; }
+.cv-arrow {
+  flex: 0 0 40px; border: 1px solid #e3e3e3; background: #fff; border-radius: 12px;
+  font-size: 1.4rem; line-height: 1; cursor: pointer; color: #333; min-height: 200px;
+}
+.cv-arrow:hover { background: #f4f0ff; border-color: #c9b8ff; }
+.cv-arrow:disabled { opacity: .3; cursor: default; }
+.cv-track-view { overflow: hidden; flex: 1 1 auto; border-radius: 14px; }
+.cv-track {
+  display: flex; height: 100%; margin: 0; padding: 0; list-style: none;
+  transition: transform .38s cubic-bezier(.22,.8,.28,1);
+  will-change: transform;
+}
+.cv-slide { flex: 0 0 100%; display: flex; justify-content: center; align-items: center; background: #faf9fc; min-height: 200px; }
+.cv-slide img { max-width: 100%; max-height: 340px; width: auto; height: auto; border-radius: 8px; box-shadow: 0 4px 18px rgba(60,20,120,.14); }
+.cv-slide--missing { color: #999; font-size: .9rem; }
+.cv-meta { display: flex; align-items: baseline; gap: 10px; margin: 10px 2px 0; }
+.cv-title { font-weight: 700; flex: 1 1 auto; }
+.cv-price { font-weight: 700; color: #5b21b6; }
+.cv-views { display: flex; gap: 6px; margin: 8px 2px 0; }
+.cv-view-btn { border: 1px solid #e3e3e3; background: #fff; border-radius: 999px; padding: 4px 12px; font-size: .82rem; cursor: pointer; }
+.cv-view-btn[aria-pressed="true"] { background: #5b21b6; border-color: #5b21b6; color: #fff; }
+.cv-dots { display: flex; gap: 6px; justify-content: center; margin: 10px 0 0; }
+.cv-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid #b9a8e8; background: transparent; padding: 0; cursor: pointer; }
+.cv-dot[aria-current="true"] { background: #5b21b6; border-color: #5b21b6; }
+.cv-cta { display: flex; gap: 8px; margin: 10px 2px 0; }
+.cv-buy { flex: 1 1 auto; background: #5b21b6; color: #fff; border: 0; border-radius: 12px; padding: 10px; font-size: 1rem; cursor: pointer; }
+.cv-buy:disabled { opacity: .5; cursor: default; }
+.cv-note { font-size: .82rem; opacity: .65; margin: 6px 2px 0; }
+@media (max-width: 560px) {
+  .cv-arrow { flex-basis: 34px; min-height: 160px; }
+  .cv-slide img { max-height: 240px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cv-track { transition: none; }
+}

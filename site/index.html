@@ -793,10 +793,13 @@
   <script src="/js/pulse-loader.js?v=1" defer></script>
   <link rel="stylesheet" href="/css/cards-studio.css">
   <link rel="stylesheet" href="/css/cards-auto.css?v=1">
+  <link rel="stylesheet" href="/css/card-viewer.css">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/api-client.js?v=studio-3"></script>
   <script src="/js/cards-studio.js?v=studio-4"></script>
-  <script src="/js/cards-auto.js?v=2"></script>
+  <script src="/js/cards-auto.js?v=3"></script>
+  <script src="/js/card-viewer.js?v=cv-1"></script>
+  <script src="/vendor/page-flip/page-flip.browser.js"></script>
 
   <script src="/js/oddy.js"></script>
   <link rel="stylesheet" href="/vendor/swiper/swiper-bundle.min.css">
@@ -5049,6 +5052,7 @@
               '<div class="feed__scene">' + (item.scene || "video") +
                 (item.duration ? " · " + Math.round(item.duration) + "s" : "") + '</div>' +
               (item.id ? '<button class="feed__share" type="button" data-share="' + item.id + '">Share →</button><span class="feed__sharemsg" aria-live="polite"></span>' : '') +
+              (item.id ? '<button class="feed__share feed__pog" type="button" data-pog="' + item.id + '">Pog 😂</button><span class="feed__sharemsg" aria-live="polite"></span>' : '') +
             '</div></div>' +
           '</div>';
         host.appendChild(slide);
@@ -5150,6 +5154,30 @@
               } else { done(url); }
             })
             .catch(function (err) { if (note) note.textContent = err.message || String(err); });
+        });
+      });
+      host.querySelectorAll("[data-pog]").forEach(function (b) {
+        b.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var vid = b.getAttribute("data-pog");
+          var slide = b.closest(".feed__slide");
+          var v = slide ? slide.querySelector("video") : null;
+          var t = v ? Math.round(v.currentTime || 0) : 0;
+          var note = b.parentNode.querySelector(".feed__sharemsg");
+          function done(t2) { if (note) note.textContent = t2; }
+          post(API + "/pog/laugh", {owner: state.owner, video_id: vid, t_seconds: t})
+            .then(function (d) {
+              if (!d.ok) { done(d.error || "Pog missed."); return; }
+              var why = window.prompt("What got you? (one line — feeds the theory engine)", "");
+              if (why === null) { done("Pogged at " + t + "s ✓"); return; }
+              post(API + "/pog/why", {laugh_id: d.laugh_id, why: why || "(just laughed)"})
+                .then(function (d2) {
+                  var lab = d2.ok && d2.labels ? d2.labels.label : "";
+                  done("Pogged at " + t + "s ✓" + (lab ? " · filed as " + lab : ""));
+                })
+                .catch(function (err) { done("Pogged ✓ (" + (err.message || String(err)) + ")"); });
+            })
+            .catch(function (err) { done(err.message || String(err)); });
         });
       });
       host.querySelectorAll(".feed__slide").forEach(function (s) { vf.obs.observe(s); });

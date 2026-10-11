@@ -105,3 +105,49 @@ def validate_set(items: list[dict], root: Path | None = None) -> dict:
             agg[h["theory"]] = agg.get(h["theory"], 0) + 1
     return {"ok": True, "items": per_item, "aggregate": agg,
             "judge_queue": queue, "theories_checked": checked}
+
+
+# ── comment taxonomy v0 (§22): keyword patterns, no LLM. Specificity first:
+# longer, mechanism-naming comments outrank generic laughs. Returns label +
+# confidence + extracted references for evidence links.
+_COMMENT_PATTERNS: list[tuple[str, str]] = [
+    ("RETURN_REQUEST", r"bring .*back|more .*episodes?|need .*season|when.?s the next|encore"),
+    ("QUOTE", r"\"[^\"]{4,}\"|stealing|my new motto|gonna (say|use)|that line about"),
+    ("JOKE_MECHANISM", r"the way (he|she|they|it) .*|thinking .* finished me|lost it when|the fact .* killed me|doubling down|misunderstand"),
+    ("PERFORMANCE", r"\bpause\b|timing|delivery|deadpan|stare|hold that|beat after"),
+    ("VISUAL", r"\bhat\b|looks? like|tiny .*|animation|mesh|face|neck"),
+    ("VOICE", r"\bvoice\b|sound(s|ing)? like|accent|tone of"),
+    ("TOPIC", r"too real|literally me|airport|my job|sled|musher|kibble"),
+    ("NEGATIVE_CHARACTER", r"hate (this|him|her|it)|annoying|unfunny guy"),
+    ("NEGATIVE_WRITING", r"same joke|repetitive|lazy writing|try-hard"),
+    ("CONFUSION", r"don.?t get|what happened|confused|makes no sense"),
+    ("AI_ARTIFACT", r"melts?|fingers|glitch|ai (slop|looking)|robotic voice"),
+    ("PACKAGING_MISMATCH", r"thumbnail.*nothing|clickbait|not in the video"),
+    ("CHARACTER_POSITIVE", r"kill(ing|ed) me|love (him|her|them|this (guy|dog|character))|my favorite|icon|killing it"),
+    ("GENERIC_POSITIVE", r"\blol\b|haha|funny|😂|lmao|great|brilliant|hilarious"),
+]
+
+
+def classify_comment(text: str) -> dict:
+    """Label one feedback string. Specific labels win over generic ones;
+    confidence scales with specificity (length + mechanism words)."""
+    t = (text or "").strip()
+    low = t.lower()
+    words = len(low.split())
+    for label, pat in _COMMENT_PATTERNS:
+        m = re.search(pat, low)
+        if m:
+            specific = words >= 6 or label not in ("GENERIC_POSITIVE",)
+            conf = round(min(0.95, 0.45 + 0.03 * words + (0.15 if specific else 0)), 2)
+            out = {"label": label, "confidence": conf,
+                   "specific": specific,
+                   "sentiment": "negative" if label.startswith("NEGATIVE_") or label in ("CONFUSION",) else "positive",
+                   "character_reference": bool(re.search(r"sled|nolan|dog|husky|sergeant", low)),
+                   "quote_reference": label == "QUOTE",
+                   "request_more": label == "RETURN_REQUEST",
+                   "mechanism_reference": label in ("JOKE_MECHANISM", "PERFORMANCE")}
+            return out
+    return {"label": "GENERIC_POSITIVE", "confidence": 0.2, "specific": False,
+            "sentiment": "neutral" if not t else "positive",
+            "character_reference": False, "quote_reference": False,
+            "request_more": False, "mechanism_reference": False}

@@ -43,3 +43,14 @@ def test_set_matrix_and_queue():
     assert all(v == 1 for v in by_item.values())
     assert any(q["theory"] == "superiority" and q["item"] == "j1"
                for q in r["judge_queue"])
+
+
+def test_classify_comment_labels():
+    from backend.creative import theory as T
+    assert T.classify_comment("the belly rub minutes killed me")["label"] == "CHARACTER_POSITIVE"
+    assert T.classify_comment("bring this dog back please")["label"] == "RETURN_REQUEST"
+    assert T.classify_comment("the pause after that line was perfect")["label"] == "PERFORMANCE"
+    assert T.classify_comment("why did his arm melt")["label"] == "AI_ARTIFACT"
+    assert T.classify_comment("lol")["label"] == "GENERIC_POSITIVE"
+    c = T.classify_comment("Nolan is killing me, bring him back next week please")
+    assert c["specific"] is True and c["request_more"] is True

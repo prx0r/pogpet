@@ -43,10 +43,27 @@
     function mount() { if (panel && !panel.contains(root)) { panel.replaceChildren(root); } }
 
     // ── step 1+2: who, occasion, photos ────────────────────────────────
+    // Your photos live on the site already — cards inherit them. Existing
+    // people come first as one-tap chips (zero new uploads needed); the
+    // form below is only for someone new.
     function startView() {
       st.jobs = []; st.pick = null;
       var head = el('div', null, 'store-head');
-      head.append(el('h2', 'Cards that star your people'), el('p', 'Upload a photo. We paint up to four cards of them with a joke that fits, and you pick one. Printed and posted.'));
+      head.append(el('h2', 'Cards that star your people'), el('p', 'Pick someone — we paint up to four cards from their saved photos with a joke that fits, and you pick one. Printed and posted.'));
+      var people = el('div', null, 'ca-people');
+      var examples = el('div', null, 'ca-examples');
+      var exRow = el('div', null, 'ca-examples__row');
+      [['/img/cards/example-golf-front.png', 'Golf birthday, front'],
+       ['/img/cards/example-golf-inside.png', 'Golf birthday, inside'],
+       ['/img/cards/example-golf-back.png', 'Golf birthday, back']].forEach(function (x) {
+        var f = el('figure', null, 'ca-example');
+        var im = el('img'); im.alt = x[1]; im.loading = 'lazy'; im.src = x[0];
+        var cap = el('figcaption', x[1]);
+        f.append(im, cap); exRow.append(f);
+      });
+      examples.append(el('h3', 'Finished cards — yours will star your people'),
+        el('p', 'A real birthday card we made: painted front, message inside, clean back. Pick someone below and we paint theirs.'),
+        exRow);
       var form = el('div', null, 'ca-form');
       var who = el('select'); who.append(new Option('Someone new', ''));
       var name = el('input'); name.maxLength = 60; name.placeholder = 'Dad, Mum, Biscuit the dog…';
@@ -56,11 +73,42 @@
       var kind = el('select'); kind.append(new Option('Person', 'person'), new Option('Pet', 'pet'));
       var file = el('input'); file.type = 'file'; file.accept = 'image/jpeg,image/png,image/webp'; file.multiple = true;
       var thumbs = el('div', null, 'ca-thumbs');
+      var savedNote = el('p', '', 'ca-status');
       var newOnly = el('div', null, 'ca-new'); newOnly.append(field('Their name', name), field('Person or pet', kind));
+      var identity = el('div', null, 'ca-identity');
+      var whoField = field('Who is it for?', who);
+      var relField = field('Who are they to you?', rel);
+      var intField = field('What are they into? (for the joke)', interests);
+      var photoField = field('Add photos (optional if they’re already below)', file);
+      identity.append(whoField, newOnly, relField, intField, photoField);
+      var forLine = el('p', '', 'ca-forline');
+      var changeBtn = btn('Change person', function () {
+        who.value = ''; newOnly.hidden = false; identity.hidden = false;
+        forLine.hidden = true; savedNote.textContent = '';
+      }, 'ca-btn ca-btn--ghost');
+      forLine.hidden = true;
+      function pickPerson(id) {
+        who.value = id;
+        newOnly.hidden = true;
+        var s = (st.library && st.library.subjects || []).find(function (x) { return x.id === id; });
+        if (s) {
+          rel.value = s.relationship || ''; interests.value = (s.interests || []).join(', ');
+          identity.hidden = true;
+          forLine.hidden = false;
+          forLine.textContent = 'For ' + s.name +
+            (s.relationship ? ' · ' + s.relationship : '') +
+            (s.interests && s.interests.length ? ' · ' + s.interests.slice(0, 3).join(', ') : '') +
+            (s.photo_count ? ' · ' + s.photo_count + ' saved photos' : '');
+          savedNote.textContent = 'Photos inherited — just pick the occasion and hit the button.';
+        }
+      }
       who.addEventListener('change', function () {
         newOnly.hidden = !!who.value;
-        var s = (st.library && st.library.subjects || []).find(function (x) { return x.id === who.value; });
-        if (s) { rel.value = s.relationship || ''; interests.value = (s.interests || []).join(', '); }
+        if (!who.value) {
+          identity.hidden = false; forLine.hidden = true; savedNote.textContent = '';
+          return;
+        }
+        pickPerson(who.value);
       });
       file.addEventListener('change', function () {
         thumbs.replaceChildren();
@@ -76,13 +124,38 @@
         st.busy = true; go.disabled = true;
         prepare(who.value, name.value.trim(), kind.value, files).then(recommend).catch(fail).then(function () { go.disabled = false; });
       }, 'ca-btn ca-btn--go');
-      form.append(field('Who is it for?', who), newOnly, field('Who are they to you?', rel),
-        field('What are they into? (for the joke)', interests), field('Occasion', occ),
-        field('Photos of them (1-3, faces clear)', file), thumbs, go);
-      root.replaceChildren(head, form, status); mount(); say('');
+      form.append(identity, forLine, changeBtn, field('Occasion', occ),
+        savedNote, thumbs, go);
+      root.replaceChildren(head, examples, people, form, status); mount(); say('');
       host.get('/studio/library').then(function (lib) {
         st.library = lib;
-        (lib.subjects || []).forEach(function (s) { if (s.name) who.append(new Option(s.name, s.id)); });
+        var subs = (lib.subjects || []).filter(function (s) { return s.name; });
+        subs.forEach(function (s) { who.append(new Option(s.name, s.id)); });
+        // one-tap chips from saved photos — no uploads, no form
+        people.replaceChildren();
+        if (subs.length) {
+          people.append(el('h3', 'Your people — tap one'));
+          var row = el('div', null, 'ca-people__row');
+          subs.forEach(function (s) {
+            var mine = (lib.photos || []).filter(function (p) {
+              return (p.subjects || []).some(function (l) { return l.subject_id === s.id && l.confirmed; });
+            });
+            s.photo_count = mine.length;
+            var chip = el('button', null, 'ca-person'); chip.type = 'button';
+            if (mine.length && mine[0].thumbnail_url) {
+              var im = el('img'); im.alt = s.name; im.loading = 'lazy';
+              im.src = host.asset(mine[0].thumbnail_url);
+              chip.append(im);
+            } else {
+              chip.append(el('span', (s.name || '?').charAt(0).toUpperCase(), 'ca-person__initial'));
+            }
+            chip.append(el('span', s.name + (mine.length ? ' · ' + mine.length : ''), 'ca-person__name'));
+            chip.setAttribute('aria-label', 'Make a card for ' + s.name + ' from saved photos');
+            chip.addEventListener('click', function () { pickPerson(s.id); });
+            row.append(chip);
+          });
+          people.append(row);
+        }
       }).catch(function () { /* first visit: no library yet */ });
     }
 

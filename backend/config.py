@@ -1643,6 +1643,7 @@ SCENES: dict[str, str] = {
     "stage":       "Talent-show stage",   # the Perform tab's default
     "wizard":      "Wizard",
     "christmas":   "Christmas",
+    "blackroom":   "Blackroom",           # black stage + tall mic stand (pogtest)
 }
 
 # ── Prodigi catalogue ────────────────────────────────────────────────
@@ -1651,9 +1652,12 @@ SCENES: dict[str, str] = {
 # price_cents is EST (cents) — no live Prodigi key on this box, so these are
 # placeholders to confirm against the dashboard before anything is listed.
 PRODIGI_PRODUCTS: dict[str, dict] = {
-    "greeting_card": {"label": "Greeting Card",   "price_cents": 299,  "sku": "CLASSIC-GRE-FEDR-7X5-BLA", "sku_note": "Classic 5x7 portrait, 127x178mm, verified live",   "shape": "card",   "free": False},
+    "greeting_card": {"label": "Greeting Card",   "price_cents": 299,  "sku": "CLASSIC-GRE-FEDR-7X5-BLA", "sku_note": "Classic 5x7 portrait, 127x178mm, verified live",   "shape": "card",   "free": False,
+                      "sku_attrs": {"finish": "matte", "paperType": "Fine art card", "style": "Single", "substrateWeight": "330gsm"}},
     "postcard":      {"label": "Postcard",        "price_cents": 399,  "sku_note": "A6 postcard",              "shape": "postcard", "free": False},
-    "sticker":       {"label": "Sticker Sheet",   "price_cents": 499,  "sku_note": "kiss-cut sheet",           "shape": "sticker", "free": False},
+    "sticker":       {"label": "Sticker Sheet",   "price_cents": 499,  "sku_note": "kiss-cut sheet, vinyl matte/gloss from 76x102mm — needs dashboard SKU for live pricing", "shape": "sticker", "free": False},
+    "tattoo":        {"label": "Temporary Tattoo", "price_cents": 799,  "sku_note": "skin-safe waterslide 50x75mm and up, UK-made 24-48h — needs dashboard SKU for live pricing", "shape": "tattoo", "free": False},
+    "magnet":        {"label": "Photo Magnet",    "price_cents": 799,  "sku_note": "photo magnets incl. 2x3in + square — needs dashboard SKU for live pricing", "shape": "magnet",  "free": False},
     "framed_print":  {"label": "Framed Print",    "price_cents": 2499, "sku_note": "framed / canvas / metal",  "shape": "print",  "free": False},
     "poster":        {"label": "Poster",          "price_cents": 1299, "sku_note": "wall poster",              "shape": "print",  "free": False},
     "photo_tile":    {"label": "Photo Tile",      "price_cents": 999,  "sku_note": "photo tile",               "shape": "print",  "free": False},

@@ -224,6 +224,20 @@ CREATE TABLE IF NOT EXISTS transformed_assets (
   created_at       REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_transformed_cache ON transformed_assets(owner, cache_key, qc_status);
+-- Pogtest laugh loop: human (you) watches a set, mashes Pog at laughs,
+-- writes why. why_labels auto-filled from the comedy-theory taxonomy so
+-- feedback lands on mechanisms, not vibes.
+CREATE TABLE IF NOT EXISTS pog_feedback (
+  id         TEXT PRIMARY KEY,
+  owner      TEXT NOT NULL,
+  video_id   TEXT NOT NULL,
+  t_seconds  REAL NOT NULL DEFAULT 0,
+  kind       TEXT NOT NULL DEFAULT 'pog',
+  why        TEXT NOT NULL DEFAULT '',
+  why_labels TEXT NOT NULL DEFAULT '[]',
+  created_at REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_pog_feedback_video ON pog_feedback(video_id);
 -- Async transform jobs: provider returned running(job_id). Poll via
 -- transform_resume; completion ingests + QCs + persists the asset.
 CREATE TABLE IF NOT EXISTS transform_jobs (

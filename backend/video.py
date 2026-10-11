@@ -215,12 +215,74 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
+def _compose_blackroom(photo: Path | None, pet_name: str, headline: str,
+                       watermark: bool, mic_height: float = 1.0) -> Path:
+    """Black stage + tall mic stand. mic_height scales the stand (giraffes
+    need longer stands). Performer still pasted center; tomorrow's splat
+    replaces this flat card with the real room."""
+    import uuid as _uuid
+    img = Image.new("RGB", (VW, VH), (5, 5, 8))
+    d = ImageDraw.Draw(img, "RGBA")
+    # floor glow
+    for i, a in enumerate((14, 10, 6)):
+        d.ellipse([VW // 2 - 320 + i * 40, VH - 420 + i * 30,
+                   VW // 2 + 320 - i * 40, VH - 180 - i * 10],
+                  fill=(255, 255, 255, a))
+    # mic stand: tall pole + boom + mic head (right of performer)
+    pole_h = int(900 * mic_height)
+    px = VW // 2 + 250
+    base_y = VH - 320
+    d.line([px, base_y, px, base_y - pole_h], fill=(200, 200, 210), width=10)
+    d.line([px - 60, base_y, px + 60, base_y], fill=(200, 200, 210), width=10)
+    hx, hy = px - 130, base_y - pole_h - 40
+    d.line([px, base_y - pole_h, hx, hy], fill=(200, 200, 210), width=8)
+    d.ellipse([hx - 45, hy - 45, hx + 45, hy + 45], fill=(60, 60, 70),
+              outline=(200, 200, 210), width=4)
+    for i in range(3):
+        d.line([hx - 45, hy - 10 + i * 12, hx + 45, hy - 10 + i * 12],
+               fill=(140, 140, 150), width=3)
+    # performer still
+    cx, cy, r = VW // 2 - 60, VH // 2 - 40, 300
+    if photo and photo.is_file():
+        try:
+            src = Image.open(photo).convert("RGB")
+            side = min(src.size)
+            src = src.crop(((src.width - side) // 2, (src.height - side) // 2,
+                            (src.width + side) // 2, (src.height + side) // 2))
+            src = src.resize((r * 2, r * 2), Image.LANCZOS)
+            mask = Image.new("L", (r * 2, r * 2), 0)
+            ImageDraw.Draw(mask).ellipse([0, 0, r * 2, r * 2], fill=255)
+            img.paste(src, (cx - r, cy - r), mask)
+            d = ImageDraw.Draw(img, "RGBA")
+            d.ellipse([cx - r - 6, cy - r - 6, cx + r + 6, cy + r + 6],
+                      outline=(255, 255, 255, 90), width=5)
+        except Exception:
+            pass
+    else:
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(30, 30, 38),
+                  outline=(255, 255, 255, 90), width=5)
+    d.text((VW // 2, VH - 200), pet_name, font=_font(64),
+           fill=(240, 240, 245), anchor="mm")
+    d.text((VW // 2, VH - 130), headline[:60], font=_font(32),
+           fill=(150, 150, 160), anchor="mm")
+    if watermark:
+        d.text((VW // 2, 80), "pogtown pogtest — free preview",
+               font=_font(30), fill=(120, 120, 130), anchor="mm")
+    out = OUT_DIR / f"stage_{uuid.uuid4().hex[:12]}.png"
+    img.save(out, "PNG")
+    return out
+
+
 def compose_frame(photo: Path | None, pet_name: str, scene: str,
                   headline: str, watermark: bool,
-                  face_box: list | tuple | None = None) -> Path:
+                  face_box: list | tuple | None = None,
+                  stage: str = "") -> Path:
     """PIL builds the full frame so ffmpeg only has to mux."""
     config.ensure_dirs()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    if stage == "blackroom" or scene == "Blackroom":
+        return _compose_blackroom(photo, pet_name, headline, watermark)
 
     img = Image.new("RGB", (VW, VH), FIGG_PAPER)
 
@@ -320,17 +382,26 @@ def duration_of(path: Path) -> float:
 
 def make(*, topic: str, pet_name: str, scene: str, voice: str,
          photo: Path | None, persona: str = "", watermark: bool | None = None,
-         talent: str = "comedy", face_box: list | tuple | None = None) -> dict:
-    """Full free-tier pipeline. Returns record for the DB/API."""
+         talent: str = "comedy", face_box: list | tuple | None = None,
+         lines: list[str] | None = None) -> dict:
+    """Full free-tier pipeline. Returns record for the DB/API.
+    Pass lines= to perform a fixed script (theory-grounded sets);
+    otherwise the generator writes one."""
     if watermark is None:
         watermark = config.WATERMARK_FREE
     if scene not in config.SCENES:
         raise VideoError(f"unknown scene — pick one of: {', '.join(config.SCENES)}")
 
-    lines = write_set(topic, pet_name, persona, talent=talent)
-    if not lines:
-        raise VideoError("the script came back empty — try a different detail", 502)
-    script = " ".join(lines)
+    if lines:
+        lines = [str(l).strip() for l in lines if str(l).strip()]
+        if not lines:
+            raise VideoError("empty script — nothing to perform", 400)
+        script = " ".join(lines)
+    else:
+        lines = write_set(topic, pet_name, persona, talent=talent)
+        if not lines:
+            raise VideoError("the script came back empty — try a different detail", 502)
+        script = " ".join(lines)
 
     token = uuid.uuid4().hex[:12]
     mp3 = OUT_DIR / f"set_{token}.mp3"

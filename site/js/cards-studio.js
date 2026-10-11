@@ -146,6 +146,9 @@
       if(window.OddHobbGallery&&!videoHost.querySelector('.oc-gallery')){
         try{window.OddHobbGallery.mount(videoHost,galHost);}catch(e){}
       }
+      if(window.OddHobbCardViewer&&!videoHost.querySelector('.cv')){
+        try{window.OddHobbCardViewer.mountSaved(videoHost,galHost);}catch(e){}
+      }
       videoHost.insertBefore(sceneLibrary,videoHost.children[1]||null);
     }
     var videoGeneration=0;

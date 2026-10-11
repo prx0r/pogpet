@@ -26,6 +26,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import re
 import os
 import shutil
 import struct
@@ -83,6 +84,9 @@ def template(tid: str) -> dict:
 
 # ── index: the backend's photo knowledge for one owner ───────────────────
 
+BACKGROUND_FACE = 0.35
+
+
 def index(owner: str, subject_id: str, *, label=True) -> dict:
     """Photos with faces, who each face is, and its L5 labels.
 
@@ -105,6 +109,18 @@ def index(owner: str, subject_id: str, *, label=True) -> dict:
         hero_photos = {r["photo_id"] for r in c.execute(
             "SELECT photo_id FROM photo_subjects WHERE subject_id=? AND confirmed=1", (subject_id,))}
         rows = [dict(r) for r in c.execute("SELECT * FROM photos WHERE owner=?", (owner,))]
+    # the likeness gate needs the hero's SFace vectors; uploads only store boxes, so embed any
+    # confirmed hero face that has none yet (once per face, CPU, no spend)
+    try:
+        from backend import studio_library as _SL
+        for fid, pid in hero_faces.items():
+            if not _SL._has_vec(owner, fid):
+                with db.connect() as c:
+                    frows = [dict(r) for r in c.execute("SELECT * FROM photo_faces WHERE photo_id=?", (pid,))]
+                _SL._embed_missing(owner, pid, frows)
+    except Exception:
+        pass
+    with db.connect() as c:
         vecs = []
         for fid in hero_faces:
             r = c.execute("SELECT vec, dim FROM face_embeddings WHERE face_id=?", (fid,)).fetchone()
@@ -135,6 +151,11 @@ def index(owner: str, subject_id: str, *, label=True) -> dict:
                        "hero": f["id"] in hero_faces,
                        "labels": {k: (labs.get(f["id"]) or {}).get(k, "unknown")
                                   for k in ("expression", "framing", "look")}})
+        # strangers in the background don't make a couple a group: drop faces under
+        # BACKGROUND_FACE x the biggest face's height (never the hero's own face)
+        if len(fs) > 1:
+            top = max(f["h_px"] for f in fs)
+            fs = [f for f in fs if f["hero"] or f["h_px"] >= BACKGROUND_FACE * top]
         # a tagged photo with a single face and no face-level tag: that face is the hero
         if p["tagged"] and len(fs) == 1:
             fs[0]["hero"] = True
@@ -206,18 +227,21 @@ def cast(t: dict, idx: dict) -> dict:
                 short.append("needs a clear photo of the pet, tagged as them")
             continue
         ranked = []
+        wants_group = r["shot"][0] == "group"
         for p in idx["photos"]:
             ok, focus, _why = _fits(p, r)
             if ok and p["id"] not in used:
-                ranked.append((focus["h_px"] * (0.5 + focus["score"]), p["created_at"], p["id"]))
+                # a family/band template wants the most people first, then the clearest hero
+                ranked.append(((len(p["faces"]) if wants_group else 0),
+                               focus["h_px"] * (0.5 + focus["score"]), p["created_at"], p["id"]))
         ranked.sort(reverse=True)
         if not ranked:
             if not r["optional"]:
                 short.append("needs " + W.describe(r))
             continue
-        roles[name] = ranked[0][2]
-        used.add(ranked[0][2])
-        refs.append(ranked[0][2])
+        roles[name] = ranked[0][-1]
+        used.add(ranked[0][-1])
+        refs.append(ranked[0][-1])
     # likeness: add the clearest tagged solos of the hero as extra references
     want_refs = max([W.norm(r)["refs"] for r in t["wants"].values()] + [1])
     solos = sorted(((f["h_px"], p["id"]) for p in idx["photos"] if len(p["faces"]) == 1
@@ -272,10 +296,18 @@ def _fill(s: str, ctx: dict) -> str:
 def write_copy(t: dict, profile: dict, overrides: dict | None = None) -> dict:
     """LLM copy within the template limits; falls back to the template's own anchors."""
     lim = {k: v["max"] for k, v in t["copy"].items()}
+    words = (profile.get("name") or "").split()
+    surname = profile.get("surname") or (words[-1] if len(words) > 1 else "")  # never a first name
     ctx = {"recipient": profile.get("recipient") or profile.get("relationship", "").title() or profile.get("name", ""),
-           "SURNAME": (profile.get("surname") or (profile.get("name", "").split() or [""])[-1]).upper(),
+           "SURNAME": surname.upper(), "NAME": (words[0] if words else "").upper(),
            "pet_name": profile.get("pet_name", "")}
-    copy = {k: _fill(v["examples"][0], ctx) for k, v in t["copy"].items()}
+
+    def first_fill(examples, mx):
+        for e in examples:  # the first example whose every {slot} has a value and that fits
+            if all(ctx.get(k) for k in re.findall(r"\{(\w+)\}", e)) and len(_fill(e, ctx)) <= mx:
+                return _fill(e, ctx)
+        return re.sub(r"\s*\{\w+\}s?", "", _fill(examples[-1], ctx)).strip()
+    copy = {k: first_fill(v["examples"], v["max"]) for k, v in t["copy"].items()}
     key = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
     if key:
         ask = {"person": {k: profile.get(k) for k in ("name", "relationship", "interests", "memories", "nicknames") if profile.get(k)},
@@ -392,8 +424,25 @@ def ocr_gate(img, expected: list[str]) -> tuple[bool, str]:
     for line in out.splitlines()[1:]:
         c = line.split("\t")
         if len(c) == 12 and c[11].strip() and float(c[10] or 0) >= 85:
-            extra += [w for w in _norm(c[11]) if len(w) >= 4 and w.isalpha() and w not in want]
+            # a stylised headline often splits a word ("PUT TING"): a piece of a copy word isn't extra
+            extra += [w for w in _norm(c[11]) if len(w) >= 4 and w.isalpha() and w not in want
+                      and not any(w in x for x in want)]
     return not extra, f"extra={extra}"
+
+
+def bleed_gate(img, strip: float = 0.015, limit: float = 0.6) -> tuple[bool, str]:
+    """Full bleed: no white/grey frame and no 'photo of a card' mockup along any edge."""
+    import numpy as np
+    a = np.asarray(img.convert("RGB")).astype(np.int16)
+    h, w = a.shape[:2]
+    k = max(2, int(min(h, w) * strip))
+    sides = {"top": a[:k], "bottom": a[-k:], "left": a[:, :k], "right": a[:, -k:]}
+    bad = []
+    for name, px in sides.items():
+        flat = (px.max(axis=2) - px.min(axis=2) < 18) & (px.min(axis=2) > 225)
+        if flat.mean() > limit:
+            bad.append(name)
+    return not bad, (f"border/mockup on {','.join(bad)}" if bad else "full bleed")
 
 
 def face_gate(img, hero_vecs: list, expected_faces: int | None, min_sim: float = 0.30) -> tuple[bool, str]:
@@ -593,7 +642,7 @@ def run(jid, owner, subject_id, template_id, profile, overrides, *, gen=None, at
         for attempt in range(3):
             _set(jid, step=f"qa{attempt}")
             gates = {"ocr": ocr_gate(art, letters), "faces": face_gate(art, idx["hero_vecs"], nfaces),
-                     "critic": critic_gate(art, letters)}
+                     "bleed": bleed_gate(art), "critic": critic_gate(art, letters)}
             rec["qa"].append({k: list(v) for k, v in gates.items()})
             bad = [k for k, (ok, _d) in gates.items() if not ok]
             if not bad:
@@ -604,6 +653,11 @@ def run(jid, owner, subject_id, template_id, profile, overrides, *, gen=None, at
                 fix = ("Edit this exact image: make the main person's face match the reference photos exactly "
                        "(face shape, eyes, smile, hair, age). Keep style, pose, lettering and everything else identical.")
                 art = gen("edit_fix", fix, [art.info.get("url", "")] + ref_urls[:2])
+            elif bad == ["bleed"]:
+                fix = ("Edit this exact image: it must be the flat artwork itself, full bleed to every edge. "
+                       "Remove any card mockup, white frame, paper edge or border by extending the painted scene "
+                       "outwards. Keep the people, lettering and style identical.")
+                art = gen("edit_fix", fix, [art.info.get("url", "")])
             elif bad == ["faces"]:
                 art = gen("identity_scene", prompt, ref_urls)   # wrong cast count: regenerate
             else:

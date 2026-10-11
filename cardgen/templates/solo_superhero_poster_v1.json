@@ -1,0 +1,79 @@
+{
+  "id": "solo_superhero_poster_v1",
+  "occasions": [
+    "birthday",
+    "fathers_day",
+    "mothers_day",
+    "retirement"
+  ],
+  "interests": [],
+  "tones": [
+    "funny"
+  ],
+  "style": "1980s painted blockbuster movie poster, dramatic rim light, airbrushed sky, heroic low angle",
+  "scene": "{hero} as an unlikely everyday superhero striking a heroic pose on a rooftop, cape billowing, wearing everyday clothes under the cape and holding a mug of tea like a trophy, city lights behind. Only {hero} is in the scene.",
+  "copy": {
+    "title": {
+      "max": 20,
+      "examples": [
+        "WORLD'S OKAYEST HERO",
+        "CAPTAIN SENSIBLE"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Happy Birthday, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Saving the day since forever, mostly by knowing where the spare batteries are. Have a heroic birthday."
+      ]
+    }
+  },
+  "spot": "a red cape draped over the back of an armchair with a mug of tea",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "schema": "cardgen.template.v2"
+}

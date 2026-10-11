@@ -152,7 +152,8 @@ class PipelineTest(Base):
             c.commit()
         with patch.object(E, "critic_gate", lambda img, exp: (True, "")), \
              patch.object(E, "face_gate", lambda img, v, n: (True, "")), \
-             patch.object(E, "ocr_gate", lambda img, exp: (True, "")):
+             patch.object(E, "ocr_gate", lambda img, exp: (True, "")), \
+             patch.object(E, "bleed_gate", lambda img: (True, "")):
             E.run("cgj_t", self.owner, self.sid, "golf_lip_v1", {"recipient": "Dad", "sender": "Tom",
                                                                    "interests": ["golf"]}, {}, gen=gen, attach=attach)
         j = E.job(self.owner, "cgj_t")

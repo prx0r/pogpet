@@ -792,10 +792,11 @@
   <link rel="preload" as="image" href="/assets/pulse/emerge.webp" fetchpriority="high">
   <script src="/js/pulse-loader.js?v=1" defer></script>
   <link rel="stylesheet" href="/css/cards-studio.css">
+  <link rel="stylesheet" href="/css/cards-auto.css?v=1">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/api-client.js?v=studio-3"></script>
   <script src="/js/cards-studio.js?v=studio-4"></script>
-  <script src="/js/card-gallery.js?v=p0-1"></script>
+  <script src="/js/cards-auto.js?v=1"></script>
 
   <script src="/js/oddy.js"></script>
   <link rel="stylesheet" href="/vendor/swiper/swiper-bundle.min.css">
@@ -2292,7 +2293,7 @@
       if (name === "shop") loadShop();
       if (name === "studio") { loadStudioMeta(); if (peopleStudio) peopleStudio.open((window.OddHobbRouter.current||{}).subjectId).catch(function(){}); }
       if (name === "products") loadProducts();
-      if (name === "cards") { if (cardStudio) cardStudio.open(); }
+      if (name === "cards") { if (autoCards) autoCards.open(); }
       if (name === "videos") { loadVideoFeed(); }
       if (name === "upload") loadMe();
       if (name === "quick") initQuickTab();
@@ -5562,7 +5563,8 @@
       }
       return cardSession;
     }
-    var cardStudio = window.OddHobbCards({
+    var cardHost = {
+
       tab: function (name) { showTab(name); },
       ready: cardReady,
       get: function (path) {
@@ -5588,7 +5590,11 @@
             .then(function (d) { if (!d.ok) throw new Error(d.error || "Upload failed"); return d; });
         });
       }
-    });
+    };
+    var cardStudio = window.OddHobbCards(cardHost);
+    // /cards is the photo -> auto cards flow (cardgen). The legacy studio above stays
+    // loaded only for its saved-design helpers; it no longer owns the cards panel.
+    var autoCards = window.OddHobbAutoCards ? window.OddHobbAutoCards(cardHost) : null;
     function studioAsset(path){if(!path)return "";var u=path.indexOf('/api/')===0?'/backend'+path:API+path;u+=(u.indexOf('?')>=0?'&':'?')+'owner='+encodeURIComponent(state.owner);try{u+='&owner_sig='+encodeURIComponent(localStorage.getItem('pogpet.ownersig')||'');}catch(e){}if(state.apiKey)u+='&api_key='+encodeURIComponent(state.apiKey);return withTok(u);}
     var studioReadiness=null;
     function studioReady(){
@@ -5655,7 +5661,7 @@
         if(route.tab==='cart')siteShell.cart();
         if(route.tab==='account')siteShell.account(state.owner);
         if(route.tab==='notfound'){$('panel-notfound').querySelector('.panel__inner').textContent='Page not found. Use the navigation to return to Studio or browse products.';}
-        if(route.tab==='cards'&&route.id){cardStudio.openDesign(route.id, route.revision).then(function(){var t=document.querySelector('#panel-cards details.oc-tinkerer');if(t)t.open=true;if(route.proof){cardStudio.showSpread().catch(function(){});}}).catch(function(e){var p=document.querySelector('#panel-cards .panel__inner');if(p&&!p.querySelector('.oc-openfail')){var n=document.createElement('p');n.className='panel__msg oc-openfail';n.textContent='That card lives on a different account — sign in as its owner, then reopen this link. ('+((e&&e.message)||'not found')+')';p.insertBefore(n,p.firstChild);}});}
+        if(route.tab==='cards'&&route.id){(autoCards?autoCards.openDesign(route.id, route.revision):cardStudio.openDesign(route.id, route.revision)).catch(function(e){var p=document.querySelector('#panel-cards .panel__inner');if(p&&!p.querySelector('.oc-openfail')){var n=document.createElement('p');n.className='panel__msg oc-openfail';n.textContent='That card lives on a different account — sign in as its owner, then reopen this link. ('+((e&&e.message)||'not found')+')';p.insertBefore(n,p.firstChild);}});}
         if(route.tab==='videos'&&route.id){loadVideoFeed();}
         if(route.tab==='funnier'&&duel){duel.open();}
         if(route.tab==='art'&&artShelf){artShelf.open();}

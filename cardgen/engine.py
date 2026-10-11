@@ -358,7 +358,11 @@ def front_prompt(t: dict, copy: dict, profile: dict) -> str:
     letters = "; ".join(f'"{x}"' for x in lettering(t, copy))
     return (f"Portrait 5:7 greeting card front, full bleed. {_fill(t['scene'], names)} "
             f"Style: {t['style']}. Every face must keep the exact likeness of the reference photos "
-            f"(face shape, eyes, smile, hair, age). The ONLY lettering on the image, designed into the art: "
+            f"(face shape, eyes, smile, hair, age): paint the face as a faithful, recognisable portrait "
+            f"of that real person with their true facial proportions, and put the comedy in the pose, "
+            f"body, props and expression, never in distorting the face. Frame it so the main face is "
+            f"large and clearly lit, at least a sixth of the image height. "
+            f"The ONLY lettering on the image, designed into the art: "
             f"{letters}. Leave clear space for it near the top. {t['negative']}.")
 
 
@@ -452,9 +456,19 @@ def face_gate(img, hero_vecs: list, expected_faces: int | None, min_sim: float =
         from backend import faces as FC
         bgr = np.asarray(img)[:, :, ::-1].copy()
         rows = FC.detect_boxes(bgr)
+        # YuNet misses strongly tilted heads (a golfer leaning into a putt): retry rotated
+        for ang in ((-20, 20, -40, 40) if not rows else ()):
+            rot = np.asarray(img.rotate(ang, expand=True, fillcolor=(128, 128, 128)))[:, :, ::-1].copy()
+            rows = FC.detect_boxes(rot)
+            if rows:
+                bgr = rot
+                break
     except Exception as e:  # noqa: BLE001 - cv2 missing in some envs
         return True, f"face gate skipped ({str(e)[:60]})"
     n = len(rows)
+    if expected_faces and not n:
+        # no face found means likeness was never checked: that is a fail, not a pass
+        return False, f"faces=0 expected={expected_faces}"
     if expected_faces and n and abs(n - expected_faces) > (0 if expected_faces <= 2 else 1):
         return False, f"faces={n} expected={expected_faces}"
     if hero_vecs and rows:

@@ -208,3 +208,38 @@ class PipelineTest(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GateAndPromptTest(unittest.TestCase):
+    def test_prompt_keeps_face_faithful_and_large(self):
+        t = E.template("golf_lip_v1")
+        p = E.front_prompt(t, {"title": "STILL ON THE LIP.", "sub": "Happy Birthday, Dad"},
+                           {"interests": ["golf"]})
+        self.assertIn("never in distorting the face", p)
+        self.assertIn("at least a sixth of the image height", p)
+
+    def test_no_face_found_is_a_fail_not_a_pass(self):
+        from PIL import Image
+        from backend import faces as FC
+        img = Image.new("RGB", (500, 700), (90, 160, 90))
+        with patch.object(FC, "detect_boxes", lambda bgr: []):
+            ok, why = E.face_gate(img, [[0.1] * 128], 1)
+        self.assertFalse(ok)
+        self.assertIn("faces=0", why)
+        with patch.object(FC, "detect_boxes", lambda bgr: []):   # nothing expected: still a pass
+            self.assertTrue(E.face_gate(img, [], None)[0])
+
+    def test_tilted_face_is_found_by_rotation_retry(self):
+        from PIL import Image
+        from backend import faces as FC
+        img = Image.new("RGB", (500, 700), (90, 160, 90))
+        calls = []
+
+        def fake_detect(bgr):
+            calls.append(bgr.shape)
+            return [] if len(calls) == 1 else [[0] * 15]
+        with patch.object(FC, "detect_boxes", fake_detect), \
+                patch.object(FC, "embed_face", lambda bgr, row: [1.0] + [0.0] * 127):
+            ok, why = E.face_gate(img, [[1.0] + [0.0] * 127], 1)
+        self.assertTrue(ok, why)
+        self.assertEqual(len(calls), 2)

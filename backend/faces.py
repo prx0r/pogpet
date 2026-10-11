@@ -86,13 +86,20 @@ def _recognizer_get():
 
 DETECT_SIDES = (1280, None, 640)   # max image side per pass; None = native size
 
+# YuNet and SFace are shared module-level cv2 nets. setInputSize()+detect() and
+# alignCrop()+feature() are not thread-safe: two cardgen jobs QA-ing at once
+# (each in its own thread) could see 0 faces or a wrong embedding. One lock.
+import threading as _threading
+_CV_LOCK = _threading.RLock()
+
 
 def _detect_once(det, bgr, min_score: float) -> list:
     import numpy as _np
     try:
         h, w = bgr.shape[:2]
-        det.setInputSize((w, h))
-        _n, raw = det.detect(bgr)
+        with _CV_LOCK:
+            det.setInputSize((w, h))
+            _n, raw = det.detect(bgr)
     except Exception:
         return []
     if raw is None:
@@ -163,8 +170,9 @@ def embed_face(bgr, face_row) -> list | None:
         # constant grey patch, so EVERY face embedded to the same vector and
         # every suggestion scored ~1.0. Cast explicitly.
         row = _np.asarray(face_row, dtype=_np.float32).reshape(1, 15)
-        aligned = rec.alignCrop(bgr, row)
-        feat = rec.feature(aligned)
+        with _CV_LOCK:
+            aligned = rec.alignCrop(bgr, row)
+            feat = rec.feature(aligned)
         v = _np.asarray(feat, dtype=_np.float64).ravel()[:DIM]
         n = float((v ** 2).sum() ** 0.5)
         if n <= 0:

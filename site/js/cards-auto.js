@@ -20,7 +20,7 @@
   var MAX_CARDS = 4, POLL_MS = 3000, JOB_TIMEOUT_MS = 6 * 60 * 1000;
   // only occasions a cardgen template declares (cardgen/templates/*.json "occasions")
   var OCCASIONS = [['birthday', 'Birthday'], ['christmas', 'Christmas'], ['fathers_day', "Father's Day"],
-    ['retirement', 'Retirement'], ['anniversary', 'Anniversary'], ['valentines', "Valentine's"]];
+    ['mothers_day', "Mother's Day"], ['retirement', 'Retirement'], ['anniversary', 'Anniversary'], ['valentines', "Valentine's"]];
   var STEP_LABEL = { queued: 'Queued', index: 'Reading the photos', write: 'Writing the joke', generate: 'Painting the front',
     qa0: 'Checking likeness', qa1: 'Fixing details', qa2: 'Final check', spot: 'Painting the inside', upscale: 'Sharpening for print',
     freeze: 'Setting the card', done: 'Ready' };

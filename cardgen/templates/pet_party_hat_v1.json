@@ -1,0 +1,72 @@
+{
+  "id": "pet_party_hat_v1",
+  "occasions": [
+    "birthday"
+  ],
+  "interests": [],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "bright playful gouache illustration, confetti, pastel balloons, soft studio light",
+  "scene": "{pet} wearing a tiny cone party hat, sitting in front of a birthday cake with one bite clearly missing and crumbs on its face, looking completely innocent. Only {pet} is in the scene, no people.",
+  "copy": {
+    "title": {
+      "max": 16,
+      "examples": [
+        "WASN'T ME."
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Happy Birthday from {pet_name}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "I may have had a small taste of your cake. Hope your birthday is as brilliant as you are. Love (and crumbs), {pet_name}"
+      ]
+    }
+  },
+  "spot": "a party hat next to a single bitten cupcake",
+  "qa": {
+    "faces": 0,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "wants": {
+    "pet": {
+      "shot": [
+        "pet"
+      ],
+      "identity": "anyone",
+      "people": [
+        0,
+        0
+      ],
+      "refs": 2
+    }
+  },
+  "names": {
+    "pet": "the pet from the reference photos"
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "CLASSIC-GRE-FEDR-7X5-BLA",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "schema": "cardgen.template.v2"
+}

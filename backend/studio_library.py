@@ -121,7 +121,9 @@ def _embed_missing(owner, pid, rows):
         return
     if bgr is None:
         return
-    boxes = {tuple(round(float(v), 4) for v in f[:4]): f
+    # photo_faces stores 0-1 boxes (faces.to_unit); key re-detections the same way
+    _h, _w = bgr.shape[:2]
+    boxes = {tuple(round(v, 4) for v in _faces.to_unit([float(v) for v in f[:4]], _w, _h)): f
              for f in _faces.detect_boxes(bgr)}
     with db.connect() as c:
         for r in rows:
@@ -133,6 +135,15 @@ def _embed_missing(owner, pid, rows):
                 continue
             key = tuple(round(float(v), 4) for v in box)
             f = boxes.get(key)
+            if f is None and len(box) == 4:
+                # stored at upload by an older detector pass: take the re-detection that overlaps it
+                def _ov(k):
+                    ix = max(0.0, min(k[0] + k[2], box[0] + box[2]) - max(k[0], box[0]))
+                    iy = max(0.0, min(k[1] + k[3], box[1] + box[3]) - max(k[1], box[1]))
+                    i = ix * iy
+                    return i / max(k[2] * k[3] + box[2] * box[3] - i, 1e-9)
+                best = max(boxes, key=_ov, default=None)
+                f = boxes[best] if best is not None and _ov(best) > 0.5 else None
             if f is None:
                 continue
             vec = _faces.embed_face(bgr, f)

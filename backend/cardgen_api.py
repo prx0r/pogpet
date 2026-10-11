@@ -74,10 +74,11 @@ def attach(bp, CardError, card_price, card_url_for, proof_url_for):
         checks = {"fal_key": env("FAL_KEY"), "openrouter_key": env("OPENROUTER_API_KEY"),
                   "cardgen_live": os.environ.get("CARDGEN_LIVE") == "1",
                   "tesseract": bool(shutil.which("tesseract"))}
-        need = [k for k in ("fal_key", "cardgen_live") if not checks[k]]
+        # openrouter labels expressions; without it every "happy couple/group" template stays blocked
+        need = [k for k in ("fal_key", "cardgen_live", "openrouter_key") if not checks[k]]
         ts = E.templates()
         return jsonify(ok=True, can_generate=not need, missing=need, checks=checks,
-                       optional_missing=[k for k in ("openrouter_key", "tesseract") if not checks[k]],
+                       optional_missing=[k for k in ("tesseract",) if not checks[k]],
                        templates=len(ts), pet_templates=sum(E.is_pet_template(t) for t in ts),
                        daily_cap=int(os.environ.get("CARDGEN_DAILY_CAP") or 12))
 

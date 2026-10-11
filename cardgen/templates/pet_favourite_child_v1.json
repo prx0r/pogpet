@@ -1,0 +1,74 @@
+{
+  "id": "pet_favourite_child_v1",
+  "occasions": [
+    "fathers_day",
+    "mothers_day",
+    "birthday"
+  ],
+  "interests": [],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "elegant Victorian oil-portrait style, dark green backdrop, gilded frame vignette, rich brushwork",
+  "scene": "{pet} posed proudly in a formal oil portrait wearing a small blue first-place rosette, chin up, looking supremely smug. Only {pet} is in the scene, no people.",
+  "copy": {
+    "title": {
+      "max": 22,
+      "examples": [
+        "YOUR FAVOURITE CHILD."
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Love from {pet_name}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Let's be honest, we both know who your favourite is. Have a wonderful day. Love, {pet_name}"
+      ]
+    }
+  },
+  "spot": "a small blue first-place rosette",
+  "qa": {
+    "faces": 0,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "wants": {
+    "pet": {
+      "shot": [
+        "pet"
+      ],
+      "identity": "anyone",
+      "people": [
+        0,
+        0
+      ],
+      "refs": 2
+    }
+  },
+  "names": {
+    "pet": "the pet from the reference photos"
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "CLASSIC-GRE-FEDR-7X5-BLA",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "schema": "cardgen.template.v2"
+}

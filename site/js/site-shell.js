@@ -9,7 +9,7 @@
     var inner=node('div',undefined,'studio-dialog-inner'),close=node('button','Close','studio-dialog-close');close.type='button';close.onclick=function(){accountDialog.close();};
     inner.append(close,node('h2','Your OddHobb account'),node('p','Sign in to keep your friends, photos and saved designs together.'));
     ['g-signin','g-who'].forEach(function(id){var n=document.getElementById(id);if(n)inner.append(n);});
-    var pwWrap=node('div','oc-password'),pwH=node('input'),pwP=node('input'),pwMsg=node('p','','panel__msg'),pwIn=node('button','Sign in','oc-button'),pwUp=node('button','Create account','oc-button');
+    var pwWrap=node('div',undefined,'oc-password'),pwH=node('input'),pwP=node('input'),pwMsg=node('p','','panel__msg'),pwIn=node('button','Sign in','oc-button'),pwUp=node('button','Create account','oc-button');
     pwWrap.className='oc-password';
     pwH.type='text';pwH.placeholder='handle (e.g. chris)';pwH.autocomplete='username';pwH.style.marginRight='6px';
     pwP.type='password';pwP.placeholder='password (8+ chars)';pwP.autocomplete='current-password';pwP.style.marginRight='6px';

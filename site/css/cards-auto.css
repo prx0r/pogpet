@@ -38,3 +38,22 @@
 .ca-blocked{background:#faf8f4;border:1px solid #ebe6dc;border-radius:14px;padding:18px;margin:18px 0}
 .ca-blocked h3{margin:0 0 8px}
 .ca-blocked p{color:#555;margin:0 0 8px}
+.ca-price{font-size:15px;font-weight:600;color:#1a1a1a;margin:4px 0 6px}
+/* card opening (StPageFlip): front -> inside spread -> back */
+.ca-bookwrap{display:flex;justify-content:center;margin:18px 0 6px;min-height:120px}
+.ca-book{margin:0 auto}
+.ca-page{background:#fffdf7;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);overflow:hidden}
+.ca-page__art{position:absolute;inset:0;background:#fffdf7 center/cover no-repeat}
+.ca-page--inside-left .ca-page__art{background-size:200% 100%;background-position:left center}
+.ca-page--inside-right .ca-page__art{background-size:200% 100%;background-position:right center}
+.ca-booknav{display:flex;gap:10px;justify-content:center;margin:6px 0 12px}
+.ca-allsides summary{cursor:pointer;font-size:13px;color:#666;margin:6px 0}
+/* live inside-message preview over the rendered inside (Apply makes the real render) */
+.ca-livehost{position:relative}
+.ca-live{position:absolute;inset:0;pointer-events:none}
+.ca-live__msg,.ca-live__sig{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;
+  background:#fffdf7;color:#1e2a3a;line-height:1.25;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.ca-live__msg{font-family:'Fraunces',Georgia,'Times New Roman',serif;font-weight:600}
+.ca-live__sig{font-family:'Caveat','Segoe Script','Bradley Hand',cursive}
+.ca-imgbox{position:relative}
+.ca-imgbox img{display:block}

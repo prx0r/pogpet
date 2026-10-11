@@ -86,7 +86,8 @@ def template(tid: str) -> dict:
 def index(owner: str, subject_id: str, *, label=True) -> dict:
     """Photos with faces, who each face is, and its L5 labels.
 
-    {"photos": [{id, r2_key, w, h, faces:[{id, box(px), h_px, score, hero, labels}]}],
+    {"photos": [{id, r2_key, w, h, tagged, faces:[{id, box(px), h_px, score, hero, labels}]}],
+    A faceless photo is listed only when it's tagged to the subject (pets: a photo-level tag).
      "hero_vecs": [[...128]], "hero_faces": n}
     """
     from backend import db, photo_labels as PL
@@ -114,7 +115,8 @@ def index(owner: str, subject_id: str, *, label=True) -> dict:
                     pass
         for p in rows:
             faces = [dict(f) for f in c.execute("SELECT * FROM photo_faces WHERE photo_id=?", (p["id"],))]
-            if not faces:
+            # faceless photos only matter when tagged to this subject: that's how a pet is cast
+            if not faces and p["id"] not in hero_photos:
                 continue
             out.append({"id": p["id"], "r2_key": p["r2_key"], "w": p.get("width") or 0,
                         "h": p.get("height") or 0, "created_at": p.get("created_at") or 0,
@@ -165,13 +167,43 @@ def _fits(p: dict, role: dict) -> tuple[bool, dict | None, str]:
     return True, focus, ""
 
 
+PET_MIN_SIDE = 400
+
+
+def interest_hits(have: set, want: list) -> int:
+    """How many of a template's interests the person has; loose ('carp fishing' ~ 'fishing')."""
+    have = {h.strip().lower() for h in have if h and h.strip()}
+    return sum(1 for w in want if any(w == h or w in h or (len(h) > 3 and h in w) for h in have))
+
+
+def is_pet_template(t: dict) -> bool:
+    return any("pet" in W.norm(r)["shot"] for r in t["wants"].values())
+
+
+def _pet_photos(idx: dict) -> list:
+    """Tagged photos with no human face in them, biggest first (a pet subject's photos)."""
+    ok = [p for p in idx["photos"] if p.get("tagged") and not p["faces"]
+          and min(p.get("w") or 0, p.get("h") or 0) >= PET_MIN_SIDE]
+    return sorted(ok, key=lambda p: (min(p["w"], p["h"]), p.get("created_at") or 0), reverse=True)
+
+
+def _cast_pet(idx: dict, used: set) -> str | None:
+    return next((p["id"] for p in _pet_photos(idx) if p["id"] not in used), None)
+
+
 def cast(t: dict, idx: dict) -> dict:
     """{"ok", "roles": {role: photo_id}, "refs": [photo ids], "shortfall": [plain words]}"""
     roles, refs, short, used = {}, [], [], set()
     for name, role in t["wants"].items():
         r = W.norm(role)
         if "pet" in r["shot"]:
-            short.append("pet photos aren't detected yet")
+            pid = _cast_pet(idx, used)
+            if pid:
+                roles[name] = pid
+                used.add(pid)
+                refs.append(pid)
+            elif not r["optional"]:
+                short.append("needs a clear photo of the pet, tagged as them")
             continue
         ranked = []
         for p in idx["photos"]:
@@ -190,6 +222,8 @@ def cast(t: dict, idx: dict) -> dict:
     want_refs = max([W.norm(r)["refs"] for r in t["wants"].values()] + [1])
     solos = sorted(((f["h_px"], p["id"]) for p in idx["photos"] if len(p["faces"]) == 1
                     for f in p["faces"] if f["hero"] and f["labels"]["look"] != "profile"), reverse=True)
+    if is_pet_template(t):
+        solos = [(0, p["id"]) for p in _pet_photos(idx)] + solos
     for _h, pid in solos:
         if len(refs) >= min(4, len(roles) + want_refs):
             break
@@ -208,13 +242,20 @@ def recommend(owner: str, subject_id: str, occasion: str = "birthday",
     for t in templates():
         if occasion not in t["occasions"]:
             continue
+        # a pet subject only gets pet templates, a person never does
+        if is_pet_template(t) != (profile.get("kind") == "pet"):
+            continue
+        hits = interest_hits(interests, t["interests"])
+        if t["interests"] and not hits:
+            continue  # an interest-led card (golf, fishing...) only for someone who has that interest
         cst = cast(t, idx)
-        fit = 1.0 + 2.0 * len(interests & set(t["interests"])) + (0.5 if tone in t["tones"] else 0)
+        fit = 1.0 + 2.0 * hits + (0.5 if tone in t["tones"] else 0)
         row = {"template_id": t["id"], "fit": fit, "photos": cst["roles"], "refs": cst["refs"]}
         (ready if cst["ok"] else blocked).append({**row, "shortfall": cst["shortfall"]})
     ready.sort(key=lambda r: -r["fit"])
     tip = None
-    if not idx["hero_faces"] and not any(f["hero"] for p in idx["photos"] for f in p["faces"]):
+    if not idx["hero_faces"] and not any(f["hero"] for p in idx["photos"] for f in p["faces"]) \
+            and not _pet_photos(idx):
         tip = "No photos are tagged as this person yet. Confirm their face once and every template can cast them."
     return {"ok": True, "subject_id": subject_id, "occasion": occasion, "ready": ready,
             "blocked": blocked, "photos_indexed": len(idx["photos"]), "tip": tip}

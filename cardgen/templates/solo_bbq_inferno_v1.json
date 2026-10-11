@@ -1,0 +1,85 @@
+{
+  "id": "solo_bbq_inferno_v1",
+  "occasions": [
+    "birthday",
+    "fathers_day",
+    "retirement"
+  ],
+  "interests": [
+    "bbq",
+    "barbecue",
+    "cooking",
+    "grilling",
+    "food"
+  ],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "sunny painted 1960s advertisement illustration, warm backyard light, saturated colours",
+  "scene": "{hero} in a striped apron and chef's hat proudly holding up tongs, presenting a plate of completely charred burgers like a masterpiece, flames leaping from the grill behind. Only {hero} is in the scene.",
+  "copy": {
+    "title": {
+      "max": 20,
+      "examples": [
+        "WELL DONE. VERY.",
+        "CHEF'S SPECIAL"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Happy Birthday, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Head chef, master of the grill, keeper of the tongs. Have a sizzling birthday — we'll bring the extinguisher."
+      ]
+    }
+  },
+  "spot": "a pair of barbecue tongs crossed over a burnt sausage",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "CLASSIC-GRE-FEDR-7X5-BLA",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "schema": "cardgen.template.v2"
+}

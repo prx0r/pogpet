@@ -210,7 +210,9 @@ def ensure(owner: str, photo_ids: list[str], fetch=None) -> int:
     n = 0
     with db.connect() as c:
         for pid in photo_ids:
-            if c.execute("SELECT 1 FROM photo_labels WHERE photo_id=? LIMIT 1", (pid,)).fetchone():
+            srcs = {r[0] for r in c.execute("SELECT source FROM photo_labels WHERE photo_id=?", (pid,))}
+            # labelled already -> skip, unless only the heuristic saw it and vision is now available
+            if srcs and not (srcs == {"heuristic"} and (os.environ.get("OPENROUTER_API_KEY") or "").strip()):
                 continue
             p = c.execute("SELECT * FROM photos WHERE id=? AND owner=?", (pid, owner)).fetchone()
             if not p:

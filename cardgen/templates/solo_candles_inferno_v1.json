@@ -1,0 +1,77 @@
+{
+  "id": "solo_candles_inferno_v1",
+  "occasions": [
+    "birthday"
+  ],
+  "interests": [],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "warm storybook gouache illustration, soft candlelight glow, cosy kitchen at night, painterly texture",
+  "scene": "{hero} leaning in to blow out a birthday cake carrying an absurd forest of lit candles, cheeks puffed, eyebrows singed into a look of mild alarm, a smoke alarm on the ceiling flashing red. Only {hero} is in the scene.",
+  "copy": {
+    "title": {
+      "max": 24,
+      "examples": [
+        "MAKE A WISH. QUICKLY.",
+        "FIRE RISK: MODERATE"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Happy Birthday, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "The fire brigade have been notified and are on standby. Have the best birthday — you've earned every single one of those candles."
+      ]
+    }
+  },
+  "spot": "a single smoking birthday candle next to a slice of cake",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "schema": "cardgen.template.v2"
+}

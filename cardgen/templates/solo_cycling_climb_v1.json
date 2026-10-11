@@ -1,0 +1,83 @@
+{
+  "id": "solo_cycling_climb_v1",
+  "occasions": [
+    "birthday",
+    "fathers_day",
+    "retirement"
+  ],
+  "interests": [
+    "cycling",
+    "bikes",
+    "road cycling",
+    "mountain biking"
+  ],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "vintage Tour de France poster illustration, sweeping mountain road, flat bold colour and grain",
+  "scene": "{hero} in full lycra, grinning through gritted teeth while grinding up an absurdly steep mountain road, as a snail wearing a tiny race number overtakes them. Only {hero} is in the scene.",
+  "copy": {
+    "title": {
+      "max": 22,
+      "examples": [
+        "ALL UPHILL FROM HERE."
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Happy Birthday, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Another year, another hill. Still no sign of slowing down (well, maybe a bit). Have a brilliant birthday."
+      ]
+    }
+  },
+  "spot": "a bicycle bell and a pair of cycling gloves",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "CLASSIC-GRE-FEDR-7X5-BLA",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "schema": "cardgen.template.v2"
+}

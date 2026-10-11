@@ -1,0 +1,86 @@
+{
+  "id": "solo_giant_veg_v1",
+  "occasions": [
+    "birthday",
+    "fathers_day",
+    "mothers_day",
+    "retirement"
+  ],
+  "interests": [
+    "gardening",
+    "garden",
+    "allotment",
+    "plants",
+    "growing veg"
+  ],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "cheerful vintage seed-packet illustration, lithograph texture, sunny allotment, bold greens and reds",
+  "scene": "{hero} in gardening gloves and a straw hat, beaming beside a ridiculously enormous prize marrow bigger than a wheelbarrow, a first-prize rosette pinned to it. Only {hero} is in the scene.",
+  "copy": {
+    "title": {
+      "max": 20,
+      "examples": [
+        "GROWN WITH LOVE.",
+        "FIRST PRIZE"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Happy Birthday, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Another year of growing older (and growing frankly alarming vegetables). Have a blooming lovely birthday."
+      ]
+    }
+  },
+  "spot": "a seed packet and a small trowel in soil",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "CLASSIC-GRE-FEDR-7X5-BLA",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "schema": "cardgen.template.v2"
+}

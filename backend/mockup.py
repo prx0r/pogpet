@@ -100,8 +100,26 @@ def cache_tag(shape: str, product_id: str | None = None) -> str:
 
 def render(shape: str, photo: Path | None, label: str, out_path: Path,
            concept: dict | None = None, subject: str = "",
-           product_id: str | None = None, scene: bool = True) -> Path:
-    """Mockup for one product. Photoreal scene when a kit exists, else flat tile."""
+           product_id: str | None = None, scene: bool = True,
+           owner: str = "", subject_id: str = "") -> Path:
+    """Mockup for one product. With owner + subject_id: the product_art design
+    from that person's best photos (backend/product_art.py). Otherwise a
+    photoreal scene from the one source image when a kit exists, else flat tile."""
+    pid = product_id or _product_for(shape, label)
+    if scene and owner and subject_id and pid:
+        try:
+            import shutil
+            import tempfile
+            from . import product_art
+            with tempfile.TemporaryDirectory() as td:
+                res = product_art.make_product(owner, subject_id, pid, out_dir=td)
+                Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+                with Image.open(res["preview_path"]) as im:
+                    im.convert("RGB").save(out_path, "PNG", optimize=True)
+                shutil.copyfile(res["print_path"], Path(out_path).with_name(Path(out_path).stem + "_print.jpg"))
+            return Path(out_path)
+        except Exception:
+            pass   # fall through to the single-photo path
     if scene and photo is not None and Path(photo).is_file():
         try:
             from . import mockup_slots

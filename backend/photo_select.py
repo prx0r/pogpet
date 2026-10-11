@@ -198,13 +198,16 @@ def _shot(n: int) -> str:
     return "solo" if n <= 1 else ("couple" if n == 2 else "group")
 
 
+CHARACTER_MIN_SHORT_SIDE = 300   # clean flat art (a character render) survives upscaling better than a photo
+
+
 def candidate(pid: str, a: dict, hero_vecs: list, tagged_boxes: list, labels: dict | None = None,
-              name: str = "them") -> tuple[dict | None, str]:
+              name: str = "them", min_short: int = MIN_SHORT_SIDE) -> tuple[dict | None, str]:
     """(candidate, "") or (None, reject reason) for one analysed photo."""
     from backend import faces as FC
     W, H = a["w"], a["h"]
-    if min(W, H) < MIN_SHORT_SIDE:
-        return None, f"low-res ({W}x{H}px; needs {MIN_SHORT_SIDE}px on the short side)"
+    if min(W, H) < min_short:
+        return None, f"low-res ({W}x{H}px; needs {min_short}px on the short side)"
     faces = a["faces"]
     if not faces:
         return None, "no face found"
@@ -391,6 +394,42 @@ def _subject_name(owner: str, subject_id: str) -> str:
         return "them"
 
 
+def _subject_kind(owner: str, subject_id: str) -> str:
+    from backend import db
+    try:
+        with db.connect() as c:
+            r = c.execute("SELECT kind FROM studio_subjects WHERE id=? AND owner=?", (subject_id, owner)).fetchone()
+        return (r["kind"] if r else "") or "person"
+    except Exception:
+        return "person"
+
+
+def subject_region(photo: dict) -> list:
+    """[x, y, w, h] 0-1 'face' box for a faceless pet/character image: the top of the
+    foreground (pixels that differ from the border colour), as wide as a head."""
+    import numpy as np
+    from backend import cards as C
+    img, _d = _load_upright(C.local_asset(photo["r2_key"]))
+    small = img.resize((256, max(1, round(256 * img.height / img.width))))
+    a = np.asarray(small).astype(np.int32)
+    H, W = a.shape[:2]
+    border = np.concatenate([a[0], a[-1], a[:, 0], a[:, -1]])
+    bg = np.median(border, axis=0)
+    diff = np.abs(a - bg).sum(axis=2)
+    fg = diff > max(60, float(np.percentile(np.abs(border - bg).sum(axis=1), 95)) + 25)
+    ys, xs = np.nonzero(fg)
+    if len(xs) < 0.02 * W * H:            # busy background: assume a centred subject
+        x0, x1, y0, y1 = 0.25 * W, 0.75 * W, 0.1 * H, 0.95 * H
+    else:
+        x0, x1 = np.percentile(xs, 2), np.percentile(xs, 98)
+        y0, y1 = np.percentile(ys, 1), np.percentile(ys, 99)
+    fw, fh = x1 - x0, y1 - y0
+    side = min(fw * 0.6, fh * 0.4)
+    cx = (x0 + x1) / 2
+    hy = y0 + fh * 0.05
+    return [max(0.0, (cx - side / 2) / W), max(0.0, hy / H), min(1.0, side / W), min(1.0, side / H)]
+
+
 def candidates(owner: str, subject_id: str) -> tuple[list, list]:
     """(qualifying candidates, rejects) for every photo the owner has."""
     from backend import db
@@ -409,6 +448,8 @@ def candidates(owner: str, subject_id: str) -> tuple[list, list]:
                 tagged.setdefault(p["id"], []).append(
                     ({"box": [x / max(p["w"], 1), y / max(p["h"], 1), w / max(p["w"], 1), h / max(p["h"], 1)]},
                      f["id"]))
+    whole = {p["id"] for p in idx["photos"] if p.get("tagged") and not p["faces"]}
+    kind = _subject_kind(owner, subject_id)
     cands, rejects = [], []
     for pid, p in sorted(rows.items(), key=lambda kv: kv[1].get("created_at") or 0):
         try:
@@ -421,6 +462,20 @@ def candidates(owner: str, subject_id: str) -> tuple[list, list]:
         for _t, fid in tagged.get(pid, []):
             lab = labs.get(fid) or {}
         cnd, why = candidate(pid, a, idx["hero_vecs"], tb, lab, name)
+        if not cnd and pid in whole and kind in ("pet", "character") and (
+                not a["faces"] or why.startswith("low-res")):
+            # a pet/character photo tagged as a whole image: the subject is the image's
+            # foreground, its "face" the top of it (no detector knows a cartoon face)
+            try:
+                box = subject_region(p)
+                a2 = dict(a, faces=[{"box": box, "score": 1.0, "sharp": max(BLUR_MIN + 1, a.get("sharp_img", 100.0)),
+                                     "vec": None}])
+                cnd, why = candidate(pid, a2, [], [box], lab, name,
+                                     min_short=CHARACTER_MIN_SHORT_SIDE if kind == "character" else MIN_SHORT_SIDE)
+                if cnd:
+                    cnd["match"] = "tagged (whole image)"
+            except Exception as e:  # noqa: BLE001
+                why = f"no face found and no clear subject ({type(e).__name__})"
         if cnd:
             cands.append(cnd)
         else:
@@ -538,6 +593,7 @@ def select_photos(owner: str, subject_id: str, n: int, layout: str = "card_grid"
         cut = len(cut_faces(crop, c["all"]))
         picks.append({"photo_id": c["photo_id"], "cell": i, "crop": crop, "hero": c is hero,
                       "score": c["score"], "shot": c["shot"], "dpi": dpi, "cut_faces": cut,
+                      "subject": c["subject"], "faces": c["all"],
                       "reason": _reason(c, c is hero, picked) + (f"; prints at ~{dpi} dpi" if dpi else "")})
     for c in kept:
         if c not in picked:

@@ -75,6 +75,9 @@ def gate():
     # Public proof images: design ids are unguessable capability URLs.
     if request.path.startswith("/api/cards/proof/"):
         return None
+    # Product print/preview proofs: make ids are unguessable capability URLs too.
+    if request.path.startswith("/api/products/proof/"):
+        return None
     return _gated()
 
 
@@ -1150,25 +1153,36 @@ def guide_packs():
                     "events": state.get("events", [])})
 
 
-def _ensure_mockup(owner, short, pid, spec, src_path, concept, subject, have):
+def _ensure_mockup(owner, short, pid, spec, src_path, concept, subject, have, subject_id=""):
     """Render a product mockup if missing; return (r2_key, fname, was_rendered).
 
     Extracted so feeds and future surfaces reuse the identical cache semantics
     as /api/products (same fname scheme, same R2 keys). Raises
     FileNotFoundError when there is no source image to render from.
+    With subject_id (a known person) the mockup is the product_art design from
+    their best photos (backend/product_art.py); the single-photo path stays the
+    fallback.
     """
     from backend import mockup   # absolute: this module is __main__
     ctag = f"_{concept['id']}" if concept else ""
     stg = f"_{abs(hash(subject)) % 99999}" if subject else ""
-    fname = f"{pid}_{short}{ctag}{stg}{mockup.cache_tag(spec.get('shape', ''), pid)}.png"
+    ptag = ""
+    if subject_id:
+        try:
+            from backend import product_art as _pa
+            ptag = "_pa" + _pa.cache_key(owner, subject_id, pid)[:10]
+        except Exception:
+            ptag = ""
+    fname = f"{pid}_{short}{ctag}{stg}{ptag}{mockup.cache_tag(spec.get('shape', ''), pid)}.png"
     key = f"owners/{storage._slug(owner)}/products/{fname}"
     rendered = False
     if fname not in have:
-        if src_path is None:
+        if src_path is None and not ptag:
             raise FileNotFoundError("no source image")
         tmp = config.LOCAL_TMP / f"mk_{pid}_{owner}.png"
         mockup.render(spec["shape"], src_path, spec["label"], tmp,
-                      concept=concept, subject=subject, product_id=pid)
+                      concept=concept, subject=subject, product_id=pid,
+                      owner=owner if ptag else "", subject_id=subject_id if ptag else "")
         storage.put(tmp, key)
         tmp.unlink(missing_ok=True)
         have.add(fname)
@@ -1207,6 +1221,133 @@ def _public_product_image(key, fname):
     return f"{_public_base()}/img/{fname}"
 
 
+def _int_arg(v, lo, hi):
+    try:
+        v = int(v)
+    except (TypeError, ValueError):
+        return None
+    return v if lo <= v <= hi else None
+
+
+def _products_for_subject(owner, subject_id, args):
+    from backend import product_art as _pa
+    age = _int_arg(args.get("age"), 0, 120) or 0
+    res = _pa.make_and_store(owner, subject_id, _pa.product_ids(), age=age,
+                             recipient=args.get("recipient"), style=args.get("style") or None)
+    items = []
+    for r in res["products"]:
+        spec = config.PRODIGI_PRODUCTS.get(r["product_id"], {})
+        items.append({"id": r["product_id"], "label": spec.get("label", r["product_id"]),
+                      "shape": spec.get("shape"), "section": config.SECTION_OF.get(r["product_id"], ""),
+                      "price_cents": spec.get("price_cents"), "price_grade": "EST",
+                      "sku": spec.get("sku"), "sku_note": spec.get("sku_note"),
+                      "image": r["preview_url"], "print_image": r["print_url"],
+                      "print_px": r["print_px"], "aspect_source": r["aspect_source"],
+                      "picks": r["picks"], "source": "prodigi", "source_kind": "photos",
+                      "free": spec.get("free", False), "note": r.get("note", "")})
+    return jsonify({"ok": res["ok"], "owner": owner, "subject_id": subject_id, "source_kind": "photos",
+                    "items": items, "count": len(items), "failed": res["failed"]})
+
+
+@app.post("/api/products/make")
+def products_make():
+    """Design one product (or all) for a person from their photos.
+
+    {subject_id, product_id | product_id:"all" | products:[...], age?, recipient?, style?,
+     photo_ids?, fresh?} -> per product: print_url (the exact print file, the ONLY
+    asset fulfilment uses), preview_url (scene mockup), picks with reasons,
+    recipe_version, aspect_source. Both URLs are public capability links."""
+    from backend import product_art as _pa
+    b = request.get_json(silent=True) or {}
+    owner = str(b.get("owner") or request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    sid = str(b.get("subject_id") or "").strip()[:80]
+    if not sid:
+        return _err("subject_id is required", 400)
+    want = b.get("products") or b.get("product_id") or b.get("product") or "all"
+    if want == "all":
+        prods = _pa.product_ids()
+    else:
+        prods = [want] if isinstance(want, str) else [str(x) for x in want]
+        bad = [p for p in prods if p not in _pa.product_ids()]
+        if bad:
+            return _err(f"unknown product {bad[0]!r}; have {_pa.product_ids()} or 'all'", 400)
+    age = b.get("age")
+    if age not in (None, "") and _int_arg(age, 0, 120) is None:
+        return _err("age must be 0-120", 400)
+    style = (str(b.get("style") or "").strip().lower() or None)
+    from backend import photo_grid as _pg
+    if style and style not in _pg.STYLE_IDS and style != "auto":
+        return _err(f"style must be one of {list(_pg.STYLE_IDS)}", 400)
+    try:
+        _pa.subject_info(owner, sid)
+    except _pa.ProductArtError as e:
+        return _err(str(e), e.status)
+    res = _pa.make_and_store(owner, sid, prods, age=_int_arg(age, 0, 120) or 0,
+                             recipient=b.get("recipient"), style=style,
+                             photo_ids=[str(x) for x in (b.get("photo_ids") or [])],
+                             fresh=bool(b.get("fresh")))
+    for r in res["products"]:
+        r.pop("print_key", None)
+        r.pop("preview_key", None)
+    code = 200 if res["ok"] else 422
+    if not res["ok"] and any(f.get("error_code") == "NEEDS_PHOTO" for f in res["failed"].values()):
+        res["error_code"] = "NEEDS_PHOTO"
+        res["error"] = next(iter(res["failed"].values()))["error"]
+    return jsonify(res), code
+
+
+@app.post("/api/subjects/intake")
+def subjects_intake():
+    """Register any person, pet or character for the product pipeline.
+
+    JSON {name, kind: person|pet|character, relationship?, interests?, photo_urls?: [...],
+    photo_ids?: [...], subject_id? (add photos to an existing subject)} or multipart with
+    one or more 'photos' files (+ the same fields). Photos go through POST /api/photos
+    (intake checks, storage, face detection); one confirmation tag is placed per subject
+    (faceless pet/character images are tagged as whole images). Returns the subject id
+    to pass to POST /api/products/make."""
+    from flask import current_app
+    from backend import subject_intake as _si
+    if request.content_type and request.content_type.startswith("multipart/"):
+        f = request.form
+        b = {k: f.get(k) for k in ("owner", "name", "kind", "relationship", "subject_id")}
+        b["interests"] = [x for x in (f.get("interests") or "").split(",") if x.strip()]
+        b["photo_urls"] = [x for x in (f.get("photo_urls") or "").split(",") if x.strip()]
+        b["photo_ids"] = [x for x in (f.get("photo_ids") or "").split(",") if x.strip()]
+        files = [(fs.filename or "photo.jpg", fs.read()) for fs in request.files.getlist("photos")]
+    else:
+        b = request.get_json(silent=True) or {}
+        files = []
+    owner = str(b.get("owner") or request.args.get("owner") or "anon").strip()[:80]
+    denied = _owner_denied(owner)
+    if denied is not None:
+        return denied
+    sources = files + [str(u) for u in (b.get("photo_urls") or []) if str(u).startswith(("http://", "https://"))] \
+        + [str(x) for x in (b.get("photo_ids") or []) if str(x).startswith("pho_")]
+    try:
+        res = _si.add_subject(current_app, owner, b.get("name") or "", sources,
+                              kind=b.get("kind") or "person", relationship=b.get("relationship") or "",
+                              interests=b.get("interests") or [], subject_id=b.get("subject_id") or "")
+    except _si.IntakeError as e:
+        return _err(str(e), e.status)
+    return jsonify(res)
+
+
+@app.get("/api/products/proof/<mid>/<kind>.jpg")
+def product_proof(mid, kind):
+    """Public print file / scene preview of one product make (unguessable id)."""
+    from backend import product_art as _pa
+    p = _pa.proof_file(mid, kind)
+    if p is None:
+        return _err("Not found", 404)
+    res = send_file(p, mimetype="image/jpeg", max_age=86400)
+    res.headers["Cache-Control"] = "public, max-age=86400, immutable"
+    return res
+
+
 @app.get("/api/products")
 def products():
     """Prodigi rendered against the owner's ACTIVE pog.
@@ -1220,6 +1361,14 @@ def products():
     owner = (request.args.get("owner") or "anon").strip()[:80]
     concept_id = (request.args.get("concept") or "").strip()
     subject = (request.args.get("subject") or "").strip()[:40]
+    subject_id = (request.args.get("subject_id") or "").strip()[:80]
+    if subject_id:
+        # a known person: every product designed from their best photos
+        # (print file + scene mockup); no active pog needed
+        denied = _owner_denied(owner)
+        if denied is not None:
+            return denied
+        return _products_for_subject(owner, subject_id, request.args)
     concept = None
     if concept_id:
         try:

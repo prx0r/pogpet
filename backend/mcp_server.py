@@ -1394,11 +1394,108 @@ def _grid_brief(body: dict) -> dict:
     return out
 
 
+def _product_ids() -> list:
+    from backend import product_art as _pa
+    return _pa.product_ids()
+
+
+async def _product_make(who, key_arg, owner_sig, sub, product, *, age=0, recipient="", style="",
+                        request="") -> dict:
+    """Shared by oddhobb_make(product=...) and oddhobb_product_make: REST /api/products/make."""
+    from backend import photo_grid_api as _pga
+    body = {"owner": who, "subject_id": sub.get("id", ""),
+            "product_id": product or "all",
+            "age": int(age or 0) or _pga.age_from_words(request)}
+    st = (style or _pga.style_from_words(request) or "").lower()
+    if st:
+        body["style"] = st
+    if recipient:
+        body["recipient"] = recipient
+    made = await _call("POST", "/api/products/make", body, api_key=key_arg, owner_sig=owner_sig)
+    name = sub.get("name") or "them"
+    if not made.get("ok"):
+        if made.get("error_code") == "NEEDS_PHOTO":
+            return _err_env(NEEDS_PHOTO, made.get("error") or "I need clearer photos of them.",
+                            status="needs_input",
+                            requires_action={"type": "add_media", "subject_id": sub.get("id", ""),
+                                             "message": "Add a few sharp photos where their face is big and clear."},
+                            extra={"failed": made.get("failed")})
+        return _err_env("PRODUCT_FAILED", "I couldn't make that product.",
+                        reason=str(made.get("error") or made.get("failed") or "")[:300])
+    prods = []
+    for r in made.get("products") or []:
+        prods.append({"product_id": r["product_id"], "print_url": r["print_url"], "preview_url": r["preview_url"],
+                      "print_px": r["print_px"], "aspect_source": r["aspect_source"],
+                      "style": r.get("style"), "photos_used": r.get("photos_used"),
+                      "photos_picked": [{"photo_id": p["photo_id"], "hero": p["hero"], "reason": p["reason"]}
+                                        for p in r.get("picks") or []],
+                      "note": r.get("note", ""), "recipe_version": r.get("recipe_version")})
+    summary = (f"{len(prods)} product{'s' if len(prods) != 1 else ''} designed from {name}'s photos"
+               + (f" ({len(made.get('failed') or {})} could not be made)" if made.get("failed") else "") + ".")
+    return _env(status="ready", id=sub.get("id", ""), summary=summary,
+                artifacts=[{"kind": "preview", "url": p["preview_url"], "product": p["product_id"]}
+                           for p in prods],
+                next_actions=[], extra={"products": prods, "failed": made.get("failed") or {},
+                                        "fulfilment": "print_url is the exact print file; preview_url is the listing mockup"})
+
+
+async def oddhobb_product_make(subject_id: str = "", person: str = "", product: str = "all",
+                               age: int = 0, recipient: str = "", style: str = "",
+                               owner: str = "", api_key: str = "", owner_sig: str = "", ctx=None) -> list:
+    """Design a Prodigi product (or all 13) for a person from their real photos: the
+    exact print file (print_url, what fulfilment prints) plus a photoreal listing
+    mockup (preview_url), with every photo pick explained. product = greeting_card|
+    postcard|sticker|framed_print|poster|photo_tile|canvas|cushion|mug|tote|notebook|
+    jigsaw|wrapping_paper|all. age adds "70th" to the lettering (and the wrap motif);
+    style = classic|bold|playful|botanical|sporty|kids (default picked for them).
+    Instant, no generation. NEEDS_PHOTO when their photos can't fill a design."""
+    from mcp.types import TextContent
+    who = _resolve_owner(owner, api_key, ctx)
+    key_arg = api_key or _bearer_key(ctx)
+    if product not in ("all", *_product_ids()):
+        return [TextContent(type="text", text=_j(_err_env(
+            "UNKNOWN_PRODUCT", f"Unknown product {product!r}.", reason="have: " + ", ".join(_product_ids()))))]
+    people = await _call("GET", "/api/oddhobb/people?owner=" + who, api_key=key_arg, owner_sig=owner_sig)
+    sub = _find_subject(people, person, subject_id) or ({"id": subject_id} if subject_id else None)
+    if not sub:
+        return [TextContent(type="text", text=_j({"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
+    return [TextContent(type="text", text=_j(await _product_make(
+        who, key_arg, owner_sig, sub, product, age=age, recipient=recipient, style=style)))]
+
+
+async def oddhobb_subject_add(name: str = "", kind: str = "person", photo_urls: list | None = None,
+                              photo_ids: list | None = None, relationship: str = "", interests: list | None = None,
+                              subject_id: str = "", owner: str = "", api_key: str = "", owner_sig: str = "",
+                              ctx=None) -> list:
+    """Register a person, pet or character from photos (URLs anyone can fetch, or photo ids
+    already uploaded) so products can be made for them. kind = person|pet|character; a
+    character works from one or a few images. One confirmation tag is placed for you; the
+    photo selector finds them in the rest. Returns subject.id for oddhobb_product_make /
+    oddhobb_make(product=...). subject_id adds photos to someone already registered."""
+    from mcp.types import TextContent
+    who = _resolve_owner(owner, api_key, ctx)
+    key_arg = api_key or _bearer_key(ctx)
+    body = {"owner": who, "name": name, "kind": kind, "photo_urls": list(photo_urls or []),
+            "photo_ids": list(photo_ids or []), "relationship": relationship,
+            "interests": list(interests or []), "subject_id": subject_id}
+    r = await _call("POST", "/api/subjects/intake", body, api_key=key_arg, owner_sig=owner_sig)
+    if not r.get("ok"):
+        return [TextContent(type="text", text=_j(_err_env("INTAKE_FAILED", r.get("error") or "Couldn't register them.",
+                                                          status="needs_input")))]
+    sub = r["subject"]
+    return [TextContent(type="text", text=_j(_env(
+        status="ready", id=sub["id"],
+        summary=f"{sub['name']} ({sub['kind']}) registered with {len(r['photos'])} photo(s).",
+        next_actions=["oddhobb_product_make"], extra={"subject": sub, "photos": r["photos"], "tags": r["tags"],
+                                                      "errors": r.get("errors") or []})))]
+
+
 async def oddhobb_make(subject_id: str = "", person: str = "",
                         request: str = "", product_type: str = "greeting_card",
                         budget_cents: int = 0, count: int = 4,
                         layout: str = "", photos: int = 0, style: str = "",
                         age: int = 0, recipient: str = "", painted: bool = False,
+                        product: str = "",
                         owner: str = "", api_key: str = "",
                         owner_sig: str = "", ctx=None) -> list:
     """Make a personalised birthday card from the person's real photos: a
@@ -1413,11 +1510,30 @@ async def oddhobb_make(subject_id: str = "", person: str = "",
     back URLs anyone can open; oddhobb_change swaps a photo, changes the count or
     style, or the inside words; oddhobb_buy / checkout buys. Errors are typed:
     NEEDS_PHOTO. The signer is asked once, at buy time. painted=true instead
-    starts premium painted cards (slow, capped daily) and is never the default."""
+    starts premium painted cards (slow, capped daily) and is never the default.
+    product=<id>|all instead designs Prodigi products (postcard, sticker, framed_print,
+    poster, photo_tile, canvas, cushion, mug, tote, notebook, jigsaw, wrapping_paper,
+    greeting_card) from the same photos: each returns print_url (the exact print file)
+    and preview_url (listing mockup), both public."""
     from mcp.types import TextContent
     from backend import photo_grid_api as _pga
     who = _resolve_owner(owner, api_key, ctx)
     key_arg = api_key or _bearer_key(ctx)
+    prod = (product or "").strip()
+    if not prod and (product_type or "greeting_card") != "greeting_card" and product_type in _product_ids():
+        prod = product_type
+    if prod:
+        # any Prodigi product (or "all") from their photos: print file + listing mockup
+        if prod not in ("all", *_product_ids()):
+            return [TextContent(type="text", text=_j(_err_env(
+                "UNKNOWN_PRODUCT", f"Unknown product {prod!r}.", reason="have: " + ", ".join(_product_ids()))))]
+        people = await _call("GET", "/api/oddhobb/people?owner=" + who, api_key=key_arg, owner_sig=owner_sig)
+        sub = _find_subject(people, person, subject_id)
+        if not sub:
+            return [TextContent(type="text", text=_j(
+                {"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
+        return [TextContent(type="text", text=_j(await _product_make(
+            who, key_arg, owner_sig, sub, prod, age=age, recipient=recipient, style=style, request=request)))]
     if (product_type or "greeting_card") != "greeting_card":
         return [TextContent(type="text", text=_j(_env(
             status="needs_input", summary="Only greeting cards so far.",
@@ -3125,7 +3241,8 @@ TOOL_AREAS: dict[str, list] = {
                   oddhobb_make_card, oddhobb_attach_card_art,
                   oddhobb_card_recommend, oddhobb_card_generate,
                   oddhobb_deal_cards,
-                  oddhobb_recommend, oddhobb_make, oddhobb_variants,
+                  oddhobb_recommend, oddhobb_make, oddhobb_product_make, oddhobb_subject_add,
+                  oddhobb_variants,
                   oddhobb_get, oddhobb_change, oddhobb_add_media,
                   oddhobb_regenerate_title_art,
                   oddhobb_edit_card_copy, oddhobb_checkout_card,

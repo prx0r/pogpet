@@ -1,0 +1,113 @@
+{
+  "version": "pr2",
+  "doc": "Design recipes for every Prodigi product, as data. backend/product_art.py reads this; no per-person or per-product code paths beyond the five kinds. print_px is the fallback print size; when the product has a sku and backend.prodigi.print_area(sku) answers (live key or the cached data/prodigi_templates.json), that size wins and aspect_source becomes 'live'. aspect_source on a fallback: 'verified' = a live lookup recorded in the repo, 'assumed' = documented size, not yet confirmed against Prodigi.",
+  "kinds": ["card", "grid", "sticker_round", "mug_band", "wrap_pattern"],
+  "layouts": {
+    "g1":  {"cols": 1, "rows": 1, "cells": [[0, 0, 1, 1]]},
+    "g2":  {"cols": 2, "rows": 1, "cells": [[0, 0, 1, 1], [1, 0, 1, 1]]},
+    "g3":  {"cols": 2, "rows": 2, "cells": [[0, 0, 2, 1], [0, 1, 1, 1], [1, 1, 1, 1]]},
+    "g3v": {"cols": 2, "rows": 2, "cells": [[0, 0, 1, 2], [1, 0, 1, 1], [1, 1, 1, 1]]},
+    "g4":  {"cols": 2, "rows": 2, "cells": [[0, 0, 1, 1], [1, 0, 1, 1], [0, 1, 1, 1], [1, 1, 1, 1]]},
+    "g6":  {"cols": 3, "rows": 3, "cells": [[0, 0, 2, 2], [2, 0, 1, 1], [2, 1, 1, 1], [0, 2, 1, 1], [1, 2, 1, 1], [2, 2, 1, 1]]},
+    "g10": {"cols": 4, "rows": 4, "cells": [[0, 0, 2, 2], [2, 0, 2, 1], [2, 1, 1, 1], [3, 1, 1, 1], [0, 2, 1, 1], [1, 2, 1, 1], [2, 2, 2, 1], [0, 3, 2, 1], [2, 3, 1, 1], [3, 3, 1, 1]]}
+  },
+  "wrap_palettes": {
+    "classic":   {"bg": "#1d3b6e", "confetti": ["#e9c46a", "#ffffff", "#f4a6b8", "#8ecae6"], "sticker_bg": "#f2d58a", "text": "#e9c46a"},
+    "bold":      {"bg": "#e8553d", "confetti": ["#ffffff", "#1a1a1a", "#ffd166", "#06d6a0"], "sticker_bg": "#ffd166", "text": "#ffffff"},
+    "playful":   {"bg": "#12988f", "confetti": ["#ffd166", "#ffffff", "#ef476f", "#f78c6b"], "sticker_bg": "#ffd166", "text": "#ffffff"},
+    "botanical": {"bg": "#f6c9d0", "confetti": ["#b76e79", "#ffffff", "#e9c46a", "#7fb7a4"], "sticker_bg": "#f9dde2", "text": "#9c5a64"},
+    "sporty":    {"bg": "#1f3a68", "confetti": ["#c8102e", "#ffffff", "#ffd166", "#8ecae6"], "sticker_bg": "#8ecae6", "text": "#ffffff"},
+    "kids":      {"bg": "#ffd23f", "confetti": ["#e53935", "#1e88e5", "#43a047", "#8e24aa"], "sticker_bg": "#8ecae6", "text": "#1e88e5"}
+  },
+  "products": {
+    "greeting_card": {
+      "kind": "card", "sku": "CLASSIC-GRE-FEDR-7X5-BLA", "print_panels": 4,
+      "print_px": [1530, 2160], "aspect_source": "verified",
+      "aspect_note": "front panel of the 6120x2160 four-panel print area (trim 1500x2100 + bleed); the full card print file comes from the card pipeline (/api/cards/photo-grid)",
+      "photos": {"ideal": 4, "min": 1, "steps": [10, 6, 4, 1]},
+      "style": "auto", "preview": {"crop": "trim"}
+    },
+    "postcard": {
+      "kind": "grid", "print_px": [1748, 1240], "aspect_source": "assumed",
+      "aspect_note": "A6 landscape 148x105mm at 300dpi, no bleed",
+      "photos": {"ideal": 4, "min": 1},
+      "layouts_by_count": {"4": "g4", "3": "g3v", "2": "g2", "1": "g1"},
+      "header": {"pos": "left", "frac": 0.36}, "margin": 0.065, "gutter": 0.02, "style": "auto"
+    },
+    "sticker": {
+      "kind": "sticker_round", "print_px": [1200, 1200], "aspect_source": "assumed",
+      "aspect_note": "round die-cut sticker, 4in diameter at 300dpi (kit fit=round)",
+      "photos": {"ideal": 1, "min": 1}, "choose_from": 4, "border": 0.04, "style": "auto"
+    },
+    "framed_print": {
+      "kind": "grid", "print_px": [3600, 4800], "aspect_source": "assumed",
+      "aspect_note": "3:4 portrait, 12x16in at 300dpi (matches the 0.75 kit)",
+      "photos": {"ideal": 4, "min": 1},
+      "layouts_by_count": {"4": "g4", "3": "g3", "1": "g1"},
+      "header": {"pos": "top", "frac": 0.25}, "margin": 0.06, "gutter": 0.016, "style": "auto"
+    },
+    "poster": {
+      "kind": "grid", "print_px": [3508, 4961], "aspect_source": "assumed",
+      "aspect_note": "A3 portrait 297x420mm at 300dpi",
+      "photos": {"ideal": 6, "min": 1},
+      "layouts_by_count": {"10": "g10", "6": "g6", "4": "g4", "3": "g3", "1": "g1"},
+      "header": {"pos": "top", "frac": 0.22}, "margin": 0.06, "gutter": 0.014, "style": "auto"
+    },
+    "photo_tile": {
+      "kind": "grid", "print_px": [2400, 2400], "aspect_source": "assumed",
+      "aspect_note": "8x8in square at 300dpi",
+      "photos": {"ideal": 1, "min": 1},
+      "layouts_by_count": {"1": "g1"},
+      "header": {"pos": "top", "frac": 0.27}, "margin": 0.06, "gutter": 0.02, "radius": 0.022, "style": "auto"
+    },
+    "canvas": {
+      "kind": "grid", "sku": "GLOBAL-CAN-10X10", "print_px": [3000, 3000], "aspect_source": "assumed",
+      "aspect_note": "10x10in face at 300dpi; Prodigi's live print area may add wrap edges (not yet looked up)",
+      "photos": {"ideal": 3, "min": 1},
+      "layouts_by_count": {"3": "g3", "2": "g2", "1": "g1"},
+      "header": {"pos": "top", "frac": 0.25}, "margin": 0.09, "gutter": 0.018, "style": "auto"
+    },
+    "cushion": {
+      "kind": "grid", "print_px": [3543, 3543], "aspect_source": "assumed",
+      "aspect_note": "45x45cm cover at 200dpi; extra margin for the seam",
+      "photos": {"ideal": 4, "min": 1},
+      "layouts_by_count": {"4": "g4", "3": "g3", "1": "g1"},
+      "header": {"pos": "top", "frac": 0.23}, "margin": 0.12, "gutter": 0.018, "style": "auto"
+    },
+    "mug": {
+      "kind": "mug_band", "print_px": [2700, 1149], "aspect_source": "assumed",
+      "aspect_note": "11oz wrap band (2.35:1, matches the mug kit); handle seam at the band ends",
+      "photos": {"ideal": 6, "min": 1, "steps": [6, 4, 2, 1]},
+      "margin": 0.04, "gutter": 0.03, "header_frac": 0.30, "style": "auto"
+    },
+    "tote": {
+      "kind": "grid", "print_px": [3000, 3750], "aspect_source": "assumed",
+      "aspect_note": "4:5 print area, 10x12.5in at 300dpi (matches the tote kit)",
+      "photos": {"ideal": 4, "min": 1},
+      "layouts_by_count": {"4": "g4", "3": "g3", "1": "g1"},
+      "header": {"pos": "top", "frac": 0.24}, "margin": 0.06, "gutter": 0.016, "style": "auto"
+    },
+    "notebook": {
+      "kind": "grid", "print_px": [1748, 2480], "aspect_source": "assumed",
+      "aspect_note": "A5 cover 148x210mm at 300dpi",
+      "photos": {"ideal": 3, "min": 1},
+      "layouts_by_count": {"3": "g3", "2": "g2", "1": "g1"},
+      "header": {"pos": "top", "frac": 0.26}, "margin": 0.08, "gutter": 0.02, "radius": 0.012, "style": "auto"
+    },
+    "jigsaw": {
+      "kind": "grid", "print_px": [4961, 3508], "aspect_source": "assumed",
+      "aspect_note": "A3 landscape 420x297mm at 300dpi (matches the sqrt2 kit)",
+      "photos": {"ideal": 6, "min": 1},
+      "layouts_by_count": {"6": "g6", "4": "g4", "3": "g3v", "1": "g1"},
+      "header": {"pos": "left", "frac": 0.32}, "margin": 0.06, "gutter": 0.016, "style": "auto"
+    },
+    "wrapping_paper": {
+      "kind": "wrap_pattern", "sku": "WRAP-1-50X70", "print_px": [2952, 4133], "aspect_source": "verified",
+      "aspect_note": "WRAP-1-50X70 print area verified live 2026-10-10 (backend/renderers/wrap.py SHEET_PX), ~150dpi",
+      "photos": {"ideal": 6, "min": 1},
+      "heads_across": 9, "rows_per_tile": 4, "cols_per_tile": 3, "rotate_deg": 15,
+      "head_outline": 0.022, "confetti_per_tile": 46, "text_per_tile": 2, "style": "auto",
+      "preview": {"extent": "landscape"}
+    }
+  }
+}

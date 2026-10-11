@@ -193,6 +193,12 @@ def _warp_cylinder(art_bgr, kit, mask):
     has = hard.any(axis=0)
     top = np.where(has, hard.argmax(axis=0), 0).astype(np.float32)
     bot = np.where(has, H_ - 1 - hard[::-1].argmax(axis=0), 0).astype(np.float32)
+    # columns where the key only covers a sliver (the rim notch at the band's edge)
+    # would squash the art upward: take the curves from full-height columns only
+    span = np.where(has, bot - top, 0)
+    if has.any():
+        full = has & (span >= 0.85 * float(np.median(span[has])))
+        has = full if full.sum() > 8 else has
     # smooth the curves (anti-aliased key edges wobble by a pixel)
     idx = np.where(has)[0]
     if len(idx) > 8:

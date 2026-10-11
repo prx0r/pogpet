@@ -1,0 +1,84 @@
+{
+  "id": "solo_fishing_tall_tale_v1",
+  "occasions": [
+    "birthday",
+    "fathers_day",
+    "retirement"
+  ],
+  "interests": [
+    "fishing",
+    "angling",
+    "carp fishing",
+    "fly fishing"
+  ],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "classic 1950s outdoors-magazine painted illustration, misty lake at dawn, muted greens and golds",
+  "scene": "{hero} in waders proudly holding up a comically tiny fish at arm's length as if it were a record catch, while a gigantic fish leaps out of the water right behind them unnoticed. Only {hero} is in the scene.",
+  "copy": {
+    "title": {
+      "max": 22,
+      "examples": [
+        "IT WAS THIS BIG.",
+        "THE ONE THAT GOT AWAY"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Happy Birthday, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "The one that got away is still telling its mates about you. Have a brilliant birthday — tight lines."
+      ]
+    }
+  },
+  "spot": "a fishing float bobbing on rippling water",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "CLASSIC-GRE-FEDR-7X5-BLA",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "schema": "cardgen.template.v2"
+}

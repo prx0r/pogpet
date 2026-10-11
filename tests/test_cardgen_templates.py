@@ -31,7 +31,7 @@ class TemplateLibrary(unittest.TestCase):
                 self.assertIn(key, t["copy"], t["id"])
             for k, v in t["copy"].items():
                 for e in v["examples"]:
-                    e = e.replace("{recipient}", "Dad").replace("{pet_name}", "Rex")
+                    e = e.replace("{recipient}", "Dad").replace("{pet_name}", "Rex").replace("{NAME}", "CHRIS").replace("{SURNAME}", "PRIOR")
                     self.assertLessEqual(len(e), v["max"], (t["id"], k, e))
 
     def test_one_neutral_solo_photo_covers_the_solo_occasions(self):
@@ -62,6 +62,22 @@ class TemplateLibrary(unittest.TestCase):
         c = E.cast(E.template("pet_party_hat_v1"), {"photos": [], "hero_vecs": [], "hero_faces": 0})
         self.assertFalse(c["ok"])
         self.assertIn("pet", c["shortfall"][0])
+
+
+class Gates(unittest.TestCase):
+    def test_bleed_gate_flags_a_card_mockup_frame(self):
+        from PIL import Image, ImageDraw
+        art = Image.new("RGB", (700, 980), (40, 90, 60))
+        self.assertTrue(E.bleed_gate(art)[0])
+        framed = Image.new("RGB", (700, 980), (250, 250, 250))
+        ImageDraw.Draw(framed).rectangle((30, 40, 670, 950), fill=(40, 90, 60))
+        ok, why = E.bleed_gate(framed)
+        self.assertFalse(ok)
+        self.assertIn("top", why)
+
+    def test_surname_never_falls_back_to_a_first_name(self):
+        self.assertEqual(E.write_copy(E.template("xmas_family_v1"), {"name": "Chris"})["sub"], "from all of us")
+        self.assertEqual(E.write_copy(E.template("band_album_group_v1"), {"name": "Chris Prior"})["title"], "THE PRIORS")
 
 
 if __name__ == "__main__":

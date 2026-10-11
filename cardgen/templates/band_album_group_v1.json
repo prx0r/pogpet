@@ -17,7 +17,9 @@
     "title": {
       "max": 20,
       "examples": [
-        "THE {SURNAME}S"
+        "THE {SURNAME}S",
+        "THE {NAME} BAND",
+        "GREATEST HITS"
       ]
     },
     "sub": {

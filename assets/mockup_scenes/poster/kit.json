@@ -1,0 +1,37 @@
+{
+ "product": "poster",
+ "mode": "quad",
+ "surface": "opaque",
+ "aspect": 0.7071067811865475,
+ "fit": "cover",
+ "note": "A-series portrait poster taped to a wall",
+ "size": [
+  1408,
+  768
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.1026,
+ "key_components": 1,
+ "corners": [
+  [
+   563.0,
+   89.0
+  ],
+  [
+   842.0,
+   89.0
+  ],
+  [
+   842.0,
+   488.0
+  ],
+  [
+   588.0,
+   487.0
+  ]
+ ],
+ "shade_ref": 235.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 120
+}

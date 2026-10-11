@@ -54,7 +54,7 @@ def render_sheet(motif_path: str, *, sku: str = "WRAP-1-50X70",
     for ry in range(rows):
         for cx in range(cols):
             ox = (cell // 2) if (mode != "classic" and ry % 2) else 0
-            x = cx * cell + ox - (cell if ox and cx == 0 else 0)
+            x = cx * cell + ox - (cell if ox else 0)   # half-drop rows start one cell left (no gap)
             y = ry * cell
             if mode == "scattered":
                 mm = m.rotate(rnd.uniform(-18, 18), expand=True,

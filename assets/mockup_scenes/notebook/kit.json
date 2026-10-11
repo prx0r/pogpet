@@ -1,0 +1,38 @@
+{
+ "product": "notebook",
+ "mode": "quad",
+ "surface": "ink",
+ "aspect": 0.7071067811865475,
+ "fit": "cover",
+ "note": "A5 hardcover notebook front cover",
+ "size": [
+  1408,
+  768
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.2211,
+ "key_components": 1,
+ "corners": [
+  [
+   636.25,
+   107.35
+  ],
+  [
+   1019.0,
+   210.0
+  ],
+  [
+   771.0,
+   685.0
+  ],
+  [
+   324.0,
+   532.0
+  ]
+ ],
+ "clean_align_diff": 2.41,
+ "shade_ref": 255.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0
+}

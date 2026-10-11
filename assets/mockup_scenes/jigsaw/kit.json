@@ -1,0 +1,38 @@
+{
+ "product": "jigsaw",
+ "mode": "quad",
+ "surface": "ink",
+ "aspect": 1.4142135623730951,
+ "fit": "cover",
+ "note": "assembled landscape jigsaw, piece lines from the clean plate",
+ "size": [
+  1232,
+  864
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.2236,
+ "key_components": 6,
+ "corners": [
+  [
+   207.56,
+   356.33
+  ],
+  [
+   818.84,
+   264.84
+  ],
+  [
+   1075.79,
+   521.79
+  ],
+  [
+   243.09,
+   701.06
+  ]
+ ],
+ "clean_align_diff": 3.56,
+ "shade_ref": 255.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0
+}

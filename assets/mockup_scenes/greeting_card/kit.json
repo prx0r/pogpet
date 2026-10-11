@@ -1,0 +1,37 @@
+{
+ "product": "greeting_card",
+ "mode": "quad",
+ "surface": "opaque",
+ "aspect": 0.7142857142857143,
+ "fit": "cover",
+ "note": "5x7 portrait card front, standing on a table",
+ "size": [
+  1408,
+  768
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.1758,
+ "key_components": 1,
+ "corners": [
+  [
+   499.53,
+   105.56
+  ],
+  [
+   856.2,
+   122.01
+  ],
+  [
+   848.96,
+   684.97
+  ],
+  [
+   509.45,
+   630.0
+  ]
+ ],
+ "shade_ref": 235.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0
+}

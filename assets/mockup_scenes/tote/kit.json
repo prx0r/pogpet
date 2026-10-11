@@ -1,0 +1,39 @@
+{
+ "product": "tote",
+ "mode": "quad",
+ "surface": "ink",
+ "aspect": 0.8,
+ "fit": "cover",
+ "note": "4:5 print on a natural cotton tote",
+ "size": [
+  1408,
+  768
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.0574,
+ "key_components": 1,
+ "art_soften": 0.6,
+ "corners": [
+  [
+   595.0,
+   377.0
+  ],
+  [
+   812.0,
+   377.0
+  ],
+  [
+   812.0,
+   661.44
+  ],
+  [
+   595.0,
+   659.52
+  ]
+ ],
+ "clean_align_diff": 3.28,
+ "shade_ref": 255.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0
+}

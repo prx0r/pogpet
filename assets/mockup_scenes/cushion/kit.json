@@ -1,0 +1,39 @@
+{
+ "product": "cushion",
+ "mode": "quad",
+ "surface": "ink",
+ "aspect": 1.0,
+ "fit": "cover",
+ "note": "square cushion front panel on a sofa",
+ "size": [
+  1408,
+  768
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.1415,
+ "key_components": 1,
+ "art_soften": 0.6,
+ "corners": [
+  [
+   491.0,
+   141.0
+  ],
+  [
+   919.0,
+   141.0
+  ],
+  [
+   931.0,
+   545.0
+  ],
+  [
+   484.0,
+   545.0
+  ]
+ ],
+ "clean_align_diff": 3.22,
+ "shade_ref": 255.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0
+}

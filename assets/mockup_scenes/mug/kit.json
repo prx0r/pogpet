@@ -1,0 +1,46 @@
+{
+ "product": "mug",
+ "mode": "cylinder",
+ "surface": "ink",
+ "aspect": 2.35,
+ "fit": "cover",
+ "note": "11oz mug wrap band, cylinder-mapped (visible window of the wrap)",
+ "size": [
+  1408,
+  768
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.156,
+ "key_components": 1,
+ "corners": [
+  [
+   486.0,
+   194.0
+  ],
+  [
+   889.0,
+   214.0
+  ],
+  [
+   881.0,
+   631.0
+  ],
+  [
+   505.0,
+   616.0
+  ]
+ ],
+ "clean_align_diff": 1.76,
+ "shade_ref": 255.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0,
+ "cyl": {
+  "xc": 687.5,
+  "r": 207.73,
+  "xl": 486.0,
+  "xr": 889.0,
+  "band_h": 429.0,
+  "visible_aspect": 1.2834
+ }
+}

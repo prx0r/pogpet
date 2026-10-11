@@ -1160,7 +1160,7 @@ def _ensure_mockup(owner, short, pid, spec, src_path, concept, subject, have):
     from backend import mockup   # absolute: this module is __main__
     ctag = f"_{concept['id']}" if concept else ""
     stg = f"_{abs(hash(subject)) % 99999}" if subject else ""
-    fname = f"{pid}_{short}{ctag}{stg}.png"
+    fname = f"{pid}_{short}{ctag}{stg}{mockup.cache_tag(spec.get('shape', ''), pid)}.png"
     key = f"owners/{storage._slug(owner)}/products/{fname}"
     rendered = False
     if fname not in have:
@@ -1168,7 +1168,7 @@ def _ensure_mockup(owner, short, pid, spec, src_path, concept, subject, have):
             raise FileNotFoundError("no source image")
         tmp = config.LOCAL_TMP / f"mk_{pid}_{owner}.png"
         mockup.render(spec["shape"], src_path, spec["label"], tmp,
-                      concept=concept, subject=subject)
+                      concept=concept, subject=subject, product_id=pid)
         storage.put(tmp, key)
         tmp.unlink(missing_ok=True)
         have.add(fname)

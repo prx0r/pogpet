@@ -1,0 +1,37 @@
+{
+ "product": "canvas",
+ "mode": "quad",
+ "surface": "opaque",
+ "aspect": 1.0,
+ "fit": "cover",
+ "note": "GLOBAL-CAN-10X10 square canvas, white wrap",
+ "size": [
+  1200,
+  896
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.121,
+ "key_components": 1,
+ "corners": [
+  [
+   536.0,
+   186.11
+  ],
+  [
+   843.58,
+   151.61
+  ],
+  [
+   841.76,
+   604.01
+  ],
+  [
+   536.0,
+   577.59
+  ]
+ ],
+ "shade_ref": 235.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0
+}

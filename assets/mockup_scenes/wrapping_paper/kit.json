@@ -1,0 +1,38 @@
+{
+ "product": "wrapping_paper",
+ "mode": "quad",
+ "surface": "ink",
+ "aspect": 1.3731,
+ "fit": "tile",
+ "note": "flat wrapping sheet; art is the repeat sheet, cropped to the visible face",
+ "size": [
+  1408,
+  768
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.4196,
+ "key_components": 1,
+ "corners": [
+  [
+   285.43,
+   85.0
+  ],
+  [
+   1071.77,
+   85.0
+  ],
+  [
+   1073.56,
+   659.0
+  ],
+  [
+   283.54,
+   659.0
+  ]
+ ],
+ "clean_align_diff": 3.71,
+ "shade_ref": 255.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0
+}

@@ -1,0 +1,37 @@
+{
+ "product": "framed_print",
+ "mode": "quad",
+ "surface": "opaque",
+ "aspect": 0.75,
+ "fit": "cover",
+ "note": "3:4 portrait print in a black frame with mount",
+ "size": [
+  768,
+  1376
+ ],
+ "scene": "scene.jpg",
+ "mask": "mask.png",
+ "slot_area_frac": 0.0954,
+ "key_components": 1,
+ "corners": [
+  [
+   253.0,
+   344.0
+  ],
+  [
+   516.0,
+   344.0
+  ],
+  [
+   516.0,
+   725.0
+  ],
+  [
+   253.0,
+   725.0
+  ]
+ ],
+ "shade_ref": 235.0,
+ "fringe_px_inpainted": 0,
+ "stray_magenta_px_inpainted": 0
+}

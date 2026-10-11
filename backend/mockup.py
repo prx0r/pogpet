@@ -2,8 +2,13 @@
 
 "Display all the products as their selected mesh" — every catalogue item gets
 a rendered preview with that owner's current pog on it. Deterministic and
-cheap (PIL only), cached in R2 per (owner, product) so switching the active
-pog is the only thing that invalidates them.
+cheap (PIL/OpenCV only), cached in R2 per (owner, product) so switching the
+active pog is the only thing that invalidates them.
+
+Default output is a photoreal listing scene (backend/mockup_slots.py: the art
+composited into a pre-keyed product photo from assets/mockup_scenes/). When a
+product/shape has no scene kit, or the kit can't be used, the flat PIL tile
+below (_render_flat) is drawn instead.
 """
 from __future__ import annotations
 
@@ -73,8 +78,43 @@ def _frame(d: ImageDraw.ImageDraw, box, radius: int, fill, outline, width: int =
     d.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
 
 
+def _product_for(shape: str, label: str) -> str | None:
+    """Catalogue id from the label (callers pass spec["label"]), else None."""
+    for pid, spec in getattr(config, "PRODIGI_PRODUCTS", {}).items():
+        if spec.get("label") == label and spec.get("shape") == shape:
+            return pid
+    return None
+
+
+SCENE_VERSION = "s1"   # bump when kits change so cached R2 mockups re-render
+
+
+def cache_tag(shape: str, product_id: str | None = None) -> str:
+    """Filename suffix for cached mockups: '_s1' when a scene kit serves it, else ''."""
+    try:
+        from . import mockup_slots
+        return f"_{SCENE_VERSION}" if mockup_slots.kit_for(product_id, shape) else ""
+    except Exception:
+        return ""
+
+
 def render(shape: str, photo: Path | None, label: str, out_path: Path,
-           concept: dict | None = None, subject: str = "") -> Path:
+           concept: dict | None = None, subject: str = "",
+           product_id: str | None = None, scene: bool = True) -> Path:
+    """Mockup for one product. Photoreal scene when a kit exists, else flat tile."""
+    if scene and photo is not None and Path(photo).is_file():
+        try:
+            from . import mockup_slots
+            kit = mockup_slots.kit_for(product_id or _product_for(shape, label), shape)
+            if kit:
+                return mockup_slots.render_product(kit, Path(photo), Path(out_path))
+        except Exception:
+            pass   # never lose a mockup to the scene path: fall back to the flat tile
+    return _render_flat(shape, photo, label, out_path, concept, subject)
+
+
+def _render_flat(shape: str, photo: Path | None, label: str, out_path: Path,
+                 concept: dict | None = None, subject: str = "") -> Path:
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img, "RGBA")
     im = _photo(photo, 300)

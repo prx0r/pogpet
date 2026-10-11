@@ -1,0 +1,77 @@
+{
+  "id": "solo_retired_hammock_v1",
+  "occasions": [
+    "retirement"
+  ],
+  "interests": [],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "sunny painted travel-poster illustration, turquoise sea, palm shadows, flat bold shapes with soft grain",
+  "scene": "{hero} blissfully asleep in a hammock between two palm trees on a tropical beach, sunglasses pushed up, a cold drink balanced on their chest, an alarm clock half-buried in the sand. Only {hero} is in the scene.",
+  "copy": {
+    "title": {
+      "max": 24,
+      "examples": [
+        "OUT OF OFFICE. FOREVER.",
+        "DO NOT DISTURB"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Congratulations, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "No more alarms, no more meetings, no more pretending to read emails. You've earned every minute of this. Congratulations."
+      ]
+    }
+  },
+  "spot": "an alarm clock half-buried in golden sand",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "schema": "cardgen.template.v2"
+}

@@ -159,7 +159,7 @@ def test_make_needs_photos_not_errors(env, monkeypatch):
         {"id": s["id"]}, blocked=[{"template_id": "golf_lip_v1",
                                    "shortfall": ["needs a clear, happy solo photo of them"]}]))
     out = asyncio.run(M.oddhobb_make(
-        subject_id=s["id"], request="birthday, golf, dry funny", count=4,
+        subject_id=s["id"], request="birthday, golf, dry funny", count=4, painted=True,
         owner=env["owner"]))
     body = _json.loads(out[0].text)
     assert body["status"] == "needs_input" and body["error_code"] == "NEEDS_PHOTO", body
@@ -180,7 +180,7 @@ def test_make_reads_interests_and_joke_and_paints(env, monkeypatch):
         {"template_id": "comic_shock_v1", "fit": 1.5, "photos": {}}]))
     out = asyncio.run(M.oddhobb_make(
         subject_id=s["id"], request="funny birthday card for Dad, he loves golf but is terrible at it",
-        count=2, owner=env["owner"]))
+        count=2, painted=True, owner=env["owner"]))
     body = _json.loads(out[0].text)
     assert body["ok"] is True and body["status"] == "working", body
     assert body["engine"] == "cardgen"
@@ -201,7 +201,7 @@ def test_make_daily_cap_is_typed_not_legacy(env, monkeypatch):
         s, ready=[{"template_id": "golf_lip_v1", "fit": 3}],
         make=lambda b: {"ok": False, "error": "daily card generation cap reached (6/24h)", "http_status": 429}))
     body = _json.loads(asyncio.run(M.oddhobb_make(
-        subject_id=s["id"], request="birthday golf", owner=env["owner"]))[0].text)
+        subject_id=s["id"], request="birthday golf", painted=True, owner=env["owner"]))[0].text)
     assert body["ok"] is False and body["error_code"] == "CARDGEN_DAILY_CAP", body
     assert "options" not in body
 
@@ -215,7 +215,7 @@ def test_make_unavailable_is_typed_not_legacy(env, monkeypatch):
         s, ready=[{"template_id": "golf_lip_v1", "fit": 3}],
         make=lambda b: {"ok": False, "error": "FAL_KEY not set: generation is fail-closed", "http_status": 503}))
     body = _json.loads(asyncio.run(M.oddhobb_make(
-        subject_id=s["id"], request="birthday golf", owner=env["owner"]))[0].text)
+        subject_id=s["id"], request="birthday golf", painted=True, owner=env["owner"]))[0].text)
     assert body["ok"] is False and body["error_code"] == "CARDGEN_UNAVAILABLE", body
     assert "FAL_KEY" in body["reason"]
 

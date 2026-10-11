@@ -1357,18 +1357,65 @@ async def oddhobb_card_generate(subject_id: str, template_id: str, occasion: str
                           api_key=api_key, owner_sig=owner_sig))
 
 
+_LAYOUT_WORDS = {"hero": 1, "single": 1, "one": 1, "1": 1, "four": 4, "4": 4, "grid": 4,
+                 "six": 6, "6": 6, "ten": 10, "10": 10, "collage": 10}
+
+
+def _layout_count(layout: str, photos: int) -> int:
+    if photos:
+        return int(photos)
+    t = str(layout or "").lower().strip()
+    for w, n in _LAYOUT_WORDS.items():
+        if t == w or t.startswith(w + "_") or t.endswith("_" + w) or t == f"grid{w}":
+            return n
+    import re as _re
+    m = _re.search(r"\d+", t)
+    return int(m.group(0)) if m else 0
+
+
+def _grid_brief(body: dict) -> dict:
+    """What the agent needs from a photo-grid API body: picks + rejects with reasons."""
+    sel = body.get("selection") or {}
+    out = {"template": "photo_grid", "grid": body.get("grid"), "style": body.get("style"),
+           "style_label": body.get("style_label"), "age": body.get("age"),
+           "recipient": body.get("recipient"), "instant": True, "counts_against_cap": False}
+    if body.get("style_reason"):
+        out["style_reason"] = body["style_reason"]
+    if sel:
+        out["photos_picked"] = [{"n": p["cell"] + 1, "photo_id": p["photo_id"], "hero": p["hero"],
+                                 "reason": p["reason"]} for p in sorted(sel.get("picks") or [],
+                                                                        key=lambda p: p["cell"])]
+        out["photos_rejected"] = [{"photo_id": r["photo_id"], "reason": r["reason"]}
+                                  for r in sel.get("rejects") or []]
+        if sel.get("summary"):
+            out["note"] = sel["summary"]
+        if sel.get("downgraded_from"):
+            out["asked_for"] = sel["downgraded_from"]
+    return out
+
+
 async def oddhobb_make(subject_id: str = "", person: str = "",
                         request: str = "", product_type: str = "greeting_card",
                         budget_cents: int = 0, count: int = 4,
+                        layout: str = "", photos: int = 0, style: str = "",
+                        age: int = 0, recipient: str = "", painted: bool = False,
                         owner: str = "", api_key: str = "",
                         owner_sig: str = "", ctx=None) -> list:
-    """Make personalised greeting cards, painted from the person's real photos.
-    Pass the human's words in `request` ("funny birthday card for Dad, he loves golf
-    but is terrible at it"): occasion, tone, interests and the joke are read from it.
-    Returns options being painted (status working); call oddhobb_get on each option
-    id for front/inside/back. Errors are typed: NEEDS_PHOTO, CARDGEN_DAILY_CAP,
-    CARDGEN_UNAVAILABLE. The signer is asked once, at buy time."""
+    """Make a personalised birthday card from the person's real photos: a
+    "Happy Birthday" lettering header (optionally their age, "Happy 70th
+    Birthday, Dad") over a clean grid of their best photos on white. Ready
+    instantly (no painting, no daily cap). Pass the human's words in `request`
+    ("birthday card for Dad, he's 70"): age, style and photo count are read from
+    it. Optional: photos/layout = 1 (one hero photo), 4 or 10 (6 when that's
+    all their photos allow); style = classic|bold|playful|botanical|sporty|kids;
+    age; recipient (the name on the front, default their relationship, e.g. Dad).
+    Every photo pick and reject comes back with a reason. Returns front/inside/
+    back URLs anyone can open; oddhobb_change swaps a photo, changes the count or
+    style, or the inside words; oddhobb_buy / checkout buys. Errors are typed:
+    NEEDS_PHOTO. The signer is asked once, at buy time. painted=true instead
+    starts premium painted cards (slow, capped daily) and is never the default."""
     from mcp.types import TextContent
+    from backend import photo_grid_api as _pga
     who = _resolve_owner(owner, api_key, ctx)
     key_arg = api_key or _bearer_key(ctx)
     if (product_type or "greeting_card") != "greeting_card":
@@ -1384,18 +1431,57 @@ async def oddhobb_make(subject_id: str = "", person: str = "",
         return [TextContent(type="text", text=_j(
             {"ok": False, "error": "unknown subject — check oddhobb_people first"}))]
     asked = _parse_card_request(request)
-    known = [str(i) for i in (sub.get("interests") or []) if str(i).strip()]
-    interests = list(dict.fromkeys([*asked["interests"], *known]))[:6]
-    memories = [str(m) for m in (sub.get("memories") or []) if str(m).strip()]
-    if asked["joke"]:
-        memories = [asked["joke"], *memories]
-    prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
-            "interests": interests, "memories": memories[:6]}
-    # cardgen only: generative, cast from the person's real photos. No legacy
-    # collage shelf — when cardgen can't paint, the agent gets a typed reason.
-    cg = await _cardgen_make(who, key_arg, owner_sig, sub, prof, asked["occasion"],
-                             asked["tone"], count, asked=asked)
-    return [TextContent(type="text", text=_j(cg))]
+    if painted:
+        # premium painted cards only when explicitly asked for; never the default
+        known = [str(i) for i in (sub.get("interests") or []) if str(i).strip()]
+        memories = [str(m) for m in (sub.get("memories") or []) if str(m).strip()]
+        if asked["joke"]:
+            memories = [asked["joke"], *memories]
+        prof = {"name": sub.get("name", ""), "relationship": sub.get("relationship", ""),
+                "interests": list(dict.fromkeys([*asked["interests"], *known]))[:6],
+                "memories": memories[:6]}
+        return [TextContent(type="text", text=_j(await _cardgen_make(
+            who, key_arg, owner_sig, sub, prof, asked["occasion"], asked["tone"], count, asked=asked)))]
+    if asked["occasion"] != "birthday":
+        return [TextContent(type="text", text=_j(_env(
+            status="needs_input", summary="Photo cards are birthday cards for now.",
+            requires_action={"type": "change_request",
+                             "message": "Ask for a birthday card (e.g. 'birthday card for Dad, he's 70')."},
+            next_actions=[])))]
+    n = _layout_count(layout, photos) or _pga.count_from_words(request) or 4
+    body = {"owner": who, "subject_id": sub.get("id", ""), "photos": n,
+            "age": int(age or 0) or _pga.age_from_words(request),
+            "style": (style or _pga.style_from_words(request) or "").lower(),
+            "request": request, "tone": asked["tone"]}
+    if recipient:
+        body["recipient"] = recipient
+    made = await _call("POST", "/api/cards/photo-grid", body, api_key=key_arg, owner_sig=owner_sig)
+    if not made.get("ok"):
+        if made.get("error_code") == _pga.NEEDS_PHOTO:
+            rej = [{"photo_id": r["photo_id"], "reason": r["reason"]}
+                   for r in ((made.get("selection") or {}).get("rejects") or [])]
+            return [TextContent(type="text", text=_j(_err_env(
+                NEEDS_PHOTO, made.get("error") or "I need clearer photos of them.", status="needs_input",
+                requires_action={"type": "add_media", "subject_id": sub.get("id", ""),
+                                 "message": "Add a few sharp photos where their face is big and clear."},
+                extra={"photos_rejected": rej})))]
+        return [TextContent(type="text", text=_j(_err_env(
+            "CARD_FAILED", "I couldn't make the card.", reason=str(made.get("error") or "")[:300])))]
+    brief = _grid_brief(made)
+    name = sub.get("name") or "them"
+    summary = (f"{made['grid']}-photo birthday card of {name} ({made.get('style_label', '')} style"
+               + (f", {made['age']}" if made.get("age") else "") + ").")
+    if brief.get("note"):
+        summary += " " + brief["note"]
+    env = await _finished(made["design_id"], int(made["revision"]), who, key_arg, owner_sig,
+                          summary=summary, extra=brief)
+    if env.get("status") == "ready":
+        env["options"] = [{"id": made["design_id"], "template": "photo_grid", "status": "ready",
+                           "grid": made["grid"], "style": made["style"], "views": env.get("views")}]
+        env["hint"] = ("Show the human the front/inside/back. oddhobb_change swaps a photo (swap='2'), "
+                       "changes the count (photos=10) or style (style='bold'), or the inside words; "
+                       "then buy.")
+    return [TextContent(type="text", text=_j(env))]
 
 
 async def oddhobb_variants(design_id: str = "", idea_id: str = "",
@@ -1643,12 +1729,16 @@ def _text_change(instruction: str, message: str, signature: str) -> tuple[str, s
 
 async def oddhobb_change(design_id: str = "", instruction: str = "",
                          message: str = "", signature: str = "",
+                         photos: int = 0, layout: str = "", style: str = "",
+                         swap: str = "", age: int = -1, recipient: str = "",
                          owner: str = "", api_key: str = "",
                          owner_sig: str = "", ctx=None) -> list:
-    """Change a finished card. For painted cards this edits the inside message and
-    signature: pass `message`/`signature`, or say it ("change the inside message to
-    'Happy birthday Dad. Lots of love, Tom'"). New immutable revision, re-rendered,
-    new front/inside/back returned; the painted art is never regenerated for words."""
+    """Change a finished card; every change is a new immutable revision, re-rendered,
+    new front/inside/back returned. Photo cards: swap a photo (swap="2", or say
+    "swap photo 2"), change the count (photos=1|4|10) or lettering style
+    (style=classic|bold|playful|botanical|sporty|kids), the age or name on the front,
+    or the inside words (message/signature, or "change the inside message to
+    'Happy birthday Dad. Lots of love, Tom'"). Painted cards: inside words only."""
     from mcp.types import TextContent
     who = _resolve_owner(owner, api_key, ctx)
     key_arg = api_key or _bearer_key(ctx)
@@ -1666,6 +1756,10 @@ async def oddhobb_change(design_id: str = "", instruction: str = "",
         return [TextContent(type="text", text=_j(cur))]
     d = cur["design"]
     spec = dict(d.get("spec") or {})
+    if spec.get("template") == "photo_grid":
+        return [TextContent(type="text", text=_j(await _change_photo_grid(
+            design_id, d, spec, instruction, message, signature, photos, layout, style, swap, age,
+            recipient, who, key_arg, owner_sig)))]
     if spec.get("template") == "birthday_fullbleed":
         return [TextContent(type="text", text=_j(await _change_painted(
             design_id, d, spec, instruction, message, signature, who, key_arg, owner_sig)))]
@@ -1791,6 +1885,82 @@ async def oddhobb_change(design_id: str = "", instruction: str = "",
                    {"kind": "inside", "url": views.get("inside", "")},
                    {"kind": "back", "url": views.get("back", "")}],
                "proof_url": saved.get("proof_url", "")})))]
+
+
+_ORD_WORDS = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5, "sixth": 6,
+              "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10, "1st": 1, "2nd": 2, "3rd": 3,
+              "top left": 1, "hero": 1, "main": 1, "big": 1, "last": -1}
+
+
+def _swap_from_words(words: str, n: int) -> list:
+    """'swap photo 3' / 'replace the second photo' / 'different photo for #2' -> [3] / [2]."""
+    import re as _re
+    w = words.lower()
+    if not _re.search(r"\b(swap|replace|change|different|another|other|remove|drop)\b", w) or \
+            not _re.search(r"\b(photo|picture|pic|image)s?\b", w):
+        return []
+    out = [int(x) for x in _re.findall(r"(?:photo|picture|pic|image|number|no\.?|#)\s*#?(\d{1,2})\b", w)]
+    for k, v in _ORD_WORDS.items():
+        if _re.search(r"\b" + k + r"\b", w):
+            out.append(n if v == -1 else v)
+    return [x for x in dict.fromkeys(out) if 1 <= x <= n]
+
+
+async def _change_photo_grid(design_id, d, spec, instruction, message, signature, photos, layout,
+                             style, swap, age, recipient, who, key_arg, owner_sig) -> dict:
+    """Photo-grid card: swap / count / style / age / name / inside words -> new revision."""
+    import re as _re
+    from backend import photo_grid_api as _pga
+    words = str(instruction or "")
+    body = {"owner": who, "design_id": design_id, "expected_revision": d.get("revision", 1)}
+    n_now = int(spec.get("grid") or len(spec.get("photos") or []))
+    sw = [x.strip() for x in str(swap or "").replace(";", ",").split(",") if x.strip()]
+    sw = [int(x) if x.isdigit() else x for x in sw] or _swap_from_words(words, n_now)
+    n = _layout_count(layout, photos) or _pga.count_from_words(words)
+    if sw:
+        body["swap"] = sw
+    elif n and n != n_now:
+        body["photos"] = n
+    st = (style or _pga.style_from_words(words) or "").lower()
+    if st:
+        body["style"] = st
+    if age is not None and int(age) >= 0:
+        body["age"] = int(age)
+    else:
+        a = _pga.age_from_words(words)
+        if a:
+            body["age"] = a
+        elif _re.search(r"\b(no|remove|drop|without)( the)? age\b", words.lower()):
+            body["age"] = 0
+    if recipient:
+        body["recipient"] = recipient
+    lw = words.lower()
+    msg, sig = _text_change(instruction, message, signature)
+    inside_words = bool(message or signature) or any(k in lw for k in ("inside", "message", "sign"))
+    if msg and inside_words:
+        body["message"] = msg
+    if sig and inside_words:
+        body["sender"] = sig
+    if len(body) == 3:
+        return _err_env(NEEDS_TEXT, "Tell me what to change: a photo (swap='2'), the count (photos=10), "
+                                    "the style (style='bold'), the age, or the inside words.",
+                        status="needs_input",
+                        requires_action={"type": "change_request",
+                                         "message": "e.g. swap='3', photos=10, style='playful', "
+                                                    "message='Happy birthday Dad.'"})
+    made = await _call("POST", "/api/cards/photo-grid", body, api_key=key_arg, owner_sig=owner_sig)
+    if not made.get("ok"):
+        code = made.get("error_code") or "SAVE_FAILED"
+        return _err_env(code, made.get("error") or "I couldn't make that change.",
+                        status="needs_input" if code in (NEEDS_PHOTO, _pga.NO_SPARE_PHOTO) else "error",
+                        reason=str(made.get("error") or "")[:200])
+    changed = made.get("changed") or []
+    extra = {"changed": changed, "previous_revision": d.get("revision", 1), **_grid_brief(made)}
+    summary = f"Updated: {', '.join(changed)}." if changed else "Nothing changed on the card."
+    if extra.get("note"):
+        summary += " " + extra["note"]
+    return await _finished(made["design_id"], int(made["revision"]), who, key_arg, owner_sig,
+                           summary=summary, extra=extra)
 
 
 async def _change_painted(design_id, d, spec, instruction, message, signature,

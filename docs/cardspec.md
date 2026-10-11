@@ -166,3 +166,32 @@ shipping line (Value → Prodigi Standard, Speedy → Express) and fulfils
 the frozen route, which owns **sku + shipping_method + market** (US
 orders print the GLOBAL sku, never CLASSIC). Do not run a second
 shipping-charge system.
+
+## The photo-grid card: `photo_grid` (the default birthday card)
+
+The cheap, can't-fail card: a pre-made "Happy Birthday" lettering plate, the age
+ordinal and the name typeset from bundled fonts ("70th / Happy Birthday / DAD"),
+over a clean grid of the person's best photos on white. Painted cards are the
+premium upsell (`oddhobb_make(painted=true)`), never the default.
+
+- Code: `backend/photo_grid.py` (layouts, styles, renderer; dispatched from
+  `card_scenes.front/inside`), `backend/photo_select.py` (selection),
+  `backend/photo_grid_api.py` (REST). No generation at render time.
+- Grids: 1 (hero), 4, 6, 10. Asked for more than the photos allow, it steps
+  down to the biggest grid it can fill and says how many more photos the
+  bigger one needs. Cell 0 is the hero (biggest cell).
+- Styles (max 6): classic, bold, playful, botanical, sporty, kids. Plates in
+  `assets/card-art/photo-grid/` (see SOURCES.md).
+- Geometry in 1500x2100 trim px: 90 px white margin on every side, 24 px
+  gutters. The Prodigi panel (1530x2160) is trim + white bleed.
+- Spec: `grid`, `grid_style`, `age` (0 = none), `recipient` (≤30), fixed
+  headline, `subject_id`, `exclude` (photos swapped out never come back),
+  per-photo `crop` from `select_photos` (faces whole, rule of thirds).
+- REST: `POST /api/cards/photo-grid` (create, or change with `design_id`:
+  `swap`, `photos`, `style`, `age`, `message`, `sender` → new revision),
+  `POST /api/cards/photo-grid/select` (dry run with reasons). `/api/cardgen/recommend`
+  returns `photo_grid` first in `offers`. Not subject to the cardgen daily cap.
+- MCP: `oddhobb_make(layout|photos, style, age, recipient)` returns the ready
+  card with a reason per pick and reject; `oddhobb_change(swap, photos, style,
+  age, message, signature)` makes a new revision. Proof faces are public at
+  `/api/cards/proof/<id>/r<rev>/<face>.png`. No path builds a legacy collage.

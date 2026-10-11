@@ -24,6 +24,9 @@
   var OCCASIONS = [['birthday', 'Birthday'], ['christmas', 'Christmas'], ['fathers_day', "Father's Day"],
     ['mothers_day', "Mother's Day"], ['retirement', 'Retirement'], ['anniversary', 'Anniversary'], ['valentines', "Valentine's"]];
   function occasionLabel(v) { var o = OCCASIONS.find(function (x) { return x[0] === v; }); return o ? o[1] : v; }
+  var GRID_CHOICES = [['4', 'Four photos'], ['1', 'One big photo'], ['10', 'Ten photos']];
+  var STYLE_CHOICES = [['', 'Pick for me'], ['classic', 'Classic gold'], ['bold', 'Bold modern'], ['playful', 'Playful'],
+    ['botanical', 'Botanical'], ['sporty', 'Sporty'], ['kids', 'Kids']];
   var STEP_LABEL = { queued: 'Queued', index: 'Reading the photos', write: 'Writing the joke', generate: 'Painting the front',
     qa0: 'Checking likeness', qa1: 'Fixing details', qa2: 'Final check', spot: 'Painting the inside', upscale: 'Sharpening for print',
     freeze: 'Setting the card', done: 'Ready' };
@@ -58,21 +61,24 @@
       var head = el('div', null, 'store-head');
       var priceLine = el('p', '', 'ca-price'); priceLine.hidden = true;
       cardPrice().then(function (p) { if (p) { priceLine.textContent = 'From ' + p + ', printed and posted.'; priceLine.hidden = false; } });
-      head.append(el('h2', 'Cards that star your people'), priceLine, el('p', 'Upload a photo. We paint up to four cards of them with a joke that fits, and you pick one.'));
+      head.append(el('h2', 'Birthday cards made from your photos'), priceLine, el('p', 'Upload their photos. We pick the best ones, crop them around every face and set them under a Happy Birthday header, ready in seconds.'));
       var form = el('div', null, 'ca-form');
       var who = el('select'); who.append(new Option('Someone new', ''));
       var name = el('input'); name.maxLength = 60; name.placeholder = 'Dad, Mum, Biscuit the dog…';
       var rel = el('input'); rel.maxLength = 40; rel.placeholder = 'dad, best friend, our dog';
       var interests = el('input'); interests.maxLength = 120; interests.placeholder = 'golf, Tesla, terrible puns';
-      var occ = el('select'); OCCASIONS.forEach(function (o) { occ.append(new Option(o[1], o[0])); });
+      var occ = el('select'); occ.append(new Option('Birthday', 'birthday'));
+      var age = el('input'); age.type = 'number'; age.min = 1; age.max = 120; age.placeholder = 'e.g. 70 (optional)';
+      var gridSel = el('select'); GRID_CHOICES.forEach(function (g) { gridSel.append(new Option(g[1], g[0])); });
+      var styleSel = el('select'); STYLE_CHOICES.forEach(function (g) { styleSel.append(new Option(g[1], g[0])); });
       var kind = el('select'); kind.append(new Option('Person', 'person'), new Option('Pet', 'pet'));
       var file = el('input'); file.type = 'file'; file.accept = 'image/jpeg,image/png,image/webp'; file.multiple = true;
       var thumbs = el('div', null, 'ca-thumbs');
       var newOnly = el('div', null, 'ca-new'); newOnly.append(field('Their name', name), field('Person or pet', kind));
-      var photoField = field('Photos of them (1-3, faces clear)', file);
+      var photoField = field('Photos of them (up to 10, faces clear)', file);
       function photoLabel() {
         // a new person needs a photo; someone already saved has theirs, so more are optional
-        photoField.firstChild.textContent = who.value ? 'More photos of them (optional, we already have theirs)' : 'Photos of them (1-3, faces clear)';
+        photoField.firstChild.textContent = who.value ? 'More photos of them (optional, we already have theirs)' : 'Photos of them (up to 10, faces clear)';
       }
       who.addEventListener('change', function () {
         newOnly.hidden = !!who.value; photoLabel();
@@ -81,20 +87,22 @@
       });
       file.addEventListener('change', function () {
         thumbs.replaceChildren();
-        Array.prototype.slice.call(file.files, 0, 3).forEach(function (f) { var i = el('img'); i.alt = ''; i.src = URL.createObjectURL(f); thumbs.append(i); });
+        Array.prototype.slice.call(file.files, 0, 10).forEach(function (f) { var i = el('img'); i.alt = ''; i.src = URL.createObjectURL(f); thumbs.append(i); });
       });
       var go = btn('Make my cards', function () {
         if (st.busy) return;
-        var files = Array.prototype.slice.call(file.files || [], 0, 3);
+        var files = Array.prototype.slice.call(file.files || [], 0, 10);
         if (!who.value && !name.value.trim()) return say('Tell us their name first.', true);
         if (!who.value && !files.length) return say('Add at least one clear photo of them.', true);
         st.occasion = occ.value; st.relationship = rel.value.trim();
         st.interests = interests.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 6);
+        st.age = parseInt(age.value, 10) || 0; st.grid = parseInt(gridSel.value, 10) || 4; st.style = styleSel.value;
         st.busy = true; go.disabled = true;
-        prepare(who.value, name.value.trim(), kind.value, files).then(recommend).catch(fail).then(function () { go.disabled = false; });
+        prepare(who.value, name.value.trim(), kind.value, files).then(makeGrid).catch(fail).then(function () { go.disabled = false; });
       }, 'ca-btn ca-btn--go');
+      go.textContent = 'Make my card';
       form.append(field('Who is it for?', who), newOnly, field('Who are they to you?', rel),
-        field('What are they into? (for the joke)', interests), field('Occasion', occ),
+        field('Age they are turning', age), field('Photos on the front', gridSel), field('Lettering', styleSel),
         photoField, thumbs, go);
       root.replaceChildren(head, form, status); mount(); say('');
       host.get('/studio/library').then(function (lib) {
@@ -179,6 +187,42 @@
       if (st.interests.length) p.interests = st.interests;
       p.occasion = st.occasion;
       return p;
+    }
+
+    // ── the photo-grid card: instant, no painting, no daily cap ─────────
+    function gridJob(r) {
+      return { design_id: r.design_id, revision: r.revision, template: 'photo_grid', grid: r.grid, style: r.style,
+        copy: { inside: ((((r.design || {}).spec || {}).inside || {}).right || {}).message || '', sender: '' },
+        views: viewsFor(r.design_id, r.revision), product: r.product, selection: r.selection };
+    }
+    function makeGrid() {
+      say('Choosing the best photos of ' + st.name + '…');
+      var body = { subject_id: st.subject, photos: st.grid || 4, style: st.style || '', age: st.age || 0, tone: '' };
+      return host.post('/cards/photo-grid', body).then(function (r) {
+        st.busy = false; st.product = r.product;
+        var j = gridJob(r);
+        return renderAndWait(j.design_id, j.revision, 'preview').then(function () {
+          detailView(j);
+          if (r.selection && r.selection.summary) say(r.selection.summary);
+        });
+      }, function (e) {
+        st.busy = false;
+        var box = el('div', null, 'ca-blocked');
+        box.append(el('h3', 'We need clearer photos of ' + st.name), el('p', (e && e.message) || 'Add a sharp photo where their face is big.'));
+        box.append(btn('Add another photo', startView));
+        root.replaceChildren(box, status); say('');
+      });
+    }
+
+    // change a photo-grid card: swap a photo, the count or the lettering -> new revision
+    function changeGrid(j, change) {
+      say('Updating your card…');
+      return host.get('/cards/designs/' + j.design_id).then(function (cur) {
+        return host.post('/cards/photo-grid', Object.assign({ design_id: j.design_id, expected_revision: cur.design.revision }, change));
+      }).then(function (r) {
+        j.revision = r.revision; j.grid = r.grid; j.style = r.style; j.selection = r.selection || j.selection;
+        return renderAndWait(j.design_id, j.revision, 'preview').then(function () { return r; });
+      });
     }
 
     function recommend() {
@@ -281,7 +325,10 @@
     function viewsFor(did, rev) { var b = '/api/cards/' + did + '/r' + rev; return { front: b + '/preview', inside: b + '/inside', back: b + '/back' }; }
 
     // the message box on the right inside page, as fractions of the spread (card_scenes.inside fullbleed)
-    var MSG_BOX = { x: 0.55, y: 0.24, w: 0.40, h: 0.42 }, SIG_BOX = { x: 0.62, y: 0.70, w: 0.26, h: 0.08 };
+    var ART_MSG_BOX = { x: 0.55, y: 0.24, w: 0.40, h: 0.42 }, ART_SIG_BOX = { x: 0.62, y: 0.70, w: 0.26, h: 0.08 };
+    // photo-grid inside (backend/photo_grid.inside)
+    var GRID_MSG_BOX = { x: 0.57, y: 0.26, w: 0.36, h: 0.36 }, GRID_SIG_BOX = { x: 0.62, y: 0.66, w: 0.26, h: 0.09 };
+    var MSG_BOX = ART_MSG_BOX, SIG_BOX = ART_SIG_BOX;
 
     // Live preview of typed words over a rendered inside image. Covers the printed message with
     // paper and sets the new words in a close web font; Apply makes the real render.
@@ -333,6 +380,7 @@
 
     function detailView(j) {
       st.pick = j;
+      if (j.template === 'photo_grid' || j.grid) { MSG_BOX = GRID_MSG_BOX; SIG_BOX = GRID_SIG_BOX; } else { MSG_BOX = ART_MSG_BOX; SIG_BOX = ART_SIG_BOX; }
       var head = el('div', null, 'store-head'), sub = el('p', 'Printed on card and posted.');
       head.append(el('h2', 'Your card for ' + (st.name || 'them')), sub);
       cardPrice().then(function (p) { if (p) sub.textContent = p + ', printed on card and posted.'; });
@@ -393,10 +441,38 @@
         checkout(j).catch(fail).then(function () { st.busy = false; buy.disabled = false; });
       }, 'ca-btn ca-btn--go');
       cardPrice().then(function (p) { if (p) buy.textContent = 'Buy this card, ' + p; });
-      var back = btn('← See the other cards', function () { if (st.jobs.length) { makingView(); say('Pick your favourite.'); } else startView(); }, 'ca-btn ca-btn--ghost');
+      var back = btn(st.jobs.length ? '← See the other cards' : '← Start again', function () { if (st.jobs.length) { makingView(); say('Pick your favourite.'); } else startView(); }, 'ca-btn ca-btn--ghost');
       var edit = el('div', null, 'ca-form');
+      var gridBox = null;
+      if (j.template === 'photo_grid' || j.grid) {
+        gridBox = el('div', null, 'ca-form ca-gridctl');
+        function run(change) {
+          if (st.busy) return; st.busy = true;
+          changeGrid(j, change).then(function (r) { show(); say((r.selection && r.selection.summary) || 'Card updated.'); drawGrid(); })
+            .catch(fail).then(function () { st.busy = false; });
+        }
+        function drawGrid() {
+          gridBox.replaceChildren();
+          var counts = el('div', null, 'ca-row');
+          GRID_CHOICES.forEach(function (g) {
+            var b = btn(g[1], function () { run({ photos: parseInt(g[0], 10) }); }, 'ca-btn ca-btn--ghost');
+            b.disabled = String(j.grid) === g[0]; counts.append(b);
+          });
+          var styles = el('select');
+          STYLE_CHOICES.slice(1).forEach(function (g) { var o = new Option(g[1], g[0]); o.selected = g[0] === j.style; styles.append(o); });
+          styles.addEventListener('change', function () { run({ style: styles.value }); });
+          var swaps = el('div', null, 'ca-row');
+          for (var i = 1; i <= (j.grid || 0); i++) (function (n) {
+            swaps.append(btn('Swap photo ' + n, function () { run({ swap: [n] }); }, 'ca-btn ca-btn--ghost'));
+          })(i);
+          gridBox.append(field('Photos on the front', counts), field('Lettering', styles), field('Not keen on one?', swaps));
+        }
+        drawGrid();
+      }
       edit.append(field('Inside message (printed as typed)', msg), field('Signed', sig), apply, buy);
-      root.replaceChildren(head, bookWrap, bookNav, allSides, edit, back, status); mount(); say('');
+      root.replaceChildren(head, bookWrap, bookNav, allSides);
+      if (gridBox) root.append(gridBox);
+      root.append(edit, back, status); mount(); say('');
     }
 
     function renderAndWait(did, rev, kind) {
@@ -448,7 +524,11 @@
     }
     function openDesign2(did, rev) {
       var p = rev ? Promise.resolve(rev) : host.get('/cards/designs/' + did).then(function (r) { return r.design.revision; });
-      return p.then(function (r) { detailView({ design_id: did, revision: r, copy: {}, views: viewsFor(did, r), product: st.product }); });
+      return host.get('/cards/designs/' + did).then(function (cur) {
+        var sp = (cur.design && cur.design.spec) || {};
+        return p.then(function (r) { detailView({ design_id: did, revision: r, copy: {}, views: viewsFor(did, r), product: st.product,
+          template: sp.template, grid: sp.grid, style: sp.grid_style }); });
+      });
     }
 
     return {

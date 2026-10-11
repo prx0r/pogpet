@@ -237,6 +237,8 @@ def test_variants_and_get(monkeypatch, env):
             return {"ok": True, "proof_url": f"https://oddhobb.com/proof/{did}",
                     "scene": {"id": did, "revision": rev,
                               "outputs": {"preview": {"status": "ready"}}}}
+        if path.endswith("/render"):
+            return {"ok": True, "job": {"id": "crj_x", "status": "ready"}}
         raise AssertionError(f"unexpected call {method} {path}")
     monkeypatch.setattr(M, "_call", fake_call)
 
@@ -250,7 +252,9 @@ def test_variants_and_get(monkeypatch, env):
     g = asyncio.run(M.oddhobb_get(
         vb["variants"][0]["design_id"], owner=env["owner"]))
     gb = json.loads(g[0].text)
-    assert gb["ok"] and "triptych" in gb["artifacts"], gb
+    assert gb["ok"] and gb["status"] == "ready", gb
+    assert [a["kind"] for a in gb["artifacts"]] == ["front", "inside", "back"]
+    assert all("/backend/api/cards/proof/" in a["url"] for a in gb["artifacts"]), gb
 
 
 def test_canonical_six_tiers():

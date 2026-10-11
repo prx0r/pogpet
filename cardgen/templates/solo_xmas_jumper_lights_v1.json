@@ -1,0 +1,77 @@
+{
+  "id": "solo_xmas_jumper_lights_v1",
+  "occasions": [
+    "christmas"
+  ],
+  "interests": [],
+  "tones": [
+    "funny",
+    "warm"
+  ],
+  "style": "cosy painted Christmas illustration, warm fairy-light bokeh, rich reds and greens, soft snow outside the window",
+  "scene": "{hero} in a gloriously ugly Christmas jumper, hopelessly tangled in a long string of fairy lights that are all lit up, a half-decorated tree behind, looking straight out with a resigned grin. Only {hero} is in the scene.",
+  "copy": {
+    "title": {
+      "max": 22,
+      "examples": [
+        "TANGLED. AGAIN.",
+        "FESTIVELY STUCK"
+      ]
+    },
+    "sub": {
+      "max": 36,
+      "examples": [
+        "Merry Christmas, {recipient}"
+      ]
+    },
+    "inside": {
+      "max": 240,
+      "examples": [
+        "Every year you swear you put them away neatly. Every year. Merry Christmas — here's to a tangle-free new year."
+      ]
+    }
+  },
+  "spot": "a tangled ball of fairy lights glowing on a wooden floor",
+  "qa": {
+    "faces": 1,
+    "text_only": [
+      "title",
+      "sub"
+    ]
+  },
+  "product": {
+    "sku": "ODD-CARD-5X7",
+    "prodigi": "GLOBAL-GRE-MOH-7X5",
+    "price_gbp": "2.99"
+  },
+  "format": {
+    "aspect": "5:7",
+    "front": "full_bleed",
+    "lettering": "in_art",
+    "inside_left": "spot",
+    "inside_right": "live_message",
+    "back": "oddhobb_mark"
+  },
+  "negative": "no other text, no logos, no watermark, no border, no extra people",
+  "wants": {
+    "hero": {
+      "shot": [
+        "solo",
+        "face",
+        "couple"
+      ],
+      "identity": "hero",
+      "people": [
+        1,
+        2
+      ],
+      "expression": [],
+      "min_face_px": 90,
+      "refs": 2
+    }
+  },
+  "names": {
+    "hero": "the person from the reference photos"
+  },
+  "schema": "cardgen.template.v2"
+}

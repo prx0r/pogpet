@@ -60,6 +60,15 @@ and **QA** expectations. See `templates/*.json`, schema in `template.schema.json
 | `comic_shock_v1` | 1 hero | an expressive face (open mouth / wide eyes) | pop-art comic panel |
 | `pet_portrait_royal_v1` | 1 pet | clear pet face | Renaissance oil portrait |
 | `xmas_family_v1` | whole family 2-6 | group photo | snow-globe family scene |
+| `solo_candles_inferno_v1` | 1 hero | any solo face | storybook gouache, candle bonfire (birthday) |
+| `solo_magazine_cover_v1` | 1 hero | any solo face | glossy magazine cover (birthday, Father's/Mother's Day, retirement) |
+| `solo_superhero_poster_v1` | 1 hero | any solo face | 80s painted superhero poster (birthday, Father's/Mother's Day, retirement) |
+| `solo_xmas_jumper_lights_v1` | 1 hero | any solo face | ugly jumper tangled in fairy lights (Christmas) |
+| `solo_retired_hammock_v1` | 1 hero | any solo face | asleep in a beach hammock (retirement) |
+
+The `solo_*` set is the one-upload floor: one clear photo (face ≥ 90 px, any expression,
+alone or tagged in a couple selfie) casts at least one card for every occasion except
+anniversary and Valentine's, which need a couple photo.
 
 ## Casting rules (step 2)
 

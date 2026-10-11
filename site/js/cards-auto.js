@@ -21,6 +21,7 @@
   // only occasions a cardgen template declares (cardgen/templates/*.json "occasions")
   var OCCASIONS = [['birthday', 'Birthday'], ['christmas', 'Christmas'], ['fathers_day', "Father's Day"],
     ['mothers_day', "Mother's Day"], ['retirement', 'Retirement'], ['anniversary', 'Anniversary'], ['valentines', "Valentine's"]];
+  function occasionLabel(v) { var o = OCCASIONS.find(function (x) { return x[0] === v; }); return o ? o[1] : v; }
   var STEP_LABEL = { queued: 'Queued', index: 'Reading the photos', write: 'Writing the joke', generate: 'Painting the front',
     qa0: 'Checking likeness', qa1: 'Fixing details', qa2: 'Final check', spot: 'Painting the inside', upscale: 'Sharpening for print',
     freeze: 'Setting the card', done: 'Ready' };
@@ -94,6 +95,8 @@
       }
       return p.then(function (id) {
         st.subject = id; st.name = name || subjectName(id);
+        var known = (st.library && st.library.subjects || []).find(function (x) { return x.id === id; });
+        st.kind = sid ? ((known && known.kind) || 'person') : kind;
         var chain = Promise.resolve(), uploaded = [];
         files.forEach(function (f, i) {
           chain = chain.then(function () {
@@ -133,6 +136,7 @@
       var keep = (photo.subjects || []).filter(function (l) { return l.subject_id !== st.subject; })
         .map(function (l) { return { subject_id: l.subject_id, face_id: l.face_id || '' }; });
       function save(fid) { return host.post('/studio/photos/' + photo.id, { subjects: keep.concat([{ subject_id: st.subject, face_id: fid || '' }]) }); }
+      if (st.kind === 'pet') return save('');  // a pet is tagged by photo, never by a human face in it
       if (faces.length <= 1) return save(faces[0] && faces[0].id);
       return new Promise(function (resolve, reject) {
         var box = el('div', null, 'ca-faces');
@@ -153,6 +157,7 @@
     // ── step 3+4: recommend, make, poll ────────────────────────────────
     function profile() {
       var p = { name: st.name };
+      if (st.kind === 'pet') p.pet_name = st.name;
       if (st.relationship) { p.relationship = st.relationship; p.recipient = st.name; }
       if (st.interests.length) p.interests = st.interests;
       p.occasion = st.occasion;
@@ -164,6 +169,19 @@
       return host.post('/cardgen/recommend', { subject_id: st.subject, occasion: st.occasion, profile: profile() }).then(function (r) {
         var ready = (r.ready || []).slice(0, MAX_CARDS);
         if (!ready.length) { st.busy = false; return blockedView(r); }
+        return host.get('/cardgen/status').catch(function () { return { can_generate: true }; }).then(function (h) {
+          if (h && h.can_generate === false) {
+            st.busy = false;
+            say('Your photos are saved, but card painting is switched off on our side right now. Please try again shortly.', true);
+            return;
+          }
+          return makeAll(ready);
+        });
+      });
+    }
+
+    function makeAll(ready) {
+      {
         st.jobs = ready.map(function (t) { return { template_id: t.template_id, status: 'queued', step: 'queued' }; });
         makingView();
         return Promise.all(st.jobs.map(function (j) {
@@ -175,7 +193,7 @@
           var ok = st.jobs.filter(function (j) { return j.status === 'ready'; }).length;
           say(ok ? 'Pick your favourite.' : 'None of the cards passed our checks this time. Try a clearer, closer photo.', !ok);
         });
-      });
+      }
     }
 
     function blockedView(r) {
@@ -186,7 +204,10 @@
         (b.shortfall || []).forEach(function (s) { var t = typeof s === 'string' ? s : (s.need || s.message || ''); if (t && !seen[t]) { seen[t] = 1; box.append(el('p', t)); } });
       });
       if (r.tip) box.append(el('p', r.tip));
-      if (!Object.keys(seen).length && !r.tip) box.append(el('p', 'Try a well-lit photo where their face fills at least a tenth of the frame.'));
+      if (!(r.blocked || []).length) {
+        box.firstChild.textContent = 'No ' + occasionLabel(st.occasion) + ' cards for ' + st.name + ' yet';
+        box.append(el('p', 'Pick another occasion and we will paint those instead.'));
+      } else if (!Object.keys(seen).length && !r.tip) box.append(el('p', 'Try a well-lit photo where their face fills at least a tenth of the frame.'));
       box.append(btn('Add another photo', startView));
       root.replaceChildren(box, status); say('');
     }

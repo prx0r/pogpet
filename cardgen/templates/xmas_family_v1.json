@@ -20,7 +20,8 @@
     "sub": {
       "max": 36,
       "examples": [
-        "from the {SURNAME}s"
+        "from the {SURNAME}s",
+        "from all of us"
       ]
     },
     "inside": {

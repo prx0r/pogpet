@@ -1,0 +1,29 @@
+{
+ "club_riv": "club.riv",
+ "sets": [
+  {
+   "id": "ralph",
+   "title": "Reptilian Ralph",
+   "sub": "Middle Management \u00b7 Global Takeover",
+   "color": "#7ed957",
+   "duration": 15.0,
+   "riv": "ralph/ralph.riv",
+   "set": "ralph/set.json",
+   "audio": "ralph/set.m4a",
+   "mp4": "ralph/set.mp4",
+   "poster": "ralph/poster.jpg"
+  },
+  {
+   "id": "zeus",
+   "title": "Zeus",
+   "sub": "Sky Sovereign \u00b7 Paperwork Division",
+   "color": "#ffd23f",
+   "duration": 15.0,
+   "riv": "zeus/zeus.riv",
+   "set": "zeus/set.json",
+   "audio": "zeus/set.m4a",
+   "mp4": "zeus/set.mp4",
+   "poster": "zeus/poster.jpg"
+  }
+ ]
+}

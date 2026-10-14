@@ -576,6 +576,33 @@
     .feed__empty{color:#666;padding:40px 16px;text-align:center;font-size:14px}
     body.studio-chrome .feed{margin-right:0;border-radius:14px}
 
+    /* Pogtown Comedy Club — live Rive set (js/club-player.js), 9:16 */
+    .club{margin:0 0 16px}
+    .club__head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:0 0 8px}
+    .club__h{font-family:'Playfair Display',Georgia,serif;font-size:18px;font-weight:600;color:#141414;margin:0}
+    .club__stage{position:relative;width:min(100%,420px,calc((100dvh - 190px) * 9 / 16));aspect-ratio:9/16;margin:0 auto;
+      border-radius:14px;overflow:hidden;background:#0d0b12;box-shadow:0 10px 30px rgba(0,0,0,.14)}
+    .club__canvas,.club__video{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;background:#0d0b12}
+    .club__canvas[hidden],.club__video[hidden]{display:none}
+    .club__tap{position:absolute;inset:0;background:transparent;border:0;cursor:pointer;touch-action:pan-y}
+    .club__play{z-index:1}
+    .club__stage.paused .club__play{opacity:1}
+    .club__mute{z-index:2}
+    .club__cap{position:absolute;left:6%;right:6%;bottom:19%;text-align:center;pointer-events:none;
+      font:800 clamp(15px,4.6vw,22px)/1.25 system-ui,-apple-system,"Segoe UI",sans-serif;color:#fff;
+      text-shadow:0 0 3px #08060c,0 0 3px #08060c,0 2px 6px rgba(0,0,0,.8)}
+    .club__cap[hidden]{display:none}
+    .club__cap span.on{color:#ffd23f}
+    .club__tag{position:absolute;left:4.4%;bottom:6%;max-width:80%;padding:8px 12px;opacity:0;pointer-events:none;
+      background:rgba(20,18,30,.85);border-left:4px solid #c4891a;color:#fff;transition:opacity .1s}
+    .club__tag b{display:block;font-size:clamp(13px,3.8vw,18px)}
+    .club__tag span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(10px,2.6vw,12px);color:#cfcfe0;margin-top:2px}
+    .club__tag[hidden]{display:none}
+    .club__mode{position:absolute;top:14px;left:12px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+      color:#fff;background:rgba(0,0,0,.35);border-radius:999px;padding:3px 8px;pointer-events:none}
+    .club__mode:empty{display:none}
+    .club__note{text-align:center;font-size:12px;color:#777;min-height:16px;margin-top:6px}
+
     /* studio character select — live mesh in the middle */
     .panel.white .panel__inner.wide{max-width:820px}
     .stv{background:transparent;border:0;border-radius:0;overflow:visible;margin:0 0 4px}
@@ -1564,6 +1591,23 @@
         <h2>Videos</h2>
         <p>Your meshes performing — stage clips only. Card scenes live under Cards.</p>
       </div>
+      <div class="club" id="club" aria-label="Pogtown Comedy Club">
+        <div class="club__head">
+          <h3 class="club__h">Pogtown Comedy Club</h3>
+          <div class="chips club__pick" role="group" aria-label="Comic"></div>
+        </div>
+        <div class="club__stage">
+          <canvas class="club__canvas" width="540" height="960" aria-label="Live comedy set"></canvas>
+          <video class="club__video" playsinline loop muted preload="metadata" hidden></video>
+          <div class="club__tag" aria-hidden="true"></div>
+          <div class="club__cap" aria-live="off"></div>
+          <button class="club__tap" type="button" aria-label="Play/pause"></button>
+          <button class="feed__mute club__mute" type="button" aria-label="Unmute">🔇</button>
+          <div class="feed__play club__play"><span>▶</span></div>
+          <span class="club__mode"></span>
+        </div>
+        <div class="club__note" role="status" aria-live="polite"></div>
+      </div>
       <div style="margin:0 0 10px">
         <a class="btn ghost" href="/stage.html" style="width:auto;display:inline-flex;margin:0">Open live stage</a>
         <a class="oc-button" href="/rehearse.html">Rehearse a recorded performance / AR</a>
@@ -2297,7 +2341,7 @@
       if (name === "studio") { loadStudioMeta(); if (peopleStudio) peopleStudio.open((window.OddHobbRouter.current||{}).subjectId).catch(function(){}); }
       if (name === "products") loadProducts();
       if (name === "cards") { if (autoCards) autoCards.open(); }
-      if (name === "videos") { loadVideoFeed(); }
+      if (name === "videos") { loadClub(); loadVideoFeed(); }
       if (name === "upload") loadMe();
       if (name === "quick") initQuickTab();
       if (name === "perform") { loadPerf(); loadPerfHistory(true); }
@@ -5003,24 +5047,52 @@
     // ── videos: vertical swipe feed (scroll-snap + IO) ────
     var vf = { items: [], obs: null, muted: true, active: 0, gen: 0 };
 
-    function feedSrc(src) {
+    function feedSrc(src, isStatic) {
       if (!src) return "";
+      if (isStatic) return src;
       if (src.charAt(0) === "/") return withTok("/backend" + src);
       return src;
+    }
+
+    // Pogtown Comedy Club: live Rive player (ES module, loaded on first visit) + its MP4s lead the feed
+    var clubSets = null;
+    function loadClub() {
+      var el = $("club"); if (!el || el.__club) return;
+      import("/js/club-player.js?v=club-1").then(function (m) { return m.mountClub(el); })
+        .catch(function (e) { var n = el.querySelector(".club__note"); if (n) n.textContent = "Comedy club unavailable."; console.warn(e); });
+    }
+    function clubFeedItems() {
+      if (clubSets) return Promise.resolve(clubSets);
+      return fetch("/assets/club/manifest.json").then(function (r) { return r.ok ? r.json() : { sets: [] }; })
+        .then(function (m) {
+          clubSets = (m.sets || []).filter(function (s) { return s.mp4; }).map(function (s) {
+            return { static: true, src: "/assets/club/" + s.mp4, poster: s.poster ? "/assets/club/" + s.poster : "",
+                     pet_name: s.title, topic: s.sub || "", scene: "Pogtown Comedy Club", duration: s.duration };
+          });
+          return clubSets;
+        })
+        .catch(function () { return []; });
     }
 
     function loadVideoFeed() {
       var host = $("vid-feed"); if (!host) return;
       msg("vid-msg", "", "");
       var myGen = ++vf.gen;
-      get(API + "/videos/feed?limit=12")
-        .then(function (d) {
-          if (!d.ok) { msg("vid-msg", d.error || "Feed unavailable.", "err"); return; }
-          vf.items = d.items || [];
-          paintFeed();
-          msg("vid-msg", vf.items.length + " clips · swipe or ↑↓ · tap for sound", "");
-        })
-        .catch(function () { if (myGen === vf.gen) msg("vid-msg", "Backend unreachable.", "err"); });
+      clubFeedItems().then(function (club) {
+        get(API + "/videos/feed?limit=12")
+          .then(function (d) {
+            if (myGen !== vf.gen) return;
+            if (!d.ok) { vf.items = club; paintFeed(); msg("vid-msg", d.error || "Feed unavailable.", "err"); return; }
+            vf.items = club.concat(d.items || []);
+            paintFeed();
+            msg("vid-msg", vf.items.length + " clips · swipe or ↑↓ · tap for sound", "");
+          })
+          .catch(function () {
+            if (myGen !== vf.gen) return;
+            vf.items = club; paintFeed();
+            msg("vid-msg", "Backend unreachable — showing club sets only.", "err");
+          });
+      });
     }
 
     function paintFeed() {
@@ -5035,8 +5107,8 @@
         var slide = document.createElement("div");
         slide.className = "feed__slide paused";
         slide.dataset.i = String(i);
-        var src = feedSrc(item.src);
-        var poster = item.poster ? feedSrc(item.poster) : "";
+        var src = feedSrc(item.src, item.static);
+        var poster = item.poster ? feedSrc(item.poster, item.static) : "";
         var vidTag = i < 2
           ? '<video playsinline loop muted preload="metadata" poster="' + poster + '" src="' + src + '" data-src="' + src + '"></video>'
           : '<video playsinline loop muted preload="none" poster="' + poster + '" data-src="' + src + '"></video>';
@@ -5119,7 +5191,7 @@
               var v = s.querySelector("video");
               if (!v) return;
               if (Math.abs(si - vf.active) <= 1) {
-                var want = feedSrc(vf.items[si].src);
+                var want = feedSrc(vf.items[si].src, vf.items[si].static);
                 if (!v.getAttribute("src")) v.setAttribute("src", v.getAttribute("data-src") || want);
                 else if (v.getAttribute("src") !== want && !v.getAttribute("src")) v.setAttribute("src", want);
                 v.preload = "metadata";

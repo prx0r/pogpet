@@ -173,7 +173,7 @@
             return {
               id: x.id, revision: x.revision,
               title: ((x.spec || {}).headline) || 'Untitled card',
-              price: (x.product && x.product.price_label) || opts.price || '£2.99',
+              price: (x.product && x.product.price_label) || opts.price || '',
               views: {
                 front: host.asset(b + '/preview'),
                 inside: host.asset(b + '/inside'),

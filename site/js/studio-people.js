@@ -23,6 +23,39 @@
     function error(e){status.textContent=e.message||String(e);if(!loaded){host.clearMesh();host.renderMeshes([]);document.getElementById('studio-mesh-empty').hidden=true;available(false);grid.replaceChildren(node('p','Your photos will appear here when the library is available.','studio-empty'));}}
 
     function person(){return data.subjects.find(function(s){return s.id===selected;});}
+    // ── person profile: Studio owns relationship / birthday / interests ──
+    var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function profileFields(s){
+      s=s||{};var wrap=node('div',undefined,'studio-profile-fields');
+      var rel=node('input');rel.maxLength=40;rel.placeholder='e.g. my sister, our dog';rel.value=s.relationship||'';
+      var relL=node('label','Who are they to you?');relL.append(rel);
+      var bd=(s.birthday||'').match(/^(\d{2})-(\d{2})$/);
+      var mon=node('select');mon.setAttribute('aria-label','Birthday month');mon.append(new Option('Month',''));MONTHS.forEach(function(m,i){mon.append(new Option(m,String(i+1).padStart(2,'0')));});
+      var day=node('select');day.setAttribute('aria-label','Birthday day');day.append(new Option('Day',''));for(var d=1;d<=31;d++)day.append(new Option(String(d),String(d).padStart(2,'0')));
+      if(bd){mon.value=bd[1];day.value=bd[2];}
+      var bdL=node('label','Birthday (optional)');var bdRow=node('span',undefined,'studio-profile-bd');bdRow.append(mon,day);bdL.append(bdRow);
+      var ints=node('input');ints.maxLength=300;ints.placeholder='e.g. golf, gardening, tennis balls';ints.value=(s.interests||[]).join(', ');
+      var intL=node('label','What are they into?');intL.append(ints);
+      wrap.append(relL,bdL,intL);
+      return {el:wrap,value:function(){return {relationship:rel.value.trim(),birthday:(mon.value&&day.value)?mon.value+'-'+day.value:'',interests:ints.value.split(',').map(function(t){return t.trim();}).filter(Boolean).slice(0,12)};}};
+    }
+    function saveProfile(sid,v){return host.post('/studio/subjects/'+sid+'/profile',{relationship:v.relationship,birthday:v.birthday,interests:v.interests});}
+    function paintProfile(){
+      var box=document.getElementById('studio-profile');if(!box)return;box.replaceChildren();
+      var s=person();if(!s){box.hidden=true;return;}box.hidden=false;
+      var head=node('div',undefined,'studio-profile-head');head.append(node('h3','About '+s.name));
+      var bits=[];if(s.relationship)bits.push(s.relationship);
+      if(/^\d{2}-\d{2}$/.test(s.birthday||'')){var p=s.birthday.split('-');bits.push('birthday '+parseInt(p[1],10)+' '+MONTHS[parseInt(p[0],10)-1]);}
+      if((s.interests||[]).length)bits.push('into '+s.interests.join(', '));
+      var summary=node('p',bits.length?bits.join(' · '):'Add who they are to you, their birthday and what they are into — cards, gifts and Quick use it so you never type it twice.','studio-profile-summary');
+      var edit=button(bits.length?'Edit':'Add details',function(){
+        var form=profileFields(s),msg=node('p','','panel__msg');
+        var save=button('Save',async function(){save.disabled=true;try{await saveProfile(s.id,form.value());await refresh(s.id);}catch(e){msg.textContent=e.message;save.disabled=false;}});
+        var cancel=button('Cancel',function(){paintProfile();},'oc-button ghost');
+        box.replaceChildren(head,form.el,save,cancel,msg);
+      });
+      head.append(edit);box.append(head,summary);
+    }
     function belongs(p){return p.subjects.some(function(s){return s.subject_id===selected&&s.confirmed;});}
     function subjectPhotos(sid){return data.photos.filter(function(p){return p.subjects.some(function(s){return s.subject_id===sid&&s.confirmed;});});}
     function context(){var s=person();return {subject:s||null,photos:s?subjectPhotos(s.id):[],meshId:host.meshId()};}
@@ -84,7 +117,7 @@
       // narrows the shelf to theirs; unassigned stay under the assign box.
       var meshes=selected?data.meshes.filter(function(m){return m.subject_id===selected;}):data.meshes.slice(),mid=memories[selected]||'';
       if(!meshes.some(function(m){return m.id===mid;}))mid=(meshes.find(function(m){return m.status==='succeeded';})||{}).id||'';
-      host.clearMesh();host.renderMeshes(meshes,mid);paintUnassignedMeshes();paintPhotos();publish();
+      host.clearMesh();host.renderMeshes(meshes,mid);paintUnassignedMeshes();paintPhotos();paintProfile();publish();
       var s=person();meshHeading.textContent=s?s.name+'’s meshes':'Meshes';
       var empty=document.getElementById('studio-mesh-empty');
       if(empty&&!meshes.length)empty.textContent=selected?'No meshes for this friend yet. Choose one of their photos to create a character.':'No meshes yet. Upload a photo to create your first character.';
@@ -128,7 +161,7 @@
     }
     function dialog(title){var d=node('dialog',undefined,'studio-dialog');var box=node('div',undefined,'studio-dialog-inner');var close=button('Close',function(){d.close();},'studio-dialog-close');box.append(close,node('h2',title));d.append(box);document.body.append(d);d.addEventListener('close',function(){d.remove();});d.showModal();return {dialog:d,box:box};}
     async function createFriend(){
-      var view=dialog('Add family');var label=node('label','Name');var field=node('input');field.maxLength=60;label.append(field);var kind=node('select');kind.append(new Option('Person','person'),new Option('Pet','pet'));var msg=node('p');var save=button('Add family',async function(){save.disabled=true;try{var result=await host.post('/studio/subjects',{name:field.value,kind:kind.value});view.dialog.close();await refresh(result.subject.id);window.OddHobbRouter.navigate('/studio/people/'+result.subject.id);}catch(e){msg.textContent=e.message;save.disabled=false;}});view.box.append(label,kind,save,msg);field.focus();
+      var view=dialog('Add family');var label=node('label','Name');var field=node('input');field.maxLength=60;label.append(field);var kind=node('select');kind.setAttribute('aria-label','Person or pet');kind.append(new Option('Person','person'),new Option('Pet','pet'));var prof=profileFields({});var msg=node('p');var save=button('Add family',async function(){save.disabled=true;try{var result=await host.post('/studio/subjects',{name:field.value,kind:kind.value});var pv=prof.value();if(pv.relationship||pv.birthday||pv.interests.length){try{await saveProfile(result.subject.id,pv);}catch(e){}}view.dialog.close();await refresh(result.subject.id);window.OddHobbRouter.navigate('/studio/people/'+result.subject.id);}catch(e){msg.textContent=e.message;save.disabled=false;}});view.box.append(label,kind,prof.el,save,msg);field.focus();
     }
     async function editPhoto(p){
       var view=dialog('Who’s in this photo?'),imgWrap=node('div',undefined,'studio-photo-inspect'),im=node('img');var full=(p.thumbnail_url||p.url||'');if(full)im.src=host.asset(full);im.alt=p.orig_name;imgWrap.append(im);view.box.append(imgWrap);
@@ -176,6 +209,6 @@
       for(var f of files){status.textContent='Uploading '+f.name+'…';await host.upload(f);}
       await refresh();await detectPending();
     }catch(e){failure=e;filter='review';}finally{working=false;available(loaded);paintPhotos();if(failure)error(failure);}};
-    return {open:open,refresh:refresh,context:context,rememberMesh:function(mid){var sid=selected;memories[sid]=mid;publish();selectionChain=selectionChain.catch(function(){}).then(function(){return host.post('/studio/selection',{subject_id:sid,mesh_id:mid});}).catch(error);}};
+    return {open:open,refresh:refresh,context:context,people:function(){return data;},addPerson:function(){return createFriend();},rememberMesh:function(mid){var sid=selected;memories[sid]=mid;publish();selectionChain=selectionChain.catch(function(){}).then(function(){return host.post('/studio/selection',{subject_id:sid,mesh_id:mid});}).catch(error);}};
   };
 })();

@@ -23,7 +23,8 @@
   </script>
   <!-- Pinterest domain verification (oddhobb.com) -->
   <meta name="p:domain_verify" content="5f31a4515d8ece964b0d7db8d0961321"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root{
       /* Inverse store theme: black chrome + white panels · pumpkin accent */
@@ -91,14 +92,6 @@
     .product__name{font-family:'Playfair Display',serif;font-size:16px;margin-bottom:4px}
     .product__desc{font-size:12px;color:var(--muted);margin-bottom:8px}
     .product__price{font-size:14px;color:var(--gold);font-weight:600}
-    .satchel{position:fixed;bottom:100px;right:20px;background:var(--charcoal);border:1px solid rgba(255,122,26,0.2);border-radius:12px;padding:12px 16px;font-size:12px;color:var(--ivory);z-index:40;opacity:0;transition:all .3s;cursor:pointer}
-    .satchel.visible{opacity:1}
-    .satchel__icon{font-size:20px;margin-bottom:4px}
-    .satchel__count{color:var(--gold);font-weight:600}
-    .satchel__total{color:var(--muted);font-size:11px}
-    .bee-status{position:fixed;bottom:100px;left:92px;font-size:11px;color:var(--muted);z-index:40;opacity:0;transition:opacity .3s}
-    .bee-status.visible{opacity:1}
-    .bee-status__name{color:var(--gold);font-weight:600}
 
     /* ── Left tab rail ─────────────────────────────────────── */
     .tabrail{position:fixed;left:0;top:0;height:100dvh;width:72px;z-index:60;
@@ -470,7 +463,6 @@
     body.studio-chrome .speech,
     body.studio-chrome .flash,
     body.studio-chrome .honey-badge,
-    body.studio-chrome .satchel,
     body.studio-chrome .bee-status,
     body.studio-chrome .hive-signal,
     body.studio-chrome .barth,
@@ -823,20 +815,21 @@
   <link rel="stylesheet" href="/css/card-viewer.css">
   <link rel="stylesheet" href="/css/moments.css">
   <script src="/js/api-client.js?v=studio-3"></script>
-  <script src="/js/cards-studio.js?v=studio-4"></script>
+  <script src="/js/cards-studio.js?v=studio-5"></script>
   <script src="/vendor/page-flip-2.0.7/page-flip.browser.js"></script>
-  <script src="/js/cards-auto.js?v=4"></script>
-  <script src="/js/card-viewer.js?v=cv-1"></script>
+  <script src="/js/cards-auto.js?v=5"></script>
+  <script src="/js/card-viewer.js?v=cv-2"></script>
 
   <script src="/js/oddy.js"></script>
   <link rel="stylesheet" href="/vendor/swiper/swiper-bundle.min.css">
   <link rel="stylesheet" href="/css/site-shell.css?v=studio-3">
+  <link rel="stylesheet" href="/css/pages.css?v=3">
   <script src="/vendor/swiper/swiper-bundle.min.js"></script>
   <script src="/js/site-router.js?v=studio-3"></script>
   <script src="/js/duel.js?v=1"></script>
-  <script src="/js/art.js?v=1"></script>
-  <script src="/js/studio-people.js?v=studio-3"></script>
-  <script src="/js/site-shell.js?v=studio-6"></script>
+  <script src="/js/art.js?v=2"></script>
+  <script src="/js/studio-people.js?v=studio-4"></script>
+  <script src="/js/site-shell.js?v=studio-7"></script>
 </head>
 <body class="studio-chrome">
   <!-- boot screen: black 3D mark emerges from plain white, then recedes -->
@@ -851,7 +844,7 @@
     <div class="greet__inner">
       <div class="greet__mark"><img src="/assets/logo-3d-black.png" alt="OddHobb"></div>
       <div class="greet__eyebrow">Tell us who it's for — we'll design the perfect little project</div>
-      <p class="greet__sub">Start with the person — Dad, Cathy, the dog — and the occasion. We pick their best photos, match the right product, and post a gift that's already them.</p>
+      <p class="greet__sub">Start with the person — a parent, a best friend, the dog — and the occasion. We pick their best photos, match the right product, and post a gift that's already them.</p>
       <ol class="greet__steps">
         <li><div><b>Say who it's for</b><span>A name and an occasion — birthday, Christmas, just because.</span></div></li>
         <li><div><b>We find their best photos</b><span>Faces ranked by quality. Add pictures any time.</span></div></li>
@@ -870,7 +863,7 @@
       <div class="greet__who" id="g-who" hidden></div>
 
       <p class="greet__fine">No photo handy? Start with a name — add pictures later.</p>
-      <p class="greet__fine"><a href="/privacy">Privacy</a> · <a href="mailto:support@oddhobb.com">support@oddhobb.com</a></p>
+      <p class="greet__fine"><a href="mailto:support@oddhobb.com">support@oddhobb.com</a></p>
     </div>
   </div>
 
@@ -1115,65 +1108,14 @@
     if (cta && greet) {
       cta.addEventListener("click", function () {
         greet.classList.add("hidden");
-        var ti = document.getElementById("ti");
-        if (ti) { try { ti.focus({ preventScroll: true }); } catch (e) { ti.focus(); } }
-        document.dispatchEvent(new CustomEvent("pog:enter"));
+        // "Start with someone" = add a person in Studio (main script opens the dialog)
+        document.dispatchEvent(new CustomEvent("oddhobb:add-person"));
       });
     }
 
   })();
   </script>
 
-  <!-- ══ TAB: upload ══ -->
-  <section class="panel" data-panel="upload" id="panel-upload" aria-label="Your people">
-    <div class="panel__inner">
-      <h2 class="panel__h">Your star</h2>
-      <p class="panel__lede">Your people, sorted automatically. One is the star — whatever’s active is what appears on every card, mug and sheet of wrapping paper. Coming from Quick? Upload here, then we’ll return you to your product.</p>
-
-      <span class="panel__label">now showing</span>
-      <div class="spot" id="spot">
-        <div class="spot__ring" id="spot-ring">
-          <span id="spot-emoji">🐾</span>
-          <img id="spot-img" alt="" hidden>
-        </div>
-        <div class="spot__meta">
-          <div class="spot__label">active star</div>
-          <div class="spot__name" id="spot-name">nothing yet</div>
-          <div class="spot__id" id="spot-id"></div>
-          <div class="spot__state" id="spot-state"></div>
-          <button class="spin__go" id="spin-go" type="button" hidden>Render 360&deg; spin</button>
-        </div>
-      </div>
-      <div class="out spin__out" id="spin-out" hidden>
-        <video id="spin-video" controls playsinline muted loop></video>
-        <div class="out__bar"><span id="spin-meta">turntable</span></div>
-      </div>
-      <div class="panel__status" id="spin-status"></div>
-
-      <span class="panel__label">your people — click a face to spotlight</span>
-      <div class="roster" id="roster" role="list"></div>
-
-      <span class="panel__label">uploads — autosorted into people</span>
-      <div class="people" id="people-grid" role="list"></div>
-
-      <span class="panel__label">add someone</span>
-      <div class="drop" id="drop" role="button" tabindex="0" aria-label="Upload a photo">
-        <input type="file" id="up-input" accept="image/jpeg,image/png" hidden>
-        <div class="drop__icon">🐾</div>
-        <p class="drop__copy">Click or drop a photo of Dad, the dog, anyone</p>
-        <p class="drop__fine">JPEG or PNG · up to 10 MB · at least 256px on the short side</p>
-      </div>
-      <img class="drop__preview" id="up-preview" alt="" hidden>
-
-      <div class="panel__msg" id="up-msg" role="status" aria-live="polite"></div>
-      <button class="btn" id="up-sculpt" type="button" hidden>Sculpt them →</button>
-      <div class="panel__status" id="up-status"></div>
-
-      <p class="panel__fine">First 3 figures a day are free. Your photos stay private to your account, and reusing the same photo never counts twice.</p>
-    </div>
-  </section>
-
-  <!-- ══ TAB: studio — mesh roster + photo gallery ══ -->
   <section class="panel white" data-panel="studio" id="panel-studio" aria-label="Studio">
     <div class="panel__inner wide">
       <div class="store-head" style="margin:0 0 10px">
@@ -1183,6 +1125,7 @@
 
       <!-- friends conveyor: tactile swipe strip, drives the whole page -->
       <div class="friends" id="friends" role="listbox" aria-label="Family"></div>
+      <div class="studio-profile" id="studio-profile" hidden></div>
 
       <h2 id="studio-mesh-title">Meshes</h2><p id="studio-mesh-empty" class="studio-empty" hidden>No meshes for this friend yet. Choose one of their photos to create a character.</p><div id="studio-unassigned-meshes"></div>
       <div class="stv" id="stv" hidden>
@@ -1397,15 +1340,15 @@
       <div class="qk-made" id="qk-made">
         <div class="qk-made__hd">Made last week</div>
         <div class="qk-made__row">
-          <figure><img src="/img/prod/prod-hero.png" alt="Personalised Christmas ornament" loading="lazy"><figcaption>Ornament · £15.00</figcaption></figure>
-          <figure><img src="/img/prod/kc-hero.png" alt="Personalised pet keychain" loading="lazy"><figcaption>Keychain · £15.00</figcaption></figure>
-          <figure><img src="/img/prod/brick-hero.png" alt="Personalised brick figure" loading="lazy"><figcaption>Brick figure · £20.00</figcaption></figure>
+          <figure data-line="ornament"><img src="/img/prod/prod-hero.png" alt="Personalised ornament" loading="lazy"><figcaption data-name="Ornament">Ornament</figcaption></figure>
+          <figure data-line="keychain"><img src="/img/prod/kc-hero.png" alt="Personalised pet keychain" loading="lazy"><figcaption data-name="Keychain">Keychain</figcaption></figure>
+          <figure data-line="brick"><img src="/img/prod/brick-hero.png" alt="Personalised brick figure" loading="lazy"><figcaption data-name="Brick figure">Brick figure</figcaption></figure>
         </div>
       </div>
       <!-- IDLE: ready to ramble -->
       <div class="qk-idle" id="qk-idle">
         <div class="qk-eyebrow">oddhobb · quick</div>
-        <div class="pr-banner__mesh" id="qk-mesh-chip" style="display:inline-block;margin-bottom:12px">mesh —</div>
+        <div class="pr-banner__mesh" id="qk-mesh-chip" style="display:inline-block;margin-bottom:12px" hidden></div>
         <svg class="oddy-avatar" id="oddy-idle" viewBox="0 0 512 512" role="img" aria-label="Oddy"><use href="#oddy-neutral"/></svg>
         <h1 class="qk-hero">Tell Oddy about them</h1>
         <p class="qk-sub">Ramble about the person, pet, or occasion. Oddy listens, thinks, and finds the odd thing that fits.</p>
@@ -1422,7 +1365,7 @@
         </div>
         <button class="qk-mic" id="qk-mic-big" type="button" aria-label="Start rambling">
           <span class="qk-mic__ring"></span>
-          <span class="qk-mic__core">🎤</span>
+          <span class="qk-mic__core"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M9 21h6"/></svg></span>
         </button>
         <div class="qk-mic-label" id="qk-mic-label">Tap when you’re ready</div>
         <div class="qk-timer" id="qk-timer" hidden></div>
@@ -1464,38 +1407,33 @@
         <div class="panel__status" id="qk-status"></div>
       </div>
 
-      <!-- RESULTS: shortlist + paths + bobdod -->
+      <!-- RESULTS: shortlist + paths -->
       <div class="qk-results" id="qk-results" hidden>
         <div class="qk-eyebrow">session complete</div>
         <h2 class="qk-hero qk-hero--sm" id="qk-result-title">Here’s what we heard</h2>
-        <p class="qk-sub" id="qk-result-sub">Pick a path — or keep talking to bobdod.</p>
+        <p class="qk-sub" id="qk-result-sub">Pick a path.</p>
         <div class="qk-label">Top matches</div>
         <div class="quick__hits etsy" id="qk-hits"></div>
         <div class="qk-label" id="qk-picked-label" hidden>Shortlist</div>
         <div class="chips" id="qk-picked"></div>
         <div class="qk-label">Where to next?</div>
         <div class="qk-opts" id="qk-opts">
-          <button class="qk-opt" data-act="order" type="button"><b>Order this</b><span>One-click Shopify on the top match</span></button>
-          <button class="qk-opt" data-act="upload" type="button"><b>Upload a photo</b><span>Personal mesh → every product inherits</span></button>
-          <button class="qk-opt" data-act="products" type="button"><b>Browse all products</b><span>Full Etsy-style shelf</span></button>
-          <button class="qk-opt" data-act="gift" type="button"><b>Gift card</b><span>£5 / £10 / £15 / £20 digital</span></button>
-          <button class="qk-opt" data-act="chat" type="button"><b>Talk to bobdod</b><span>Agent guides the rest</span></button>
+          <button class="qk-opt" data-act="order" type="button"><b>Customise &amp; order</b><span>Open the top match in Products</span></button>
+          <button class="qk-opt" data-act="upload" id="qk-opt-upload" type="button"><b>Add their photos</b><span>In Studio — every product uses them</span></button>
+          <button class="qk-opt" data-act="gift" type="button"><b>Gift card</b><span id="qk-gift-amounts">Digital, any amount we offer</span></button>
           <button class="qk-opt" data-act="again" type="button"><b>Ramble again</b><span>Open the mic again</span></button>
         </div>
         <div class="panel__msg" id="qk-opt-msg" role="status" aria-live="polite"></div>
         <div class="qk-chat">
-          <div class="qk-label">bobdod</div>
-          <div class="dialogue__text" id="qk-dt" style="color:#333;font-size:13px;min-height:2.4em"></div>
+          <div class="qk-label">Type instead</div>
           <div class="quick__row">
-            <input type="text" id="qk-ti" class="pr-agent-input" placeholder="Ask bobdod — or type instead of the mic" autocomplete="off">
+            <input type="text" id="qk-ti" class="pr-agent-input" placeholder="Type about them instead of using the mic" autocomplete="off">
             <button class="quick__go" id="qk-send" type="button">Send</button>
           </div>
         </div>
         <div class="qk-mesh-chip-row">
-          <div class="pr-banner__mesh" id="qk-mesh-chip-results">mesh —</div>
-          <button class="btn ghost" id="qk-shuffle" type="button" style="width:auto;margin:0;padding:8px 12px">Another prompt idea</button>
+          <div class="pr-banner__mesh" id="qk-mesh-chip-results"></div>
         </div>
-        <div class="quick__prompt" id="qk-prompt" hidden>What’s their funniest habit?</div>
       </div>
     </div>
   </section>
@@ -1505,13 +1443,13 @@
     <div class="panel__inner">
       <div class="pr-banner">
         <div>
-          <div class="pr-banner__title">Made from your active star</div>
-          <div class="pr-banner__sub">3D lines inherit your studio mesh · jackets &amp; hats are controlled custom · prints &amp; gifts below</div>
+          <div class="pr-banner__title">Made for your person</div>
+          <div class="pr-banner__sub">Made from the person you picked in Studio · jackets &amp; hats to choose · cards &amp; prints below</div>
         </div>
         <div class="pr-banner__mesh" id="pr-mesh-chip">mesh —</div>
       </div>
 
-      <div class="qk-label" style="margin-top:0">Studio 3D · one-click Shopify</div>
+      <div class="qk-label" style="margin-top:0">Personalised 3D gifts</div>
       <div class="packbox" style="border:1px solid #e8e4dc;border-radius:14px;padding:12px;margin-bottom:10px">
         <div class="qk-label" style="margin-top:0">Gift pack — Oddy's game: best gift inside your budget</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1544,6 +1482,7 @@
         <div class="chips" id="pr-coats" style="margin-top:12px"></div>
         <div class="chips" id="pr-hats" style="margin-top:8px"></div>
         <div class="chips" id="pr-sizes" style="margin-top:8px"></div>
+        <label class="pr-name-on" id="pr-name-wrap" hidden>Name on it <input type="text" id="pr-name-on" maxlength="14" autocomplete="off"></label>
         <div class="pr-qty">
           <span>Qty</span>
           <button type="button" id="pr-qty-dec" aria-label="Decrease qty">−</button>
@@ -1551,24 +1490,14 @@
           <button type="button" id="pr-qty-inc" aria-label="Increase qty">+</button>
         </div>
         <div class="pr-order-row">
-          <button class="btn btn-shopify" id="pr-order" type="button">One-click order → Shopify</button>
-          <button class="btn btn-ghost-dark" id="pr-order-reserve" type="button">Reserve only</button>
-          <button class="btn btn-ghost-dark" id="pr-fit" type="button" title="Move, rotate and resize the hat, then save">Fine-tune hat fit</button>
+          <button class="btn btn-shopify" id="pr-order" type="button">Order &amp; pay →</button>
         </div>
         <div class="panel__status" id="pr-status"></div>
         <div class="panel__msg" id="pr-msg" role="status" aria-live="polite"></div>
-        <details class="pr-mcp">
-          <summary style="font-weight:600;color:#8a6a2f;cursor:pointer">Agent / MCP — no token needed</summary>
-          <div style="font-size:12px;color:#6b5b3e;margin-bottom:4px">Any agent connects to <code>https://mcp.oddhobb.com/mcp</code> and gets the public tier (catalog, contracts, quotes, gift packs). Start with <code>figg_tools</code>. Full loop docs: <code>/llms.txt</code>.</div>
-          <code>figg_quick_map</code> · <code>figg_fullchain_personalise_order</code> ·
-          <code>figg_checkout</code> · playbook <code>/api/agent/playbook</code>
-        </details>
       </div>
 
-      <div class="qk-label">Prints &amp; gifts · mesh on the face</div>
-      <div class="etsy" id="pr-prints"></div>
-      <div id="pr-print-cands" style="display:none;margin:0 0 10px;padding:10px;border:1px solid #e8e4dc;border-radius:14px;background:#fff"></div>
-      <p class="panel__fine">Paper greeting cards live under <b>cards</b>. Ramble lives under <b>quick</b>.</p>
+      <div class="qk-label" id="pr-prints-label" hidden>Cards &amp; prints</div>
+      <div class="etsy" id="pr-prints" hidden></div>
     </div>
   </section>
 
@@ -1608,10 +1537,6 @@
         </div>
         <div class="club__note" role="status" aria-live="polite"></div>
       </div>
-      <div style="margin:0 0 10px">
-        <a class="btn ghost" href="/stage.html" style="width:auto;display:inline-flex;margin:0">Open live stage</a>
-        <a class="oc-button" href="/rehearse.html">Rehearse a recorded performance / AR</a>
-      </div>
       <div class="feed" id="vid-feed" tabindex="0" role="feed" aria-label="Video feed"></div>
       <div class="panel__msg" id="vid-msg" role="status" aria-live="polite"></div>
     </div>
@@ -1631,10 +1556,12 @@
       <div class="panel__fine" id="pf-premise"></div>
 
       <span class="panel__label">the bit</span>
+      <p class="pf-for" id="pf-for" hidden></p>
+      <div class="chips" id="pf-starters" role="group" aria-label="Bit ideas" hidden></div>
       <input type="text" id="pf-topic" placeholder="e.g. does the worm on a pub table" maxlength="180">
 
-      <span class="panel__label">their name</span>
-      <input type="text" id="pf-name" placeholder="Bender" maxlength="40">
+      <span class="panel__label" id="pf-name-label">their name</span>
+      <input type="text" id="pf-name" placeholder="Their name" maxlength="40">
 
       <button class="btn" id="pf-go" type="button">Take the stage &#8594;</button>
       <button class="btn ghost" id="pf-sharpen" type="button">Sharpen my bit (writing room)</button>
@@ -1672,552 +1599,13 @@
 <section class="panel white" data-panel="cart" id="panel-cart"><div class="panel__inner"></div></section>
 <section class="panel white" data-panel="account" id="panel-account"><div class="panel__inner"></div></section>
 <section class="panel white" data-panel="notfound" id="panel-notfound"><div class="panel__inner"></div></section>
-  <section class="panel" data-panel="shop" id="panel-shop" aria-label="Shop">
-    <div class="panel__inner">
-      <h2 class="panel__h">Shop</h2>
-      <p class="panel__lede" id="shop-lede">Everything below is already active against your mesh — same model, one sculpt, many products. <a href="/products.html" style="color:var(--gold)">See exactly what arrives →</a></p>
-      <div class="hero" id="shop-hero">
-        <h3>what odd thing shall we make you?</h3>
-        <p id="hero-sub">Your star, on everything below.</p>
-        <div class="hero__row"><input id="hero-q" placeholder="Describe it — a bauble that barks…" maxlength="140"><button id="hero-go" type="button">Ask &rarr;</button></div>
-      </div>
 
-      <span class="panel__label">design</span>
-      <select class="panel__select" id="shop-concept"></select>
-      <span class="panel__label">their name</span>
-      <input type="text" id="shop-subject" placeholder="Max" maxlength="40">
-      <button class="btn ghost" id="shop-apply" type="button">Apply to all cards</button>
-      <div class="panel__status" id="shop-status"></div>
-      <div class="cards" id="shop-grid"></div>
-      <div class="panel__msg" id="shop-msg" role="status" aria-live="polite"></div>
-      <p class="panel__fine">Printed to order and posted to you. Digital gifts land instantly.</p>
-    </div>
-  </section>
-
-  <div class="app">
-    <div class="stage">
-      <div class="flash" id="flash"></div>
-      <div class="speech" id="speech"></div>
-      <div class="barth" id="barth" hidden>
-        <img src="assets/poses/01_neutral.webp" alt="" id="barth-img">
-        <div class="barth__tag" hidden></div>
-      </div>
-    </div>
-    <div class="dialogue">
-      <div class="dialogue__inner">
-        <div class="dialogue__speaker" id="speaker">bobdod</div>
-        <div class="dialogue__text" id="dt"></div>
-        <div class="dialogue__input-row">
-          <input type="text" class="dialogue__input" id="ti" placeholder="Type or press the mic…" autocomplete="off">
-          <button class="dialogue__btn dialogue__mic" id="mic" type="button"><svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg></button>
-          <button class="dialogue__btn" id="send" type="button"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="overlay" id="concepts-overlay"><button class="overlay-close" id="concepts-close">×</button><div class="overlay-panel"><h2 id="concepts-title">Ideas</h2><p>Which feels right?</p><div class="concepts-grid" id="concepts-grid"></div></div></div>
-  <div class="overlay" id="products-overlay"><button class="overlay-close" id="products-close">×</button><div class="overlay-panel"><h2>How should we deliver this?</h2><p>Same concept. Different form.</p><div class="products-grid"><div class="product" data-type="digital" data-price="6.99"><div class="product__visual">✨</div><div class="product__body"><div class="product__name">Personalised Video</div><div class="product__desc">Your pet, brought to life</div><div class="product__price">£6.99</div></div></div><div class="product" data-type="card" data-price="12.99"><div class="product__visual">💳</div><div class="product__body"><div class="product__name">Video + Portal Card</div><div class="product__desc">Scan to summon them</div><div class="product__price">£12.99</div></div></div><div class="product" data-type="gift" data-price="19.99"><div class="product__visual">☕</div><div class="product__body"><div class="product__name">Mug Portal</div><div class="product__desc">Their face on your mornings</div><div class="product__price">£19.99</div></div></div><div class="product" data-type="legend" data-price="29.99"><div class="product__visual">🛋️</div><div class="product__body"><div class="product__name">Cushion Portal</div><div class="product__desc">A throne for their face</div><div class="product__price">£29.99</div></div></div></div></div></div>
-  <div class="hive-signal"><div class="hive-signal-fill" id="hive-signal"></div></div>
-  <div class="honey-badge" id="honey-badge"><span>🛒</span><span id="honey-count">0</span></div>
-  <div class="satchel" id="satchel"><div class="satchel__icon">👜</div><div class="satchel__count" id="satchel-count">0 items</div><div class="satchel__total" id="satchel-total">Empty</div></div>
-  <div class="bee-status" id="bee-status"><span class="bee-status__name" id="bee-name">bobdod</span> — <span id="bee-role">Store helper</span></div>
-
-  <script>
-    console.log('oddhobb loading...');
-
-    // ═══════════════════════════════════════════════════════════
-    // CONFIG
-    // ═══════════════════════════════════════════════════════════
-    var CF = { account: "YOUR_ACCOUNT_ID", token: "YOUR_CLOUDFLARE_TOKEN" };
-    var $ = function(id) { return document.getElementById(id); };
-    var dt, conf, flash, ti, speech, barthImg;
-
-    // ═══════════════════════════════════════════════════════════
-    // POGO POSES
-    // ═══════════════════════════════════════════════════════════
-    var POSES = {
-      neutral: 'assets/poses/01_neutral.webp',
-      happy: 'assets/poses/02_happy.webp',
-      wink: 'assets/poses/03_wink.webp',
-      listening: 'assets/poses/04_listening.webp',
-      thinking: 'assets/poses/05_thinking.webp',
-      surprised: 'assets/poses/06_surprised.webp',
-      confident: 'assets/poses/07_confident.webp',
-      talking: 'assets/poses/08_talking.webp',
-      presenting: 'assets/poses/09_presenting.webp',
-      celebrate: 'assets/poses/11_celebrate_arms.webp',
-      sleeping: 'assets/poses/12_sleeping.webp'
-    };
-    var currentPose = 'neutral';
-    function setPose(pose) {
-      if (POSES[pose] && pose !== currentPose && barthImg) {
-        barthImg.src = POSES[pose];
-        currentPose = pose;
-      }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // BEE SESSION
-    // ═══════════════════════════════════════════════════════════
-    // CAST — bobdod is the main helper. Pogo disconnected from the picker (assets kept on disk).
-    var BOBDOD = {
-      name: 'bobdod',
-      role: 'Store helper',
-      voice: 'warm, direct, catalogue-obsessed',
-      traits: ['helpful', 'knows every product', 'no nonsense', 'asks one good question']
-    };
-    var ARCHETYPES = [
-      BOBDOD,
-      { name: 'Buster', role: 'Dachshund Wizard', voice: 'grandiose-cheeky', traits: ['dramatic', 'cheese-motivated', 'secretly judgemental'] },
-      { name: 'Kevin', role: 'Angry Pigeon', voice: 'irate', traits: ['furious', 'territorial', 'shareable'] },
-      { name: 'Pickles', role: 'Cat', voice: 'dry', traits: ['unimpressed', 'precise', 'dangerous'] },
-      { name: 'Mog', role: 'Weird Goblin', voice: 'mischievous', traits: ['funny', 'strange', 'feral'] }
-    ];
-    window.__COMPANY__ = null;
-
-    var session = {
-      id: 'bee_' + Date.now().toString(36),
-      bee: BOBDOD,
-      brief: {},
-      satchel: [],
-      honey: 30,
-      history: [],
-      mission: {}
-    };
-
-    // Load from localStorage — bobdod unless a guest host was chosen on purpose.
-    // Pogo is disconnected: any saved Pogo session falls back to bobdod.
-    try {
-      var saved = JSON.parse(localStorage.getItem('mythicbee-session'));
-      if (saved && saved.bee && saved.bee.name) session = saved;
-      if (!session.bee || !session.bee.name) session.bee = BOBDOD;
-      if (session.bee && /pogo/i.test(session.bee.name || '')) session.bee = BOBDOD;
-    } catch(e) { session.bee = BOBDOD; }
-    function loadCompanyGraph() {
-      return fetch("/backend/api/companygraph?token=" + encodeURIComponent(window.__FIGG_TOKEN || ""))
-        .then(function (r) { return window.OddHobbAPI.readJSON(r); }).then(function (d) {
-        if (d && d.ok) window.__COMPANY__ = d;
-      }).catch(function () {});
-    }
-
-    function saveSession() {
-      try { localStorage.setItem('mythicbee-session', JSON.stringify(session)); } catch(e) {}
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // UI HELPERS
-    // ═══════════════════════════════════════════════════════════
-    function say(text) {
-      if (!speech) return;
-      speech.textContent = text;
-      speech.classList.add('visible');
-      setTimeout(function() { speech.classList.remove('visible'); }, 4000);
-    }
-
-    function speak(text) {
-      return new Promise(function(resolve) {
-        if (!window.speechSynthesis) { resolve(); return; }
-        window.speechSynthesis.cancel();
-        var u = new SpeechSynthesisUtterance(text);
-        u.rate = 0.95;
-        u.pitch = 1.1;
-        var v = window.speechSynthesis.getVoices();
-        var en = null;
-        for (var i = 0; i < v.length; i++) {
-          if (v[i].lang.startsWith('en') && v[i].name.includes('Google')) { en = v[i]; break; }
-        }
-        if (!en) for (var i = 0; i < v.length; i++) { if (v[i].lang.startsWith('en')) { en = v[i]; break; } }
-        if (en) u.voice = en;
-        u.onstart = function() {
-          setPose('talking');
-          try { if (window.Oddy) window.Oddy.speakingStart(); } catch (e) {}
-        };
-        u.onend = function() {
-          setPose('neutral');
-          try { if (window.Oddy) window.Oddy.speakingStop(); } catch (e) {}
-          resolve();
-        };
-        u.onerror = function() { resolve(); };
-        window.speechSynthesis.speak(u);
-      });
-    }
-
-    function typeText(text, speed) {
-      speed = speed || 22;
-      if (!dt) return Promise.resolve();
-      dt.innerHTML = '';
-      var i = 0;
-      return new Promise(function(resolve) {
-        var interval = setInterval(function() {
-          if (i < text.length) {
-            dt.innerHTML = text.substring(0, i + 1) + '<span class="cursor"></span>';
-            i++;
-          } else {
-            clearInterval(interval);
-            dt.innerHTML = text;
-            resolve();
-          }
-        }, speed);
-      });
-    }
-
-    async function barthSpeaks(text) {
-      if ($('speaker')) $('speaker').textContent = session.bee.name;
-      setPose('talking');
-      await typeText(text, 18);
-      await speak(text);
-      setPose('neutral');
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // FLASH PROMPTS
-    // ═══════════════════════════════════════════════════════════
-    var FLASH = ["What's something only you know?","What makes them laugh?","What's their most ridiculous opinion?","What would they hate?","What's a memory that defines them?","What do they care about too much?","What's their superpower?"];
-    function showFlash() {
-      if (!flash) return;
-      flash.textContent = FLASH[Math.floor(Math.random() * FLASH.length)];
-      flash.classList.add('visible');
-      setTimeout(function() { flash.classList.remove('visible'); }, 7000);
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // GIFT BRIEF
-    // ═══════════════════════════════════════════════════════════
-    var turnCount = 0;
-    function extract(text) {
-      var l = text.toLowerCase();
-      var b = session.brief;
-      if (/dad|father/i.test(l)) { b.relationship = 'dad'; b.recipient = 'Dad'; }
-      if (/mum|mom|mother/i.test(l)) { b.relationship = 'mum'; b.recipient = 'Mum'; }
-      if (/husband|partner|boyfriend/i.test(l)) { b.relationship = 'partner'; b.recipient = 'Partner'; }
-      if (/friend/i.test(l)) { b.relationship = 'family'; b.recipient = 'Family'; }
-      if (/dog|cat|pet/i.test(l)) { b.relationship = 'pet'; }
-      if (/birthday/i.test(l)) b.occasion = 'birthday';
-      if (/christmas/i.test(l)) b.occasion = 'christmas';
-      if (/funny|hilarious/i.test(l)) b.personality = 'funny';
-      if (/sarcastic|witty|dry/i.test(l)) b.personality = 'sarcastic';
-      if (!b.interests) b.interests = [];
-      ['football','soccer','arsenal','liverpool','chelsea','music','guitar','cooking','garden','golf','fishing','travel','wine','beer','book','film'].forEach(function(i) {
-        if (l.includes(i) && b.interests.indexOf(i) === -1) b.interests.push(i);
-      });
-      saveSession();
-      var confidence = {
-        relationship: b.relationship ? 0.95 : 0.1,
-        occasion: b.occasion ? 0.9 : 0.1,
-        interests: (b.interests||[]).length > 0 ? Math.min(0.95, 0.3 + (b.interests||[]).length * 0.15) : 0.1,
-        personality: b.personality ? 0.85 : 0.1
-      };
-      var vals = Object.values(confidence);
-      var avg = vals.reduce(function(a,c) { return a+c; }, 0) / vals.length;
-      if (conf) conf.style.width = (avg * 100) + '%';
-      if (b.recipient && turnCount === 1) { session.honey += 10; updateHoney(); }
-      if (b.interests && b.interests.length === 1 && turnCount === 2) { session.honey += 5; updateHoney(); }
-    }
-
-    function updateHoney() {
-      if ($('honey-count')) $('honey-count').textContent = session.honey;
-      if ($('honey-badge')) $('honey-badge').classList.add('visible');
-    }
-
-    function updateSatchel() {
-      if ($('satchel-count')) $('satchel-count').textContent = session.satchel.length + ' item' + (session.satchel.length !== 1 ? 's' : '');
-      if ($('satchel-total')) $('satchel-total').textContent = session.satchel.length > 0 ? '£' + session.satchel.reduce(function(a,i) { return a + (i.price||0); }, 0) : 'Empty';
-      if (session.satchel.length > 0 && $('satchel')) $('satchel').classList.add('visible');
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // LLM
-    // ═══════════════════════════════════════════════════════════
-    async function callLLM(messages) {
-      var r = await fetch('/api/ai/cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: messages, max_tokens: 200, temperature: 0.8 })
-      });
-      var res = await r.json();
-      if (res.success && res.result) return res.result.response;
-      throw new Error('LLM failed');
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // CONVERSATION
-    // ═══════════════════════════════════════════════════════════
-    async function turn(userText) {
-      extract(userText);
-      session.history.push({ role: 'user', content: userText });
-      turnCount++;
-      setPose('thinking');
-      if (turnCount % 3 === 0) setTimeout(showFlash, 2500);
-      try {
-        var reply = await callLLM([
-          { role: 'system', content: (function () {
-              var b = window.__BRAND__ || {brand:"oddhobb"};
-              var cg = window.__COMPANY__;
-              var who = 'You are bobdod, the main store helper at ' + b.brand + '.';
-              if (session.bee && session.bee.name && session.bee.name !== 'bobdod') {
-                who = 'You are ' + session.bee.name + ' (' + session.bee.role + '), a guest host at ' + b.brand + '. The store helper is bobdod.';
-              }
-              var facts = '';
-              if (cg && cg.policies) {
-                facts = ' Policies: free tier ' + (cg.policies.free_tier||'') +
-                  '; shipping ' + (cg.policies.shipping||'') +
-                  '; personalisation ' + (cg.policies.personality || cg.policies.personalisation || '') + '.';
-              }
-              if (cg && cg.products && cg.products.length) {
-                var names = cg.products.slice(0, 12).map(function (p) { return p.name + ' (£' + p.price_gbp + ')'; }).join(', ');
-                facts += ' Catalogue sample: ' + names + '.';
-              }
-              return who + ' You help people bring their pet to life as videos, prints, cards and gifts.' + facts +
-                ' Personality: ' + (session.bee.traits||[]).join(', ') + '. Be ' + (session.bee.voice||'warm, direct') +
-                ', concise. Ask one good question at a time. When you have enough info, say "I think I have some ideas." GiftBrief: ' + JSON.stringify(session.brief);
-            })() },
-          ].concat(session.history)
-        );
-        session.history.push({ role: 'assistant', content: reply });
-        await barthSpeaks(reply);
-        if (/idea|think|suggest|recommend|show|got enough/i.test(reply)) {
-          setTimeout(showConcepts, 1000);
-        }
-      } catch (err) {
-        if (dt) dt.innerHTML = 'Something went wrong. Try again?';
-        setPose('neutral');
-      }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // CONCEPTS
-    // ═══════════════════════════════════════════════════════════
-    function showConcepts() {
-      setPose('presenting');
-      var b = session.brief;
-      var concepts = [];
-      if (b.relationship === 'dad' || (b.interests||[]).some(function(i) { return ['football','soccer','arsenal','liverpool','chelsea'].indexOf(i) >= 0; }))
-        concepts.push({ name: 'GameWinners', desc: 'Turn them into a sporting legend', emoji: '⚽', price: 9 });
-      if (b.relationship === 'pet' || (b.interests||[]).some(function(i) { return ['dog','cat','pet'].indexOf(i) >= 0; }))
-        concepts.push({ name: 'Dogcasso', desc: 'Renaissance pet portrait', emoji: '🐕', price: 9 });
-      concepts.push({ name: 'Breaking News', desc: 'Personalized headline story', emoji: '📰', price: 9 });
-      if (b.occasion === 'birthday') concepts.push({ name: 'CoverStar', desc: 'Magazine cover', emoji: '📸', price: 9 });
-      if (b.relationship === 'dad') concepts.push({ name: 'Legend of Dad', desc: 'Cinematic documentary', emoji: '🎬', price: 9 });
-
-      var title = $('concepts-title');
-      if (title) title.textContent = 'Ideas for ' + (b.recipient || 'them');
-      var grid = $('concepts-grid');
-      if (grid) {
-        grid.innerHTML = concepts.map(function(c, i) {
-          return '<div class="concept" data-i="' + i + '"><div class="concept__visual">' + c.emoji + '</div><div class="concept__body"><div class="concept__name">' + c.name + '</div><div class="concept__desc">' + c.desc + '</div><div class="concept__price">From £' + c.price + '</div></div></div>';
-        }).join('');
-
-        grid.querySelectorAll('.concept').forEach(function(el) {
-          el.onclick = function() {
-            var overlay = $('concepts-overlay');
-            if (overlay) overlay.classList.remove('visible');
-            var idx = parseInt(el.dataset.i);
-            var c = concepts[idx];
-            session.mission.concept = c.name;
-            saveSession();
-            barthSpeaks(c.name + '. Excellent. How should we deliver this?');
-            setTimeout(function() {
-              var prodOverlay = $('products-overlay');
-              if (prodOverlay) prodOverlay.classList.add('visible');
-            }, 1500);
-          };
-        });
-      }
-
-      var overlay = $('concepts-overlay');
-      if (overlay) overlay.classList.add('visible');
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // PRODUCTS
-    // ═══════════════════════════════════════════════════════════
-    document.querySelectorAll('.product').forEach(function(p) {
-      p.onclick = function() {
-        var overlay = $('products-overlay');
-        if (overlay) overlay.classList.remove('visible');
-        var product = { type: p.dataset.type, name: p.querySelector('.product__name').textContent, price: parseInt(p.dataset.price) };
-        session.satchel.push(product);
-        updateSatchel();
-        session.honey += 15;
-        updateHoney();
-        setPose('confident');
-        barthSpeaks('The ' + product.name.toLowerCase() + '. I\'ll take it to the hive.');
-        setTimeout(function() { setPose('neutral'); }, 3000);
-      };
-    });
-
-    // Close overlays
-    if ($('concepts-close')) $('concepts-close').onclick = function() { $('concepts-overlay').classList.remove('visible'); };
-    if ($('products-close')) $('products-close').onclick = function() { $('products-overlay').classList.remove('visible'); };
-
-    // ═══════════════════════════════════════════════════════════
-    // VOICE
-    // ═══════════════════════════════════════════════════════════
-    var mediaRecorder = null, audioChunks = [];
-    var speechRec = null;
-    // Web Speech first (free, on-device where offered, Chrome/Edge/Safari);
-    // MediaRecorder→server whisper stays as the fallback path.
-    function speechSupported() {
-      return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-    }
-    if ($('mic')) {
-      $('mic').onclick = async function() {
-        if (speechRec) {
-          try { speechRec.stop(); } catch (e) {}
-          speechRec = null;
-          $('mic').classList.remove('recording');
-          if (ti) ti.placeholder = 'Type or press the mic…';
-          setPose('neutral');
-          return;
-        }
-        if (mediaRecorder && mediaRecorder.state === 'recording') {
-          mediaRecorder.stop();
-          $('mic').classList.remove('recording');
-          if (ti) ti.placeholder = 'Type or press the mic…';
-          setPose('neutral');
-          return;
-        }
-        if (speechSupported()) {
-          try {
-            setPose('listening');
-            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            speechRec = new SR();
-            speechRec.lang = 'en-GB';
-            speechRec.interimResults = true;
-            speechRec.continuous = false;
-            $('mic').classList.add('recording');
-            if (ti) ti.placeholder = 'Listening… speak now';
-            speechRec.onresult = function (ev) {
-              var interim = '', final = '';
-              for (var i = ev.resultIndex; i < ev.results.length; i++) {
-                if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
-                else interim += ev.results[i][0].transcript;
-              }
-              if (interim && dt) dt.innerHTML = '<span style="opacity:.6">' + interim + '…</span>';
-              if (final && final.trim()) {
-                var t = final.trim();
-                speechRec = null;
-                $('mic').classList.remove('recording');
-                if (ti) ti.placeholder = 'Type or press the mic…';
-                turn(t);
-              }
-            };
-            speechRec.onerror = function () {
-              speechRec = null;
-              $('mic').classList.remove('recording');
-              if (ti) ti.placeholder = 'Type or press the mic…';
-              setPose('neutral');
-            };
-            speechRec.onend = function () {
-              if (speechRec) {
-                speechRec = null;
-                $('mic').classList.remove('recording');
-                if (ti) ti.placeholder = 'Type or press the mic…';
-                setPose('neutral');
-              }
-            };
-            speechRec.start();
-            return;
-          } catch (e) { speechRec = null; }
-        }
-        try {
-          setPose('listening');
-          var stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-          audioChunks = [];
-          mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) audioChunks.push(e.data); };
-          mediaRecorder.onstop = async function() {
-            stream.getTracks().forEach(function(t) { t.stop(); });
-            if (dt) dt.innerHTML = '<span style="color:var(--gold)">Transcribing…</span>';
-            try {
-              var fd = new FormData();
-              fd.append('file', new Blob(audioChunks, { type: 'audio/webm' }), 'recording.webm');
-              fd.append('model', '@cf/openai/whisper');
-              var r = await fetch('/api/ai/cf/@cf/openai/whisper', {
-                method: 'POST', body: fd
-              });
-              var res = await r.json();
-              if (res.success && res.result && res.result.text) turn(res.result.text);
-              else barthSpeaks("I didn't catch that.");
-            } catch(e) { barthSpeaks("Voice failed. Try typing?"); }
-          };
-          mediaRecorder.start();
-          $('mic').classList.add('recording');
-          if (ti) ti.placeholder = 'Listening…';
-        } catch(e) {
-          if (ti) ti.placeholder = 'Mic denied — type instead';
-          setPose('neutral');
-        }
-      };
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // INPUT HANDLERS (the important part)
-    // ═══════════════════════════════════════════════════════════
-    function sendMessage() {
-      if (!ti) return;
-      var v = ti.value.trim();
-      if (v) {
-        ti.value = '';
-        turn(v);
-      }
-    }
-
-    // Wait for DOM to be ready
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM ready, attaching handlers...');
-      
-      dt = $('dt');
-      conf = $('hive-signal');
-      flash = $('flash');
-      ti = $('ti');
-      speech = $('speech');
-      barthImg = $('barth-img');
-
-      // Attach send handlers
-      var sendBtn = $('send');
-      var tiEl = $('ti');
-      
-      if (sendBtn) {
-        sendBtn.addEventListener('click', sendMessage);
-        console.log('Send button handler attached');
-      }
-      
-      if (tiEl) {
-        tiEl.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            sendMessage();
-          }
-        });
-        console.log('Enter key handler attached');
-        tiEl.focus();
-      }
-
-      // UI elements
-      if ($('bee-name')) $('bee-name').textContent = session.bee.name;
-      if ($('bee-role')) $('bee-role').textContent = session.bee.role;
-      if ($('bee-status')) $('bee-status').classList.add('visible');
-      updateHoney();
-      updateSatchel();
-
-      // THE GREETING
-      setTimeout(async function() {
-        setPose('happy');
-        say('Hey! What\'s the occasion?');
-        await barthSpeaks('Hey! What\'s the occasion?');
-        setPose('neutral');
-      }, 800);
-    });
-
-    console.log('oddhobb loaded');
-  </script>
 <script>
   (function () {
     var API = "/backend/api";
     var state = {
       owner: "", photoId: null, meshId: null, apiKey: "",
-      voice: "ryan", scene: "comedy_show", ready: false,
+      ready: false,
       concept: "", subject: "",
       talent: "comedy", act: ""
     };
@@ -2337,16 +1725,20 @@
         panels[i].classList.toggle("open", panels[i].getAttribute("data-panel") === name);
       }
       document.body.classList.add("studio-chrome");
-      if (name === "shop") loadShop();
-      if (name === "studio") { loadStudioMeta(); if (peopleStudio) peopleStudio.open((window.OddHobbRouter.current||{}).subjectId).catch(function(){}); }
+      if (name === "studio") { if (peopleStudio) peopleStudio.open((window.OddHobbRouter.current||{}).subjectId).catch(function(){}); }
       if (name === "products") loadProducts();
       if (name === "cards") { if (autoCards) autoCards.open(); }
       if (name === "videos") { loadClub(); loadVideoFeed(); }
-      if (name === "upload") loadMe();
       if (name === "quick") initQuickTab();
       if (name === "perform") { loadPerf(); loadPerfHistory(true); }
     }
     document.addEventListener("pog:tab", function (e) { showTab(e.detail.tab); });
+    document.addEventListener("oddhobb:add-person", function () {
+      showTab("studio");
+      if (peopleStudio && peopleStudio.addPerson) {
+        studioReady().then(function () { return peopleStudio.addPerson(); }).catch(function (e) { msg("stv-msg", e.message, "err"); });
+      }
+    });
 
     // ── sections: top category strip (Amazon) + host routing ────────
     // Registry comes from GET /api/sections (config.SECTIONS is the truth);
@@ -2360,7 +1752,7 @@
     ];
     var SECTION_OF = {}, HOST_SECTION = {};
     state.section = "all";
-    var shopLoaded = false, hostRouted = false;
+    var hostRouted = false;
 
     function secBtn(s) {
       var b = document.createElement("button");
@@ -2388,13 +1780,6 @@
       if (!SECTIONS.some(function (s) { return s.id === id; })) id = "all";
       state.section = id;
       markSectionUI();
-      var lede = $("shop-lede");
-      if (lede) {
-        var s0 = SECTIONS.filter(function (x) { return x.id === id; })[0] || SECTIONS[0];
-        lede.textContent = id === "all"
-          ? "Everything below is already active against your mesh — same model, one sculpt, many products."
-          : ((s0.blurb || sectionLabel(id)) + " — every card here already features your star.");
-      }
       var target=id==='cards'?'/cards':id==='my'?'/studio':'/products'+(id==='all'?'':'?section='+encodeURIComponent(id));
       if(!fromHash) window.OddHobbRouter.navigate(target);
       if (typeof applySection === "function") applySection();
@@ -2402,8 +1787,7 @@
 
     function applySection() {
       // Visible shelves first: the products grid and prints carry data-sec
-      // tags (SECTION_OF from /sections, fallback all/gifts). The legacy
-      // shop-grid filter below stays for the hidden panel.
+      // tags (SECTION_OF from /sections, fallback all/gifts).
       var secMaps = [["pr-grid", "all"], ["pr-prints", "gifts"]];
       for (var si = 0; si < secMaps.length; si++) {
         var vg = $(secMaps[si][0]);
@@ -2414,43 +1798,6 @@
           vtiles[vi].style.display =
             (state.section === "all" || tsec === state.section) ? "" : "none";
         }
-      }
-      if (!shopLoaded) return;
-      var grid = $("shop-grid"); if (!grid) return;
-      var q = (state.q || "").toLowerCase();
-      var cards = Array.prototype.slice.call(grid.querySelectorAll(".card"));
-      // relevance rank when searching; otherwise keep catalog order
-      if (q) {
-        cards.sort(function (a, b) {
-          var sa = scoreSearch({ hay: ((a.dataset.label||"") + " " + (a.dataset.sec||"")), label: a.dataset.label||"" }, q);
-          var sb = scoreSearch({ hay: ((b.dataset.label||"") + " " + (b.dataset.sec||"")), label: b.dataset.label||"" }, q);
-          return sb - sa;
-        });
-        cards.forEach(function (c) { grid.appendChild(c); });
-      }
-      var vis = 0;
-      cards.forEach(function (c) {
-        var show = (state.section === "all" || (c.dataset.sec || "") === state.section) &&
-                   (!q || scoreSearch({ hay: ((c.dataset.label||"") + " " + (c.dataset.sec||"")), label: c.dataset.label||"" }, q) > 0);
-        c.style.display = show ? "" : "none";
-        if (show) vis++;
-      });
-      var old = grid.querySelector(".secempty");
-      if (old) old.remove();
-      if (vis === 0) {
-        var d = document.createElement("div");
-        d.className = "secempty";
-        d.innerHTML = q
-          ? "No shelf match for <b>" + q + "</b> — try the <b>products</b> tab (studio lines) or <b>Quick</b>."
-          : (state.section === "board-games"
-          ? "<b>Board games</b> are coming — the jigsaw lands here first.<br>Meanwhile the <b>All</b> shelf has everything."
-          : "<b>" + sectionLabel(state.section) + "</b> has nothing in stock yet.<br>Try <b>All</b> — everything we make lives there.");
-        grid.appendChild(d);
-      }
-      var st = $("shop-status");
-      if (st && st.textContent && st.textContent.indexOf("·") >= 0) {
-        st.dataset.base = st.dataset.base || st.textContent;
-        st.textContent = (state.section === "all" ? "" : sectionLabel(state.section) + " · ") + st.dataset.base;
       }
     }
     function initSections() {
@@ -2470,7 +1817,6 @@
     window.addEventListener("load", wireTopbar);
     window.addEventListener("load", initBrand);
     window.addEventListener("load", function () { mintSession(); });
-    window.addEventListener("load", function () { loadCompanyGraph(); });
     var pendingProductLine = null;
     // ── multi-brand: same app, many storefronts ──────────────────────────
     // Brand strings live on the server (GET /api/brand answers per request
@@ -2534,12 +1880,6 @@
       if (cb) cb.onclick = function () {
         showTab("cart");
       };
-      var hq = $("hero-q"), hg = $("hero-go");
-      if (hq && hg) hg.onclick = function () {
-        var t = $("ti");
-        if (t) { t.value = hq.value || ""; t.focus(); }
-        if (hq.value) msg("shop-msg", "Pasted into the chat bar below — hit send.", "");
-      };
     }
 
     // ── similarity search: live products ranked under the topbar ──
@@ -2580,16 +1920,8 @@
       (CARD_ROWS || []).forEach(function (it) {
         rows.push({
           kind: "card", id: it.id, label: it.label,
-          blurb: it.blurb || "", price_cents: it.price_cents || 799,
-          status: "live", img: it.img, hay: (it.label + " card greeting " + it.id).toLowerCase(),
-          live: true
-        });
-      });
-      (typeof PRINTS_CATALOG !== "undefined" ? PRINTS_CATALOG : []).forEach(function (it) {
-        rows.push({
-          kind: "print", id: it.id, label: it.label,
           blurb: it.blurb || "", price_cents: it.price_cents || 0,
-          status: "live", img: it.img, hay: (it.label + " " + it.blurb + " " + (it.section||"") + " " + it.id).toLowerCase(),
+          status: "live", img: it.img, hay: (it.label + " card greeting " + it.id).toLowerCase(),
           live: true
         });
       });
@@ -2645,23 +1977,18 @@
       if (r.recommended_coat && r.recommended_coat !== "none") rec = r.recommended_coat;
       if (r.recommended_hat && r.recommended_hat !== "none") rec += (rec ? " · " : "") + r.recommended_hat;
       tile.innerHTML =
-        '<div class="etsy__badges"><span class="etsy__badge gold">' + (r.kind === "studio" || !r.kind ? "Studio" : "Print") + '</span>' +
+        '<div class="etsy__badges"><span class="etsy__badge gold">' + (r.kind === "card" ? "Card" : "Personalised") + '</span>' +
         confBadge +
         (r.live || r.status === "live" ? '' : '<span class="etsy__badge soon">Soon</span>') + '</div>' +
         '<img class="etsy__img" src="' + r.img + '" alt="' + r.label + '" loading="lazy">' +
         '<div class="etsy__body">' +
           '<div class="etsy__name">' + r.label + '</div>' +
           '<div class="etsy__meta">' + (rec ? rec + " · " : "") + (r.blurb || "").slice(0, 42) + '</div>' +
-          '<div class="etsy__price">' + ((r.live || r.status === "live") ? "£" + ((r.price_cents||0)/100).toFixed(2) : "Soon") + '</div>' +
+          '<div class="etsy__price">' + ((r.live || r.status === "live") ? (r.price_cents ? "£" + (r.price_cents/100).toFixed(2) : "") : "Soon") + '</div>' +
         '</div>';
       tile.addEventListener("click", function () {
         if (r.kind === "card") {
           window.OddHobbRouter.navigate("/cards/" + encodeURIComponent(r.id));
-        } else if (r.kind === "print") {
-          showTab("products");
-          prPrintSel = r.id;
-          if (typeof loadPrints === "function") loadPrints();
-          msg("pr-msg", r.label + " — prints & gifts on Products.", "");
         } else {
           showTab("products");
           if (itemById(r.id)) selectProduct(r.id);
@@ -2686,9 +2013,12 @@
       if (CARD_ROWS || cardRowsLoading) return;
       cardRowsLoading = true;
       get(API + "/cards/templates").then(function (d) {
+        // card price is backend truth (product.price, e.g. "£2.99"), never a literal
+        var pm = /([0-9]+(?:\.[0-9]{1,2})?)/.exec(String(((d && d.product) || {}).price || ""));
+        var cents = pm ? Math.round(parseFloat(pm[1]) * 100) : 0;
         CARD_ROWS = (d.templates || []).map(function (t) {
           return { id: t.id, label: t.label || t.id, blurb: "Greeting card template",
-                   price_cents: 799, img: "/img/prod/prod-hero.png" };
+                   price_cents: cents, img: "/img/prod/prod-hero.png" };
         });
       }).catch(function () { CARD_ROWS = []; }).then(function () {
         cardRowsLoading = false;
@@ -2732,128 +2062,42 @@
     // The gate token is injected into the page by the bridge (window.__FIGG_TOKEN).
     // fetch is patched for us, but <img src> never goes through fetch — so image
     // URLs have to carry the token themselves or every card comes back 401.
+    // The person picked in Studio (from /studio/library) — every tab inherits it.
+    function selectedPerson() {
+      var c = window.OddHobbStudioContext;
+      return (c && c.subject) || null;
+    }
+    function birthdaySoon(mmdd, days) {
+      var m = /^(\d{2})-(\d{2})$/.exec(mmdd || ""); if (!m) return false;
+      var now = new Date(), y = now.getFullYear();
+      var next = new Date(y, parseInt(m[1], 10) - 1, parseInt(m[2], 10));
+      if (next < new Date(y, now.getMonth(), now.getDate())) next = new Date(y + 1, next.getMonth(), next.getDate());
+      return (next - now) / 86400000 <= (days || 45);
+    }
+    // Signed-in account: email + display name for orders (GET /accounts/me).
+    function loadAccount() {
+      if (!state.apiKey) return Promise.resolve(null);
+      return get(API + "/accounts/me?owner=" + encodeURIComponent(state.owner)).then(function (d) {
+        if (d && d.ok) { state.email = d.email || ""; state.displayName = d.display_name || ""; }
+        return d;
+      }).catch(function () { return null; });
+    }
+    // Mesh -> the saved person it belongs to (Studio library), never a raw id.
+    function meshPerson(mid) {
+      try {
+        var d = (peopleStudio && peopleStudio.people && peopleStudio.people()) || {};
+        var m = (d.meshes || []).filter(function (x) { return x.id === mid; })[0];
+        var sid = m ? m.subject_id : "";
+        return (d.subjects || []).filter(function (s) { return s.id === sid; })[0] || null;
+      } catch (e) { return null; }
+    }
+    function shortName(id) { var p = meshPerson(id); return p ? p.name : "your character"; }
     function art(u) {
       if (!u) return "";
       var tok = window.__FIGG_TOKEN || "";
       var abs = u.charAt(0) === "/" ? "/backend" + u : u;
       if (!tok) return abs;
       return abs + (abs.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(tok);
-    }
-    function loadMe() {
-      if(peopleStudio) return peopleStudio.refresh();
-      get(API + "/me?owner=" + encodeURIComponent(state.owner))
-        .then(function (d) {
-          if (typeof myGen !== "undefined" && myGen !== vf.gen) return;
-          if (!d.ok) return;
-          state.meshId = d.active_mesh_id || null;
-          try { if (state.meshId) localStorage.setItem("pogpet.mesh", state.meshId); } catch (e) {}
-          paintSpotlight(d);
-          loadPeople();
-        })
-        .catch(function () { stat("up-status", "couldn't reach the roster"); });
-    }
-    var peopleLoaded = false;
-    function loadPeople(force) {
-      var grid = $("people-grid"); if (!grid) return;
-      if (peopleLoaded && !force) return;
-      peopleLoaded = true;
-      grid.innerHTML = "";
-      post(API + "/photos/autosort?owner=" + encodeURIComponent(state.owner), {})
-        .then(function (d) {
-          if (!d || !d.ok) { grid.innerHTML = '<div class="person__hint">couldn\u2019t sort uploads yet.</div>'; peopleLoaded = false; return; }
-          if (!d.groups.length) { grid.innerHTML = '<div class="person__hint">no uploads yet — add someone below.</div>'; return; }
-          d.groups.forEach(function (g) {
-            var card = document.createElement("div");
-            card.className = "person"; card.setAttribute("role", "listitem");
-            var head = document.createElement("input");
-            head.className = "person__name"; head.maxLength = 40; head.value = g.person;
-            head.placeholder = "who\u2019s this?"; head.setAttribute("aria-label", "Name this person");
-            head.addEventListener("change", function () {
-              var to = head.value.trim();
-              if (!to || to === g.person) { head.value = g.person; return; }
-              post(API + "/people/rename", { owner: state.owner, from: g.person, to: to })
-                .then(function (r) { if (r && r.ok) { g.person = to; head.value = to; } else { head.value = g.person; } })
-                .catch(function () { head.value = g.person; });
-            });
-            card.appendChild(head);
-            var thumbs = document.createElement("div"); thumbs.className = "person__thumbs";
-            g.photos.forEach(function (ph) {
-              var im = document.createElement("img");
-              im.src = art("/api/artifacts/" + ph.r2_key); im.alt = g.person; im.loading = "lazy";
-              thumbs.appendChild(im);
-            });
-            card.appendChild(thumbs);
-            var foot = document.createElement("div"); foot.className = "person__foot";
-            var mid = null;
-            for (var i = 0; i < g.photos.length; i++) if (g.photos[i].mesh_id) { mid = g.photos[i].mesh_id; break; }
-            if (mid) {
-              var b = document.createElement("button");
-              b.className = "person__star"; b.type = "button"; b.textContent = "make star";
-              (function (m) { b.addEventListener("click", function () { activate(m); }); })(mid);
-              foot.appendChild(b);
-            } else {
-              var h = document.createElement("span"); h.className = "person__hint";
-              h.textContent = "no sculpt yet";
-              foot.appendChild(h);
-            }
-            if (g.needs_name) {
-              var h2 = document.createElement("span"); h2.className = "person__hint";
-              h2.textContent = "new face — give them a name";
-              foot.appendChild(h2);
-            }
-            card.appendChild(foot);
-            grid.appendChild(card);
-          });
-        })
-        .catch(function () { grid.innerHTML = ""; peopleLoaded = false; });
-    }
-    function paintSpotlight(d) {
-      var roster = $("roster"), ring = $("spot-ring");
-      if (!roster) return;
-      if (!d.pogs.length) {
-        roster.innerHTML = '<div class="roster__empty">Nobody here yet — drop a photo below to add your first person.</div>';
-        $("spot-name").textContent = "nothing yet";
-        $("spot-id").textContent = "";
-        $("spot-state").textContent = "";
-        $("spot-img").hidden = true;
-        return;
-      }
-      var active = null;
-      for (var i = 0; i < d.pogs.length; i++) if (d.pogs[i].active) active = d.pogs[i];
-
-      // spotlight frame
-      if (active) {
-        $("spot-name").textContent = shortName(active.mesh_id);
-        $("spot-id").textContent = active.mesh_id;
-        $("spot-state").textContent = active.status === "succeeded"
-          ? (active.stub ? "preview sculpt · 8 products armed" : "sculpt ready · products armed")
-          : active.status;
-        var img = $("spot-img");
-        if (active.photo_key) { img.src = art("/api/artifacts/" + active.photo_key); img.hidden = false; }
-        else { img.hidden = true; }
-        var sbtn = $("spin-go");
-        if (sbtn) sbtn.hidden = !(active.mesh_id && active.status === "succeeded");
-        var sout = $("spin-out");
-        if (sout && active.mesh_id && state.meshId !== active.mesh_id) sout.hidden = true;
-        wireSpin();
-      }
-
-      roster.innerHTML = "";
-      d.pogs.forEach(function (p) {
-        var el = document.createElement("button");
-        el.type = "button";
-        el.className = "rogue" + (p.active ? " on" : "");
-        el.setAttribute("role", "listitem");
-        el.innerHTML =
-          '<div class="rogue__ph">' +
-            (p.photo_key
-              ? '<img src="' + art("/api/artifacts/" + p.photo_key) + '" alt="">'
-              : "🐾") +
-          "</div>" +
-          '<div class="rogue__st">' + (p.status === "succeeded" ? "ready" : p.status) + "</div>";
-        el.addEventListener("click", function () { activate(p.mesh_id); });
-        roster.appendChild(el);
-      });
     }
     function paintWho() {
       var el = $("g-who");
@@ -2878,70 +2122,6 @@
       if (an) an.textContent = "@" + state.owner;
     }
 
-    // ── 360° turntable on the spotlight ─────────────────────
-    function wireSpin() {
-      var b = $("spin-go");
-      if (!b) return;
-      b.onclick = function () {
-        if (!state.meshId) return;
-        b.disabled = true;
-        stat("spin-status", "rendering 36 frames with Blender — first time takes about a minute…");
-        var owner = encodeURIComponent(state.owner);
-        var mid = state.meshId;
-        function finish(d) {
-          if (d.status === "ready" && d.url) {
-            b.disabled = false;
-            var v = $("spin-video");
-            v.src = art(d.url);
-            $("spin-out").hidden = false;
-            stat("spin-status", "cached in R2 — instant from now on");
-            v.play().catch(function () {});
-            return true;
-          }
-          return false;
-        }
-        function poll(n) {
-          if (n > 75) { b.disabled = false; stat("spin-status", "still rendering — try again shortly"); return; }
-          get(API + "/meshes/" + mid + "/turntable?owner=" + owner)
-            .then(function (d) {
-              if (!d.ok) { b.disabled = false; stat("spin-status", d.error || "couldn't render"); return; }
-              if (finish(d)) return;
-              stat("spin-status", "rendering 36 frames with Blender… " + (n * 4) + "s");
-              setTimeout(function () { poll(n + 1); }, 4000);
-            })
-            .catch(function () { setTimeout(function () { poll(n + 1); }, 5000); });
-        }
-        get(API + "/meshes/" + mid + "/turntable?owner=" + owner)
-          .then(function (d) {
-            if (!d.ok) { b.disabled = false; stat("spin-status", d.error || "couldn't render"); return; }
-            if (finish(d)) return;
-            stat("spin-status", "rendering 36 frames with Blender… takes about a minute");
-            poll(1);
-          })
-          .catch(function () { b.disabled = false; stat("spin-status", "render failed"); });
-      };
-    }
-
-    function shortName(id) {
-      // no pet names stored yet — show a friendly handle off the id
-      return "star " + id.replace(/^msh_/, "").slice(0, 5);
-    }
-    function activate(meshId) {
-      if (!meshId) return;
-      stat("up-status", "spotlighting " + meshId + "…");
-      post(API + "/me/active", { owner: state.owner, mesh_id: meshId })
-        .then(function (d) {
-          if (!d.ok) { msg("up-msg", d.error || "Couldn't switch.", "err"); return; }
-          state.meshId = d.active_mesh_id;
-          msg("up-msg", "Active. Cards, studio and shop all follow it now.", "ok");
-          stat("up-status", "");
-          loadMe();
-          // shop re-renders against the new active mesh
-          if ($("panel-shop") && $("panel-shop").classList.contains("open")) loadShop();
-        })
-        .catch(function (e) { msg("up-msg", "Error: " + e.message, "err"); });
-    }
-
     // ── domain switcher ─────────────────────────────────────
     var bb = $("brand-btn"), sw = $("switcher");
     if (bb && sw) {
@@ -2957,194 +2137,12 @@
       sw.addEventListener("click", function (e) { e.stopPropagation(); });
     }
 
-    // ── upload tab ──────────────────────────────────────────
-    var drop = $("drop"), input = $("up-input"), preview = $("up-preview"),
-        sculptBtn = $("up-sculpt"), picked = null;
-
-    if (drop && input) {
-      drop.addEventListener("click", function () { input.click(); });
-      drop.addEventListener("keydown", function (e) {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
-      });
-      ["dragenter", "dragover"].forEach(function (ev) {
-        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); });
-      });
-      ["dragleave", "drop"].forEach(function (ev) {
-        drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); });
-      });
-      drop.addEventListener("drop", function (e) {
-        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) take(e.dataTransfer.files[0]);
-      });
-      input.addEventListener("change", function () {
-        if (input.files && input.files[0]) take(input.files[0]);
-      });
-    }
-
-    function take(file) {
-      picked = file;
-      msg("up-msg", "", "");
-      stat("up-status", "");
-      if (!/^image\/(jpeg|png)$/.test(file.type)) { msg("up-msg", "JPEG or PNG only — try another photo.", "err"); return; }
-      if (file.size > 10 * 1024 * 1024) { msg("up-msg", "That's " + (file.size / 1048576).toFixed(1) + " MB — max is 10 MB.", "err"); return; }
-      var url = URL.createObjectURL(file);
-      preview.src = url; preview.hidden = false;
-      stat("up-status", "uploading " + file.name + "…");
-      upload(file);
-    }
-
-    function upload(file) {
-      var fd = new FormData();
-      fd.append("photo", file, file.name);
-      fd.append("owner", state.owner);
-      fetch(withTok(API + "/photos"), { method: "POST", headers: authHeaders(), body: fd })
-        .then(function (r) { return window.OddHobbAPI.readJSON(r); })
-        .then(function (d) {
-          if (!d.ok) { msg("up-msg", d.error || "Upload failed.", "err"); stat("up-status", ""); return; }
-          state.photoId = d.photo.id;
-          sculptBtn.hidden = false;
-          msg("up-msg", (d.reused ? "Already on file — no credit spent. " : "") +
-              "Stored " + d.photo.width + "×" + d.photo.height + ".", "ok");
-          stat("up-status", "owner " + state.owner + " · photos: " + d.photo.r2_key.split("/")[1]);
-        })
-        .catch(function (e) { msg("up-msg", "Upload failed: " + e.message, "err"); stat("up-status", ""); });
-    }
-
-    if (sculptBtn) sculptBtn.addEventListener("click", function () {
-      if (!state.photoId) return;
-      sculptBtn.disabled = true;
-      stat("up-status", "Sculpting…");
-      msg("up-msg", "", "");
-      post(API + "/meshes", { photo_id: state.photoId, owner: state.owner })
-        .then(function (d) {
-          if (!d.ok) { msg("up-msg", d.error || "Could not start.", "err"); sculptBtn.disabled = false; stat("up-status", ""); return; }
-          if (d.reused) { msg("up-msg", "Cached — already sculpted.", "ok"); }
-          state.meshId = d.mesh.id;
-          try { localStorage.setItem("pogpet.mesh", state.meshId); } catch (e) {}
-          poll(d.mesh.id, 0);
-        })
-        .catch(function (e) { msg("up-msg", "Error: " + e.message, "err"); sculptBtn.disabled = false; stat("up-status", ""); });
-    });
-
-    function poll(mid, n) {
-      if (n > 60) { stat("up-status", "still going — check back in a moment"); sculptBtn.disabled = false; return; }
-      get(API + "/meshes/" + mid)
-        .then(function (d) {
-          if (!d.ok) { msg("up-msg", d.error || "Lost that mesh.", "err"); sculptBtn.disabled = false; return; }
-          var s = d.mesh.status;
-                    if (s === "succeeded") {
-            stat("up-status", "done · " + d.products.length + " products now active");
-            msg("up-msg", "Ready. Studio and Shop are unlocked.", "ok");
-            sculptBtn.disabled = false;
-            sculptBtn.textContent = "Open the studio →";
-            sculptBtn.onclick = function () { document.querySelector('[data-tab="studio"]').click(); };
-            loadMe();   // roster + spotlight pick it up (auto-activates if it's the first)
-            if (typeof shopLoaded !== "undefined" && shopLoaded) {
-              var s0 = $("shop-status"); if (s0) delete s0.dataset.base;
-              loadShop();   // re-render every product preview against the new mesh
-            }
-            // funnel: ramble → products → photo → land back on the mapped line
-            var pend = takePendingOrder();
-            if (pend && pend.line) {
-              pr.activeMesh = d.mesh && d.mesh.id ? d.mesh.id : (state.meshId || "");
-              applyIntentToProducts(pend, {
-                checkout: true,
-                message: "Photo sculpted — " + (pend.line) + " is ready on your mesh."
-              });
-              loadProducts();
-            }
-          }
- else if (s === "failed") {
-            msg("up-msg", d.mesh.error || "The sculpt failed.", "err");
-            stat("up-status", ""); sculptBtn.disabled = false;
-          } else {
-            stat("up-status", s === "queued" ? "queued…" : "sculpting… (" + n + ")");
-            setTimeout(function () { poll(mid, n + 1); }, 1500);
-          }
-        })
-        .catch(function () { setTimeout(function () { poll(mid, n + 1); }, 2000); });
-    }
-
     // ── studio tab: Wii-style character select ─────────────
     var stv = {
       meshes: [], idx: 1, line: "ornament", coat: "none", hat: "none",
       lines: [], coats: [], hats: [], ready: false, calling: "/img/prod/prod-hero.png",
       slots: []
     };
-
-    function studioSlots() {
-      // Unique meshes only: dog + both brick demos + owner-installed meshes.
-      var src = (stv.meshes && stv.meshes.length) ? stv.meshes : [{
-        mesh_id: "canonical", label: "canonical dog", glb_url: configStudioGlb(),
-        portrait: stv.calling, demo: true, kind: "pet"
-      }];
-      var seen = {};
-      var uniq = [];
-      src.forEach(function (m) {
-        if (!m || !m.mesh_id || seen[m.mesh_id]) return;
-        seen[m.mesh_id] = 1;
-        uniq.push(m);
-      });
-      if (!seen["canonical"]) {
-        uniq.unshift({
-          mesh_id: "canonical", label: "canonical dog",
-          glb_url: configStudioGlb(), portrait: stv.calling, demo: true, kind: "pet"
-        });
-        seen["canonical"] = 1;
-      }
-      function hasLabel(exact) {
-        return uniq.some(function (m) { return (m.label || "") === exact; });
-      }
-      if (!seen["brick-demo"] && !hasLabel("brick figure")) {
-        uniq.splice(1, 0, {
-          mesh_id: "brick-demo", label: "brick figure",
-          glb_url: "/img/prod/brick-figure.glb",
-          portrait: "/img/prod/brick-hero.png",
-          demo: true, kind: "brick"
-        });
-        seen["brick-demo"] = 1;
-      }
-      if (!seen["brick-demo-2"] && !hasLabel("brick figure 2")) {
-        var at = 1;
-        for (var j = 0; j < uniq.length; j++) {
-          if (uniq[j].kind === "brick") { at = j + 1; break; }
-        }
-        uniq.splice(at, 0, {
-          mesh_id: "brick-demo-2", label: "brick figure 2",
-          glb_url: "/img/prod/brick-figure-2.glb",
-          portrait: "/img/prod/brick-hero-2.png",
-          demo: true, kind: "brick"
-        });
-        seen["brick-demo-2"] = 1;
-      }
-      // If owner already installed a brick, don't show a duplicate demo for it
-      var installedBrickLabels = {};
-      uniq.forEach(function (m) {
-        if (!m.demo && m.kind === "brick") installedBrickLabels[m.label] = 1;
-      });
-      var out = [];
-      uniq.forEach(function (m, i) {
-        // skip demo brick if an installed mesh already covers that label
-        if (m.demo && m.kind === "brick" && installedBrickLabels[m.label]) return;
-        var portrait = m.portrait
-          || (m.kind === "brick"
-              ? (/2$/.test(m.label || "") ? "/img/prod/brick-hero-2.png" : "/img/prod/brick-hero.png")
-              : stv.calling)
-          || stv.calling;
-        out.push({
-          mesh_id: m.mesh_id,
-          label: (m.profile && m.profile.name) || m.label || (m.kind === "brick" ? "brick figure" : "dog"),
-          profile: m.profile || null,
-          glb_url: m.glb_url || configStudioGlb(),
-          demo: !!m.demo,
-          installed: !m.demo,
-          kind: m.kind || "pet",
-          portrait: portrait,
-          active: !!m.active,
-          n: out.length + 1
-        });
-      });
-      return out;
-    }
 
     function configStudioGlb() {
       return "/img/prod/chibi-figure-hook.glb";
@@ -3248,50 +2246,6 @@
       }
     }
 
-    function paintPhotos(f) {
-      var grid = $("as-grid"); if (!grid) return;
-      var photos = (f && f.photos) || [];
-      var pogs = ((f && f.meshes) || []).filter(function (p) { return p.status === "succeeded"; });
-      var status = $("as-status");
-      if (status) status.textContent = photos.length + " photos · " + pogs.length + " meshes";
-      if (!photos.length && !pogs.length) {
-        grid.innerHTML = '<div class="photo-empty">No uploads yet — add a photo in Upload.</div>';
-        return;
-      }
-      var html = "";
-      photos.forEach(function (p) {
-        var src = p.r2_key ? art("/api/artifacts/" + p.r2_key) : "";
-        if (!src) return;
-        var who = p.person || p.orig_name || "photo";
-        html += '<figure class="photo">' +
-          '<img src="' + src + '" alt="" loading="lazy">' +
-          '<figcaption class="meta"><b>' + who + '</b>' +
-          (p.size ? p.size[0] + "×" + p.size[1] : "") +
-          '</figcaption></figure>';
-      });
-      pogs.forEach(function (p) {
-        var src = p.photo_key ? art("/api/artifacts/" + p.photo_key) : stv.calling;
-        var label = shortName(p.mesh_id);
-        if (p.active) label = "★ " + label;
-        html += '<figure class="photo">' +
-          '<img src="' + src + '" alt="" loading="lazy">' +
-          '<figcaption class="meta"><b>' + label + '</b>mesh</figcaption></figure>';
-      });
-      grid.innerHTML = html || '<div class="photo-empty">Nothing yet.</div>';
-    }
-
-    function activate(meshId) {
-      if (!meshId) return;
-      post(API + "/me/active", { owner: state.owner, mesh_id: meshId })
-        .then(function (d) {
-          if (!d.ok) { msg("as-msg", d.error || "Couldn't switch.", "err"); return; }
-          state.meshId = d.active_mesh_id;
-          msg("as-msg", "Active star updated — Products follow this mesh.", "ok");
-          loadStudio();
-        })
-        .catch(function (e) { msg("as-msg", "Error: " + e.message, "err"); });
-    }
-
     function installBrickStyle(styleId, btn, label) {
       if (!btn) return;
       btn.disabled = true;
@@ -3342,15 +2296,17 @@
     // ── products tab: Etsy storefront, mesh-inherited ──────
     var pr = { items: [], sel: null, coat: "none", hat: "none", pattern: "solid", ready: false, qty: 1, activeMesh: "", size: null, amount_cents: null };
 
+    function prPersonName() {
+      var p = selectedPerson();
+      return (p && p.name) || pr.giftWho || "";
+    }
     function paintMeshChip() {
       var chip = $("pr-mesh-chip");
       var dm = $("pr-d-mesh");
-      var short = pr.activeMesh || state.meshId || "canonical";
-      var label = short && short !== "canonical" && short !== ""
-        ? "inherits mesh " + String(short).replace("msh_", "").slice(0, 8)
-        : "canonical studio mesh";
+      var who = prPersonName();
+      var label = who ? "For " + who : "Pick someone in Studio";
       if (chip) chip.textContent = label;
-      if (dm) dm.textContent = "✓ " + label + " · studio active mesh";
+      if (dm) dm.textContent = who ? "✓ Made for " + who : "";
     }
 
     var packWired = false;
@@ -3363,7 +2319,11 @@
         var pounds = parseFloat(String(raw).replace(/[^0-9.]/g, ""));
         if (!(pounds > 0)) { msg("pack-msg", "Tell Oddy the budget first — e.g. 30.", "err"); return; }
         msg("pack-msg", "Oddy is building your pack…", "");
-        post(API + "/gift-packs", { owner: state.owner, budget_cents: Math.round(pounds * 100), mesh_id: state.meshId || "" })
+        var who = selectedPerson() || {};
+        var packBody = { owner: state.owner, budget_cents: Math.round(pounds * 100), mesh_id: state.meshId || "" };
+        if (who.relationship || who.name) packBody.recipient = String(who.relationship || who.name).slice(0, 60);
+        if (birthdaySoon(who.birthday, 45)) packBody.occasion = "birthday";
+        post(API + "/gift-packs", packBody)
           .then(function (d) {
             if (!d.ok) { msg("pack-msg", d.error || "No pack fits that budget.", "err"); return; }
             var p = d.pack, out = $("pack-out");
@@ -3375,15 +2335,11 @@
             if (p.card) html += row("💌 Card (" + p.card.format + ")", p.card.price_cents);
             if (p.video) html += row("🎬 " + p.video.label + " (free)", 0);
             html += '<div style="font-size:13px;color:#8a6a2f">Total ' + money(p.total_cents) + ' · ' + money(p.remaining_cents) + ' left over</div>';
-            html += '<button class="btn" id="pack-reserve" type="button" style="margin-top:8px">Reserve the physical part</button>';
+            if (p.physical && itemById(p.physical.line)) html += '<button class="btn" id="pack-order" type="button" style="margin-top:8px">Customise &amp; order the ' + (p.physical.label || p.physical.line) + ' →</button>';
             out.innerHTML = html;
             msg("pack-msg", "", "");
-            var rb = $("pack-reserve");
-            if (rb && p.physical) rb.addEventListener("click", function () {
-              post(API + "/products/order", { owner: state.owner, line: p.physical.line, mesh_id: p.mesh_id || state.meshId || "", qty: 1 })
-                .then(function (o) { msg("pack-msg", o.ok ? "Reserved · " + ((o.order || {}).id || "") + ". Card + video next in Cards." : (o.error || "Failed"), o.ok ? "ok" : "err"); try { if (o.ok && typeof siteShell !== "undefined" && siteShell.refreshBadge) siteShell.refreshBadge(); } catch (e) {} })
-                .catch(function (e) { msg("pack-msg", e.message || String(e), "err"); });
-            });
+            var ob = $("pack-order");
+            if (ob) ob.addEventListener("click", function () { selectProduct(p.physical.line); });
           })
           .catch(function (e) { msg("pack-msg", e.message || String(e), "err"); });
       });
@@ -3456,8 +2412,7 @@
           '</div>';
         tile.addEventListener("click", function () {
           if (itemById(g.line)) selectProduct(g.line);
-          pr.giftText = (g.method === "name" && g.text) ? String(g.text).slice(0, 200) : null;
-          if (g.method === "name" && g.text) msg("pr-msg", g.reason + " — text: " + g.text + " (goes on the order).", "");
+          if (g.method === "name" && g.text) setNameOn(g.text);
         });
         grid.appendChild(tile);
       });
@@ -3499,7 +2454,7 @@
           wirePack();
           if (typeof loadPrints === "function") loadPrints();
           selectProduct(pr.sel, { silent: true });
-          stat("pr-status", pr.items.length + " lines · " + (pr.activeMesh || state.meshId || "canonical mesh"));
+          stat("pr-status", "");
           pr.ready = true;
           // resume in-app funnel if Quick left a pending pick
           var pend = takePendingOrder();
@@ -3515,8 +2470,7 @@
               scale_mm: (itemById(pend.line) || {}).scale_mm,
               confidence: null
             });
-            msg("pr-msg", "Resumed from your last Quick pick — upload photo or checkout.", "ok");
-            setFunnelStep(pend.from === "quick" ? 2 : 4);
+            msg("pr-msg", "Picked up from Quick — check the details, then order.", "ok");
           }
         })
         .catch(function () { stat("pr-status", ""); msg("pr-msg", "Backend unreachable.", "err"); });
@@ -3534,7 +2488,7 @@
     function paintProductGrid() {
       var grid = $("pr-grid"); if (!grid) return;
       grid.innerHTML = "";
-      var meshShort = (pr.activeMesh || state.meshId || "").replace("msh_", "").slice(0, 8);
+      var forName = prPersonName();
       var giftMap = {};
       (pr.gifts || []).forEach(function (g, idx) { if (g && g.line && !giftMap[g.line]) giftMap[g.line] = { gift: g, rank: idx }; });
       var items = pr.items.slice();
@@ -3576,8 +2530,8 @@
           var who = pr.giftWho ? "For " + pr.giftWho : "For your star";
           badges += '<span class="etsy__badge gold">' + who + '</span>';
         }
-        if (live && it.fulfilment !== "digital" && meshShort) {
-          badges += '<span class="etsy__badge mesh">Your star · ' + meshShort + '</span>';
+        if (live && it.fulfilment !== "digital" && forName && !(gm && gm.gift)) {
+          badges += '<span class="etsy__badge mesh">For ' + forName + '</span>';
         }
         if (live && it.fulfilment === "digital") badges += '<span class="etsy__badge">Digital</span>';
         badges += "</div>";
@@ -3613,7 +2567,8 @@
       if (!it) return;
       pr.sel = id;
       pr.qty = 1;
-      pr.size = null; pr.amount_cents = null; pr.giftText = null;
+      pr.size = null; pr.amount_cents = null;
+      paintNameOn(it);
       var qn = $("pr-qty-n"); if (qn) qn.textContent = "1";
       try {
         var lo = JSON.parse(localStorage.getItem("pogpet.loadout") || "{}");
@@ -3654,9 +2609,13 @@
       }
       // size chips
       var sb = $("pr-sizes");
+      // Only lines with a priced size choice (gift card amounts) get chips —
+      // /products/order has no size field for the rest, so a chip would be dropped.
+      var sizeChoices = (it.sizes || []).filter(function (s) { return s && s.price_cents != null; });
       if (sb) {
         sb.innerHTML = "";
-        (it.sizes || []).forEach(function (s) {
+        sb.style.display = sizeChoices.length ? "" : "none";
+        sizeChoices.forEach(function (s) {
           var b = document.createElement("button");
           b.type = "button";
           b.className = "chip" + (pr.size === s.label ? " on" : "");
@@ -3684,7 +2643,7 @@
       paintProductGrid();
       paintProductChips(it);
       refreshProductStill(it);
-      if (!opts.silent) msg("pr-msg", it.label + " selected · " + (pr.activeMesh || state.meshId || "canonical"), "");
+      if (!opts.silent) msg("pr-msg", it.label + (prPersonName() ? " for " + prPersonName() : "") + " selected", "");
     }
 
     function paintProductChips(it) {
@@ -3821,6 +2780,22 @@
       }
     }
 
+    // "Name on it": only lines whose order route accepts text (text_personalization).
+    function paintNameOn(it) {
+      var wrap = $("pr-name-wrap"), inp = $("pr-name-on");
+      if (!wrap || !inp) return;
+      var tp = it && it.text_personalization;
+      wrap.hidden = !tp;
+      if (!tp) { inp.value = ""; return; }
+      inp.maxLength = tp.max_chars || 14;
+      var who = prPersonName();
+      inp.value = who ? who.toUpperCase().slice(0, inp.maxLength) : "";
+    }
+    function setNameOn(text) {
+      var wrap = $("pr-name-wrap"), inp = $("pr-name-on");
+      if (!wrap || wrap.hidden || !inp || !text) return;
+      inp.value = String(text).toUpperCase().slice(0, inp.maxLength || 14);
+    }
     function orderPayload(fulfil) {
       var it = itemById(pr.sel);
       if (!it || it.status !== "live") return null;
@@ -3830,12 +2805,14 @@
         coat: pr.coat,
         hat: pr.hat,
         pattern: pr.pattern || "solid",
-        note: pr.giftText || "",
         mesh_id: pr.activeMesh || state.meshId || "",
         qty: pr.qty || 1,
         fulfil: !!fulfil,
-        email: (state.owner && state.owner.indexOf("@") > 0) ? state.owner : ""
+        // signed-in account email (GET /accounts/me); backend also falls back to it
+        email: state.email || ""
       };
+      var nameOn = $("pr-name-on"), nameWrap = $("pr-name-wrap");
+      if (it.text_personalization && nameWrap && !nameWrap.hidden && nameOn && nameOn.value.trim()) body.text = nameOn.value.trim();
       if (it.id === "gift_card") body.amount_cents = unitPrice(it);
       return body;
     }
@@ -3844,9 +2821,9 @@
       var it = itemById(pr.sel);
       var body = orderPayload(fulfil);
       if (!body) { msg("pr-msg", "That line isn't orderable yet.", "err"); return; }
-      var btn = $(fulfil ? "pr-order" : "pr-order-reserve");
+      var btn = $("pr-order");
       if (btn) btn.disabled = true;
-      stat("pr-status", fulfil ? "creating Shopify draft…" : "reserving order…");
+      stat("pr-status", "creating your checkout…");
       post(API + "/products/order", body).then(function (d) {
         if (btn) btn.disabled = false;
         stat("pr-status", "");
@@ -3857,11 +2834,10 @@
         } else if (d.shopify && d.shopify.attempted) {
           sh = " · Shopify: " + (d.shopify.error || "not configured");
         }
+        var forWho = prPersonName();
         msg("pr-msg",
-          (fulfil ? "One-click " : "Reserved ") + "· " + (d.order && d.order.id) +
-          " · " + it.label + " ×" + body.qty +
-          " · " + money(d.price_cents) +
-          " · mesh " + (body.mesh_id || "canonical") + sh, "ok");
+          "Ordered · " + it.label + (body.text ? " “" + body.text + "”" : "") + (forWho ? " for " + forWho : "") +
+          " ×" + body.qty + " · " + money(d.price_cents) + sh, "ok");
         if (d.checkout_url) {
           var payBox = $("pr-msg");
           if (payBox) {
@@ -3930,15 +2906,6 @@
 
     var prOrder = $("pr-order");
     if (prOrder) prOrder.addEventListener("click", function () { runOrder(true); });
-    var prOrderReserve = $("pr-order-reserve");
-    if (prOrderReserve) prOrderReserve.addEventListener("click", function () { runOrder(false); });
-    var prFit = $("pr-fit");
-    if (prFit) prFit.addEventListener("click", function () {
-      var it = itemById(pr.sel);
-      var line = it ? it.id : "ornament";
-      var part = (pr.hat && pr.hat !== "none") ? pr.hat : "santa";
-      open("/fit.html?line=" + encodeURIComponent(line) + "&part=" + encodeURIComponent(part), "_blank");
-    });
 
     var qInc = $("pr-qty-inc"), qDec = $("pr-qty-dec");
     if (qInc) qInc.addEventListener("click", function () {
@@ -3956,44 +2923,6 @@
       if (it && it.status === "live" && p) p.textContent = money(unitPrice(it) * pr.qty);
     });
 
-    function setFunnelStep(n) {
-      var box = $("funnel-steps");
-      if (!box) return;
-      var spans = box.querySelectorAll("span");
-      for (var i = 0; i < spans.length; i++) spans[i].classList.toggle("on", i < n);
-    }
-
-    var prQuickPick = { item: null };
-
-    function paintQuickPick(m) {
-      var box = $("quick-pick");
-      if (!box || !m) return;
-      prQuickPick.item = m;
-      box.hidden = false;
-      var n = $("qp-name"); if (n) n.textContent = m.label || m.id;
-      var meta = $("qp-meta");
-      if (meta) {
-        var bits = [];
-        if (m.recommended_coat && m.recommended_coat !== "none") bits.push(m.recommended_coat);
-        if (m.recommended_hat && m.recommended_hat !== "none") bits.push(m.recommended_hat);
-        if (m.scale_mm) bits.push(m.scale_mm + " mm");
-        if (m.confidence != null) bits.push(Math.round(m.confidence * 100) + "% match");
-        meta.textContent = bits.join(" · ") || (m.blurb || "");
-      }
-      var p = $("qp-price");
-      if (p) p.textContent = m.status === "live" ? "£" + ((m.price_cents || 0) / 100).toFixed(2) : "Soon";
-      var o = $("qp-order");
-      if (o) o.disabled = m.status !== "live";
-      setPendingOrder({
-        line: m.id,
-        coat: m.recommended_coat || "none",
-        hat: m.recommended_hat || "none",
-        pattern: m.recommended_pattern || "solid",
-        qty: 1,
-        from: "quick"
-      });
-    }
-
     function selectQuickProduct(m) {
       if (!m) return;
       if (itemById(m.id)) {
@@ -4010,80 +2939,6 @@
         var det = $("pr-detail");
         if (det) det.hidden = false;
       }
-      paintQuickPick(m);
-      setFunnelStep(2);
-    }
-
-    var qpUpload = $("qp-upload");
-    if (qpUpload) qpUpload.addEventListener("click", function () {
-      setFunnelStep(3);
-      showTab("studio");
-      msg("as-msg", "Upload a photo of the star — after sculpt we'll bring you back to this product.", "ok");
-    });
-
-    var qpOrder = $("qp-order");
-    if (qpOrder) qpOrder.addEventListener("click", function () {
-      var m = prQuickPick.item;
-      if (!m) { msg("pr-msg", "Find a product first.", "err"); return; }
-      if (itemById(m.id)) {
-        selectProduct(m.id, { silent: true });
-        if (m.recommended_coat) pr.coat = m.recommended_coat;
-        if (m.recommended_hat) pr.hat = m.recommended_hat;
-        if (m.recommended_pattern) pr.pattern = m.recommended_pattern;
-        var it = itemById(m.id);
-        if (it) { paintProductChips(it); paintProductGrid(); refreshProductStill(it); }
-      }
-      setFunnelStep(4);
-      runOrder(true);
-      msg("pr-msg", "Ordering " + (m.label || m.id) + " on mesh " +
-          (pr.activeMesh || state.meshId || "canonical") + "…", "");
-    });
-
-    // ── Quick: in-app funnel (Products tab) ────────────────
-    var QUICK_PROMPTS = [
-      "What's their funniest habit?",
-      "What do they do that makes you laugh every time?",
-      "What's their favourite thing in the world?",
-      "What's the most dramatic thing they've ever done?",
-      "What's a quirk that's purely theirs?",
-      "What would they say if they could talk?",
-      "What's their favourite spot in the house?",
-      "What's the cutest thing they do when nobody's watching?",
-      "What's a nickname you have for them?",
-      "Tell me about them. Start anywhere."
-    ];
-    var quickPi = 0;
-    var quickRec = null;
-
-    function paintQuickPrompt() {
-      var el = $("quick-prompt");
-      if (el) el.textContent = QUICK_PROMPTS[quickPi % QUICK_PROMPTS.length];
-    }
-    var quickShuffle = $("quick-shuffle");
-    if (quickShuffle) quickShuffle.addEventListener("click", function () {
-      quickPi = (quickPi + 1) % QUICK_PROMPTS.length;
-      paintQuickPrompt();
-    });
-    paintQuickPrompt();
-
-    function paintQuickHits(hits) {
-      var grid = $("quick-hits");
-      if (!grid) return;
-      grid.innerHTML = "";
-      if (!hits || !hits.length) {
-        grid.innerHTML = '<div style="grid-column:1/-1;color:#666;font-size:13px">No live line matched that ramble — try another angle or upload a photo first.</div>';
-        return;
-      }
-      hits.slice(0, 6).forEach(function (r, i) {
-        setTimeout(function () {
-          var t = paintSearchTile(r);
-          t.addEventListener("click", function () {
-            // paintSearchTile already navigates; also sync Quick pick bar
-            if (r.kind !== "card") selectQuickProduct(r);
-          });
-          grid.appendChild(t);
-        }, i * 50);
-      });
     }
 
     function setPendingOrder(intent) {
@@ -4099,350 +2954,47 @@
       } catch (e) { return null; }
     }
 
-    function applyIntentToProducts(intent, opts) {
-      opts = opts || {};
-      if (!intent || !intent.line) return;
-      showTab("products");
-      if (itemById(intent.line)) selectProduct(intent.line, { silent: true });
-      if (intent.coat) pr.coat = intent.coat;
-      if (intent.hat) pr.hat = intent.hat;
-      if (intent.pattern) pr.pattern = intent.pattern;
-      if (intent.qty) pr.qty = intent.qty;
-      var qn = $("pr-qty-n"); if (qn) qn.textContent = String(pr.qty || 1);
-      var it = itemById(pr.sel || intent.line);
-      if (it) {
-        paintProductChips(it);
-        paintProductGrid();
-        refreshProductStill(it);
-      }
-      paintMeshChip();
-      if (opts.message) msg("pr-msg", opts.message, "ok");
-      if (opts.checkout) {
-        // leave the button ready — human confirms price then clicks
-        msg("pr-msg", (opts.message || "Mesh ready.") + " Review the price, then One-click order → Shopify.", "ok");
-      }
-    }
-
-    function mapRambleToStudio(text) {
-      // Prefer the shared server mapper (same contract as ChatGPT/MCP).
-      return post(API + "/quick/map", { text: text, owner: state.owner })
-        .then(function (d) {
-          if (!d || !d.ok) throw new Error((d && d.error) || "map failed");
-          var matches = (d.matches || []).map(function (m) {
-            return {
-              kind: "studio", id: m.id, label: m.label, blurb: m.blurb || "",
-              price_cents: m.price_cents || 0, status: m.status,
-              confidence: m.confidence,
-              recommended_coat: m.recommended_coat,
-              recommended_hat: m.recommended_hat,
-              recommended_pattern: m.recommended_pattern,
-              img: (m.stills && (m.stills.hero || m.stills.front)) || "/img/prod/prod-hero.png",
-              hay: "", live: m.status === "live", score: m.score || 0
-            };
-          });
-          var best = d.recommended || matches[0] || null;
-          if (best) selectQuickProduct(best);
-          var intent = best ? {
-            line: best.id,
-            coat: best.recommended_coat || "none",
-            hat: best.recommended_hat || "none",
-            pattern: best.recommended_pattern || "solid",
-            qty: 1,
-            from: "quick",
-            text: text
-          } : null;
-          setPendingOrder(intent);
-          return {
-            mapped: best ? {
-              line: best.id, coat: best.recommended_coat, hat: best.recommended_hat,
-              pattern: best.recommended_pattern, note: (d.next && d.next.why) || ""
-            } : {},
-            hits: matches,
-            confidence: d.confidence,
-            next: d.next,
-            funnel: d.funnel,
-            pending: intent,
-            activeMesh: d.active_mesh_id || state.meshId || ""
-          };
-        })
-        .catch(function () {
-          // local fallback
-          var hits = rankSearch(text);
-          var primary = hits[0];
-          if (primary && primary.kind === "studio") {
-            selectProduct(primary.id, { silent: true });
-            setPendingOrder({ line: primary.id, coat: "none", hat: "none", pattern: "solid", qty: 1, from: "quick", text: text });
-          }
-          return {
-            mapped: primary ? { line: primary.id, note: "local rank (agent offline)" } : {},
-            hits: hits,
-            confidence: primary ? 0.45 : 0,
-            next: { stage: "upload", actions: ["upload_photo"] },
-            pending: primary && primary.kind === "studio" ? { line: primary.id, coat: "none", hat: "none", pattern: "solid", qty: 1, from: "quick", text: text } : null
-          };
-        });
-    }
-
-    function runQuick() {
-      var ta = $("quick-text");
-      var text = ((ta && ta.value) || "").trim();
-      if (!text) {
-        msg("quick-msg", "Ramble something first — or hit the mic.", "err");
-        return;
-      }
-      var go = $("quick-go");
-      if (go) go.disabled = true;
-      msg("quick-msg", "Reading the ramble against the warehouse…", "");
-      stat("pr-status", "quick: mapping ramble…");
-      mapRambleToStudio(text).then(function (r) {
-        if (go) go.disabled = false;
-        stat("pr-status", "");
-        var m = r.mapped || {};
-        var confPct = r.confidence != null ? Math.round(r.confidence * 100) + "% " : "";
-        var stage = (r.next && r.next.stage) || "products";
-        var nextLine = stage === "upload"
-          ? "Next: upload their photo → sculpt → auto-land on these products."
-          : "Mesh already active — review price, then One-click order → Shopify.";
-        msg("quick-msg",
-          confPct + (m.note || "Got it.") + " → " + (m.line || "—") +
-          " · " + (r.hits || []).length + " live line(s). " + nextLine, "ok");
-        paintQuickHits(r.hits);
-        setFunnelStep(stage === "upload" ? 3 : 4);
-        var fbox = $("funnel-steps");
-        // funnel text under hits
-        var grid = $("quick-hits");
-        if (grid && r.funnel && r.funnel.length) {
-          var old = grid.querySelector(".funnel-note");
-          if (old) old.remove();
-          var stepEl = document.createElement("div");
-          stepEl.className = "funnel-note";
-          stepEl.style.cssText = "grid-column:1/-1;font-size:12px;color:#6b5a3c;margin-top:4px;line-height:1.5";
-          stepEl.innerHTML = "<b>Next:</b> " + nextLine + " <span style='opacity:.75'>" + r.funnel.join(" · ") + "</span>";
-          grid.appendChild(stepEl);
-        }
-        if (stage === "upload" && r.pending) {
-          setPendingOrder(r.pending);
-          msg("quick-msg",
-            confPct + (m.note || "Matched.") + " → " + (m.line || "") +
-            ". Upload their photo next — we'll drop you back here.", "ok");
-        }
-      }).catch(function (e) {
-        if (go) go.disabled = false;
-        stat("pr-status", "");
-        var hits = rankSearch(text);
-        paintQuickHits(hits);
-        msg("quick-msg", "Mapper offline — ranked locally: " + hits.length + " match(es). " + e.message, "");
-      });
-    }
-    var quickGo = $("quick-go");
-    if (quickGo) quickGo.addEventListener("click", runQuick);
-    var quickText = $("quick-text");
-    if (quickText) quickText.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); runQuick(); }
-    });
-
-    var quickMic = $("quick-mic");
-    if (quickMic) quickMic.addEventListener("click", function () {
-      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) {
-        msg("quick-msg", "This browser has no Web Speech API — type the ramble instead.", "err");
-        return;
-      }
-      if (quickRec) {
-        try { quickRec.stop(); } catch (e) {}
-        quickRec = null;
-        quickMic.classList.remove("rec");
-        return;
-      }
-      quickRec = new SR();
-      quickRec.lang = "en-GB";
-      quickRec.interimResults = true;
-      quickRec.continuous = true;
-      var base = (quickText && quickText.value) ? quickText.value + " " : "";
-      quickRec.onstart = function () {
-        quickMic.classList.add("rec");
-        msg("quick-msg", "Listening — ramble away…", "");
-      };
-      quickRec.onresult = function (ev) {
-        var interim = "", final = "";
-        for (var i = ev.resultIndex; i < ev.results.length; i++) {
-          if (ev.results[i].isFinal) final += ev.results[i][0].transcript;
-          else interim += ev.results[i][0].transcript;
-        }
-        if (quickText) quickText.value = (base + final + interim).trim();
-      };
-      quickRec.onerror = function () {
-        quickMic.classList.remove("rec");
-        msg("quick-msg", "Mic error — type it instead?", "err");
-      };
-      quickRec.onend = function () {
-        quickMic.classList.remove("rec");
-        quickRec = null;
-      };
-      try { quickRec.start(); } catch (e) {
-        msg("quick-msg", "Couldn't start mic: " + e.message, "err");
-      }
-    });
-
-    // ── products tab: prints & gifts (NOT paper cards) ─────
-    var PRINTS_CATALOG = [
-      { id: "mug", label: "Mug", price_cents: 1299, img: "/img/mug_70edae28.png", blurb: "Their face on mornings", section: "gifts" },
-      { id: "cushion", label: "Cushion", price_cents: 2999, img: "/img/cushion_70edae28.png", blurb: "A throne for their face", section: "gifts" },
-      { id: "poster", label: "Poster", price_cents: 1499, img: "/img/poster_70edae28.png", blurb: "Wall art from your star", section: "gifts" },
-      { id: "framed_print", label: "Framed Print", price_cents: 2499, img: "/img/framed_print_70edae28.png", blurb: "Ready to hang", section: "gifts" },
-      { id: "sticker", label: "Sticker Pack", price_cents: 499, img: "/img/sticker_70edae28.png", blurb: "Peel, stick, repeat", section: "gifts" },
-      { id: "tote", label: "Tote Bag", price_cents: 1999, img: "/img/tote_70edae28.png", blurb: "Carry the legend", section: "gifts" },
-      { id: "notebook", label: "Notebook", price_cents: 1199, img: "/img/notebook_70edae28.png", blurb: "Ideas for the star", section: "gifts" },
-      { id: "jigsaw", label: "Jigsaw", price_cents: 1699, img: "/img/jigsaw_70edae28.png", blurb: "Puzzle them back together", section: "board-games" },
-      { id: "photo_tile", label: "Photo Tile", price_cents: 999, img: "/img/photo_tile_70edae28.png", blurb: "Ceramic tile print", section: "gifts" },
-      { id: "wrapping_paper", label: "Wrapping Paper", price_cents: 1499, img: "/img/wrapping_paper_70edae28.png", blurb: "Their face, tiled · LIVE", section: "gifts" },
-      { id: "canvas", label: "Canvas", price_cents: 2799, img: "/img/canvas_70edae28.png", blurb: "Gallery wrap", section: "gifts" }
-    ];
-    var prPrintSel = null;
-    var prPrintCands = [];
-    var prPrintCandI = 0;
-    var prQuoteText = "";
-
-    function candThumbUrl(c) {
-      var u = "/api/studio/photos/" + encodeURIComponent(c.photo_id) + "/image?size=320";
-      if (c.face_id) u += "&face_id=" + encodeURIComponent(c.face_id);
-      try { return studioAsset(u); } catch (e) { return u; }
-    }
-
-    function paintPrintCands() {
-      var box = $("pr-print-cands");
-      if (!box) return;
-      if (!prPrintCands.length) { box.style.display = "none"; box.innerHTML = ""; return; }
-      var c = prPrintCands[prPrintCandI];
-      box.style.display = "";
-      box.innerHTML = "";
-      var wrap = document.createElement("div");
-      wrap.style.cssText = "display:flex;gap:10px;align-items:center";
-      var prev = document.createElement("button");
-      prev.type = "button"; prev.className = "btn btn-ghost-dark"; prev.textContent = "◀";
-      prev.setAttribute("aria-label", "Previous face option");
-      prev.onclick = function () {
-        prPrintCandI = (prPrintCandI + prPrintCands.length - 1) % prPrintCands.length;
-        paintPrintCands();
-      };
-      var next = document.createElement("button");
-      next.type = "button"; next.className = "btn btn-ghost-dark"; next.textContent = "▶";
-      next.setAttribute("aria-label", "Next face option");
-      next.onclick = function () {
-        prPrintCandI = (prPrintCandI + 1) % prPrintCands.length;
-        paintPrintCands();
-      };
-      var img = document.createElement("img");
-      img.src = candThumbUrl(c); img.alt = "face option";
-      img.style.cssText = "width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid #eee";
-      img.onclick = function () {
-        pr.artPhoto = { photo_id: c.photo_id, face_id: c.face_id || null };
-        msg("pr-msg", "Artwork source set · " + (c.shot_type || "photo") +
-            " (score " + (c.score != null ? c.score : "—") + ") — used by wrap/cards/fills.", "ok");
-      };
-      var lab = document.createElement("div");
-      lab.style.cssText = "font-size:12px;color:#6b5b3e";
-      lab.textContent = "Option " + (prPrintCandI + 1) + " of " + prPrintCands.length +
-        " · best by quality first, arrows for the rest — click to use on this product.";
-      var mid = document.createElement("div");
-      mid.appendChild(img); mid.appendChild(lab);
-      wrap.appendChild(prev); wrap.appendChild(mid); wrap.appendChild(next);
-      box.appendChild(wrap);
-      if (prQuoteText) {
-        var qd = document.createElement("div");
-        qd.id = "pr-quote";
-        qd.style.cssText = "font-size:12px;color:#6b5b3e;margin-top:8px";
-        qd.textContent = prQuoteText;
-        box.appendChild(qd);
-      }
-    }
-
-    function loadPrintQuotes(lineId) {
-      prQuoteText = "";
-      get(API + "/quotes/compare?line=" + encodeURIComponent(lineId))
-        .then(function (d) {
-          if (!d || !d.ok || !d.picks || !d.picks.value) return;
-          var box = $("pr-print-cands");
-          if (!box) return;
-          var v = d.picks.value, s = d.picks.speed, b = d.picks.balanced;
-          var m = d.matrix || {};
-          var lanes = ["GB", "US"].filter(function (k) { return m[k] && m[k].total != null; })
-            .map(function (k) { return k + " £" + m[k].total.toFixed(2); }).join(" · ");
-          var cd = (s && s.countdown) || {};
-          var clock = "";
-          if (cd.mode === "cutoff" && cd.order_within) {
-            clock = " · order in " + cd.order_within + " for dispatch by " + (cd.dispatch_guaranteed || "?");
-          } else if (cd.dispatch_guaranteed) {
-            clock = " · dispatch by " + cd.dispatch_guaranteed;
-          }
-          prQuoteText = "Value £" + v.total.toFixed(2) + " (" + v.supplier + ")" +
-            " · Speed £" + s.total.toFixed(2) + " (" + s.supplier + ")" +
-            (b ? " · Balanced £" + b.total.toFixed(2) + " (" + b.supplier + ")" : "") +
-            clock +
-            (lanes ? " · ship " + lanes : "") +
-            (s.note ? " — " + s.note : "") +
-            " · " + d.options.length + " suppliers compared";
-          var old = $("pr-quote");
-          if (old && old.parentNode) old.parentNode.removeChild(old);
-          var qd = document.createElement("div");
-          qd.id = "pr-quote";
-          qd.style.cssText = "font-size:12px;color:#6b5b3e;margin-top:8px";
-          qd.textContent = prQuoteText;
-          box.appendChild(qd);
-        })
-        .catch(function () {});
-    }
-
-    function loadPrintCands(lineId) {
-      prPrintCands = []; prPrintCandI = 0; paintPrintCands();
-      get(API + "/products/candidates?owner=" + encodeURIComponent(state.owner) +
-          "&kind=prodigi&line=" + encodeURIComponent(lineId) + "&n=8")
-        .then(function (d) {
-          if (!d || !d.ok) return;
-          var order = ["face", "solo", "group", "couple"];
-          var seen = {}, list = [];
-          order.forEach(function (slot) {
-            ((d.candidates || {})[slot] || []).forEach(function (c) {
-              if (c && c.photo_id && !seen[c.photo_id]) { seen[c.photo_id] = 1; list.push(c); }
-            });
-          });
-          // fallback: filled slots when requires named none of the four
-          Object.keys(d.slots || {}).forEach(function (k) {
-            var s = d.slots[k];
-            if (s && s.photo_id && !seen[s.photo_id]) { seen[s.photo_id] = 1; list.push(s); }
-          });
-          if (list.length) { prPrintCands = list; prPrintCandI = 0; paintPrintCands(); }
-        })
-        .catch(function () {});
-    }
-
+    // ── products tab: cards & prints shelf ─────────────────
+    // Prices come from the backend catalog (GET /api/catalog, Prodigi rows).
+    // Only formats with a real order path are shown: greeting card + postcard
+    // are made and paid in Cards. Mugs, posters, cushions etc. have no order
+    // route yet, so they stay off the customer shelf until one exists.
+    var PRINT_ORDERABLE = {
+      greeting_card: { img: "/img/greeting_card_70edae28.png", blurb: "Folded card with their best photos", go: "/cards" },
+      postcard: { img: "/img/postcard_70edae28.png", blurb: "A6 postcard, posted for you", go: "/cards" }
+    };
+    var printsLoaded = false;
     function loadPrints() {
-      var grid = $("pr-prints"); if (!grid) return;
-      grid.innerHTML = "";
-      PRINTS_CATALOG.forEach(function (it) {
-        var tile = document.createElement("button");
-        tile.type = "button";
-        tile.dataset.sec = (typeof SECTION_OF !== "undefined" && SECTION_OF[it.id]) || "gifts";
-        tile.className = "etsy__tile" + (it.id === prPrintSel ? " on" : "");
-        tile.innerHTML =
-          '<div class="etsy__badges"><span class="etsy__badge">Print &amp; gift</span></div>' +
-          '<img class="etsy__img" src="' + it.img + '" alt="' + it.label + '" loading="lazy">' +
-          '<div class="etsy__body">' +
-            '<div class="etsy__name">' + it.label + '</div>' +
-            '<div class="etsy__meta">' + (it.blurb || "").slice(0, 42) + '</div>' +
-            '<div class="etsy__price">£' + (it.price_cents / 100).toFixed(2) + '</div>' +
-          '</div>';
-        tile.addEventListener("click", function () {
-          prPrintSel = it.id;
-          loadPrints();
-          loadPrintCands(it.id);
-          loadPrintQuotes(it.id);
-          msg("pr-msg", it.label + " £" + (it.price_cents / 100).toFixed(2) +
-              " — mesh on the face · order via shop / agent (2D print path).", "");
+      var grid = $("pr-prints"), head = $("pr-prints-label"); if (!grid) return;
+      if (printsLoaded) return; printsLoaded = true;
+      get(API + "/catalog").then(function (d) {
+        var rows = ((d && d.ok && d.products) || []).filter(function (p) {
+          return p.source === "prodigi" && PRINT_ORDERABLE[p.id] && p.price_cents > 0;
         });
-        grid.appendChild(tile);
-      });
-      if (typeof applySection === "function") applySection();
+        grid.innerHTML = "";
+        if (head) head.hidden = !rows.length;
+        grid.hidden = !rows.length;
+        var who = prPersonName();
+        rows.forEach(function (p) {
+          var meta = PRINT_ORDERABLE[p.id];
+          var tile = document.createElement("button");
+          tile.type = "button";
+          tile.dataset.sec = (typeof SECTION_OF !== "undefined" && SECTION_OF[p.id]) || p.section || "cards";
+          tile.className = "etsy__tile";
+          tile.innerHTML =
+            '<div class="etsy__badges"><span class="etsy__badge">' + (who ? "For " + who : "Card") + '</span></div>' +
+            '<img class="etsy__img" src="' + meta.img + '" alt="' + p.label + '" loading="lazy" onerror="this.onerror=null;this.src=\'/img/greeting_card_70edae28.png\'">' +
+            '<div class="etsy__body">' +
+              '<div class="etsy__name">' + p.label + '</div>' +
+              '<div class="etsy__meta">' + meta.blurb + '</div>' +
+              '<div class="etsy__price">' + money(p.price_cents) + '</div>' +
+              '<div class="etsy__foot"><span class="etsy__ship">Posted</span><span class="etsy__cta">Make it →</span></div>' +
+            '</div>';
+          tile.addEventListener("click", function () { window.OddHobbRouter.navigate(meta.go); });
+          grid.appendChild(tile);
+        });
+        if (typeof applySection === "function") applySection();
+      }).catch(function () { printsLoaded = false; grid.hidden = true; if (head) head.hidden = true; });
     }
 
     // ── quick tab: adaptive ramble (mythicbee GiftIntelligence pattern) ──
@@ -4496,12 +3048,36 @@
       festive: /christmas|xmas|festive|holidays?/
     };
 
+    // What Studio already knows about the selected person: who (person/pet)
+    // and their look (photos on file) — Quick never asks those again.
+    function qkKnown() {
+      var c = window.OddHobbStudioContext || {}, s = c.subject;
+      return { who: !!(s && s.kind), coat: !!(s && c.photos && c.photos.length) };
+    }
+    function paintQuickPerson() {
+      var s = selectedPerson(), c = window.OddHobbStudioContext || {};
+      var chips = document.querySelectorAll("#qk-mesh-chip,#qk-mesh-chip-results");
+      for (var i = 0; i < chips.length; i++) {
+        var el = chips[i];
+        el.innerHTML = "";
+        el.hidden = !s;
+        if (!s) continue;
+        var ph = (c.photos || [])[0];
+        if (ph && ph.thumbnail_url) {
+          var im = document.createElement("img");
+          var link = (ph.subjects || []).filter(function (l) { return l.subject_id === s.id && l.face_id; })[0];
+          im.src = studioAsset(ph.thumbnail_url + (link ? "&face_id=" + encodeURIComponent(link.face_id) : ""));
+          im.alt = ""; im.width = 20; im.height = 20;
+          im.style.cssText = "width:20px;height:20px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px";
+          el.appendChild(im);
+        }
+        el.appendChild(document.createTextNode("For " + s.name));
+      }
+      var up = $("qk-opt-upload");
+      if (up) up.hidden = !!(s && c.photos && c.photos.length);
+    }
     function qkSay(text, cls) { msg("qk-msg", text || "", cls || ""); }
     function qkStatus(t) { stat("qk-status", t || ""); }
-    function qkAgentSay(text) {
-      var dt = $("qk-dt");
-      if (dt) dt.textContent = text || "";
-    }
 
     function qkSetPhase(phase) {
       qk.phase = phase;
@@ -4601,10 +3177,16 @@
     function qkNextPrompt() {
       qkUpdateBelief();
       var lc = qkLineConfidence();
-      var eligible = QK_QBANK.filter(function (q) {
+      var known = qkKnown();
+      var bank = QK_QBANK.filter(function (q) {
+        if (known.who && (q.targets || []).indexOf("who") >= 0) return false;
+        if (known.coat && (q.targets || []).indexOf("coat") >= 0) return false;
+        return true;
+      });
+      var eligible = bank.filter(function (q) {
         return qk.asked.indexOf(q.text) < 0;
       });
-      if (!eligible.length) eligible = QK_QBANK.slice();
+      if (!eligible.length) eligible = bank.slice();
 
       var scored = eligible.map(function (q) {
         var score = q.w;
@@ -4706,19 +3288,16 @@
         if (qk.lines[k] >= 0.75 && boosts.indexOf(k) < 0) boosts.push(k);
       });
       if (!text && !boosts.length) return;
-      post(API + "/quick/map", {
+      var qkWho = selectedPerson();
+      var qkBody = {
         text: text || ("gift " + (Object.keys(qk.lines).filter(function (k) { return qk.lines[k] >= 0.6; })[0] || "something personal")),
         owner: state.owner,
         boost_lines: boosts
-      }).then(function (d) {
+      };
+      if (qkWho && qkWho.id) qkBody.subject_id = qkWho.id;
+      post(API + "/quick/map", qkBody).then(function (d) {
         if (!d || !d.ok) return;
-        if (d.active_mesh_id) {
-          state.meshId = d.active_mesh_id;
-          var chips = document.querySelectorAll("#qk-mesh-chip,#qk-mesh-chip-results");
-          for (var ci = 0; ci < chips.length; ci++) {
-            chips[ci].textContent = "mesh " + String(d.active_mesh_id).replace("msh_", "").slice(0, 8);
-          }
-        }
+        if (d.active_mesh_id) state.meshId = d.active_mesh_id;
         qk.matches = d.matches || [];
         var prevTop = qk.top && qk.top.id;
         qk.top = d.recommended || qk.matches[0] || null;
@@ -4775,11 +3354,8 @@
       if (sub) sub.textContent = qk.top
         ? ("Overall confidence " + unc + "% · " +
            (qk.top.recommended_coat && qk.top.recommended_coat !== "none" ? qk.top.recommended_coat + " · " : "") +
-           "Pick a path, or talk to bobdod.")
+           "Pick a path.")
         : "Keep rambling later — or browse products now.";
-      qkAgentSay(qk.top
-        ? "Heard enough to lean " + qk.top.label + " at " + conf + ". Paths below."
-        : "Still fuzzy — pick a path or ask bobdod.");
       if (qk.top) {
         msg("qk-opt-msg", "Top match ready — Order this or Upload a photo to personalise it.", "ok");
       }
@@ -4802,11 +3378,11 @@
       qkFlashPrompt("What’s the occasion?");
       qk.asked.push("What’s the occasion?");
       qk.lastPromptText = "What’s the occasion?";
+      if (qkKnown().who) qk.slots.who = 1;
       qkPaintLean(qk.matches);
       var liveTimer = $("qk-live-timer");
       if (liveTimer) liveTimer.textContent = "";
       qkStatus("mic open — no rush");
-      qkAgentSay("Take your time. We’ll only nudge if we’re stuck.");
       qkScheduleMap();
 
       if (qk.promptTimer) clearInterval(qk.promptTimer);
@@ -4831,7 +3407,7 @@
 
       var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
-        qkSay("No voice API — type into bobdod after, or browse products.", "err");
+        qkSay("This browser can’t listen — stop, then type about them instead.", "err");
         return;
       }
       try {
@@ -4924,7 +3500,6 @@
             paintQkPicked();
             qk.top = m;
             if (typeof itemById === "function" && itemById(m.id)) selectQuickProduct(m);
-            qkAgentSay("Shortlisted " + m.label + " — that firms the product.");
             qkMapLive();
           });
           grid.appendChild(t);
@@ -4936,14 +3511,22 @@
       if (qk.ready) return;
       qk.ready = true;
       qkSetPhase("idle");
+      paintQuickPerson();
       get(API + "/products/studio?owner=" + encodeURIComponent(state.owner || "anon"))
         .then(function (d) {
-          if (d && d.ok && d.active_mesh_id) {
-            state.meshId = d.active_mesh_id;
-            var chips = document.querySelectorAll("#qk-mesh-chip,#qk-mesh-chip-results");
-            for (var i = 0; i < chips.length; i++) {
-              chips[i].textContent = "mesh " + String(d.active_mesh_id).replace("msh_", "").slice(0, 8);
-            }
+          if (!d || !d.ok) return;
+          if (d.active_mesh_id) state.meshId = d.active_mesh_id;
+          var byId = {};
+          (d.items || []).forEach(function (it) { byId[it.id] = it; });
+          // "Made last week" captions + gift card amounts read backend prices
+          document.querySelectorAll("#qk-made figure[data-line]").forEach(function (fig) {
+            var it = byId[fig.getAttribute("data-line")], cap = fig.querySelector("figcaption");
+            if (!it || it.status !== "live") { fig.hidden = true; return; }
+            if (cap) cap.textContent = (cap.getAttribute("data-name") || it.label) + " · " + money(it.price_cents);
+          });
+          var gc = byId.gift_card, ga = $("qk-gift-amounts");
+          if (gc && ga && gc.amounts_cents && gc.amounts_cents.length) {
+            ga.textContent = gc.amounts_cents.map(function (c) { return "£" + (c / 100).toFixed(0); }).join(" / ") + " digital";
           }
         }).catch(function () {});
       qkMapLive();
@@ -4987,7 +3570,7 @@
           qty: 1, from: "quick-immersive"
         });
         showTab("products");
-        msg("qk-opt-msg", "From Quick: " + top.label + " — review price, then One-click Shopify.", "ok");
+        msg("qk-opt-msg", "From Quick: " + top.label + " — check the details, then order.", "ok");
       } else if (act === "upload") {
         if (top) {
           setPendingOrder({
@@ -4996,19 +3579,15 @@
             qty: 1, from: "quick-immersive"
           });
         }
-        showTab("studio");
-        msg("as-msg", "Upload the star in Studio — after sculpt we'll bring you back to your product.", "ok");
-      } else if (act === "products") {
-        showTab("products");
+        var whoU = selectedPerson();
+        window.OddHobbRouter.navigate(whoU && whoU.id ? "/studio/people/" + whoU.id : "/studio");
+        msg("as-msg", whoU ? "Add photos of " + whoU.name + " — then open Products to order." : "Add someone, then their photos — then open Products to order.", "ok");
       } else if (act === "gift") {
         setPendingOrder({ line: "gift_card", coat: "none", hat: "none", pattern: "solid", qty: 1, from: "quick-immersive" });
         qk.lines.gift_card = 0.9;
         showTab("products");
         selectProduct("gift_card");
         msg("pr-msg", "Gift card — pick an amount in the detail, then checkout.", "ok");
-      } else if (act === "chat") {
-        qkAgentSay("I’m here. Who’s it for, and what do they love?");
-        var ti = $("qk-ti"); if (ti) ti.focus();
       } else if (act === "again") {
         qkSetPhase("idle");
         qkStartLive();
@@ -5022,12 +3601,8 @@
       qk.text = (qk.text + " " + t).trim();
       qkTi.value = "";
       qkUpdateBelief();
-      qkAgentSay("Noted — “" + t.slice(0, 80) + "”");
+      msg("qk-opt-msg", "Added — updating the matches.", "");
       qkMapLive();
-      if (/gift|voucher/.test(t.toLowerCase())) qkAgentSay("Gift card is a clean finish — or keep describing them.");
-      else if (/photo|upload/.test(t.toLowerCase())) qkAgentSay("Upload tab is ready when you are.");
-      else if (qk.top) qkAgentSay("Front-runner is still " + qk.top.label + ".");
-      else qkAgentSay("Keep going — or hit mic for another minute.");
       if (qk.phase === "results") {
         setTimeout(function () { paintQkHits(qk.matches); paintQkPicked(); }, 400);
       }
@@ -5037,12 +3612,6 @@
       if (e.key === "Enter") { e.preventDefault(); qkChatSend(); }
     });
 
-    var qkShuffle = $("qk-shuffle");
-    if (qkShuffle) qkShuffle.onclick = function () {
-      var p = qkNextPrompt() || { text: "What’s the occasion?" };
-      qkFlashPrompt(p.text);
-      qkSay("Prompt: " + p.text, "");
-    };
 
     // ── videos: vertical swipe feed (scroll-snap + IO) ────
     var vf = { items: [], obs: null, muted: true, active: 0, gen: 0 };
@@ -5285,193 +3854,50 @@
       };
     }
 
-    // ── studio photos gallery (uploads + mesh portraits) ──
-    function loadAssets() { if(peopleStudio) return peopleStudio.refresh(); }
-
-    var metaLoaded = false;
-    function loadStudioMeta() {
-      if (metaLoaded) return; metaLoaded = true;
-      get(API + "/voices").then(function (d) {
-        if (!d.ok) return;
-        renderChips("st-voices", d.voices, "key", "label", state.voice, function (k) { state.voice = k; });
-        renderChips("st-scenes", d.scenes, "key", "label", state.scene, function (k) { state.scene = k; });
-      }).catch(function () { stat("st-status", "voice list unavailable"); });
-      get(API + "/credits?owner=" + encodeURIComponent(state.owner)).then(function (d) {
-        var _sc = $("st-credits");
-        if (d.ok && _sc) _sc.textContent = "Free videos left today: " +
-          d.credits.video.remaining + "/" + d.credits.video.limit +
-          " · watermarked: " + (d.watermark_free ? "yes" : "no");
-      }).catch(function () {});
-    }
-    function renderChips(id, items, valKey, labKey, current, onPick) {
-      var box = $(id); if (!box) return;
-      box.innerHTML = "";
-      items.forEach(function (it) {
-        var b = document.createElement("button");
-        b.type = "button"; b.className = "chip" + (it[valKey] === current ? " on" : "");
-        b.textContent = it[labKey];
-        b.addEventListener("click", function () {
-          state.current = it[valKey];
-          var all = box.querySelectorAll(".chip");
-          for (var i = 0; i < all.length; i++) all[i].classList.remove("on");
-          b.classList.add("on");
-          onPick(it[valKey]);
-        });
-        box.appendChild(b);
-      });
-    }
-
-    var stGo = $("st-go");
-    if (stGo) stGo.addEventListener("click", function () {
-      var topic = ($("st-topic").value || "").trim();
-      if (!topic) { msg("st-msg", "Give me one funny detail — that's the whole joke.", "err"); return; }
-      if (!state.meshId) { msg("st-msg", "Sculpt your pet in the upload tab first.", "err"); return; }
-      stGo.disabled = true;
-      $("st-out").hidden = true;
-      stat("st-status", "writing, voicing, rendering — about 45 seconds…");
-      msg("st-msg", "", "");
-      post(API + "/videos", {
-        owner: state.owner, mesh_id: state.meshId, topic: topic,
-        voice: state.voice, scene: state.scene,
-        pet_name: ($("st-name").value || "").trim() || "your pet"
-      }).then(function (d) {
-        stGo.disabled = false;
-        if (!d.ok) { msg("st-msg", d.error || "Render failed.", "err"); stat("st-status", ""); return; }
-        stat("st-status", "");
-        msg("st-msg", "Free — cost you nothing.", "ok");
-        var url = "/backend" + d.download;
-        var v = $("st-video");
-        v.src = url; $("st-out").hidden = false;
-        $("st-dl").href = url;
-        $("st-meta").textContent = d.video.duration.toFixed(0) + "s · " +
-          (d.video.watermarked ? "free preview" : "no watermark") + " · " + d.video.voice;
-        v.play().catch(function () {});
-        if (d.credits_remaining !== undefined)
-          $("st-credits").textContent = "Free videos left today: " + d.credits_remaining;
-      }).catch(function (e) { stGo.disabled = false; msg("st-msg", "Error: " + e.message, "err"); stat("st-status", ""); });
-    });
-
-    // ── shop tab ────────────────────────────────────────────
-    var EMOJI = { figurine: "🗿", bauble: "🎄", video: "🎬", comedy_show: "🎤",
-                  card: "💌", sticker: "🌟", comedy_set: "🎙️", ar_show: "📱" };
-    var BLURB = {
-      figurine: "Your pet as a printed brick figure",
-      bauble: "Same sculpt, on the tree",
-      video: "A short clip, watermarked",
-      comedy_show: "A set at the comedy club",
-      card: "Printed and posted to the door",
-      sticker: "Peel, stick, repeat",
-      comedy_set: "Written for them, start to finish",
-      ar_show: "Scan it, watch them do the set"
-    };
-    // One registry drives every card: GET /api/catalog (docs/foundation.md).
-    // Inline maps above stay as the pre-paint fallback.
-    window.CATALOG = null;
-    get(API + "/catalog").then(function (d) {
-      if (!d || !d.ok) return;
-      window.CATALOG = d.products;
-      d.products.forEach(function (p) {
-        if (p.emoji) EMOJI[p.id] = p.emoji;
-        if (p.blurb) BLURB[p.id] = p.blurb;
-      });
-    }).catch(function () {});
-    var conceptsLoaded = false;
-    function loadConcepts() {
-      if (conceptsLoaded) return;
-      conceptsLoaded = true;
-      var sel = $("shop-concept");
-      if (!sel) return;
-      get(API + "/concepts").then(function (d) {
-        if (!d.ok) { sel.innerHTML = '<option value="">(catalogue unavailable)</option>'; return; }
-        var byWorld = {};
-        d.items.forEach(function (c) { (byWorld[c.world] = byWorld[c.world] || []).push(c); });
-        var html = '<option value="">no template — plain product card</option>';
-        Object.keys(byWorld).forEach(function (w) {
-          html += '<optgroup label="' + w + '">';
-          byWorld[w].forEach(function (c) {
-            html += '<option value="' + c.id + '">' + c.id + " · " + c.name + '</option>';
-          });
-          html += "</optgroup>";
-        });
-        sel.innerHTML = html;
-        if (state.concept) sel.value = state.concept;
-      }).catch(function () {});
-    }
-
-    function loadShop() {
-      var grid = $("shop-grid");
-      var s0 = $("shop-status"); if (s0) delete s0.dataset.base;
-      loadConcepts();
-      stat("shop-status", "loading…");
-      var q = "?owner=" + encodeURIComponent(state.owner);
-      if (state.concept) q += "&concept=" + encodeURIComponent(state.concept);
-      if (state.subject) q += "&subject=" + encodeURIComponent(state.subject);
-      get(API + "/products" + q)
-        .then(function (d) {
-          if (!d.ok) { stat("shop-status", ""); msg("shop-msg", d.error || "Couldn't reach the shop.", "err"); return; }
-          if (!d.count) {
-            stat("shop-status", ""); grid.innerHTML = "";
-            msg("shop-msg", d.hint || "Nothing yet — sculpt a photo in the spotlight tab first.", "err");
-            return;
-          }
-          state.meshId = d.active_mesh_id;
-          try { localStorage.setItem("pogpet.mesh", d.active_mesh_id); } catch (e) {}
-          stat("shop-status", "spotlight: " + shortName(d.active_mesh_id) + " · " + d.count +
-                " items" + (d.concept ? " · " + d.concept : "") +
-                (d.subject ? " for " + d.subject : "") + " · prices EST");
-          msg("shop-msg", "", "");
-          grid.innerHTML = "";
-          d.items.forEach(function (it) {
-            var el = document.createElement("div");
-            el.className = "card";
-            el.dataset.sec = it.section || "";
-            el.dataset.label = (it.label || "").toLowerCase();
-            el.innerHTML =
-              '<img class="card__shot" src="' + art(it.image) + '" alt="' + it.label + '" loading="lazy">' +
-              '<div class="card__tag">prodigi · ' + it.shape + '</div>' +
-              '<div class="card__name">' + it.label + '</div>' +
-              '<div class="card__note">' + it.sku_note + '</div>' +
-              '<div class="card__price">£' + (it.price_cents / 100).toFixed(2) +
-                ' <small style="font-size:9px;color:var(--muted)">' + it.price_grade + '</small></div>' +
-              '<button class="card__btn" type="button">Add to cart</button>';
-            grid.appendChild(el);
-          });
-          msg("shop-msg", d.note || "", "");
-          // second: the products that come straight off the active mesh
-          return get(API + "/meshes/" + d.active_mesh_id + "/products");
-        })
-        .then(function (m) {
-          if (!m || !m.ok) return;
-          m.products.forEach(function (p) {
-            var el = document.createElement("div");
-            el.className = "card";
-            el.dataset.sec = p.section || "";
-            el.dataset.label = p.product.replace(/_/g, " ").toLowerCase();
-            el.innerHTML =
-              '<div class="card__emoji">' + (EMOJI[p.product] || "\u{1F381}") + '</div>' +
-              '<div class="card__tag">from your mesh</div>' +
-              '<div class="card__name">' + p.product.replace(/_/g, " ") + '</div>' +
-              '<div class="card__desc">' + (BLURB[p.product] || "") + '</div>' +
-              '<div class="card__price">' + (p.price_cents === 0 ? "free" : "$" + (p.price_cents / 100).toFixed(2)) + '</div>' +
-              '<button class="card__btn" type="button">' + (p.status === "active" ? "Add to cart" : p.status) + '</button>';
-            $("shop-grid").appendChild(el);
-          });
-          $("shop-grid").querySelectorAll(".card__btn").forEach(function (b) {
-            if (b.dataset.wired) return;
-            b.dataset.wired = "1";
-            b.addEventListener("click", function () {
-              msg("shop-msg", "Cart isn't wired up yet — that's Stripe, which still needs keys.", "");
-            });
-          });
-          shopLoaded = true;
-          applySection();
-        })
-        .catch(function () { stat("shop-status", ""); msg("shop-msg", "Backend unreachable.", "err"); });
-    }
-
 
     // ── perform: talent show ─────────────────────────────────
-    var perfLoaded = false;
+    var perfLoaded = false, perfActs = [];
+    // Perform inherits the Studio person: name on stage + bit starters from interests.
+    function paintPerformPerson() {
+      var who = selectedPerson();
+      var nameEl = $("pf-name"), nameLab = $("pf-name-label"), forEl = $("pf-for"), st = $("pf-starters");
+      var has = !!(who && who.name);
+      if (nameEl) nameEl.hidden = has;
+      if (nameLab) nameLab.hidden = has;
+      if (forEl) {
+        forEl.hidden = !has;
+        forEl.textContent = has ? "Starring " + who.name + " — the person picked in Studio." : "";
+      }
+      if (st) {
+        st.innerHTML = "";
+        var ints = (has && who.interests) || [];
+        st.hidden = !ints.length;
+        ints.slice(0, 4).forEach(function (t) {
+          var b = document.createElement("button");
+          b.type = "button"; b.className = "chip";
+          b.textContent = who.name + " and " + t;
+          b.onclick = function () { var tp = $("pf-topic"); if (tp) { tp.value = who.name + " and " + t; tp.focus(); } };
+          st.appendChild(b);
+        });
+      }
+    }
+    function performName() {
+      var who = selectedPerson();
+      if (who && who.name) return who.name;
+      var nameEl = $("pf-name");
+      return (nameEl && nameEl.value.trim()) || "your pet";
+    }
+    function selectedAct() {
+      var sel = $("pf-act"); var v = sel ? sel.value : "";
+      return perfActs.filter(function (a) { return a.slug === v; })[0] || null;
+    }
+    function loadPerfCredits() {
+      var cr = $("pf-credits"); if (!cr) return;
+      get(API + "/credits?owner=" + encodeURIComponent(state.owner)).then(function (d) {
+        var v = d && d.ok && d.credits && d.credits.video;
+        cr.textContent = v ? "Free videos left today: " + v.remaining + " of " + v.limit + (d.watermark_free ? "" : " · watermarked") : "";
+      }).catch(function () { cr.textContent = ""; });
+    }
     function loadPerf(force) {
       if (perfLoaded && !force) return;
       perfLoaded = true;
@@ -5494,6 +3920,7 @@
             box.appendChild(b);
           });
         }
+        perfActs = d.acts || [];
         var sel = $("pf-act");
         if (sel) {
           sel.innerHTML = '<option value="">your pet as themselves</option>' +
@@ -5509,8 +3936,8 @@
           sel.addEventListener("change", showPremise);
           showPremise();
         }
-        var cr = $("pf-credits");
-        if (cr) cr.textContent = "Free: 5 videos a day · watermarked · cost you nothing";
+        loadPerfCredits();
+        paintPerformPerson();
       }).catch(function () {
         var st = $("pf-status");
         if (st) st.textContent = "couldn\'t reach the roster";
@@ -5561,9 +3988,10 @@
       if (!topic) { pfRoomMsg("Give me the rough bit first.", "err"); return; }
       pfPremise.disabled = true;
       pfRoomMsg("Writing room is sharpening it…", "");
-      var nameEl = $("pf-name");
+      // persona = the act's own voice/premise (the performer's name stays separate)
+      var act = selectedAct();
       post(API + "/jokes/premise", { owner: state.owner, topic: topic,
-        persona: nameEl && nameEl.value ? nameEl.value.trim() : "" })
+        persona: act ? String(act.name + (act.premise ? " — " + act.premise : "")).slice(0, 60) : "" })
         .then(function (d) {
           pfPremise.disabled = false;
           if (!d.ok) { pfRoomMsg(d.error || "Writing room is down — stage still works.", "err"); return; }
@@ -5604,12 +4032,12 @@
       var out = $("pf-out"); if (out) out.hidden = true;
       stat("pf-status", "writing, voicing, rendering — about 45 seconds…");
       msg("pf-msg", "", "");
-      var actEl = $("pf-act"), nameEl = $("pf-name");
+      var actEl = $("pf-act");
+      // no voice sent: the backend uses the act's own voice (falls back to its default)
       post(API + "/videos", {
         owner: state.owner, mesh_id: state.meshId, topic: topic,
         talent: state.talent, act: actEl ? actEl.value : "",
-        pet_name: nameEl && nameEl.value ? nameEl.value.trim() : "your pet",
-        voice: "ryan"
+        pet_name: performName()
       }).then(function (d) {
         pfGo.disabled = false;
         if (!d.ok) { msg("pf-msg", d.error || "Render failed.", "err"); stat("pf-status", ""); return; }
@@ -5625,26 +4053,12 @@
         if (meta) meta.textContent = (d.video.talent || "comedy") + " · " +
           d.video.duration.toFixed(0) + "s · " + d.video.voice;
         v.play().catch(function () {});
-        var cr = $("pf-credits");
-        if (cr && d.credits_remaining !== undefined)
-          cr.textContent = "Free videos left today: " + d.credits_remaining;
+        loadPerfCredits();
       }).catch(function (e) {
         pfGo.disabled = false;
         msg("pf-msg", "Error: " + e.message, "err");
         stat("pf-status", "");
       });
-    });
-
-    // ── shop: template + subject controls ───────────────────
-    var applyBtn = $("shop-apply");
-    if (applyBtn) applyBtn.addEventListener("click", function () {
-      var sel = $("shop-concept"), sub = $("shop-subject");
-      state.concept = sel ? sel.value : "";
-      state.subject = sub ? (sub.value || "").trim() : "";
-      loadShop();
-    });
-    if ($("shop-subject")) $("shop-subject").addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && applyBtn) applyBtn.click();
     });
 
     var cardSession = null, cardSessionOwner = "";
@@ -5667,6 +4081,10 @@
 
       tab: function (name) { showTab(name); },
       ready: cardReady,
+      // Cards inherit the signed-in owner's people + active star (GET /studio/library)
+      signedIn: function () { return !!state.apiKey; },
+      signIn: function () { window.OddHobbRouter.navigate("/account"); },
+      activeMesh: function () { return state.meshId || ""; },
       get: function (path) {
         return get(API + path + (path.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner))
           .then(function (d) { if (!d.ok) throw new Error(d.error || "Request failed"); return d; });
@@ -5742,7 +4160,14 @@
       get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
       post:function(path,body){body.owner=state.owner;return post(API+path,body).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
       asset:function(path){try{return studioAsset(path);}catch(e){return path;}},
-      loadProducts:loadProducts,search:rankSearch,searchTile:paintSearchTile});
+      loadProducts:loadProducts,search:rankSearch,searchTile:paintSearchTile,
+      personForMesh:function(mid){var p=(mid&&meshPerson(mid))||selectedPerson();return p?p.name:'';}});
+    // Every tab follows the person picked in Studio.
+    document.addEventListener('oddhobb:subject',function(){
+      try{paintQuickPerson();}catch(e){}
+      try{paintPerformPerson();}catch(e){}
+      try{paintMeshChip();if(pr.ready){paintProductGrid();var cur=itemById(pr.sel);if(cur)paintNameOn(cur);}}catch(e){}
+    });
     var duel = window.OddHobbDuel ? window.OddHobbDuel({
       get:function(path){return get(API+path+'?owner='+encodeURIComponent(state.owner)).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});},
       post:function(path,body){body.owner=state.owner;return post(API+path,body).then(function(d){if(!d.ok)throw Error(d.error||'Request failed');return d;});}
@@ -5768,6 +4193,7 @@
       });
       cardReady().then(function(){return peopleStudio.refresh();}).catch(function(e){msg('stv-msg',e.message,'err');});
       try{if(siteShell&&siteShell.refreshBadge)siteShell.refreshBadge();}catch(e){}
+      loadAccount();
       try{if(siteShell&&siteShell.paintAcctName&&state.apiKey&&state.owner&&!/^pog_/.test(state.owner))siteShell.paintAcctName('@'+state.owner);}catch(e){}
     });
 
@@ -5775,7 +4201,6 @@
     // (studio, shop, perform) has a mesh to work with without visiting the
     // spotlight first. state.meshId from localStorage is only a hint.
     // Studio library restores subject and mesh context once the session is ready.
-    if (state.meshId) stat("up-status", "previous sculpt remembered");
   })();
   </script>
 </body>

@@ -1378,6 +1378,10 @@ def start_style():
         owner = h
     if not owner:
         return _err("owner or API key required", 400)
+    if kind != "agent":
+        denied = _owner_denied(owner)
+        if denied:
+            return denied
     try:
         from backend import styles as lib
         return jsonify(lib.install_style(owner, style_id))
@@ -2122,6 +2126,13 @@ def _caller(owner_arg: str = "") -> tuple[str, bool]:
             u = db.get_user_by_api_key(c, key)
         return (u["handle"], True) if u else ("", False)
     return (owner_arg or "anon").strip()[:80], False
+
+
+def _is_admin(handle: str) -> bool:
+    """Internal tools (fit editor, standup demo render). ODDHOBB_ADMIN_HANDLES
+    is a comma list of account handles; unset = any signed-in account."""
+    allow = [h.strip() for h in os.environ.get("ODDHOBB_ADMIN_HANDLES", "").split(",") if h.strip()]
+    return bool(handle) and (not allow or handle in allow)
 
 
 # ── accounts ────────────────────────────────────────────────────────
@@ -3331,11 +3342,20 @@ def standup_render():
     import time as _t
 
     body = request.get_json(silent=True) or {}
-    name = (body.get("name") or "Buster").strip()[:40]
+    handle, authed = _caller(body.get("owner", ""))
+    if not authed:
+        return _err("API key required — X-API-Key or Authorization: Bearer", 401)
+    if not _is_admin(handle):
+        return _err("admin only", 403)
+    name = (body.get("name") or "").strip()[:40]
     voice = (body.get("voice") or "ryan").strip()[:20]
     script = (body.get("script") or "").strip()[:2000]
     if not script:
         return _err("script is required", 400)
+    if not name:
+        return _err("name is required", 400)
+    with db.connect() as c:
+        mesh_id = (db.get_profile(c, handle).get("active_mesh_id") or "")
     script_path = config.ROOT / "scripts" / "pose_lipsync.py"
     if not script_path.exists():
         return _err("pose_lipsync.py missing", 500)
@@ -3364,7 +3384,7 @@ def standup_render():
             """INSERT INTO videos (id,owner,mesh_id,scene,talent,voice,pet_name,topic,
                  script,lines,watermarked,duration,bytes,path,created_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (vid, "demo", "msh_70edae28a4304f4cb7e9", "comedy_show", "comedy",
+            (vid, handle, mesh_id, "comedy_show", "comedy",
              voice, name, "stand-up set", script[:500], "[]", 0, dur,
              out_mp4.stat().st_size, str(out_mp4), _t.time()),
         )
@@ -4020,10 +4040,27 @@ def quick_map():
     boosts = [str(b).strip().lower() for b in boosts if str(b).strip()][:12]
     if not text:
         return _err("text is required — ramble something first", 400)
+    sid = str(body.get("subject_id") or "").strip()[:80]
+    extra = ""
     with db.connect() as c:
         prof = db.get_profile(c, owner)
         active = prof.get("active_mesh_id") or ""
-    q = text.lower()
+        if sid:
+            # selected Studio person: their kind, relationship and interests
+            # steer scoring (never echoed back, never required)
+            try:
+                srow = c.execute("SELECT * FROM studio_subjects WHERE id=? AND owner=?",
+                                 (sid, owner)).fetchone()
+                if srow:
+                    from backend import subjects as _subjects
+                    _subjects.ensure_tables(c)
+                    full = _subjects.profile_for(c, owner, sid)
+                    extra = " ".join([str(srow["kind"] if "kind" in srow.keys() else ""),
+                                      str(full.get("relationship") or "")] +
+                                     [str(i) for i in ((full.get("profile") or {}).get("interests") or [])])
+            except Exception:
+                extra = ""
+    q = (text + " " + extra).strip().lower()
     scored = []
     for lid, spec in config.STUDIO_LINES.items():
         hay = " ".join([
@@ -5453,8 +5490,18 @@ def products_order():
         qty = max(1, min(20, int(body.get("qty") or 1)))
     except (TypeError, ValueError):
         return _err("qty must be 1-20", 400)
+    # anon (public tier) stays open; a named owner must be the caller
+    denied = _owner_denied(owner) if owner != "anon" else None
+    if denied:
+        return denied
     note = (body.get("note") or "")[:200]
     email = (body.get("email") or "").strip()[:120]
+    if not email:
+        # inherit the signed-in account's email so Shopify drafts reach the buyer
+        handle, authed = _caller(owner)
+        if authed:
+            with db.connect() as c:
+                email = ((db.get_user_by_handle(c, handle) or {}).get("email") or "").strip()[:120]
     amount_cents = body.get("amount_cents")
     fulfil = bool(body.get("fulfil") or body.get("shopify"))
     if line not in config.STUDIO_LINES:
@@ -5636,7 +5683,7 @@ def fit_placement_get():
 
 @app.post("/api/fit/placement")
 def fit_placement_save():
-    """Save a hand placement from the fit editor (/fit.html).
+    """Save a hand placement from the fit editor (/admin/fit.html).
 
     Body: {line, part, position:[x,y,z], rotation:[x,y,z] (euler XYZ radians),
            scale:[x,y,z] or number}. Position clamp ±0.5m, scale 0.1–5.
@@ -5645,6 +5692,11 @@ def fit_placement_save():
     """
     import math as _math
     body = request.get_json(silent=True) or {}
+    handle, authed = _caller(body.get("owner", ""))
+    if not authed:
+        return _err("API key required — X-API-Key or Authorization: Bearer", 401)
+    if not _is_admin(handle):
+        return _err("admin only", 403)
     line = str(body.get("line") or "ornament").strip()
     part = str(body.get("part") or "santa").strip()
     if line not in config.STUDIO_LINES:
@@ -5846,8 +5898,17 @@ def products_studio():
                     srow = c.execute(
                         "SELECT * FROM studio_subjects WHERE id=?", (sid,)).fetchone()
                     if srow:
-                        subject = {"name": srow["name"], "interests": [],
-                                   "birthday": "", "kind": srow["kind"] if "kind" in srow.keys() else ""}
+                        from backend import subjects as _subjects
+                        try:
+                            _subjects.ensure_tables(c)
+                            full = _subjects.profile_for(c, owner, sid)
+                        except Exception:
+                            full = {}
+                        subject = {"id": sid, "name": srow["name"],
+                                   "interests": list((full.get("profile") or {}).get("interests") or []),
+                                   "birthday": full.get("birthday", "") or "",
+                                   "relationship": full.get("relationship", "") or "",
+                                   "kind": srow["kind"] if "kind" in srow.keys() else ""}
             except Exception:
                 pass
     suggestion = _suggest_motif(subject.get("interests", [])) if subject else None
@@ -5894,6 +5955,7 @@ def products_studio():
             "amounts_cents": spec.get("amounts_cents"),
             "assets": {"hats": hats, "coats": coats, "patterns": patterns},
             "stills": stills,
+            "text_personalization": config.TEXT_PERSONALIZATION.get(lid),
             "glb_url": (config.STUDIO_BRICK_GLB if lid == "brick"
                         else config.STUDIO_NIBBLE_JIBBIT_GLB if lid in ("clog_charm", "croc_tag") else ""),
             "customization_schema": _custom_schema(lid, spec),
@@ -5968,6 +6030,10 @@ def gift_pack():
     from backend import card_scenes as _scenes
     body = request.get_json(silent=True) or {}
     owner = (body.get("owner") or "anon").strip()[:80]
+    # anon (public tier) stays open; a named owner must be the caller
+    denied = _owner_denied(owner) if owner != "anon" else None
+    if denied:
+        return denied
     try:
         budget = int(body.get("budget_cents") or 0)
     except (TypeError, ValueError):

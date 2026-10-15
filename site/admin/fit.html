@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fit editor — oddhobb</title>
 <style>
@@ -25,6 +26,11 @@
   "three":"https://unpkg.com/three@0.170.0/build/three.module.js",
   "three/addons/":"https://unpkg.com/three@0.170.0/examples/jsm/"
 }}
+</script>
+<script>
+// Internal tool: needs a signed-in OddHobb account (writes are admin-gated server-side).
+(function(){var k='';try{k=localStorage.getItem('pogpet.apikey')||'';}catch(e){}
+window.__ADMIN_KEY=k;if(!k){document.addEventListener('DOMContentLoaded',function(){var b=document.createElement('div');b.setAttribute('role','alert');b.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99;padding:12px 16px;background:#B3261E;color:#fff;font:600 14px Inter,system-ui,sans-serif';b.textContent='Internal tool — sign in on oddhobb.com with an admin account first.';document.body.prepend(b);});}})();
 </script>
 </head>
 <body>
@@ -117,7 +123,7 @@ addEventListener('resize', () => {
 });
 (function loop() { requestAnimationFrame(loop); orbit.update(); renderer.render(scene, camera); })();
 
-const api = (p, o) => fetch(`/backend/api${p}${p.includes('?') ? '&' : '?'}token=${encodeURIComponent(tok)}`, o);
+const api = (p, o) => { o = o || {}; o.headers = Object.assign({}, o.headers || {}, window.__ADMIN_KEY ? { 'X-API-Key': window.__ADMIN_KEY } : {}); return fetch(`/backend/api${p}${p.includes('?') ? '&' : '?'}token=${encodeURIComponent(tok)}`, o); };
 try {
   say('loading meshes…');
   const [bodyG, partG] = await Promise.all([load(BODY[line]), load(PARTS[part])]);

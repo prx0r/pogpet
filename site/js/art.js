@@ -46,7 +46,7 @@
       sheet.scrollIntoView({block: "start"});
     }
     function buy(item, format) {
-      msg.textContent = format === "mp4" ? "Rendering your video…" : "Reserving…";
+      msg.textContent = format === "mp4" ? "Rendering your video…" : "Preparing checkout…";
       var done = function (text) { msg.textContent = text; };
       if (format === "mp4") {
         host.post("/creative/art/mp4", {art_id: item.id}).then(function (d) {
@@ -60,8 +60,13 @@
       }
       host.post("/creative/art/order", {art_id: item.id, format: format, qty: 1}).then(function (d) {
         var o = d.order || {};
-        done("Reserved · " + money(o.price_cents || 0) + " estimate · no payment taken. " +
-          (d.draft_url ? "Checkout: " + d.draft_url : "Order " + (o.id || "")));
+        if (d.draft_url) {
+          var pay = el("a", "Pay " + money(o.price_cents || 0) + " →", "btn");
+          pay.href = d.draft_url; pay.target = "_blank"; pay.rel = "noopener";
+          msg.replaceChildren(document.createTextNode("Ready to pay. "), pay);
+        } else {
+          done("Checkout isn't available for this one right now — nothing was charged.");
+        }
       }).catch(function (e) { done(e.message || String(e)); });
     }
     return {

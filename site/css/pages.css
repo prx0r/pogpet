@@ -535,3 +535,17 @@
   .panel *,.panel *::before,.panel *::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
   .panel .qk-made figure,.panel .ca-example img{transform:none!important}
 }
+
+/* ── Studio person profile (relationship · birthday · interests) ─────────── */
+.panel .studio-profile{background:var(--oh-surface);border:1px solid var(--oh-line);border-radius:var(--oh-r-lg);box-shadow:var(--oh-shadow-xs);padding:16px 18px;margin:14px 0 6px}
+.panel .studio-profile-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.panel .studio-profile-head h3{font-family:var(--oh-display);font-weight:700;letter-spacing:-.02em;font-size:18px;margin:0;color:var(--oh-ink)}
+.panel .studio-profile-summary{margin:6px 0 0;color:var(--oh-muted);font-size:14px;line-height:1.55}
+.studio-profile-fields{display:grid;gap:10px;margin:12px 0}
+.studio-profile-fields label{display:grid;gap:4px;font-size:12.5px;color:var(--oh-muted,#6C655B)}
+.studio-profile-fields input,.studio-profile-fields select{font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--oh-line-2,#DCD3C5);border-radius:var(--oh-r-xs,9px);background:#fff;color:var(--oh-ink,#1B1814)}
+.studio-profile-bd{display:flex;gap:8px}
+.studio-profile-bd select{flex:1}
+.panel .pr-name-on{display:grid;gap:4px;margin:10px 0 0;font-size:12.5px;color:var(--oh-muted)}
+.panel .pr-name-on input{font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--oh-line-2);border-radius:var(--oh-r-xs);max-width:260px;text-transform:uppercase}
+.panel .pf-for,.panel .qk-for{font-size:13px;color:var(--oh-muted);margin:0 0 8px}

@@ -826,13 +826,13 @@
   <script src="/js/api-client.js?v=studio-3"></script>
   <script src="/js/cards-studio.js?v=studio-4"></script>
   <script src="/vendor/page-flip-2.0.7/page-flip.browser.js"></script>
-  <script src="/js/cards-auto.js?v=4"></script>
+  <script src="/js/cards-auto.js?v=5"></script>
   <script src="/js/card-viewer.js?v=cv-1"></script>
 
   <script src="/js/oddy.js"></script>
   <link rel="stylesheet" href="/vendor/swiper/swiper-bundle.min.css">
   <link rel="stylesheet" href="/css/site-shell.css?v=studio-3">
-  <link rel="stylesheet" href="/css/pages.css?v=1">
+  <link rel="stylesheet" href="/css/pages.css?v=2">
   <script src="/vendor/swiper/swiper-bundle.min.js"></script>
   <script src="/js/site-router.js?v=studio-3"></script>
   <script src="/js/duel.js?v=1"></script>
@@ -5669,6 +5669,10 @@
 
       tab: function (name) { showTab(name); },
       ready: cardReady,
+      // Cards inherit the signed-in owner's people + active star (GET /studio/library)
+      signedIn: function () { return !!state.apiKey; },
+      signIn: function () { window.OddHobbRouter.navigate("/account"); },
+      activeMesh: function () { return state.meshId || ""; },
       get: function (path) {
         return get(API + path + (path.indexOf("?") >= 0 ? "&" : "?") + "owner=" + encodeURIComponent(state.owner))
           .then(function (d) { if (!d.ok) throw new Error(d.error || "Request failed"); return d; });

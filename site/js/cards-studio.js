@@ -21,7 +21,7 @@
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   window.OddHobbCards = function (host) {
     var state = { photos: [], selected: [], slots: {}, templates: [], formats: {}, fonts: {}, template: 'portrait', format: '5x7', headlineFont: 'fraunces', insideFont: 'inter', id: '', revision: 0, cropTarget: '', dirty: 0, chain: Promise.resolve(), ready: null };
-    var cardPrice='£7.99';
+    var cardPrice='';
     var library = el('div', undefined, 'oc-library');
     var panel = document.querySelector('#panel-cards .panel__inner');
     var studio = document.querySelector('#panel-studio .panel__inner');
@@ -84,12 +84,12 @@
     var save=button('Save & preview',function(){savePreview().catch(error);});
     var exportBtn=button('Download print PDF',function(){produce('export').catch(error);});
     var motionBtn=button('Bring this card to life',function(){produce('motion').catch(error);});
-    var orderBtn=button('Add to basket · '+cardPrice,buy);
+    var orderBtn=button(cardPrice?'Add to basket · '+cardPrice:'Add to basket',buy);
     var actions=el('div',undefined,'oc-toolbar');actions.append(save,exportBtn,motionBtn,button('View matching video',async function(){try{var x=await savePreview();await videos(x.id);var item=sceneGrid.querySelector('[data-scene-id="'+x.id+'"]');if(item&&item.scrollIntoView)item.scrollIntoView({block:'start'});}catch(e){error(e);}}),orderBtn,button('New card',newCard));
     // Editor is tinkerer tools: collapsed by default, gallery + scenes lead.
     var tinkerer=el('details',undefined,'oc-tinkerer');
     var tinkererSummary=el('summary','Tinkerer tools (forms)');
-    tinkerer.append(tinkererSummary,header,cardsLibrary,library,choices,sceneNote,form,crop,previews,quality,status,actions,video,downloads,el('p','Fixed '+cardPrice+' per card (5×7, envelope included). Buy takes you to Shopify checkout; Prodigi prints after payment.','panel__fine'));
+    tinkerer.append(tinkererSummary,header,cardsLibrary,library,choices,sceneNote,form,crop,previews,quality,status,actions,video,downloads,el('p','One fixed price per card (5×7, envelope included). Buy takes you to checkout; printing starts after payment.','panel__fine'));
     if(panel) panel.append(tinkerer);
     var timer,image,canvasRect,drag;
     function error(e){status.textContent=e.message||String(e);}

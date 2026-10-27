@@ -11,7 +11,7 @@
     ['g-signin','g-who'].forEach(function(id){var n=document.getElementById(id);if(n)inner.append(n);});
     var pwWrap=node('div',undefined,'oc-password'),pwH=node('input'),pwP=node('input'),pwMsg=node('p','','panel__msg'),pwIn=node('button','Sign in','oc-button'),pwUp=node('button','Create account','oc-button');
     pwWrap.className='oc-password';
-    pwH.type='text';pwH.placeholder='handle (e.g. chris)';pwH.autocomplete='username';pwH.style.marginRight='6px';
+    pwH.type='text';pwH.placeholder='handle';pwH.autocomplete='username';pwH.style.marginRight='6px';
     pwP.type='password';pwP.placeholder='password (8+ chars)';pwP.autocomplete='current-password';pwP.style.marginRight='6px';
     pwIn.type='button';pwUp.type='button';pwUp.style.marginLeft='6px';
     function pwAuth(mode){
@@ -46,6 +46,14 @@
       }catch(e){body.append(node('p',e.message));}
     }
     var cartGeneration=0;
+    // One Shopify cart per browser: add lines to it; only create when none exists (or it expired).
+    async function addToCart(did,rev){
+      var cid=null;try{cid=localStorage.getItem('oddhobb.cartId');}catch(e){cid=null;}
+      if(cid){try{return await host.post('/cart/lines',{cart_id:cid,action:'add',design_id:did,revision:rev,qty:1});}catch(e){cid=null;}}
+      var c=await host.post('/cart/create',{design_id:did,revision:rev,qty:1});
+      try{localStorage.setItem('oddhobb.cartId',((c.cart||{}).id)||'');}catch(e){}
+      return c;
+    }
     var acctGeneration=0;
     async function refreshBadge(){
       try{
@@ -147,7 +155,7 @@
             var vr=viewsRow(d.views||[]);if(vr)row.append(vr);
             else if(d.preview){var dim=node('img');dim.alt=d.label;dim.loading='lazy';dim.src=host.asset(d.preview);dim.onerror=function(){dim.remove();};row.append(dim);}
             row.append(node('h2',d.label),node('p','Draft · revision '+d.revision));
-            if(d.export_ready){var b=node('button','Add to basket','oc-button');b.type='button';b.onclick=function(){b.disabled=true;host.post('/cart/create',{design_id:d.design_id,revision:d.revision,qty:1}).then(function(c){try{localStorage.setItem('oddhobb.cartId',((c.cart||{}).id)||'');}catch(e){}cart();}).catch(function(e){b.disabled=false;body.append(node('p',e.message));});};row.append(b);}
+            if(d.export_ready){var b=node('button','Add to basket','oc-button');b.type='button';b.onclick=function(){b.disabled=true;addToCart(d.design_id,d.revision).then(function(){cart();}).catch(function(e){b.disabled=false;body.append(node('p',e.message));});};row.append(b);}
             else row.append(link('Finish in studio','/cards/'+d.design_id));
             body.append(row);
           });
@@ -170,7 +178,9 @@
         body.replaceChildren(node('h1','Your account'));
         if(me&&me.handle){
           body.append(node('p','Signed in as @'+me.handle+(me.display_name?' ('+me.display_name+')':'')));
-          if(me.active_mesh_id)body.append(node('p','Active star: '+me.active_mesh_id));
+          if(me.email)body.append(node('p','Email: '+me.email));
+          var who=host.personForMesh?host.personForMesh(me.active_mesh_id):null;
+          if(who)body.append(node('p','Making things for: '+who));
           try{
             var basket=await host.get('/studio/basket');
             var n=0;basket.items.forEach(function(it){n+=Math.max(1,parseInt(it.qty||1,10)||1);});

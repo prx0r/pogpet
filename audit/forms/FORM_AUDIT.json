@@ -1,0 +1,1482 @@
+{
+  "repo": "prx0r/pogpet",
+  "commit": "71a4f0a (site-beauty, 'Update site/rehearse.html')",
+  "generated_utc": "2026-10-15T13:55Z",
+  "method": "Static trace of site/index.html + site/js/* + other pages against backend/server.py, studio_library.py, cards.py, cardgen_api.py, mcp_server.py. Live API unreachable; no writes performed.",
+  "live_api": {
+    "status": "DOWN — judged from code only",
+    "checks": [
+      {
+        "utc": "2026-10-15T13:39:37Z",
+        "via": "sandbox curl (browser UA)",
+        "target": "https://oddhobb.com/ and /backend/api/sections, /me",
+        "result": "HTTP 502 'Bad Gateway' (12-byte text/plain) returned by the sandbox egress proxy at the CONNECT stage; no Cf-Ray header. This is the sandbox proxy refusing/failing the tunnel, NOT a Cloudflare 502 from the origin."
+      },
+      {
+        "utc": "2026-10-15T13:40Z-13:46Z",
+        "via": "Hark browser (real Chrome)",
+        "target": "homepage + 33 /backend/api GETs (18 public, 15 with owner+api_key)",
+        "result": "ERR_EMPTY_RESPONSE on every URL incl. homepage (retried once). No Cloudflare error page, no Ray ID, no status code, no JSON. Origin/tunnel accepted the connection and sent nothing."
+      },
+      {
+        "utc": "2026-10-15T13:41Z",
+        "via": "web_fetch",
+        "target": "/, /backend/api/sections, /backend/api/catalog",
+        "result": "upstream_failure (page extraction failed)"
+      }
+    ],
+    "not_tested_by_rule": [
+      "POST /products/order",
+      "POST /meshes",
+      "POST /meshes/style (install_style)",
+      "POST /videos",
+      "POST /standup/render",
+      "POST /creative/art/order|mp4",
+      "POST /cart/*",
+      "POST /gift-packs",
+      "any card render/export"
+    ]
+  },
+  "verdict_totals": {
+    "BROKEN": 15,
+    "DEAD": 25,
+    "KEEP": 42,
+    "INHERIT": 15,
+    "MOVE": 12
+  },
+  "per_page_counts": {
+    "index.html · global chrome": {
+      "KEEP": 1,
+      "INHERIT": 0,
+      "DEAD": 5,
+      "BROKEN": 4,
+      "MOVE": 0
+    },
+    "index.html · Quick (/)": {
+      "KEEP": 9,
+      "INHERIT": 4,
+      "DEAD": 3,
+      "BROKEN": 0,
+      "MOVE": 0
+    },
+    "index.html · Studio (/studio, /studio/people/<sid>)": {
+      "KEEP": 8,
+      "INHERIT": 1,
+      "DEAD": 1,
+      "BROKEN": 1,
+      "MOVE": 2
+    },
+    "index.html · Products (/products)": {
+      "KEEP": 4,
+      "INHERIT": 4,
+      "DEAD": 4,
+      "BROKEN": 2,
+      "MOVE": 3
+    },
+    "index.html · Cards (/cards) — being reworked by another agent": {
+      "KEEP": 3,
+      "INHERIT": 1,
+      "DEAD": 2,
+      "BROKEN": 0,
+      "MOVE": 1
+    },
+    "index.html · Videos (/videos)": {
+      "KEEP": 5,
+      "INHERIT": 0,
+      "DEAD": 1,
+      "BROKEN": 0,
+      "MOVE": 1
+    },
+    "index.html · Perform (/perform)": {
+      "KEEP": 5,
+      "INHERIT": 2,
+      "DEAD": 0,
+      "BROKEN": 2,
+      "MOVE": 0
+    },
+    "index.html · Funnier (/funnier)": {
+      "KEEP": 1,
+      "INHERIT": 0,
+      "DEAD": 0,
+      "BROKEN": 0,
+      "MOVE": 0
+    },
+    "index.html · Art (/art)": {
+      "KEEP": 2,
+      "INHERIT": 0,
+      "DEAD": 0,
+      "BROKEN": 1,
+      "MOVE": 0
+    },
+    "index.html · Cart (/cart)": {
+      "KEEP": 2,
+      "INHERIT": 0,
+      "DEAD": 0,
+      "BROKEN": 3,
+      "MOVE": 0
+    },
+    "index.html · Account (/account + account dialog)": {
+      "KEEP": 1,
+      "INHERIT": 3,
+      "DEAD": 0,
+      "BROKEN": 0,
+      "MOVE": 0
+    },
+    "index.html · Search (/search?q=)": {
+      "KEEP": 0,
+      "INHERIT": 0,
+      "DEAD": 1,
+      "BROKEN": 0,
+      "MOVE": 0
+    },
+    "index.html · ORPHAN panels (unreachable: router maps /upload→/studio, /shop→/products)": {
+      "KEEP": 0,
+      "INHERIT": 0,
+      "DEAD": 4,
+      "BROKEN": 0,
+      "MOVE": 0
+    },
+    "products.html": {
+      "KEEP": 1,
+      "INHERIT": 0,
+      "DEAD": 0,
+      "BROKEN": 2,
+      "MOVE": 1
+    },
+    "fit.html": {
+      "KEEP": 0,
+      "INHERIT": 0,
+      "DEAD": 0,
+      "BROKEN": 0,
+      "MOVE": 1
+    },
+    "quick.html": {
+      "KEEP": 0,
+      "INHERIT": 0,
+      "DEAD": 1,
+      "BROKEN": 0,
+      "MOVE": 0
+    },
+    "stage.html": {
+      "KEEP": 0,
+      "INHERIT": 0,
+      "DEAD": 1,
+      "BROKEN": 0,
+      "MOVE": 1
+    },
+    "rehearse.html": {
+      "KEEP": 0,
+      "INHERIT": 0,
+      "DEAD": 0,
+      "BROKEN": 0,
+      "MOVE": 1
+    },
+    "admin.html / admin/index.html": {
+      "KEEP": 0,
+      "INHERIT": 0,
+      "DEAD": 1,
+      "BROKEN": 0,
+      "MOVE": 1
+    },
+    "site/js (unloaded files)": {
+      "KEEP": 0,
+      "INHERIT": 0,
+      "DEAD": 1,
+      "BROKEN": 0,
+      "MOVE": 0
+    }
+  },
+  "controls": [
+    {
+      "page": "index.html · global chrome",
+      "element": "#greet-cta",
+      "label": "Start with someone →",
+      "js_does": "Hides greeting, focuses #ti (legacy chat input, hidden under every panel), dispatches 'pog:enter' (no listener anywhere).",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Code: works as a close button only; promised 'say who it's for' step never happens.",
+      "verdict": "BROKEN",
+      "fix": "Route to /studio + open Add-family when /studio/library has 0 subjects; otherwise go to Quick with the selected subject pre-attached. Drop the #ti focus and dead 'pog:enter' event."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": ".greet__sub / .greet__steps copy",
+      "label": "greeting copy",
+      "js_does": "Static copy names a real family member and 'Dad' as examples.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Static",
+      "verdict": "BROKEN",
+      "fix": "Replace with generic examples; better: render the visitor's own saved people (names + faces) from /studio/library when signed in."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": "a[href=/privacy]",
+      "label": "Privacy link",
+      "js_does": "Router has no /privacy route; no privacy page in repo -> 'Page not found' panel.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Code: 404/notfound (cannot verify bridge-served page while live is down)",
+      "verdict": "BROKEN",
+      "fix": "Add site/privacy.html (and a router passthrough) or link to the hosted policy."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": "#g-signin",
+      "label": "Continue with Google",
+      "js_does": "hidden attr never removed; moved into account dialog. Click probes /auth/google/start (501 if no GOOGLE_CLIENT_ID).",
+      "api": "GET /api/auth/google/start ?return_to,claim_owner,owner_sig",
+      "backend_param_use": "server.py google_start uses claim_owner, return_to",
+      "working": "Hidden; backend returns 501 unless OAuth creds set",
+      "verdict": "DEAD",
+      "fix": "Delete until OAuth creds exist (or unhide behind /api/auth config flag). Keep handle+password path."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": "#acct-btn / #acct-name",
+      "label": "👤 sign in",
+      "js_does": "Opens account <dialog> (site-shell). Name painted '@handle' only when apiKey present.",
+      "api": "GET /api/accounts/me (on /account)",
+      "backend_param_use": "uses X-API-Key; returns handle, display_name, email, active_mesh_id",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "Paint display_name (not raw handle) once /accounts/me returns it."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": "#cart-btn / #cart-n",
+      "label": "🛒 count",
+      "js_does": "refreshBadge() counts only /studio/basket reservations; cart page later sets badge = Shopify lines + reservations -> badge disagrees until /cart is opened.",
+      "api": "GET /api/studio/basket",
+      "backend_param_use": "studio_library.basket (orders pending_checkout + drafts)",
+      "working": "Code: inconsistent count",
+      "verdict": "BROKEN",
+      "fix": "One badge source: add Shopify cart line count (GET /cart?id=oddhobb.cartId) in refreshBadge, or have /studio/basket return the Shopify cart count."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": "#brand-btn / #switcher",
+      "label": "Switch world",
+      "js_does": "Toggles a menu with one entry ('oddhobb.com — you are here').",
+      "api": "none (GET /api/brand repaints it)",
+      "backend_param_use": "server /api/brand",
+      "working": "Works, but nothing to switch to",
+      "verdict": "DEAD",
+      "fix": "Make the logo a plain link to / until a second storefront exists."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": "#qsearch (+ #search-drop, #search-grid)",
+      "label": "search box",
+      "js_does": "Input element no longer exists; wireTopbar() no-ops, the live search drop (rankSearch/paintSearchTile, ~200 lines) can never open. /search?q= panel only reachable by typing a URL.",
+      "api": "GET /api/cards/templates (to build card rows)",
+      "backend_param_use": "n/a",
+      "working": "Code: unreachable",
+      "verdict": "DEAD",
+      "fix": "Either restore a visible search input that navigates to /search?q=, or delete the drop + synonyms code. Card rows hardcode price_cents 799 (backend card truth is £2.99) — read cards.public_price instead."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": "#catstrip / secchip section chips",
+      "label": "All · Board games · Gifts · Cards · My oddhobbs",
+      "js_does": "Strip element missing; GET /api/sections still fired on every load to paint nothing (section_of is used only to tag product tiles).",
+      "api": "GET /api/sections",
+      "backend_param_use": "server /api/sections",
+      "working": "Code: request wasted, UI absent",
+      "verdict": "DEAD",
+      "fix": "Drop the strip code; keep /products?section= filtering (fold SECTION_OF into /api/products/studio items)."
+    },
+    {
+      "page": "index.html · global chrome",
+      "element": "#ti, #mic, #send (+ #concepts-overlay, #products-overlay, honey-badge, satchel, bee-status)",
+      "label": "legacy bobdod chat + 'How should we deliver this?' £6.99/£12.99/£19.99/£29.99",
+      "js_does": "MythicBee-era chat (~490 inline lines). .app sits under fixed full-screen .panel on every route, so it is never visible. Calls /api/ai/cf/@cf/meta/llama… and /api/ai/cf/@cf/openai/whisper (bridge/worker proxy per README, not a backend route) and carries a CF placeholder config {account:'YOUR_ACCOUNT_ID', token:'YOUR_CLOUDFLARE_TOKEN'}.",
+      "api": "fetch /api/ai/cf/* (bridge proxy)",
+      "backend_param_use": "not a backend/server.py route",
+      "working": "Code: invisible on every route",
+      "verdict": "DEAD",
+      "fix": "Delete lines ~1700-2216 of index.html, the overlays and the .app/.dialogue markup. Hardcoded overlay prices disagree with catalog."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-mic-big",
+      "label": "Tap when you're ready (mic)",
+      "js_does": "Starts Web Speech recogniser + 60s session; every few seconds POST /quick/map with live transcript.",
+      "api": "POST /api/quick/map {text, owner, boost_lines}",
+      "backend_param_use": "Uses text, boost_lines; owner only to read active_mesh_id. Ignores saved subjects / relationship / interests / birthday entirely.",
+      "working": "Code: OK (Chrome/Edge only; Safari/Firefox fall back to typing)",
+      "verdict": "KEEP",
+      "fix": "Also send subject_id (studio selection) and have quick_map fold the subject's interests+relationship into scoring (the data already exists in subjects.profile_for)."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-flash prompts (QK_QBANK)",
+      "label": "'Who's it for — pet or person?', 'What's the occasion?', 'Do you know their colouring?'",
+      "js_does": "Floating questions chosen by local belief over 5 hardcoded lines (ornament, keychain, croc_tag, gift_card, brick) — 10 other live lines (keycap, golf_marker, card_rack…) are invisible to the belief engine.",
+      "api": "none (client-side)",
+      "backend_param_use": "n/a",
+      "working": "Code: works, re-asks known facts",
+      "verdict": "INHERIT",
+      "fix": "Skip 'who/pet or person/colouring' when a subject is selected (kind + photos known). Seed qk.lines from /api/products/studio items instead of the 5-line literal."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-stop",
+      "label": "That's enough — show me options",
+      "js_does": "Stops recogniser, builds results.",
+      "api": "POST /api/quick/map (final)",
+      "backend_param_use": "as above",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-how-toggle",
+      "label": "How it works",
+      "js_does": "Expands/collapses the 5-step list.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-mesh-chip, #qk-mesh-chip-results",
+      "label": "mesh —",
+      "js_does": "Shows 'mesh ab12cd34' (raw mesh id) after first map.",
+      "api": "from /quick/map active_mesh_id",
+      "backend_param_use": "n/a",
+      "working": "Code: OK but meaningless to customers",
+      "verdict": "INHERIT",
+      "fix": "Show the selected person's name + face thumb from /studio/library (selection.subject_id) instead of a mesh hash."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-made (Made last week)",
+      "label": "Ornament £15 · Keychain £15 · Brick £20",
+      "js_does": "Static figures + literal prices.",
+      "api": "none",
+      "backend_param_use": "STUDIO_LINES prices currently match (1500/1500/2000)",
+      "working": "OK today, will drift",
+      "verdict": "INHERIT",
+      "fix": "Render from /api/products/studio (price_cents + stills.hero)."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-hits tiles",
+      "label": "Top matches",
+      "js_does": "Server matches -> tiles; click navigates to Products and preselects line+coat+hat.",
+      "api": "POST /api/quick/map",
+      "backend_param_use": "matches[].recommended_* used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-picked chips",
+      "label": "Shortlist",
+      "js_does": "Removes a boosted line; re-maps.",
+      "api": "POST /api/quick/map {boost_lines}",
+      "backend_param_use": "boost_lines +4 score",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": ".qk-opt[data-act=order]",
+      "label": "Order this — 'One-click Shopify on the top match'",
+      "js_does": "Only stores pending pick in localStorage and navigates to Products; no order is created.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Code: works as navigation; label over-promises",
+      "verdict": "KEEP",
+      "fix": "Relabel 'Customise & order' (or actually call the Products order with the inherited subject)."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": ".qk-opt[data-act=upload]",
+      "label": "Upload a photo — 'Personal mesh → every product inherits'",
+      "js_does": "Navigates to /studio and writes a hint into #as-msg. The post-sculpt 'bring you back to your product' resume only exists in the orphan Upload panel poll(), so it never fires from Studio. Sculpting is off by default (FREE_MESH_PER_DAY=0).",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Code: resume path dead",
+      "verdict": "INHERIT",
+      "fix": "Hide when the selected subject already has photos/mesh; otherwise deep-link /studio/people/<sid>. Move takePendingOrder() resume into studio-people after a mesh reaches 'succeeded'."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": ".qk-opt[data-act=products]",
+      "label": "Browse all products",
+      "js_does": "showTab('products') — same as tab rail.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "OK",
+      "verdict": "DEAD",
+      "fix": "Remove (duplicate of the Products tab)."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": ".qk-opt[data-act=gift]",
+      "label": "Gift card £5/£10/£15/£20",
+      "js_does": "Navigates to Products and selects gift_card.",
+      "api": "none",
+      "backend_param_use": "STUDIO_LINES.gift_card.amounts_cents [500,1000,1500,2000] match",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "Read the amounts label from gift_card.amounts_cents."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": ".qk-opt[data-act=chat] + #qk-dt",
+      "label": "Talk to bobdod — 'Agent guides the rest'",
+      "js_does": "Writes canned strings into #qk-dt via regex; no agent/LLM/API behind it.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Code: fake",
+      "verdict": "DEAD",
+      "fix": "Remove the option and the 'bobdod' label (or wire a real agent)."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-ti + #qk-send",
+      "label": "Ask bobdod — or type instead of the mic",
+      "js_does": "Appends typed text to the ramble and re-maps.",
+      "api": "POST /api/quick/map",
+      "backend_param_use": "text used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "Relabel as 'Type instead' — it is the keyboard path for non-Chrome users, not a chat."
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": ".qk-opt[data-act=again]",
+      "label": "Ramble again",
+      "js_does": "Restarts live session.",
+      "api": "/quick/map",
+      "backend_param_use": "—",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Quick (/)",
+      "element": "#qk-shuffle",
+      "label": "Another prompt idea",
+      "js_does": "Changes text of #qk-prompt, which is permanently hidden.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Code: no visible effect",
+      "verdict": "DEAD",
+      "fix": "Delete button (or unhide #qk-prompt)."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "#studio-add-friend dialog: Name + Person/Pet",
+      "label": "Add family",
+      "js_does": "POST /studio/subjects then navigate to the new person.",
+      "api": "POST /api/studio/subjects {name, kind, owner}",
+      "backend_param_use": "Both used (studio_library.subject).",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "Add relationship, birthday (MM-DD) and interests here (POST /api/studio/subjects/<sid>/profile) — today they are only collected inside the Cards form."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "(missing) relationship / birthday / interests editor",
+      "label": "—",
+      "js_does": "No Studio UI to view or edit what the backend already stores per person.",
+      "api": "POST /api/studio/subjects/<sid>/profile {relationship, birthday, interests[]}",
+      "backend_param_use": "studio_library.subject_profile merges all three; read back by /studio/subjects, cardgen_api, family/reminders",
+      "working": "Missing",
+      "verdict": "MOVE",
+      "fix": "Move the Cards 'Who are they to you?' + 'What are they into?' fields into a per-person profile card on /studio/people/<sid>; Cards/Quick/Perform then read it."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "#friends conveyor (swiper)",
+      "label": "Your family",
+      "js_does": "Selecting a person navigates and POSTs selection; backend sets active mesh.",
+      "api": "POST /api/studio/selection {subject_id, mesh_id}",
+      "backend_param_use": "Both used; db.set_active() updates the active star",
+      "working": "Code: OK; edge: empty subject + a mesh -> 400 'mesh not assigned'",
+      "verdict": "KEEP",
+      "fix": "Send mesh_id only when it belongs to the subject (or skip the call when subject is empty)."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "#studio-upload (Add photos, multiple, accepts webp)",
+      "label": "Add photos",
+      "js_does": "Uploads each file then runs in-browser face detection and saves faces.",
+      "api": "POST /api/photos (multipart photo, owner) -> POST /api/studio/photos/<pid> {faces}",
+      "backend_param_use": "photos: owner, source used; intake accepts jpeg/png/webp",
+      "working": "Code: OK",
+      "verdict": "INHERIT",
+      "fix": "When a person is selected, link the upload to them automatically for single-face photos ({subjects:[{subject_id,face_id}]}) instead of dumping everything into 'Review faces'."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "Find faces (button)",
+      "label": "Find faces",
+      "js_does": "Re-runs detection on photos with detection_status=pending.",
+      "api": "POST /api/studio/photos/<pid> {faces}",
+      "backend_param_use": "used",
+      "working": "Code: OK (auto-runs after upload already)",
+      "verdict": "KEEP",
+      "fix": "Show only when pending photos exist."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "Refresh (button)",
+      "label": "Refresh",
+      "js_does": "Re-reads /studio/library. Copy tells users to 'Refresh to check' mesh progress.",
+      "api": "GET /api/studio/library",
+      "backend_param_use": "used",
+      "working": "Code: OK",
+      "verdict": "DEAD",
+      "fix": "Replace with automatic polling while any mesh is queued/running; remove the button."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": ".studio-filters (All/Portraits/Together/Activities/Favourites/Review faces)",
+      "label": "photo filters",
+      "js_does": "Client-side filters over library data. 'Activities' only matches manual 'activity' tags.",
+      "api": "none",
+      "backend_param_use": "uses photo.tags/faces/favourite from library",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "Auto-tag (photo_labels.py exists server-side) so 'Activities' isn't empty by default."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "Photo dialog: face selects, 'Also in the photo' checkboxes, Favourite, Tags",
+      "label": "Who's in this photo?",
+      "js_does": "Saves identities/favourite/tags.",
+      "api": "POST /api/studio/photos/<pid> {subjects[], favourite, tags[]}",
+      "backend_param_use": "all used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "Photo dialog: Create character for <name>",
+      "label": "Create character",
+      "js_does": "POST /meshes {photo_id, single:true} then assign to subject.",
+      "api": "POST /api/meshes; POST /api/studio/meshes/<mid>/subject",
+      "backend_param_use": "photo_id, single used; mesh allowance FREE_MESH_PER_DAY defaults 0 (paid Meshy)",
+      "working": "Not tested (paid generation)",
+      "verdict": "KEEP",
+      "fix": "Show allowance/price before the click (GET /api/credits)."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "#stv-prev / #stv-next / #stv-roster / carousel side slots",
+      "label": "mesh carousel",
+      "js_does": "Pick mesh -> rememberMesh -> /studio/selection (becomes active star).",
+      "api": "POST /api/studio/selection",
+      "backend_param_use": "used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "Hide demo slots (canonical dog, brick 1/2) once the owner has any succeeded mesh — they are mixed into every family's carousel today."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "#stv-brick / #stv-brick2",
+      "label": "Use brick figure / Use brick figure 2",
+      "js_does": "POST /meshes/style -> install_style (switches the active mesh).",
+      "api": "POST /api/meshes/style {style, owner}",
+      "backend_param_use": "server.start_style: owner taken from body with NO _owner_denied check (a user key or bridge token can install a style on any owner).",
+      "working": "Not tested (changes active mesh — forbidden)",
+      "verdict": "MOVE",
+      "fix": "Offer 'brick' as a product base option on Products (no account mutation); add _owner_denied(owner) to /api/meshes/style."
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "#studio-unassigned-meshes select",
+      "label": "Whose character is this?",
+      "js_does": "Assigns an orphan mesh to a person.",
+      "api": "POST /api/studio/meshes/<mid>/subject {subject_id}",
+      "backend_param_use": "used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Studio (/studio, /studio/people/<sid>)",
+      "element": "#stv-msg / #as-msg hint from Quick",
+      "label": "status",
+      "js_does": "Quick writes 'after sculpt we'll bring you back' — not true from Studio (see Quick upload).",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Misleading",
+      "verdict": "BROKEN",
+      "fix": "Fix resume or change copy."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-mesh-chip / #pr-d-mesh",
+      "label": "inherits mesh ab12cd34",
+      "js_does": "Shows a mesh hash.",
+      "api": "from GET /api/products/studio active_mesh_id",
+      "backend_param_use": "n/a",
+      "working": "OK",
+      "verdict": "INHERIT",
+      "fix": "Show 'For <name>' + face from /products/studio subject (already returned) instead of the hash."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pack-budget + #pack-go",
+      "label": "Budget £ e.g. 30 → Build my pack",
+      "js_does": "Parses pounds, POST /gift-packs.",
+      "api": "POST /api/gift-packs {owner, budget_cents, mesh_id}",
+      "backend_param_use": "Backend also accepts recipient, occasion, note, line — UI never sends them though the selected subject's relationship/birthday is known. No _owner_denied.",
+      "working": "Not tested (read-like but POST)",
+      "verdict": "INHERIT",
+      "fix": "Send recipient=subject.relationship, occasion from upcoming birthday (/api/family/reminders); keep the budget field."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pack-reserve (dynamic)",
+      "label": "Reserve the physical part",
+      "js_does": "POST /products/order without fulfil -> pending_checkout row with no checkout_url.",
+      "api": "POST /api/products/order {owner,line,mesh_id,qty}",
+      "backend_param_use": "used; no payment path",
+      "working": "Not tested",
+      "verdict": "DEAD",
+      "fix": "Replace with 'Add pack to basket' that creates the Shopify draft (fulfil:true) or a cart line; one checkout path."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-gifts tiles",
+      "label": "For <name> — derived from your family",
+      "js_does": "Gift tiles from /products/studio. Clicking a 'name' gift puts the name into note, not the emboss text field.",
+      "api": "GET /api/products/studio?owner",
+      "backend_param_use": "products_studio falls back to studio_subjects with interests:[] hardcoded — ignores interests/birthday saved via /studio/subjects/<sid>/profile; gift text sent as note (backend 'text' = emboss).",
+      "working": "Code: partially working",
+      "verdict": "INHERIT",
+      "fix": "Backend: read subjects.profile_for() in the fallback. Frontend: send gift text as body.text (validated by _check_text) not note."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-grid tiles",
+      "label": "Customise →",
+      "js_does": "selectProduct(line).",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-coats chips",
+      "label": "jacket — physical winter coat",
+      "js_does": "Sets pr.coat; repaints stills.",
+      "api": "GET /api/studio/stills?line,coat,hat",
+      "backend_param_use": "coat used by stills + order",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-hats chips",
+      "label": "hat",
+      "js_does": "Sets pr.hat.",
+      "api": "GET /api/studio/stills",
+      "backend_param_use": "used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "pattern (no control)",
+      "label": "—",
+      "js_does": "pr.pattern always 'solid'; grid/stills code still builds coat-<c>-<pattern> URLs.",
+      "api": "sent as pattern",
+      "backend_param_use": "backend stores pattern only inside note text",
+      "working": "Unreachable",
+      "verdict": "DEAD",
+      "fix": "Remove pattern branches from the UI code."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-sizes chips",
+      "label": "size chips (label · mm · £price)",
+      "js_does": "Sets pr.size; for non-gift lines the price shown stays line price and pr.size is NOT included in orderPayload().",
+      "api": "— (not sent)",
+      "backend_param_use": "/api/products/order has no size param; price = STUDIO_LINES[line].price_cents * qty",
+      "working": "Code: size choice silently dropped",
+      "verdict": "BROKEN",
+      "fix": "Either send size (add backend support + per-size price) or hide size chips for non-gift lines. gift_card amount_cents path works."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-qty-dec / #pr-qty-inc",
+      "label": "Qty − / +",
+      "js_does": "pr.qty 1-20; price display updates.",
+      "api": "sent as qty",
+      "backend_param_use": "used, clamped 1-20",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-order",
+      "label": "One-click order → Shopify",
+      "js_does": "POST /products/order fulfil:true; shows 'Pay here →' with draft invoice_url.",
+      "api": "POST /api/products/order {owner,line,coat,hat,pattern,note,mesh_id,qty,fulfil:true,email,amount_cents}",
+      "backend_param_use": "All used. email = owner if it contains '@' (handles never do) -> Shopify draft has no customer email. No text/name field though backend supports text (emboss) + slots and MCP has /api/products/personalise {subject_id,name}. No _owner_denied on this route.",
+      "working": "Not tested (creates order/draft)",
+      "verdict": "INHERIT",
+      "fix": "Fill email from /accounts/me.email; add 'Name on it' prefilled from subject name -> body.text; add _owner_denied(owner) server-side."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-order-reserve",
+      "label": "Reserve only",
+      "js_does": "Same POST with fulfil:false -> reservation with no checkout_url; basket then shows it with no Pay/remove action.",
+      "api": "POST /api/products/order",
+      "backend_param_use": "used",
+      "working": "Not tested",
+      "verdict": "DEAD",
+      "fix": "Remove; one order path (draft with invoice) only."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-fit",
+      "label": "Fine-tune hat fit",
+      "js_does": "Opens /fit.html?line&part in new tab.",
+      "api": "→ fit.html POST /api/fit/placement",
+      "backend_param_use": "Placement saved GLOBALLY per line+part (no owner, not on the order).",
+      "working": "Code: customer can overwrite shared seating",
+      "verdict": "MOVE",
+      "fix": "Admin-only tool; remove from the customer detail card."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "details.pr-mcp",
+      "label": "Agent / MCP — no token needed",
+      "js_does": "Developer instructions inside a product card.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Static",
+      "verdict": "MOVE",
+      "fix": "Move to /llms.txt or a footer 'For agents' link."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-prints tiles",
+      "label": "Mug £12.99 · Cushion £29.99 · Poster £14.99 · … (11 tiles)",
+      "js_does": "Hardcoded PRINTS_CATALOG. Click only prints 'order via shop / agent (2D print path)' — no order button anywhere.",
+      "api": "GET /api/quotes/compare?line; GET /api/products/candidates",
+      "backend_param_use": "Backend PRODIGI_PRODUCTS prices differ: mug 1499 vs 1299 shown, poster 1299 vs 1499, jigsaw 1899 vs 1699.",
+      "working": "Code: dead end + stale prices",
+      "verdict": "BROKEN",
+      "fix": "Drive from GET /api/products (Prodigi rows with price_grade) and add a real order/cart action, or hide the shelf."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-print-cands face carousel ◀ ▶",
+      "label": "best face options",
+      "js_does": "Click sets pr.artPhoto — never read by any code.",
+      "api": "GET /api/products/candidates?owner&line",
+      "backend_param_use": "kind,line,n,owner used",
+      "working": "Code: selection discarded",
+      "verdict": "DEAD",
+      "fix": "Delete until the print order path exists; then send photo_id/face_id with the order."
+    },
+    {
+      "page": "index.html · Products (/products)",
+      "element": "#pr-quote text",
+      "label": "Value £x (supplier) · Speed £y …",
+      "js_does": "Quote matrix text exposes supplier names to customers.",
+      "api": "GET /api/quotes/compare?line",
+      "backend_param_use": "line,country",
+      "working": "Code: OK",
+      "verdict": "MOVE",
+      "fix": "Admin/agent only; customers need one price + dispatch date."
+    },
+    {
+      "page": "index.html · Cards (/cards) — being reworked by another agent",
+      "element": "cards-auto: 'Who is it for?' select",
+      "label": "Someone new / saved people",
+      "js_does": "Lists /studio/library subjects; picking one inherits photos, relationship, interests and hides the identity block.",
+      "api": "GET /api/studio/library",
+      "backend_param_use": "used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "Default to the Studio selection instead of 'Someone new'."
+    },
+    {
+      "page": "index.html · Cards (/cards) — being reworked by another agent",
+      "element": "cards-auto: Their name / Person or pet",
+      "label": "new person",
+      "js_does": "POST /studio/subjects.",
+      "api": "POST /api/studio/subjects",
+      "backend_param_use": "used",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "Only when 'Someone new'."
+    },
+    {
+      "page": "index.html · Cards (/cards) — being reworked by another agent",
+      "element": "cards-auto: Who are they to you? / What are they into?",
+      "label": "relationship / interests",
+      "js_does": "Prefilled from library; saved back via /studio/subjects/<sid>/profile.",
+      "api": "POST /api/studio/subjects/<sid>/profile",
+      "backend_param_use": "used",
+      "working": "OK",
+      "verdict": "MOVE",
+      "fix": "Edit in Studio profile; Cards just reads."
+    },
+    {
+      "page": "index.html · Cards (/cards) — being reworked by another agent",
+      "element": "cards-auto: Occasion select",
+      "label": "Birthday (only option)",
+      "js_does": "Single-option select.",
+      "api": "cardgen/make occasion",
+      "backend_param_use": "used",
+      "working": "OK",
+      "verdict": "DEAD",
+      "fix": "Drop the select until there is a second occasion (or drive from /api/family/reminders)."
+    },
+    {
+      "page": "index.html · Cards (/cards) — being reworked by another agent",
+      "element": "cards-auto: Age",
+      "label": "e.g. 70 (optional)",
+      "js_does": "Sent to cardgen.",
+      "api": "POST /api/cardgen/make",
+      "backend_param_use": "used",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "Prefill if birthday year is ever stored (currently MM-DD only)."
+    },
+    {
+      "page": "index.html · Cards (/cards) — being reworked by another agent",
+      "element": "cards-auto: Inside message / signature ('Love, Tom')",
+      "label": "message + sign-off",
+      "js_does": "Apply writes copy to design.",
+      "api": "POST /api/cards/<did>/…",
+      "backend_param_use": "used",
+      "working": "OK",
+      "verdict": "INHERIT",
+      "fix": "Prefill signature from /accounts/me.display_name."
+    },
+    {
+      "page": "index.html · Cards (/cards) — being reworked by another agent",
+      "element": "cards-studio.js cardPrice='£7.99'",
+      "label": "price literal",
+      "js_does": "Legacy studio (loaded only for helpers) paints £7.99 until /cards/templates answers; card-viewer fallback '£2.99'; index search rows 799.",
+      "api": "GET /api/cards/templates product.price",
+      "backend_param_use": "cards.card_price() fixed £2.99",
+      "working": "Stale",
+      "verdict": "DEAD",
+      "fix": "Delete the literal (cards-auto already reads product.price); drop cards-studio.js once helpers are moved."
+    },
+    {
+      "page": "index.html · Videos (/videos)",
+      "element": "#club (comic chips, tap, mute)",
+      "label": "Pogtown Comedy Club",
+      "js_does": "Static club player from /assets/club/manifest.json.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Code: OK (assets not in repo — cannot verify)",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Videos (/videos)",
+      "element": "a[href=/stage.html]",
+      "label": "Open live stage",
+      "js_does": "Links to stage.html (hardcoded demo dog, see stage.html).",
+      "api": "—",
+      "backend_param_use": "—",
+      "working": "Demo only",
+      "verdict": "DEAD",
+      "fix": "Remove link (or rebuild stage on the user's own mesh)."
+    },
+    {
+      "page": "index.html · Videos (/videos)",
+      "element": "a[href=/rehearse.html]",
+      "label": "Rehearse a recorded performance / AR",
+      "js_does": "Links to internal GLB authoring tool.",
+      "api": "—",
+      "backend_param_use": "—",
+      "working": "Internal tool",
+      "verdict": "MOVE",
+      "fix": "Admin/internal nav only."
+    },
+    {
+      "page": "index.html · Videos (/videos)",
+      "element": "#vid-feed slides",
+      "label": "video feed",
+      "js_does": "GET /videos/feed + club manifest; IntersectionObserver autoplay.",
+      "api": "GET /api/videos/feed?limit=12",
+      "backend_param_use": "limit used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Videos (/videos)",
+      "element": "[data-share]",
+      "label": "Share",
+      "js_does": "POST share, copies link.",
+      "api": "POST /api/videos/<vid>/share {}",
+      "backend_param_use": "used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Videos (/videos)",
+      "element": "[data-pog] + window.prompt",
+      "label": "Pog (laugh) → 'What got you?'",
+      "js_does": "POST laugh then native prompt() for why.",
+      "api": "POST /api/pog/laugh {owner,video_id,t_seconds}; POST /api/pog/why {laugh_id,why}",
+      "backend_param_use": "used; /pog/laugh has no owner auth",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "Replace prompt() with inline one-tap reason chips."
+    },
+    {
+      "page": "index.html · Videos (/videos)",
+      "element": ".feed__mute",
+      "label": "🔇/🔊",
+      "js_does": "Toggles mute on all slides.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-talents chips",
+      "label": "talent",
+      "js_does": "Sets state.talent.",
+      "api": "GET /api/acts",
+      "backend_param_use": "talent used (non-comedy -> scene 'stage')",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-act + #pf-premise",
+      "label": "act / persona",
+      "js_does": "Select act; shows premise.",
+      "api": "sent as act",
+      "backend_param_use": "server looks up act voice + premise",
+      "working": "Code: act voice never applies (see #pf-go)",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-topic",
+      "label": "the bit",
+      "js_does": "Required text.",
+      "api": "sent as topic",
+      "backend_param_use": "used",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "Offer 2-3 starters from the selected person's interests/facts."
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-name",
+      "label": "their name (placeholder 'Bender')",
+      "js_does": "Sent as pet_name, default 'your pet'.",
+      "api": "sent as pet_name",
+      "backend_param_use": "used verbatim; backend never derives the name from the mesh's subject",
+      "working": "OK",
+      "verdict": "INHERIT",
+      "fix": "Prefill from the selected subject name (studio selection / /products/studio subject.name); backend default from mesh_subjects -> studio_subjects.name."
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-go",
+      "label": "Take the stage →",
+      "js_does": "POST /videos with voice:'ryan' hardcoded.",
+      "api": "POST /api/videos {owner,mesh_id,topic,talent,act,pet_name,voice:'ryan'}",
+      "backend_param_use": "server: voice = body.voice OR act_voice OR 'ryan' -> because the UI always sends 'ryan', every act's own voice is ignored.",
+      "working": "Not tested (spends a video credit)",
+      "verdict": "BROKEN",
+      "fix": "Omit voice unless the user picks one; add a voice chip row from GET /api/voices."
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-sharpen",
+      "label": "Sharpen my bit (writing room)",
+      "js_does": "Sends the performer NAME as persona.",
+      "api": "POST /api/jokes/premise {owner,topic,persona}",
+      "backend_param_use": "server uses topic + persona (≤60 chars); owner ignored",
+      "working": "Code: works, wrong field",
+      "verdict": "BROKEN",
+      "fix": "Send persona = selected act premise/name; keep pet name separate."
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-riff",
+      "label": "Riff it",
+      "js_does": "Shows riffs.",
+      "api": "POST /api/jokes/riff {owner,line}",
+      "backend_param_use": "line used; owner ignored",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-credits",
+      "label": "Free: 5 videos a day · watermarked",
+      "js_does": "Literal text.",
+      "api": "— (GET /api/credits exists; loadStudioMeta fetches it into missing #st-credits)",
+      "backend_param_use": "credits.video.remaining/limit",
+      "working": "Static",
+      "verdict": "INHERIT",
+      "fix": "Render GET /api/credits?owner result here."
+    },
+    {
+      "page": "index.html · Perform (/perform)",
+      "element": "#pf-history items / #pf-dl",
+      "label": "your performances / Download",
+      "js_does": "GET /videos?owner list; click plays.",
+      "api": "GET /api/videos?owner",
+      "backend_param_use": "owner + auth",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Funnier (/funnier)",
+      "element": "duel 'A/B is funnier' buttons",
+      "label": "vote",
+      "js_does": "Vote then load next pair.",
+      "api": "GET /api/creative/duel; POST /api/creative/duel/vote {a_id,b_id,winner,owner}",
+      "backend_param_use": "all used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Art (/art)",
+      "element": "'Put it on something →'",
+      "label": "open format sheet",
+      "js_does": "Formats + prices from server.",
+      "api": "GET /api/creative/art",
+      "backend_param_use": "formats from backend",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Art (/art)",
+      "element": "format 'Buy £x →'",
+      "label": "Buy",
+      "js_does": "Reservation; draft_url printed as plain text, not a link; not added to the Shopify basket.",
+      "api": "POST /api/creative/art/order {art_id,format,qty,owner}",
+      "backend_param_use": "used, owner-checked",
+      "working": "Not tested",
+      "verdict": "BROKEN",
+      "fix": "Render a Pay link / add to the one basket."
+    },
+    {
+      "page": "index.html · Art (/art)",
+      "element": "'Make it a video →'",
+      "label": "MP4",
+      "js_does": "Renders MP4 and offers download.",
+      "api": "POST /api/creative/art/mp4 {art_id}",
+      "backend_param_use": "backend also takes voice (unused by UI)",
+      "working": "Not tested",
+      "verdict": "KEEP",
+      "fix": "Optional voice chips from /api/voices."
+    },
+    {
+      "page": "index.html · Cart (/cart)",
+      "element": "Shopify line − / + / Remove",
+      "label": "qty / remove",
+      "js_does": "Updates Shopify cart lines.",
+      "api": "POST /api/cart/lines {cart_id,action,line_id,qty}",
+      "backend_param_use": "used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Cart (/cart)",
+      "element": "Checkout · £x",
+      "label": "Shopify checkout",
+      "js_does": "Link to cart.checkoutUrl.",
+      "api": "GET /api/cart?id",
+      "backend_param_use": "used",
+      "working": "Code: OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Cart (/cart)",
+      "element": "Reserved rows (Pay · £x)",
+      "label": "product reservations",
+      "js_does": "Rows from /studio/basket; Pay link only if checkout_url; 'Reserve only' / pack / art reservations have no action and no remove.",
+      "api": "GET /api/studio/basket",
+      "backend_param_use": "used",
+      "working": "Code: dead-end rows",
+      "verdict": "BROKEN",
+      "fix": "Add cancel/remove; stop creating checkout-less reservations (see pr-order-reserve)."
+    },
+    {
+      "page": "index.html · Cart (/cart)",
+      "element": "Saved creations 'Add to basket'",
+      "label": "Add to basket",
+      "js_does": "Always POST /cart/create and overwrite oddhobb.cartId — a second card starts a new cart and orphans the first.",
+      "api": "POST /api/cart/create {design_id,revision,qty}",
+      "backend_param_use": "used",
+      "working": "Code: loses earlier basket",
+      "verdict": "BROKEN",
+      "fix": "If oddhobb.cartId exists use POST /api/cart/lines {action:'add'} (as cards-studio buy() already does)."
+    },
+    {
+      "page": "index.html · Cart (/cart)",
+      "element": "two baskets",
+      "label": "Shopify cart + reservations",
+      "js_does": "Cards go to Shopify cart; 3D products + art go to draft-order reservations with separate Pay links.",
+      "api": "—",
+      "backend_param_use": "—",
+      "working": "Design",
+      "verdict": "BROKEN",
+      "fix": "One basket: put product draft lines into the Shopify cart (or show a single combined checkout)."
+    },
+    {
+      "page": "index.html · Account (/account + account dialog)",
+      "element": "handle + password inputs, Sign in / Create account",
+      "label": "handle (placeholder uses a family first name) / password",
+      "js_does": "POST /accounts(/login) {handle,password,claim_owner}; stores api_key.",
+      "api": "POST /api/accounts | /api/accounts/login",
+      "backend_param_use": "signup also accepts email, display_name, ref — UI never sends them (so later Shopify drafts have no email)",
+      "working": "Not tested (account creation)",
+      "verdict": "INHERIT",
+      "fix": "Collect email (+ optional display name) on Create account; send pogpet.ref as ref; neutral placeholder."
+    },
+    {
+      "page": "index.html · Account (/account + account dialog)",
+      "element": "Account panel: 'Active star: msh_…'",
+      "label": "active star",
+      "js_does": "Prints raw mesh id.",
+      "api": "GET /api/accounts/me",
+      "backend_param_use": "active_mesh_id",
+      "working": "Code: OK",
+      "verdict": "INHERIT",
+      "fix": "Show the selected person's name + face."
+    },
+    {
+      "page": "index.html · Account (/account + account dialog)",
+      "element": "Account panel: Sign out",
+      "label": "Sign out",
+      "js_does": "Clears keys, new pog_ owner, reload.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "index.html · Account (/account + account dialog)",
+      "element": "Account panel: profile fields (missing)",
+      "label": "email / display name / address",
+      "js_does": "No way to see or edit email/display name/default address.",
+      "api": "—",
+      "backend_param_use": "/accounts/me returns email, display_name",
+      "working": "Missing",
+      "verdict": "INHERIT",
+      "fix": "Read-only display first; edit later."
+    },
+    {
+      "page": "index.html · Search (/search?q=)",
+      "element": "search panel",
+      "label": "Results for …",
+      "js_does": "Works only when the URL is typed (no input on the page).",
+      "api": "GET /api/products/studio (via loadProducts)",
+      "backend_param_use": "—",
+      "working": "Code: unreachable from UI",
+      "verdict": "DEAD",
+      "fix": "Restore a search input or drop the route."
+    },
+    {
+      "page": "index.html · ORPHAN panels (unreachable: router maps /upload→/studio, /shop→/products)",
+      "element": "#panel-upload: #drop/#up-input, #up-sculpt, #spin-go, #roster, #people-grid (rename prompt)",
+      "label": "Your star / add someone / Sculpt them / Render 360° spin",
+      "js_does": "Never shown. Contains the ONLY post-sculpt pending-order resume and the people rename/autosort calls.",
+      "api": "POST /api/photos, /api/meshes, /api/me/active, /api/photos/autosort, /api/people/rename; GET /api/meshes/<id>/turntable",
+      "backend_param_use": "routes exist",
+      "working": "Unreachable",
+      "verdict": "DEAD",
+      "fix": "Delete panel + JS; port resume logic to studio-people; turntable could become a Studio button."
+    },
+    {
+      "page": "index.html · ORPHAN panels (unreachable: router maps /upload→/studio, /shop→/products)",
+      "element": "#panel-shop: #hero-q/#hero-go, #shop-concept, #shop-subject 'their name', #shop-apply, 'Add to cart'",
+      "label": "Shop",
+      "js_does": "Never shown. 'Add to cart' says 'Cart isn't wired up yet — that's Stripe'. shop-subject re-asks the name.",
+      "api": "GET /api/products?owner&concept&subject; /api/concepts; /api/meshes/<id>/products",
+      "backend_param_use": "concept, subject used",
+      "working": "Unreachable",
+      "verdict": "DEAD",
+      "fix": "Delete panel + loadShop/loadConcepts (~150 lines)."
+    },
+    {
+      "page": "index.html · ORPHAN panels (unreachable: router maps /upload→/studio, /shop→/products)",
+      "element": "st-* (old Studio video form): st-go, st-topic, st-name, st-voices, st-scenes, st-credits",
+      "label": "—",
+      "js_does": "Markup removed, JS remains; loadStudioMeta() still fires GET /voices + GET /credits on the first Studio open of each page load, into elements that no longer exist.",
+      "api": "GET /api/voices, /api/credits, POST /api/videos",
+      "backend_param_use": "—",
+      "working": "Unreachable",
+      "verdict": "DEAD",
+      "fix": "Delete; reuse /voices + /credits in Perform."
+    },
+    {
+      "page": "index.html · ORPHAN panels (unreachable: router maps /upload→/studio, /shop→/products)",
+      "element": "quick-* / qp-* / funnel-steps (old in-Products quick funnel)",
+      "label": "—",
+      "js_does": "Markup removed, ~150 lines of JS remain.",
+      "api": "POST /api/quick/map",
+      "backend_param_use": "—",
+      "working": "Unreachable",
+      "verdict": "DEAD",
+      "fix": "Delete."
+    },
+    {
+      "page": "products.html",
+      "element": "nav a[href=/learn/]",
+      "label": "Learn",
+      "js_does": "No /learn page in repo.",
+      "api": "—",
+      "backend_param_use": "—",
+      "working": "Code: 404 likely",
+      "verdict": "BROKEN",
+      "fix": "Remove link."
+    },
+    {
+      "page": "products.html",
+      "element": "a[href=/api/etsy/listings] (×2)",
+      "label": "Listing JSON",
+      "js_does": "Relative /api/… (not /backend/api) — not a site route.",
+      "api": "should be /backend/api/etsy/listings",
+      "backend_param_use": "route exists under /backend",
+      "working": "Code: wrong path",
+      "verdict": "BROKEN",
+      "fix": "Fix path — or better move with the pack (below)."
+    },
+    {
+      "page": "products.html",
+      "element": "Etsy listing pack zip, GLB downloads (dog, brick 1, brick 2), '0 Meshy credits' copy",
+      "label": "ops downloads",
+      "js_does": "Internal seller/ops material on a customer page.",
+      "api": "static",
+      "backend_param_use": "—",
+      "working": "Static",
+      "verdict": "MOVE",
+      "fix": "Move to admin; keep the 'what arrives' photos for customers."
+    },
+    {
+      "page": "products.html",
+      "element": "Load 3D model (model-viewer poster button), lightbox thumbs",
+      "label": "3D/photo viewers",
+      "js_does": "Local.",
+      "api": "static",
+      "backend_param_use": "—",
+      "working": "OK",
+      "verdict": "KEEP",
+      "fix": "—"
+    },
+    {
+      "page": "fit.html",
+      "element": "#m-t, #m-r, #m-s, #reset, #save",
+      "label": "Move/Rotate/Resize/Reset/Save placement",
+      "js_does": "Saves hat transform.",
+      "api": "GET/POST /api/fit/placement {line,part,position,rotation,scale}",
+      "backend_param_use": "used; saved to a global file per line+part — no owner, never attached to an order",
+      "working": "Not tested (write)",
+      "verdict": "MOVE",
+      "fix": "Gate behind admin token; customers should not edit shared fit."
+    },
+    {
+      "page": "quick.html",
+      "element": "meta refresh → /#quick + link",
+      "label": "'Quick lives in the shop now — open Products → Quick'",
+      "js_does": "Redirect works via hash routing; copy is stale (Quick is the home tab).",
+      "api": "—",
+      "backend_param_use": "—",
+      "working": "OK",
+      "verdict": "DEAD",
+      "fix": "Replace with a server 301 to / and delete the file."
+    },
+    {
+      "page": "stage.html",
+      "element": "#lines, #name ('Buster'), #voice (4 hardcoded voices), #render",
+      "label": "Edit your set / Render shareable video",
+      "js_does": "POST /standup/render with token only; plays hardcoded vid_p0standup001.",
+      "api": "POST /api/standup/render {name, voice, script}",
+      "backend_param_use": "No auth; owner hardcoded 'demo', mesh hardcoded; runs synchronously up to 900 s (well past a typical ~100 s proxy timeout).",
+      "working": "Not tested (CPU render)",
+      "verdict": "MOVE",
+      "fix": "Internal demo: move to admin or rebuild on the user's mesh as an async job (name from subject, voices from /api/voices)."
+    },
+    {
+      "page": "stage.html",
+      "element": "#play, #unmute, #dl",
+      "label": "Play clip / Sound on / Download",
+      "js_does": "Plays the demo clip.",
+      "api": "GET /api/videos/vid_p0standup001/file",
+      "backend_param_use": "—",
+      "working": "Demo",
+      "verdict": "DEAD",
+      "fix": "Goes with the page."
+    },
+    {
+      "page": "rehearse.html",
+      "element": "#motion-file, #motion-clip, #motion-time, #motion-play, #motion-poster, AR button",
+      "label": "Motion rehearsal (local GLB)",
+      "js_does": "Local-only authoring preview; asks for a rigged GLB.",
+      "api": "none",
+      "backend_param_use": "n/a",
+      "working": "Code: OK",
+      "verdict": "MOVE",
+      "fix": "Internal tool — remove from customer Videos tab."
+    },
+    {
+      "page": "admin.html / admin/index.html",
+      "element": "admin.html (review dash)",
+      "label": "Review dash",
+      "js_does": "Public, noindex, 'not linked anywhere' internal QA images.",
+      "api": "static",
+      "backend_param_use": "—",
+      "working": "Public",
+      "verdict": "MOVE",
+      "fix": "Put behind auth or remove from site/."
+    },
+    {
+      "page": "admin.html / admin/index.html",
+      "element": "admin/index.html (MythicBee Admin) + js/orders.js",
+      "label": "MythicBee Admin",
+      "js_does": "Legacy admin from another brand.",
+      "api": "—",
+      "backend_param_use": "—",
+      "working": "Legacy",
+      "verdict": "DEAD",
+      "fix": "Delete."
+    },
+    {
+      "page": "site/js (unloaded files)",
+      "element": "app.js, chat-panel.js, creation-flow.js (+templates.js, preview-renderer.js), desksprite.js, gift-brief.js, gift-intelligence.js, prompt-bank.js, inworld.js, order-pipeline.js (+card-renderer.js), print-pipeline.js, prodigi.js, starfield.js, state.js, viral-card-library.js",
+      "label": "—",
+      "js_does": "Not referenced by any page (~3,800 lines). prodigi.js is a browser-side Prodigi client (no key embedded).",
+      "api": "—",
+      "backend_param_use": "—",
+      "working": "Unreferenced",
+      "verdict": "DEAD",
+      "fix": "Delete (git keeps history)."
+    }
+  ],
+  "ranked_fixes": [
+    {
+      "rank": 1,
+      "fix": "Delete the invisible MythicBee chat layer (#ti/#mic/#send, overlays with £6.99–£29.99, satchel, /api/ai/cf calls) plus orphan Upload/Shop panels, st-*/quick-*/qp-* JS",
+      "impact": "index.html ~1,000+ dead lines; 2 wasted requests per page load (Studio); misleading hardcoded prices",
+      "kind": "DEAD"
+    },
+    {
+      "rank": 2,
+      "fix": "Delete ~3,800 lines of unreferenced site/js files and admin/index.html (MythicBee)",
+      "impact": "repo/site weight, confusion for agents",
+      "kind": "DEAD"
+    },
+    {
+      "rank": 3,
+      "fix": "Studio owns the person profile: add relationship/birthday/interests to Add family + /studio/people/<sid>; Cards/Quick/Perform read it",
+      "impact": "Removes re-asking in Cards; feeds quick/map, gift-packs, Perform starters",
+      "kind": "MOVE/INHERIT"
+    },
+    {
+      "rank": 4,
+      "fix": "Products order: inherit email from /accounts/me, name text from subject (body.text, not note); add _owner_denied to /products/order, /gift-packs, /meshes/style",
+      "impact": "Shopify drafts currently go out with no email; personalisation silently lands in a note; auth holes",
+      "kind": "INHERIT/BROKEN"
+    },
+    {
+      "rank": 5,
+      "fix": "Kill 'Reserve only' + pack 'Reserve' + checkout-less reservations; one basket (Shopify) for cards, 3D lines and art; fix cart/create overwriting oddhobb.cartId",
+      "impact": "Dead-end basket rows; second card orphans the first cart; two checkouts",
+      "kind": "BROKEN"
+    },
+    {
+      "rank": 6,
+      "fix": "Prints & gifts shelf: either wire a real order path from GET /api/products (Prodigi prices) or hide it; drop pr-print-cands (selection never used) and supplier quote text",
+      "impact": "11 tiles with stale prices and no way to buy",
+      "kind": "BROKEN"
+    },
+    {
+      "rank": 7,
+      "fix": "Perform: stop hardcoding voice:'ryan' (act voices never apply), send act premise as persona, prefill name from subject, show /api/credits",
+      "impact": "Core video flow ignores act voices; re-asks the name",
+      "kind": "BROKEN/INHERIT"
+    },
+    {
+      "rank": 8,
+      "fix": "Size chips on non-gift lines: send size or hide them",
+      "impact": "Customers pick a size that is silently dropped",
+      "kind": "BROKEN"
+    },
+    {
+      "rank": 9,
+      "fix": "Greeting CTA → Studio Add-family (or Quick with selected person); fix /privacy; neutral copy without family names",
+      "impact": "First click lands nowhere it promised",
+      "kind": "BROKEN"
+    },
+    {
+      "rank": 10,
+      "fix": "Quick: send subject_id to /quick/map and score with saved interests; skip 'who/pet/colouring' prompts when a person is selected; remove fake 'Talk to bobdod', hidden-prompt shuffle and duplicate 'Browse all products'",
+      "impact": "Quick re-asks what the backend knows; 3 dead buttons",
+      "kind": "INHERIT/DEAD"
+    },
+    {
+      "rank": 11,
+      "fix": "Move fit.html, rehearse.html, stage.html, products.html ops downloads, admin.html and the MCP <details> out of the customer surface",
+      "impact": "Customers can overwrite global hat placement; unauthenticated 15-min CPU render endpoint",
+      "kind": "MOVE"
+    },
+    {
+      "rank": 12,
+      "fix": "Replace mesh hashes (qk/pr chips, account 'Active star: msh_…') with the selected person's name + face",
+      "impact": "Every tab shows a meaningless id",
+      "kind": "INHERIT"
+    },
+    {
+      "rank": 13,
+      "fix": "Backend products_studio fallback: read subjects.profile_for() interests/birthday (currently interests:[] literal)",
+      "impact": "Gift suggestions ignore saved interests",
+      "kind": "INHERIT"
+    },
+    {
+      "rank": 14,
+      "fix": "Search: restore an input or delete the 200-line drop; drop catstrip + per-load /api/sections; card rows 799 → cards.public_price",
+      "impact": "Unreachable feature + stale £7.99",
+      "kind": "DEAD"
+    },
+    {
+      "rank": 15,
+      "fix": "Studio: auto-link uploads to the selected person; poll mesh progress instead of 'Refresh'; hide demo meshes once the owner has one; move brick presets to Products as a base option",
+      "impact": "Less manual review, no account-mutating preset buttons",
+      "kind": "INHERIT/MOVE"
+    }
+  ]
+}

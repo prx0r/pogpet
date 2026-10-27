@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stage — OddHobb</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#f4f1ea;--ink:#141414;--gold:#c4891a;--panel:#fff}
+  :root{--bg:#FAF8F4;--ink:#1B1814;--gold:#A84F08;--panel:#fff;--orange:#EE7410;--line:#E9E2D6;--muted:#6C655B}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif;min-height:100dvh}
   .wrap{max-width:560px;margin:0 auto;padding:20px 16px 48px}
@@ -27,7 +30,38 @@
   textarea{min-height:120px;resize:vertical}
   .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   .hint{font-size:12px;color:#777;margin-top:8px}
+  /* ── polish layer ── */
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:600px;padding-top:32px}
+  h1,.editor h2{font-family:"Bricolage Grotesque",Inter,system-ui,sans-serif;font-weight:700;letter-spacing:-.025em}
+  h1{font-size:clamp(30px,6vw,40px);line-height:1.05;margin-bottom:8px}
+  p.lede{font-size:15px;line-height:1.6;color:var(--muted)}
+  p.lede code{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:#FDF2E7;color:var(--gold);padding:1px 6px;border-radius:6px}
+  .stage{border-radius:24px;border-color:var(--line);box-shadow:0 1px 2px rgba(58,38,12,.05),0 24px 48px -26px rgba(58,38,12,.45)}
+  .meter{height:6px;background:#EFE8DC;margin-top:12px}
+  .meter i{background:linear-gradient(90deg,#FFA24A,var(--orange))}
+  button,.btn{border-radius:12px;padding:12px 16px;font:600 13.5px Inter,system-ui,sans-serif;background:var(--ink);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 8px 18px -10px rgba(27,24,20,.55);transition:transform .16s ease,box-shadow .16s,border-color .16s}
+  button:hover:not(:disabled),.btn:hover{transform:translateY(-1px)}
+  #render{background:var(--orange);box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 22px -12px rgba(238,116,16,.75)}
+  button.ghost,.btn.ghost{background:#fff;border:1px solid #DCD3C5;color:var(--ink);box-shadow:0 1px 2px rgba(58,38,12,.06)}
+  button.ghost:hover,.btn.ghost:hover{border-color:var(--ink)}
+  .status{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:#9A9287}
+  .editor{border-radius:22px;border-color:var(--line);padding:22px;margin-top:22px;box-shadow:0 1px 2px rgba(58,38,12,.05)}
+  .editor h2{font-size:22px;margin-bottom:6px}
+  .editor label{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.14em;color:var(--gold);margin:18px 0 7px}
+  textarea,input,select{border:1px solid #DCD3C5;border-radius:12px;padding:12px 14px;font:15px Inter,system-ui,sans-serif;color:var(--ink);transition:border-color .16s,box-shadow .16s}
+  textarea{line-height:1.55}
+  textarea:focus,input:focus,select:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 4px rgba(238,116,16,.26)}
+  .hint{color:#9A9287;font-size:12.5px}
+  a:focus-visible,button:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--orange)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
+<script>
+// Internal tool: needs a signed-in OddHobb account (writes are admin-gated server-side).
+(function(){var k='';try{k=localStorage.getItem('pogpet.apikey')||'';}catch(e){}
+window.__ADMIN_KEY=k;if(!k){document.addEventListener('DOMContentLoaded',function(){var b=document.createElement('div');b.setAttribute('role','alert');b.style.cssText='position:fixed;left:0;right:0;top:0;z-index:99;padding:12px 16px;background:#B3261E;color:#fff;font:600 14px Inter,system-ui,sans-serif';b.textContent='Internal tool — sign in on oddhobb.com with an admin account first.';document.body.prepend(b);});}})();
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -40,7 +74,7 @@
     <button id="play" type="button">Play clip</button>
     <button id="unmute" class="ghost" type="button">Sound on</button>
     <a class="btn ghost" id="dl" href="#" download="oddhobb-standup.mp4">Download video</a>
-    <a class="btn ghost" href="/#videos">Feed</a>
+    <a class="btn ghost" href="/admin/ops.html">Admin</a>
   </div>
   <div class="status" id="status">loading mesh…</div>
 
@@ -54,7 +88,7 @@ They bought me a smart collar. It tracked me to the bin. Twice.
 I have four beds. I sleep on the charging cable. You're welcome.
 They say I'm a good boy. Correct. That's the whole joke. Good night.</textarea>
     <label for="name">Performer name</label>
-    <input id="name" value="Buster" maxlength="40">
+    <input id="name" value="" placeholder="Performer name" maxlength="40">
     <label for="voice">Voice</label>
     <select id="voice">
       <option value="ryan">Ryan — dry, deadpan</option>
@@ -94,9 +128,8 @@ const dl = document.getElementById('dl');
 const q = new URLSearchParams(location.search);
 let tok = q.get('token') || '';
 try { if (!tok) tok = localStorage.getItem('pogpet.bridge') || ''; } catch(e){}
-const vid = 'vid_p0standup001';
-audio.src = `/backend/api/videos/${vid}/file` + (tok ? `?token=${encodeURIComponent(tok)}` : '');
-dl.href = audio.src;
+// no demo clip: the player stays empty until this account renders a set
+dl.removeAttribute('href'); dl.hidden = true; playBtn.disabled = true;
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -226,7 +259,9 @@ const renderBtn = document.getElementById('render');
 const renderStatus = document.getElementById('render-status');
 renderBtn.addEventListener('click', async () => {
   const lines = document.getElementById('lines').value.split('\n').map(s=>s.trim()).filter(Boolean);
-  const name = document.getElementById('name').value.trim() || 'Buster';
+  const name = document.getElementById('name').value.trim();
+  if (!name) { renderStatus.textContent = 'give the performer a name first'; return; }
+  if (!window.__ADMIN_KEY) { renderStatus.textContent = 'sign in on oddhobb.com first'; return; }
   const voice = document.getElementById('voice').value;
   const script = lines.join(' ');
   renderBtn.disabled = true;
@@ -234,6 +269,7 @@ renderBtn.addEventListener('click', async () => {
   try {
     const headers = {'Content-Type':'application/json'};
     if (tok) headers['X-API-Token'] = tok;
+    headers['X-API-Key'] = window.__ADMIN_KEY;
     const r = await fetch('/backend/api/standup/render?token=' + encodeURIComponent(tok), {
       method:'POST', headers, body: JSON.stringify({ name, voice, script })
     });
@@ -242,7 +278,7 @@ renderBtn.addEventListener('click', async () => {
     renderStatus.textContent = 'done · ' + (d.video_id || '') + ' — check Videos feed';
     if (d.video_id) {
       audio.src = `/backend/api/videos/${d.video_id}/file` + (tok ? `?token=${encodeURIComponent(tok)}` : '');
-      dl.href = audio.src;
+      dl.href = audio.src; dl.hidden = false; playBtn.disabled = false;
     }
   } catch (e) {
     renderStatus.textContent = 'error: ' + e.message;

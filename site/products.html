@@ -4,13 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Product photos — OddHobb</title>
-<meta name="description" content="Exact product photos of OddHobb pet products — ornament, keychain and brick figure from the canonical meshes. Etsy-ready downloads.">
+<meta name="description" content="Exact product photos of OddHobb pet products — ornament, keychain and brick figure from the canonical meshes.">
 <link rel="canonical" href="https://oddhobb.com/products.html">
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0e0e10; --panel:#17171b; --ink:#f4f1ea; --muted:#9a958c;
-    --gold:#d4a84b; --line:rgba(255,255,255,.08); --violet:#8b3dff;
+    /* warm light store theme · brand orange (was dark + violet) */
+    --bg:#FAF8F4; --panel:#FFFFFF; --ink:#1B1814; --muted:#6C655B;
+    --gold:#A84F08; --line:#E9E2D6; --violet:#EE7410;
+    --display:"Bricolage Grotesque",Inter,system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+    --shadow:0 1px 2px rgba(58,38,12,.05),0 12px 32px -20px rgba(58,38,12,.32);
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
@@ -59,6 +64,39 @@
   .panel h2{margin:0 0 10px;font-size:16px}
   footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
   @media (max-width:640px){.cta .btn{width:100%;justify-content:center}}
+  /* ── polish layer ── */
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{padding-top:32px}
+  h1,.line-head h2{font-family:var(--display);font-weight:700;letter-spacing:-.025em;line-height:1.05}
+  h1{font-size:clamp(32px,4.4vw,52px);margin-bottom:12px}
+  .line-head h2{font-size:26px}
+  .lede{font-size:16.5px;line-height:1.6}
+  nav a{font-weight:500;color:var(--muted);transition:color .15s}
+  nav a:hover{color:var(--ink);text-decoration:none}
+  .btn{border-radius:12px;padding:12px 18px;font:600 14px Inter,system-ui,sans-serif;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 1px 2px rgba(150,70,0,.25),0 10px 22px -12px rgba(238,116,16,.7);
+    transition:transform .16s ease,box-shadow .16s ease,background-color .16s}
+  .btn:hover{filter:none;background:#D9650A;transform:translateY(-1px)}
+  .btn.ghost{background:#fff;border:1px solid #DCD3C5;color:var(--ink);box-shadow:0 1px 2px rgba(58,38,12,.06)}
+  .btn.ghost:hover{background:#fff;border-color:var(--ink)}
+  .viewer-card,.panel{border-radius:22px;box-shadow:var(--shadow)}
+  .viewer-head{padding:16px 20px}
+  .viewer-head h2{font-family:var(--display);font-size:17px;letter-spacing:-.01em}
+  .hint,.viewer-foot,.dl-table th,.shot .cap{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+  model-viewer{background:radial-gradient(ellipse at 50% 35%,#fff,#F6F1E9)!important}
+  .badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--gold);border-color:#FBE3CC;background:#FDF2E7}
+  .gallery{gap:14px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+  .shot{border-radius:18px;padding:6px;box-shadow:0 1px 2px rgba(58,38,12,.06);transition:transform .2s ease,box-shadow .2s ease}
+  .shot:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+  .shot img{border-radius:13px;background:#F6F1E9}
+  .shot .meta{padding:10px 6px 6px}
+  .shot .acts a{border-radius:999px;font-weight:600;padding:7px 4px;border-color:#DCD3C5}
+  .shot .acts a:hover{text-decoration:none;border-color:var(--ink)}
+  .shot .acts a.dl:hover{background:#D9650A}
+  .dl-table td{border-color:var(--line)}
+  .lightbox{background:rgba(27,24,20,.88);backdrop-filter:blur(6px)}
+  a:focus-visible,button:focus-visible{outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px #EE7410;border-radius:10px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
@@ -68,7 +106,6 @@
     <nav>
       <a href="/">Shop</a>
       <a href="/#studio">Studio</a>
-      <a href="/learn/">Learn</a>
       <a href="/products.html">Product photos</a>
     </nav>
   </div>
@@ -79,11 +116,6 @@
   <div class="cta">
     <a class="btn" href="/#studio">Studio · character select</a>
     <a class="btn" href="/#products">Products · order</a>
-    <a class="btn ghost" href="#etsy-pack">Etsy listing pack</a>
-    <a class="btn ghost" href="#downloads">Download list</a>
-    <a class="btn ghost" href="/img/prod/chibi-figure-hook.glb" download="oddhobb-chibi-figure-hook.glb">Download dog GLB</a>
-    <a class="btn ghost" href="/img/prod/brick-figure.glb" download="oddhobb-brick-figure.glb">Download brick 1 GLB</a>
-    <a class="btn ghost" href="/img/prod/brick-figure-2.glb" download="oddhobb-brick-figure-2.glb">Download brick 2 GLB</a>
   </div>
 
   <section class="viewer-card" aria-label="3D product viewer">
@@ -103,7 +135,7 @@
       loading="lazy"
       reveal="auto"
       style="background:#ffffff">
-      <button slot="poster" style="position:absolute;bottom:12px;left:12px;background:#8b3dff;color:#fff;border:0;border-radius:8px;padding:8px 12px;font:13px system-ui;cursor:pointer">Load 3D model</button>
+      <button slot="poster" style="position:absolute;bottom:12px;left:12px;background:#EE7410;color:#fff;border:0;border-radius:999px;padding:9px 16px;font:600 13px Inter,system-ui;cursor:pointer">Load 3D model</button>
     </model-viewer>
     <div class="viewer-foot">
       White backdrop · one mesh · printed loop on the back (in the GLB) · hardware is part of the print, never metal
@@ -156,38 +188,15 @@
   <!-- CUSTOMER MAKES: BUSTER (finished samples, Oct 2026) -->
   <section class="line" id="customer-makes">
     <div class="line-head">
-      <h2>Customer makes — Buster</h2>
+      <h2>Finished samples</h2>
       <span class="badge">finished samples · every line</span>
     </div>
-    <p>One finished version of each product starring demo dog Buster — the photos you'd put on Etsy. Swap Buster assets per order to regenerate.</p>
+    <p>One finished version of each product, made with our demo dog — yours is made from your own photos.</p>
     <div class="gallery" id="buster-gallery"></div>
   </section>
 
-  <!-- ETSY LISTING PACK (for sellers & makers) -->
-  <section class="panel" id="etsy-pack">
-    <h2>Etsy listing pack — for sellers &amp; makers</h2>
-    <p class="hint" style="margin:0 0 12px;color:var(--muted);font-size:13px">
-      2000×2000 white background · one-click zip · titles/tags in
-      <a href="/api/etsy/listings">/api/etsy/listings</a> · P0 lines: ornament · keychain · brick.
-    </p>
-    <div class="cta" style="margin-bottom:14px">
-      <a class="btn" href="/img/etsy/oddhobb-etsy-listing-pack.zip" download="oddhobb-etsy-listing-pack.zip">Download full pack (.zip)</a>
-      <a class="btn ghost" href="/api/etsy/listings" target="_blank" rel="noopener">Listing JSON</a>
-    </div>
-    <div class="gallery" id="etsy-gallery"></div>
-  </section>
-
-  <section class="panel" id="downloads">
-    <h2>Download list</h2>
-    <p class="hint" style="margin:0 0 12px;color:var(--muted);font-size:13px">2000×2000 white background. Ready for Etsy. No props in exact frames.</p>
-    <table class="dl-table">
-      <thead><tr><th>File</th><th>Line</th><th>Link</th></tr></thead>
-      <tbody id="dl-body"></tbody>
-    </table>
-  </section>
-
   <footer>
-    OddHobb · <a href="/">Shop</a> · exact mesh snapshots · 0 Meshy credits on these renders
+    OddHobb · <a href="/">Shop</a> · exact product snapshots
   </footer>
 </div>
 
@@ -236,16 +245,6 @@
     ["coat-chocolate-santa-hero.png","Chocolate + santa"],
     ["coat-black-santa-hero.png","Black + santa"]
   ];
-  var ETSY = [
-    ["etsy-orn-hero.png","Ornament hero"],["etsy-orn-front.png","Ornament front"],
-    ["etsy-orn-side.png","Ornament side"],["etsy-orn-back.png","Ornament back"],
-    ["etsy-orn-hang.png","Ornament hang"],["etsy-orn-loop-detail.png","Ornament loop"],
-    ["etsy-kc-hero.png","Keychain hero"],["etsy-kc-front.png","Keychain front"],
-    ["etsy-kc-back.png","Keychain back"],["etsy-kc-side.png","Keychain side"],
-    ["etsy-kc-ring-detail.png","Keychain ring"],
-    ["etsy-brick-hero.png","Brick hero"],["etsy-brick-front.png","Brick front"],
-    ["etsy-brick-side.png","Brick side"],["etsy-brick-back.png","Brick back"]
-  ];
   function fill(el, files, prefix, label, base){
     var host = document.getElementById(el);
     if(!host) return;
@@ -268,32 +267,7 @@
   fill("kc-gallery", KC, "kc-", "keychain");
   fill("brick-gallery", BRICK, "", "brick");
   fill("brick2-gallery", BRICK2, "", "brick2");
-  fill("etsy-gallery", ETSY, "", "etsy", "/img/etsy/");
   fill("buster-gallery", BUSTER, "", "buster", "/img/samples-buster/");
-
-  var rows = [];
-  rows.push(["3D model (GLB)","all","/img/prod/chibi-figure-hook.glb","Download dog GLB"]);
-  rows.push(["Brick 1 GLB","brick","/img/prod/brick-figure.glb","Download brick 1"]);
-  rows.push(["Brick 2 GLB","brick","/img/prod/brick-figure-2.glb","Download brick 2"]);
-  rows.push(["Etsy pack zip","all","/img/etsy/oddhobb-etsy-listing-pack.zip","Download zip"]);
-  ORN.forEach(function(f){
-    rows.push([f[0],"ornament","/img/prod/"+f[0],"Download"]);
-  });
-  KC.forEach(function(f){
-    rows.push(["kc-"+f[0],"keychain","/img/prod/kc-"+f[0],"Download"]);
-  });
-  BRICK.forEach(function(f){
-    rows.push([f[0],"brick","/img/prod/"+f[0],"Download"]);
-  });
-  BRICK2.forEach(function(f){
-    rows.push([f[0],"brick 2","/img/prod/"+f[0],"Download"]);
-  });
-  ETSY.forEach(function(f){
-    rows.push([f[0],"etsy pack","/img/etsy/"+f[0],"Download"]);
-  });
-  document.getElementById("dl-body").innerHTML = rows.map(function(r){
-    return "<tr><td>"+r[0]+"</td><td>"+r[1]+"</td><td><a href=\""+r[2]+"\" download>"+r[3]+"</a></td></tr>";
-  }).join("");
 
   var lb=document.getElementById("lb"), img=document.getElementById("lb-img");
   document.querySelectorAll(".thumb").forEach(function(btn){

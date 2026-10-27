@@ -41,6 +41,8 @@ User-agent: Bytespider
 Allow: /
 
 User-agent: *
+Disallow: /admin/
+Disallow: /admin.html
 Allow: /
 
 Sitemap: https://oddhobb.com/sitemap.xml
